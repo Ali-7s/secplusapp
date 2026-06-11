@@ -74,12 +74,12 @@
 
 .learn-overview {
   margin-bottom: 20px;
-  h2 { margin: 0 0 10px; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
-  .overview-text { margin: 0; color: #475569; line-height: 1.65; font-size: 14px; }
+  h2 { margin: 0 0 10px; font-size: 21px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
+  .overview-text { margin: 0; color: #475569; line-height: 1.75; font-size: 15.5px; }
 }
 
 .learn-body {
-  font-size: 14px; line-height: 1.7; color: #334155; padding: 16px 0;
+  font-size: 15px; line-height: 1.75; color: #334155; padding: 16px 0;
   ::ng-deep h2, ::ng-deep h3 { color: #1e3a8a; margin-top: 20px; }
   ::ng-deep ul, ::ng-deep ol { padding-left: 20px; }
   ::ng-deep li { margin-bottom: 4px; }
@@ -98,7 +98,7 @@
   &.examples    { border-top: 3px solid #2e7d32; }
   &.mistakes    { border-top: 3px solid #c62828; }
   ul { margin: 0; padding-left: 18px; }
-  li { font-size: 13px; color: #475569; margin-bottom: 5px; line-height: 1.5; }
+  li { font-size: 14px; color: #475569; margin-bottom: 6px; line-height: 1.6; }
 }
 
 .analogy-card {

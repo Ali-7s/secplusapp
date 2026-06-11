@@ -62,7 +62,7 @@
                   <mat-icon>refresh</mat-icon>
                 </button>
               </div>
-              <p class="overview-text">{{ explanation.overview }}</p>
+              <p class="overview-text" [innerHTML]="explanation.overview"></p>
             </div>
 
             <mat-divider></mat-divider>
