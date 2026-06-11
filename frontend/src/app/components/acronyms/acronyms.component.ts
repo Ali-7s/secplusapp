@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -18,8 +19,8 @@ import { Acronym, AcronymDetail } from '../../models/flashcard.model';
   selector: 'app-acronyms',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule,
-    MatTooltipModule, MatSlideToggleModule],
+    MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
@@ -38,11 +39,15 @@ export class AcronymsComponent implements OnInit {
 
   flashcardMode = false;
   expandedAcronym: string | null = null;
-  flippedCards = new Set<string>();
   cardDetails = new Map<string, AcronymDetail>();
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
+
+  // Carousel state
+  fcIndex = 0;
+  fcFlipped = false;
+  fcDone = new Set<number>();
 
   ngOnInit() {
     this.load();
@@ -73,12 +78,38 @@ export class AcronymsComponent implements OnInit {
     if (this.expandedAcronym && !this.filteredAcronyms.some(a => a.acronym === this.expandedAcronym)) {
       this.expandedAcronym = null;
     }
+    this.fcIndex = 0;
+    this.fcFlipped = false;
   }
 
   toggleFlashcardMode() {
     this.flashcardMode = !this.flashcardMode;
     this.expandedAcronym = null;
-    this.flippedCards.clear();
+    this.fcReset();
+  }
+
+  fcFlip() { this.fcFlipped = !this.fcFlipped; }
+
+  fcNext(known: boolean) {
+    if (known) this.fcDone.add(this.fcIndex);
+    this.fcFlipped = false;
+    if (this.fcIndex < this.filteredAcronyms.length - 1) {
+      this.fcIndex++;
+    }
+  }
+
+  fcPrev() {
+    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; }
+  }
+
+  fcReset() {
+    this.fcIndex = 0;
+    this.fcFlipped = false;
+    this.fcDone.clear();
+  }
+
+  get fcDeckComplete(): boolean {
+    return this.fcIndex === this.filteredAcronyms.length - 1 && this.fcFlipped;
   }
 
   toggleExpand(acronym: Acronym, event: MouseEvent) {
@@ -110,12 +141,6 @@ export class AcronymsComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
-  }
-
-  toggleFlip(key: string, event: MouseEvent) {
-    event.stopPropagation();
-    if (this.flippedCards.has(key)) this.flippedCards.delete(key);
-    else this.flippedCards.add(key);
   }
 
   selectQuizOption(acronym: string, letter: string, event: MouseEvent) {
