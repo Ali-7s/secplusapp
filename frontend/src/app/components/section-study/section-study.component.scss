@@ -485,3 +485,78 @@
   .lab-container  { padding: 0 0 16px; }
   .exam-intro     { padding: 24px 16px; h2 { font-size: 18px; } }
 }
+
+:host-context([data-theme="dark"]) {
+  ::ng-deep .mat-mdc-tab-header { background: var(--c-surface) !important; }
+
+  // Learn
+  .learn-overview h2        { color: var(--c-text); }
+  .learn-overview .overview-text { color: var(--c-text-2); }
+  .learn-body               { color: var(--c-text-2); }
+  .learn-body ::ng-deep h2,
+  .learn-body ::ng-deep h3  { color: var(--c-primary); }
+  .learn-body ::ng-deep code { background: var(--c-surface-2); color: var(--c-accent); }
+  .info-card                { border-color: var(--c-border); }
+  .info-card li             { color: var(--c-text-2); }
+  .analogy-card             { background: rgba(139,92,246,.08) !important; border-color: rgba(139,92,246,.25) !important; p { color: #c4b5fd; } }
+  .tab-count                { background: var(--c-accent-light); color: var(--c-accent); }
+
+  // Flashcard back
+  .fc-back {
+    background: var(--c-surface) !important;
+    border-color: var(--c-border) !important;
+    color: var(--c-text) !important;
+    .fc-answer { color: var(--c-text); }
+    .fc-mnemonic { background: rgba(245,158,11,.1); border-left-color: #f59e0b; color: #fcd34d; }
+    .fc-tip      { background: var(--c-accent-light); border-left-color: var(--c-accent); color: var(--c-accent); }
+  }
+  .fc-dots .fc-dot { background: var(--c-border); &.active { background: var(--c-accent); } }
+  .fc-known { background: var(--c-success-light); color: var(--c-success); }
+
+  // Practice
+  .question-card  { border-color: var(--c-border); }
+  .q-number       { background: var(--c-accent-light); color: var(--c-accent); }
+  .q-type         { background: var(--c-warning-light); color: var(--c-warning); }
+  .scenario-box   { background: rgba(249,115,22,.08); border-left-color: #f97316; color: var(--c-text-2); }
+  .q-stem         { color: var(--c-text); }
+  .option-btn {
+    background: var(--c-surface) !important;
+    border-color: var(--c-border);
+    &:hover { border-color: var(--c-accent); background: var(--c-accent-light) !important; }
+    &.selected { border-color: var(--c-accent); background: var(--c-accent-light) !important; }
+    .opt-letter { background: var(--c-surface-2); color: var(--c-text-2); }
+    .opt-text   { color: var(--c-text); }
+  }
+  .option-result {
+    background: var(--c-surface-2) !important;
+    border-color: var(--c-border) !important;
+    &.correct-opt { background: var(--c-success-light) !important; border-color: var(--c-success) !important; .opt-letter { background: var(--c-success-light); color: var(--c-success); } }
+    &.wrong-opt   { background: var(--c-error-light) !important; border-color: var(--c-error) !important; .opt-letter { background: var(--c-error-light); color: var(--c-error); } }
+    .opt-text { color: var(--c-text); }
+  }
+  .explanation-box { background: var(--c-accent-light); border-color: var(--c-accent); p { color: var(--c-accent); } mat-icon { color: var(--c-accent); } }
+  .score-banner    { background: var(--c-surface-2); &.passed { background: var(--c-success-light); } .score-main { color: var(--c-text); } }
+  .practice-header { color: var(--c-text-2); .answered-count { color: var(--c-accent); } }
+
+  // Lab
+  .lab-step-card  { border-color: var(--c-border); &.expanded { border-color: var(--c-accent); } }
+  .step-header    { &:hover { background: var(--c-surface-2); } .step-title { color: var(--c-text); } mat-icon { color: var(--c-muted); } }
+  .step-body p    { color: var(--c-text-2); }
+  .output-block   { background: var(--c-surface-2); border-color: var(--c-border); color: var(--c-text-2); strong { color: var(--c-text); } }
+  .hint-block     { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+  .lab-q-card     { border-color: var(--c-border); .lab-q-text { color: var(--c-text); } .lab-explain { color: var(--c-muted); } }
+  .lab-answer     { background: var(--c-success-light); color: var(--c-success); }
+  .walkthrough-card { background: var(--c-surface-2) !important; .walkthrough-body p { color: var(--c-text-2); } .walkthrough-body strong { color: var(--c-primary); } }
+  .lab-complete-msg { background: var(--c-success-light); border-color: var(--c-success); color: var(--c-success); }
+  .lab-steps-title  { color: var(--c-text); }
+
+  // Exam
+  .exam-nav .nav-bubble { background: var(--c-surface); border-color: var(--c-border); color: var(--c-text); &.answered { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent); } &.flagged { background: rgba(249,115,22,.1); border-color: #f97316; color: #f97316; } }
+  .exam-question-card { border-color: var(--c-border); }
+  .prev-score { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent); }
+  .feedback-card { border-color: var(--c-border); p { color: var(--c-text-2); } .next-steps { color: var(--c-accent); } }
+
+  // Results
+  .result-hero { background: var(--c-error-light) !important; &.passed { background: var(--c-success-light) !important; } }
+  .review-result-card { border-left-color: var(--c-border) !important; &.correct-card { border-left-color: var(--c-success) !important; } &.wrong-card { border-left-color: var(--c-error) !important; } .rr-stem { color: var(--c-text); } .rr-answers { color: var(--c-muted); } }
+}

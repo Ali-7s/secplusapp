@@ -93,3 +93,19 @@
   .weak-score { font-size: 12px; color: #dc2626; font-weight: 700; white-space: nowrap; }
   a { border-radius: 8px !important; font-size: 12px !important; }
 }
+
+:host-context([data-theme="dark"]) {
+  .page-header { mat-icon { color: var(--c-primary); } h1 { color: var(--c-text); } p { color: var(--c-muted); } }
+  .stat-card   { border-color: var(--c-border); .stat-val { color: var(--c-text); } }
+  .domain-prog-card { border-color: var(--c-border); .dp-name { color: var(--c-text); } .dp-sub { color: var(--c-muted); } }
+  .domain-section-group { border-color: var(--c-border); }
+  .dsgroup-header { color: var(--c-text); background: var(--c-surface-2); .domain-weight { background: var(--c-surface); color: var(--c-text-2); } }
+  .section-row {
+    background: var(--c-surface); border-top-color: var(--c-border);
+    &:hover     { background: var(--c-surface-2); }
+    &.passed-row { background: var(--c-success-light); }
+    .sr-name    { color: var(--c-text); }
+  }
+  .weak-card  { border-color: var(--c-error); }
+  .weak-row   { border-bottom-color: var(--c-border); &:hover { background: rgba(248,113,113,.06); } .weak-name { color: var(--c-text); } }
+}

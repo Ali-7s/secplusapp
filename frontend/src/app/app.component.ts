@@ -13,6 +13,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { ProgressService } from './services/progress.service';
 import { ContentService } from './services/content.service';
 import { AuthService } from './services/auth.service';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -28,6 +29,7 @@ import { AuthService } from './services/auth.service';
 })
 export class AppComponent implements OnInit {
   auth = inject(AuthService);
+  theme = inject(ThemeService);
   private progressService = inject(ProgressService);
   private contentService = inject(ContentService);
   private router = inject(Router);

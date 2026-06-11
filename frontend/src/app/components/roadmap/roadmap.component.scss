@@ -119,3 +119,37 @@
   p  { margin: 0; font-size: 13px; color: #92400e; }
   button { margin-left: auto; border-radius: 10px !important; }
 }
+
+:host-context([data-theme="dark"]) {
+  .timeline-card { border-color: var(--c-border); }
+  .timeline-legend .legend-item { color: var(--c-muted); }
+  .current-callout {
+    background: var(--c-accent-light) !important;
+    border-color: var(--c-accent) !important;
+    .callout-title { color: var(--c-primary); }
+    .callout-sub   { color: var(--c-accent); }
+  }
+  .rd-header {
+    background: var(--c-surface) !important;
+    h2 { color: var(--c-text); }
+  }
+  .rd-connector { background: linear-gradient(to bottom, transparent, var(--c-border)); }
+  .rd-meta      { color: var(--c-muted); }
+  .rd-sections  { }
+  .rd-section {
+    background: var(--c-surface);
+    border-color: var(--c-border);
+    &:hover   { background: var(--c-surface-2); }
+    &.current { border-color: var(--c-accent); background: var(--c-accent-light); }
+    &.passed  { background: var(--c-success-light); border-color: var(--c-success); }
+    .rds-name { color: var(--c-text); }
+    .rds-desc { color: var(--c-muted); }
+  }
+  .final-exam-callout {
+    background: var(--c-warning-light) !important;
+    border-color: var(--c-warning) !important;
+    h3 { color: var(--c-text); }
+    p  { color: var(--c-text-2); }
+  }
+  .tip-item { color: var(--c-muted); }
+}

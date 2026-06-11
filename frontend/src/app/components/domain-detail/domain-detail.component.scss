@@ -121,3 +121,18 @@
   font-size: 11px; color: #94a3b8; text-align: center;
   mat-icon { font-size: 20px; width: 20px; height: 20px; }
 }
+
+:host-context([data-theme="dark"]) {
+  .section-card        { border-color: var(--c-border); }
+  .section-status-icon { background: var(--c-surface-2); }
+  .section-name        { color: var(--c-text); }
+  .section-desc        { color: var(--c-muted); }
+  .section-obj         { color: var(--c-muted); }
+  .mini-stat           { background: var(--c-surface-2); color: var(--c-text-2); &.done { background: var(--c-success-light); color: var(--c-success); } }
+  .topic-chip          { background: var(--c-surface-2); color: var(--c-text-2); }
+  .exam-badge {
+    &.passed { background: var(--c-success-light); color: var(--c-success); }
+    &.failed { background: var(--c-error-light);   color: var(--c-error); }
+  }
+  .locked-msg { color: var(--c-muted); }
+}

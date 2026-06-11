@@ -120,3 +120,16 @@
   gap: 4px; font-size: 14px; color: #64748b;
   padding: 8px 16px 20px;
 }
+
+:host-context([data-theme="dark"]) {
+  .auth-header {
+    h1 { color: var(--c-text); }
+    p  { color: var(--c-muted); }
+  }
+  .auth-error {
+    background: var(--c-error-light);
+    border-color: var(--c-error);
+    color: var(--c-error);
+  }
+  .auth-footer { color: var(--c-muted); }
+}

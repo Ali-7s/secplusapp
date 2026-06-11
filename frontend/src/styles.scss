@@ -12,24 +12,27 @@ html {
   ));
 }
 
-// ── Design tokens ─────────────────────────────────────────────
+// ── Light mode tokens ──────────────────────────────────────────
 :root {
-  --c-primary:       #1e3a8a;
-  --c-primary-mid:   #2d52b0;
-  --c-accent:        #3b82f6;
-  --c-accent-light:  #eff6ff;
-  --c-success:       #059669;
-  --c-success-light: #d1fae5;
-  --c-warning:       #d97706;
-  --c-warning-light: #fef3c7;
-  --c-error:         #dc2626;
-  --c-error-light:   #fee2e2;
-  --c-surface:       #ffffff;
-  --c-bg:            #f1f5f9;
-  --c-text:          #0f172a;
-  --c-muted:         #64748b;
-  --c-border:        #e2e8f0;
-  --c-border-dark:   #cbd5e1;
+  --c-primary:        #1e3a8a;
+  --c-primary-mid:    #2d52b0;
+  --c-accent:         #3b82f6;
+  --c-accent-light:   #eff6ff;
+  --c-success:        #059669;
+  --c-success-light:  #d1fae5;
+  --c-warning:        #d97706;
+  --c-warning-light:  #fef3c7;
+  --c-error:          #dc2626;
+  --c-error-light:    #fee2e2;
+  --c-surface:        #ffffff;
+  --c-surface-2:      #f8fafc;
+  --c-surface-3:      #f1f5f9;
+  --c-bg:             #f1f5f9;
+  --c-text:           #0f172a;
+  --c-text-2:         #334155;
+  --c-muted:          #64748b;
+  --c-border:         #e2e8f0;
+  --c-border-dark:    #cbd5e1;
 
   --r-sm: 8px;
   --r-md: 12px;
@@ -41,6 +44,145 @@ html {
   --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
   --shadow-lg: 0 10px 24px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.05);
   --shadow-xl: 0 20px 40px rgba(0,0,0,.12), 0 8px 16px rgba(0,0,0,.06);
+
+  color-scheme: light;
+}
+
+// ── Dark mode tokens ───────────────────────────────────────────
+[data-theme="dark"] {
+  --c-primary:        #93c5fd;
+  --c-primary-mid:    #60a5fa;
+  --c-accent:         #60a5fa;
+  --c-accent-light:   rgba(96,165,250,.14);
+  --c-success:        #34d399;
+  --c-success-light:  rgba(52,211,153,.14);
+  --c-warning:        #fbbf24;
+  --c-warning-light:  rgba(251,191,36,.14);
+  --c-error:          #f87171;
+  --c-error-light:    rgba(248,113,113,.14);
+  --c-surface:        #1e293b;
+  --c-surface-2:      #162032;
+  --c-surface-3:      #0f172a;
+  --c-bg:             #0f172a;
+  --c-text:           #e2e8f0;
+  --c-text-2:         #94a3b8;
+  --c-muted:          #64748b;
+  --c-border:         #334155;
+  --c-border-dark:    #475569;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.35);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.40);
+  --shadow-lg: 0 10px 24px rgba(0,0,0,.45);
+  --shadow-xl: 0 20px 40px rgba(0,0,0,.55);
+
+  color-scheme: dark;
+
+  // ── Angular Material dark overrides ──────────────────────────
+
+  // Drawer / sidenav
+  .mat-drawer-container { background: var(--c-bg) !important; color: var(--c-text) !important; }
+  .mat-drawer            { background: var(--c-surface) !important; }
+
+  // Cards
+  .mat-mdc-card {
+    --mdc-elevated-card-container-color: var(--c-surface);
+    --mdc-outlined-card-container-color: var(--c-surface);
+    background: var(--c-surface) !important;
+    color: var(--c-text) !important;
+  }
+  .mat-mdc-card-subtitle { color: var(--c-muted) !important; }
+
+  // Form fields
+  .mat-mdc-form-field {
+    --mdc-outlined-text-field-outline-color:             var(--c-border);
+    --mdc-outlined-text-field-hover-outline-color:       var(--c-accent);
+    --mdc-outlined-text-field-focus-outline-color:       var(--c-accent);
+    --mdc-outlined-text-field-input-text-color:          var(--c-text);
+    --mdc-outlined-text-field-label-text-color:          var(--c-muted);
+    --mdc-outlined-text-field-focus-label-text-color:    var(--c-accent);
+    --mdc-outlined-text-field-caret-color:               var(--c-accent);
+    --mdc-outlined-text-field-container-shape:           var(--r-sm);
+    --mat-form-field-container-text-color:               var(--c-text);
+  }
+  .mat-mdc-input-element { color: var(--c-text) !important; }
+  .mat-mdc-form-field-hint-wrapper,
+  .mat-mdc-form-field-error-wrapper { color: var(--c-muted) !important; }
+
+  // Select
+  .mat-mdc-select-value-text  { color: var(--c-text) !important; }
+  .mat-mdc-select-arrow       { color: var(--c-muted) !important; }
+  .mat-mdc-select-panel       { background: var(--c-surface) !important; }
+  .mat-mdc-option             { color: var(--c-text) !important; background: var(--c-surface) !important; }
+  .mat-mdc-option:hover,
+  .mat-mdc-option.mdc-list-item--selected { background: var(--c-accent-light) !important; }
+
+  // Menus
+  .mat-mdc-menu-panel { background: var(--c-surface) !important; border: 1px solid var(--c-border); }
+  .mat-mdc-menu-item  { color: var(--c-text) !important; }
+  .mat-mdc-menu-item:hover { background: var(--c-accent-light) !important; }
+  .mat-mdc-menu-item .mat-icon { color: var(--c-muted) !important; }
+
+  // Tabs
+  .mat-mdc-tab-header {
+    background: var(--c-surface) !important;
+    border-bottom: 1px solid var(--c-border);
+    --mat-tab-header-active-label-text-color:         var(--c-primary);
+    --mat-tab-header-inactive-label-text-color:       var(--c-muted);
+    --mat-tab-header-active-indicator-color:          var(--c-accent);
+    --mat-tab-header-active-focus-label-text-color:   var(--c-primary);
+    --mat-tab-header-active-hover-label-text-color:   var(--c-primary);
+    --mat-tab-header-inactive-focus-label-text-color: var(--c-text);
+    --mat-tab-header-inactive-hover-label-text-color: var(--c-text);
+  }
+  .mat-mdc-tab-body-wrapper { background: transparent; }
+
+  // Nav list items
+  .mat-mdc-list-item               { color: var(--c-text) !important; }
+  .mat-mdc-list-item .mat-icon     { color: var(--c-muted) !important; }
+  .mat-mdc-list-item:hover         { background: var(--c-accent-light) !important; }
+
+  // Divider
+  .mat-divider { --mat-divider-color: var(--c-border); border-color: var(--c-border) !important; }
+
+  // Tooltip
+  .mat-mdc-tooltip {
+    --mdc-plain-tooltip-container-color:       #334155;
+    --mdc-plain-tooltip-supporting-text-color: #e2e8f0;
+  }
+
+  // Progress bar track
+  .mat-mdc-progress-bar { --mdc-linear-progress-track-color: var(--c-border); }
+
+  // Spinner
+  .mat-mdc-progress-spinner { --mdc-circular-progress-active-indicator-color: var(--c-accent); }
+
+  // Buttons
+  .mat-mdc-outlined-button { --mdc-outlined-button-outline-color: var(--c-border); color: var(--c-text) !important; }
+  .mat-mdc-button           { color: var(--c-text) !important; }
+
+  // Icon buttons in dark context
+  .mat-mdc-icon-button { color: var(--c-text) !important; }
+
+  // Chips
+  .mat-mdc-chip { background: var(--c-surface-2) !important; color: var(--c-text) !important; border: 1px solid var(--c-border); }
+
+  // Expansion panel
+  .mat-expansion-panel {
+    background: var(--c-surface) !important;
+    color: var(--c-text) !important;
+  }
+  .mat-expansion-panel-header-title { color: var(--c-text) !important; }
+  .mat-expansion-panel-header-description { color: var(--c-muted) !important; }
+
+  // Snackbar
+  .mdc-snackbar__surface { background: #334155 !important; }
+  .mdc-snackbar__label   { color: #e2e8f0 !important; }
+
+  // Dialog
+  .mat-mdc-dialog-container { --mdc-dialog-container-color: var(--c-surface); }
+  .mat-mdc-dialog-surface   { background: var(--c-surface) !important; color: var(--c-text) !important; }
+  .mat-mdc-dialog-title      { color: var(--c-text) !important; }
+  .mat-mdc-dialog-content    { color: var(--c-text-2) !important; }
 }
 
 // ── Reset & base ──────────────────────────────────────────────
@@ -51,7 +193,25 @@ body {
   background: var(--c-bg);
   color: var(--c-text);
   -webkit-font-smoothing: antialiased;
+  transition: background .25s ease, color .25s ease;
 }
+
+// ── Reduced motion ────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+// ── Focus rings (accessibility) ───────────────────────────────
+:focus-visible {
+  outline: 2px solid var(--c-accent) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) { outline: none !important; }
 
 // ── Keyframes ─────────────────────────────────────────────────
 @keyframes fadeInUp {
@@ -64,7 +224,7 @@ body {
 }
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
+  100% { background-position:  600px 0; }
 }
 @keyframes scaleIn {
   from { transform: scale(0.9); opacity: 0; }
@@ -139,13 +299,13 @@ body {
     border-radius: 50%;
     padding: 10px;
   }
-  h3 { margin: 0; font-size: 18px; font-weight: 600; }
+  h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--c-text); }
   p  { margin: 0; color: var(--c-muted); font-size: 14px; max-width: 420px; line-height: 1.55; }
 }
 
 // ── Skeleton ──────────────────────────────────────────────────
 .skeleton {
-  background: linear-gradient(90deg, #f0f4ff 25%, #dbe4f5 50%, #f0f4ff 75%);
+  background: linear-gradient(90deg, var(--c-surface-2) 25%, var(--c-border) 50%, var(--c-surface-2) 75%);
   background-size: 600px 100%;
   animation: shimmer 1.6s infinite linear;
   border-radius: var(--r-sm);
@@ -162,9 +322,9 @@ body {
   letter-spacing: .4px;
   text-transform: uppercase;
 
-  &.easy   { background: #dcfce7; color: #15803d; }
-  &.medium { background: #fef9c3; color: #a16207; }
-  &.hard   { background: #ffe4e6; color: #be123c; }
+  &.easy   { background: var(--c-success-light); color: var(--c-success); }
+  &.medium { background: var(--c-warning-light);  color: var(--c-warning); }
+  &.hard   { background: var(--c-error-light);   color: var(--c-error); }
 }
 
 // ── Domain chip ───────────────────────────────────────────────
@@ -190,12 +350,12 @@ body {
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--c-border-dark); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-muted); }
 
 // ── Utilities ─────────────────────────────────────────────────
-.text-muted   { color: var(--c-muted); }
-.text-success { color: var(--c-success); }
-.text-danger  { color: var(--c-error); }
+.text-muted    { color: var(--c-muted); }
+.text-success  { color: var(--c-success); }
+.text-danger   { color: var(--c-error); }
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
 .gap-8  { gap: 8px; }
