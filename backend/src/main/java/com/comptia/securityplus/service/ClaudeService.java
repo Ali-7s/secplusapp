@@ -95,17 +95,40 @@ public class ClaudeService {
 
     private String stripMarkdownFences(String text) {
         String trimmed = text.strip();
-        // Remove opening ```json or ``` fence
-        if (trimmed.startsWith("```")) {
-            int newline = trimmed.indexOf('\n');
+
+        // If a code fence exists anywhere (Claude sometimes adds preamble before it),
+        // extract only the content between the opening and closing fences.
+        int fenceOpen = trimmed.indexOf("```");
+        if (fenceOpen != -1) {
+            int newline = trimmed.indexOf('\n', fenceOpen);
             if (newline != -1) {
-                trimmed = trimmed.substring(newline + 1);
+                trimmed = trimmed.substring(newline + 1).stripLeading();
+                int fenceClose = trimmed.lastIndexOf("```");
+                if (fenceClose != -1) {
+                    trimmed = trimmed.substring(0, fenceClose).stripTrailing();
+                }
             }
         }
-        // Remove closing ``` fence
-        if (trimmed.endsWith("```")) {
-            trimmed = trimmed.substring(0, trimmed.lastIndexOf("```")).stripTrailing();
+
+        // If still not starting with a JSON character, advance to the first { or [
+        if (!trimmed.isEmpty() && trimmed.charAt(0) != '{' && trimmed.charAt(0) != '[') {
+            int brace   = trimmed.indexOf('{');
+            int bracket = trimmed.indexOf('[');
+            int start;
+            if (brace == -1 && bracket == -1) {
+                start = -1;
+            } else if (brace == -1) {
+                start = bracket;
+            } else if (bracket == -1) {
+                start = brace;
+            } else {
+                start = Math.min(brace, bracket);
+            }
+            if (start != -1) {
+                trimmed = trimmed.substring(start);
+            }
         }
+
         return trimmed;
     }
 }
