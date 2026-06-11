@@ -1,5 +1,8 @@
 package com.comptia.securityplus.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Flashcard {
     private String id;
     private String sectionId;

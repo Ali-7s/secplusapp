@@ -1,7 +1,9 @@
 package com.comptia.securityplus.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Question {
     private String id;
     private String sectionId;
@@ -15,7 +17,7 @@ public class Question {
     private String explanation;
     private String difficulty;
     private List<String> tags;
-    private int points;
+    private Integer points;
 
     public enum QuestionType { MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST }
 
@@ -45,6 +47,6 @@ public class Question {
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
-    public int getPoints() { return points; }
-    public void setPoints(int points) { this.points = points; }
+    public Integer getPoints() { return points; }
+    public void setPoints(Integer points) { this.points = points; }
 }

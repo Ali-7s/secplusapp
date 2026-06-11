@@ -1,7 +1,9 @@
 package com.comptia.securityplus.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Lab {
     private String id;
     private String sectionId;
@@ -12,14 +14,15 @@ public class Lab {
     private List<LabStep> steps;
     private List<String> tools;
     private String difficulty;
-    private int estimatedMinutes;
+    private Integer estimatedMinutes;
     private List<LabQuestion> questions;
     private String walkthrough;
 
     public Lab() {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class LabStep {
-        private int stepNumber;
+        private Integer stepNumber;
         private String title;
         private String instruction;
         private String command;
@@ -27,8 +30,8 @@ public class Lab {
         private String hint;
 
         public LabStep() {}
-        public int getStepNumber() { return stepNumber; }
-        public void setStepNumber(int stepNumber) { this.stepNumber = stepNumber; }
+        public Integer getStepNumber() { return stepNumber; }
+        public void setStepNumber(Integer stepNumber) { this.stepNumber = stepNumber; }
         public String getTitle() { return title; }
         public void setTitle(String title) { this.title = title; }
         public String getInstruction() { return instruction; }
@@ -41,6 +44,7 @@ public class Lab {
         public void setHint(String hint) { this.hint = hint; }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class LabQuestion {
         private String question;
         private String answer;
@@ -73,8 +77,8 @@ public class Lab {
     public void setTools(List<String> tools) { this.tools = tools; }
     public String getDifficulty() { return difficulty; }
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
-    public int getEstimatedMinutes() { return estimatedMinutes; }
-    public void setEstimatedMinutes(int estimatedMinutes) { this.estimatedMinutes = estimatedMinutes; }
+    public Integer getEstimatedMinutes() { return estimatedMinutes; }
+    public void setEstimatedMinutes(Integer estimatedMinutes) { this.estimatedMinutes = estimatedMinutes; }
     public List<LabQuestion> getQuestions() { return questions; }
     public void setQuestions(List<LabQuestion> questions) { this.questions = questions; }
     public String getWalkthrough() { return walkthrough; }

@@ -21,7 +21,9 @@ public class ContentService {
     private final CurriculumData curriculum;
     private final GeneratedContentRepository contentRepo;
     private final ObjectMapper mapper = new ObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
+        .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
@@ -108,8 +110,8 @@ public class ContentService {
         try {
             return mapper.readValue(response, ConceptExplanation.class);
         } catch (Exception e) {
-            log.severe("Failed to parse explanation for " + sectionId + ". Claude response (first 500 chars): "
-                + response.substring(0, Math.min(500, response.length())));
+            log.severe("Failed to parse explanation for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
             evict(key);
             throw new RuntimeException("Failed to parse explanation response: " + e.getMessage());
         }
@@ -148,8 +150,8 @@ public class ContentService {
         try {
             return mapper.readValue(response, new TypeReference<List<Flashcard>>() {});
         } catch (Exception e) {
-            log.severe("Failed to parse flashcards for " + sectionId + ". Claude response (first 500 chars): "
-                + response.substring(0, Math.min(500, response.length())));
+            log.severe("Failed to parse flashcards for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
             evict(key);
             throw new RuntimeException("Failed to parse flashcards: " + e.getMessage());
         }
@@ -198,8 +200,8 @@ public class ContentService {
         try {
             return mapper.readValue(response, new TypeReference<List<Question>>() {});
         } catch (Exception e) {
-            log.severe("Failed to parse questions for " + sectionId + ". Claude response (first 500 chars): "
-                + response.substring(0, Math.min(500, response.length())));
+            log.severe("Failed to parse questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
             evict(key);
             throw new RuntimeException("Failed to parse questions: " + e.getMessage());
         }
@@ -233,8 +235,8 @@ public class ContentService {
         try {
             return mapper.readValue(response, new TypeReference<List<Question>>() {});
         } catch (Exception e) {
-            log.severe("Failed to parse exam questions for " + sectionId + ". Claude response (first 500 chars): "
-                + response.substring(0, Math.min(500, response.length())));
+            log.severe("Failed to parse exam questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
             evict(key);
             throw new RuntimeException("Failed to parse exam questions: " + e.getMessage());
         }
@@ -346,8 +348,8 @@ public class ContentService {
         try {
             return mapper.readValue(response, Lab.class);
         } catch (Exception e) {
-            log.severe("Failed to parse lab for " + sectionId + ". Claude response (first 500 chars): "
-                + response.substring(0, Math.min(500, response.length())));
+            log.severe("Failed to parse lab for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
             evict(key);
             throw new RuntimeException("Failed to parse lab: " + e.getMessage());
         }
@@ -397,8 +399,8 @@ public class ContentService {
                 List<Acronym> chunk = mapper.readValue(response, new TypeReference<List<Acronym>>() {});
                 all.addAll(chunk);
             } catch (Exception e) {
-                log.severe("Failed to parse acronym batch " + batch[0] + ". Claude response (first 500 chars): "
-                    + response.substring(0, Math.min(500, response.length())));
+                log.severe("Failed to parse acronym batch " + batch[0] + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                    + response.substring(0, Math.min(1000, response.length())));
                 throw new RuntimeException("Failed to parse acronym batch " + batch[0] + ": " + e.getMessage());
             }
         }
