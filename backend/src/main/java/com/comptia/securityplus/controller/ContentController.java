@@ -84,6 +84,13 @@ public class ContentController {
         return ResponseEntity.ok(contentService.getAcronyms());
     }
 
+    @GetMapping("/acronyms/{acronym}/detail")
+    public ResponseEntity<AcronymDetail> getAcronymDetail(
+            @PathVariable String acronym,
+            @RequestParam(required = false, defaultValue = "") String expansion) {
+        return ResponseEntity.ok(contentService.getAcronymDetail(acronym, expansion));
+    }
+
     // ── Regenerate (evict DB entry then re-generate) ──────────────────────────
 
     @PostMapping("/explain/{sectionId}/regenerate")

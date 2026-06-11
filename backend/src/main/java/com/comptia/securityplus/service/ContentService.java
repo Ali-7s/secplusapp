@@ -430,4 +430,42 @@ public class ContentService {
         }
         return all;
     }
+
+    public AcronymDetail getAcronymDetail(String acronym, String expansion) {
+        String key = "acronym_detail:" + acronym;
+        Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
+        if (cached.isPresent()) {
+            try {
+                return mapper.readValue(cached.get().getJsonContent(), AcronymDetail.class);
+            } catch (Exception e) {
+                evict(key);
+            }
+        }
+
+        String prompt = String.format("""
+                For the Security+ SY0-701 acronym "%s" (%s):
+                Return ONLY this JSON object — no markdown, no code fences, nothing else:
+                {
+                  "practicalScenario": "2-3 sentence real-world scenario using a specific person name (Alex, Maria, Sam). Describe exactly what they configure/implement and the concrete security outcome.",
+                  "quizQuestion": "A realistic exam-style scenario question testing application of this concept — not just its definition. 1-2 sentences.",
+                  "quizOptions": ["A) ...", "B) ...", "C) ...", "D) ..."],
+                  "quizAnswer": "B"
+                }
+                Rules:
+                - quizAnswer must be exactly one letter (A, B, C, or D) matching the correct option
+                - All four options must be plausible distractors — related concepts the student might confuse
+                - Do not make the answer obvious from the question stem alone
+                """, acronym, expansion);
+
+        String response = claude.callClaude(SYSTEM_PROMPT, prompt, 1024);
+        try {
+            AcronymDetail detail = mapper.readValue(response, AcronymDetail.class);
+            persist(key, mapper.writeValueAsString(detail));
+            return detail;
+        } catch (Exception e) {
+            log.severe("Failed to parse acronym detail for " + acronym + ": " + e.getMessage()
+                + ". Response: " + response.substring(0, Math.min(300, response.length())));
+            throw new RuntimeException("Failed to generate detail for " + acronym + ": " + e.getMessage());
+        }
+    }
 }

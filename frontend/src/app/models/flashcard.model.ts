@@ -60,3 +60,10 @@ export interface Acronym {
   examContext: string;
   relatedAcronyms: string;
 }
+
+export interface AcronymDetail {
+  practicalScenario: string;
+  quizQuestion: string;
+  quizOptions: string[];
+  quizAnswer: string;
+}

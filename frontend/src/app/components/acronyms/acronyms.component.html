@@ -3,28 +3,36 @@
     <mat-icon>abc</mat-icon>
     <div>
       <h1>Acronym Glossary</h1>
-      <p>All CompTIA Security+ SY0-701 acronyms with definitions and exam context</p>
+      <p>All CompTIA Security+ SY0-701 acronyms — click any card to expand it</p>
     </div>
     @if (!loading && allAcronyms.length) {
       <div class="count-badge">{{ filteredAcronyms.length }} / {{ allAcronyms.length }}</div>
     }
   </div>
 
-  <div class="filter-bar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Search acronyms...</mat-label>
-      <input matInput [(ngModel)]="searchText" (ngModelChange)="filter()" placeholder="e.g. AES, encryption...">
-      <mat-icon matSuffix>search</mat-icon>
-    </mat-form-field>
+  <div class="toolbar">
+    <div class="filter-bar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search acronyms...</mat-label>
+        <input matInput [(ngModel)]="searchText" (ngModelChange)="filter()" placeholder="e.g. AES, encryption...">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
 
-    <mat-form-field appearance="outline" class="cat-field">
-      <mat-label>Category</mat-label>
-      <mat-select [(value)]="selectedCategory" (selectionChange)="filter()">
-        @for (cat of categories; track cat) {
-          <mat-option [value]="cat">{{ cat }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+      <mat-form-field appearance="outline" class="cat-field">
+        <mat-label>Category</mat-label>
+        <mat-select [(value)]="selectedCategory" (selectionChange)="filter()">
+          @for (cat of categories; track cat) {
+            <mat-option [value]="cat">{{ cat }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <button class="mode-toggle" [class.active]="flashcardMode" (click)="toggleFlashcardMode()"
+      matTooltip="{{ flashcardMode ? 'Switch to browse mode' : 'Switch to flashcard mode' }}">
+      <mat-icon>{{ flashcardMode ? 'view_module' : 'flip_to_back' }}</mat-icon>
+      {{ flashcardMode ? 'Browse' : 'Flashcards' }}
+    </button>
   </div>
 
   @if (loading) {
@@ -45,22 +53,153 @@
       <p>No acronyms match "{{ searchText }}"</p>
     </div>
   } @else {
-    <div class="acronyms-grid">
+
+    @if (flashcardMode) {
+      <div class="fc-hint-bar">
+        <mat-icon>touch_app</mat-icon> Tap a card to flip it
+      </div>
+    }
+
+    <div class="acronyms-grid" [class.flashcard-grid]="flashcardMode">
+
       @for (a of filteredAcronyms; track a.acronym) {
-        <mat-card class="acronym-card">
-          <div class="acr-header">
-            <span class="acr-letters">{{ a.acronym }}</span>
-            <span class="acr-category">{{ a.category }}</span>
+
+        @if (flashcardMode) {
+          <!-- ── Flashcard ─────────────────────────────────────── -->
+          <div class="flashcard" [class.flipped]="flippedCards.has(a.acronym)"
+            (click)="toggleFlip(a.acronym, $event)" [id]="'acr-' + a.acronym">
+            <div class="fc-inner">
+              <div class="fc-front">
+                <span class="acr-letters">{{ a.acronym }}</span>
+                <span class="acr-category">{{ a.category }}</span>
+                <div class="fc-prompt"><mat-icon>flip_to_back</mat-icon> Tap to reveal</div>
+              </div>
+              <div class="fc-back">
+                <div class="fc-expansion">{{ a.expansion }}</div>
+                <div class="fc-definition">{{ a.definition }}</div>
+                @if (a.examContext) {
+                  <div class="fc-context"><mat-icon>school</mat-icon> {{ a.examContext }}</div>
+                }
+              </div>
+            </div>
           </div>
-          <div class="acr-expansion">{{ a.expansion }}</div>
-          <div class="acr-definition">{{ a.definition }}</div>
-          @if (a.examContext) {
-            <div class="acr-exam"><mat-icon>school</mat-icon> {{ a.examContext }}</div>
-          }
-          @if (a.relatedAcronyms) {
-            <div class="acr-related">Related: {{ a.relatedAcronyms }}</div>
-          }
-        </mat-card>
+
+        } @else {
+          <!-- ── Normal browse card ───────────────────────────── -->
+          <mat-card class="acronym-card" [class.expanded]="expandedAcronym === a.acronym"
+            [id]="'acr-' + a.acronym" (click)="toggleExpand(a, $event)">
+
+            <div class="acr-header">
+              <span class="acr-letters">{{ a.acronym }}</span>
+              <span class="acr-category">{{ a.category }}</span>
+              <mat-icon class="expand-chevron">
+                {{ expandedAcronym === a.acronym ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
+            </div>
+
+            <div class="acr-expansion">{{ a.expansion }}</div>
+
+            @if (expandedAcronym !== a.acronym) {
+              <!-- Collapsed preview -->
+              <div class="acr-definition acr-preview">{{ a.definition }}</div>
+              @if (a.examContext) {
+                <div class="acr-exam"><mat-icon>school</mat-icon> {{ a.examContext }}</div>
+              }
+              @if (a.relatedAcronyms) {
+                <div class="acr-related">Related: {{ a.relatedAcronyms }}</div>
+              }
+            }
+
+            @if (expandedAcronym === a.acronym) {
+              <!-- Expanded detail -->
+              <div class="expanded-body" (click)="onDetailClick($event)">
+
+                <div class="acr-definition" [innerHTML]="linkify(a.definition, a.acronym)"></div>
+
+                @if (a.examContext) {
+                  <div class="acr-exam">
+                    <mat-icon>school</mat-icon>
+                    <span [innerHTML]="linkify(a.examContext, a.acronym)"></span>
+                  </div>
+                }
+
+                @if (a.relatedAcronyms) {
+                  <div class="related-chips">
+                    <span class="related-label">Related:</span>
+                    @for (rel of getRelatedList(a.relatedAcronyms); track rel) {
+                      <span class="rel-chip" (click)="navigateToAcronym(rel, $event)"
+                        [matTooltip]="'Jump to ' + rel">{{ rel }}</span>
+                    }
+                  </div>
+                }
+
+                <!-- Lazy-loaded detail (scenario + quiz) -->
+                @if (loadingDetails.has(a.acronym)) {
+                  <div class="detail-loading">
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Loading scenario & quiz...</span>
+                  </div>
+                } @else {
+                  @if (getDetail(a.acronym); as detail) {
+
+                    <!-- Practical scenario -->
+                    <div class="scenario-section">
+                      <div class="detail-label">
+                        <mat-icon>person</mat-icon> Real-World Scenario
+                      </div>
+                      <p class="scenario-text">{{ detail.practicalScenario }}</p>
+                    </div>
+
+                    <!-- Quiz -->
+                    <div class="quiz-section">
+                      <div class="detail-label">
+                        <mat-icon>quiz</mat-icon> Quick Check
+                      </div>
+                      <p class="quiz-question">{{ detail.quizQuestion }}</p>
+                      <div class="quiz-options">
+                        @for (opt of detail.quizOptions; track opt) {
+                          @let letter = opt.charAt(0);
+                          <button class="quiz-btn"
+                            [class.correct]="quizSelected.has(a.acronym) && letter === detail.quizAnswer"
+                            [class.wrong]="quizSelected.get(a.acronym) === letter && letter !== detail.quizAnswer"
+                            [class.selected]="quizSelected.get(a.acronym) === letter"
+                            (click)="selectQuizOption(a.acronym, letter, $event)"
+                            [disabled]="quizSelected.has(a.acronym)">
+                            <span class="quiz-letter">{{ letter }}</span>
+                            <span class="quiz-text">{{ opt.slice(3) }}</span>
+                            @if (quizSelected.has(a.acronym) && letter === detail.quizAnswer) {
+                              <mat-icon class="quiz-icon correct-icon">check_circle</mat-icon>
+                            }
+                            @if (quizSelected.get(a.acronym) === letter && letter !== detail.quizAnswer) {
+                              <mat-icon class="quiz-icon wrong-icon">cancel</mat-icon>
+                            }
+                          </button>
+                        }
+                      </div>
+                      @if (quizSelected.has(a.acronym)) {
+                        <div class="quiz-result" [class.pass]="isQuizCorrect(a.acronym)">
+                          <mat-icon>{{ isQuizCorrect(a.acronym) ? 'check_circle' : 'info' }}</mat-icon>
+                          {{ isQuizCorrect(a.acronym) ? 'Correct!' : 'Correct answer: ' + detail.quizAnswer }}
+                        </div>
+                      }
+                    </div>
+
+                  } @else if (detailErrors.has(a.acronym)) {
+                    <div class="detail-error">
+                      <mat-icon>error_outline</mat-icon>
+                      Could not load additional details.
+                      <button mat-button color="primary" (click)="loadDetail(a); $event.stopPropagation()">
+                        Retry
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            }
+
+          </mat-card>
+        }
+
       }
     </div>
   }

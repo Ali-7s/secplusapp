@@ -113,8 +113,11 @@ html {
   .mat-mdc-select-arrow       { color: var(--c-muted) !important; }
   .mat-mdc-select-panel       { background: var(--c-surface) !important; }
   .mat-mdc-option             { color: var(--c-text) !important; background: var(--c-surface) !important; }
-  .mat-mdc-option:hover,
+  .mat-mdc-option .mdc-list-item__primary-text { color: var(--c-text) !important; }
+  .mat-mdc-option:hover       { background: var(--c-surface-2) !important; }
+  .mat-mdc-option:hover .mdc-list-item__primary-text { color: var(--c-text) !important; }
   .mat-mdc-option.mdc-list-item--selected { background: var(--c-accent-light) !important; }
+  .mat-mdc-option.mdc-list-item--selected .mdc-list-item__primary-text { color: var(--c-accent) !important; }
 
   // Menus
   .mat-mdc-menu-panel { background: var(--c-surface) !important; border: 1px solid var(--c-border); }

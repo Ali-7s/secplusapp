@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Domain, Section } from '../models/curriculum.model';
 import { Question, ExamSubmission, ExamResult } from '../models/question.model';
-import { Flashcard, ConceptExplanation, Lab, Acronym } from '../models/flashcard.model';
+import { Flashcard, ConceptExplanation, Lab, Acronym, AcronymDetail } from '../models/flashcard.model';
 
 @Injectable({ providedIn: 'root' })
 export class ContentService {
@@ -55,6 +55,10 @@ export class ContentService {
 
   getAcronyms(): Observable<Acronym[]> {
     return this.api.get<Acronym[]>('/content/acronyms');
+  }
+
+  getAcronymDetail(acronym: string, expansion: string): Observable<AcronymDetail> {
+    return this.api.get<AcronymDetail>(`/content/acronyms/${encodeURIComponent(acronym)}/detail?expansion=${encodeURIComponent(expansion)}`);
   }
 
   regenerateExplanation(sectionId: string): Observable<ConceptExplanation> {

@@ -1,27 +1,32 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
-import { Acronym } from '../../models/flashcard.model';
+import { Acronym, AcronymDetail } from '../../models/flashcard.model';
 
 @Component({
   selector: 'app-acronyms',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatInputModule, MatFormFieldModule, MatChipsModule, MatProgressSpinnerModule, MatSelectModule],
+    MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule,
+    MatTooltipModule, MatSlideToggleModule],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
 export class AcronymsComponent implements OnInit {
   private contentService = inject(ContentService);
+  private sanitizer = inject(DomSanitizer);
+  private cdr = inject(ChangeDetectorRef);
 
   allAcronyms: Acronym[] = [];
   filteredAcronyms: Acronym[] = [];
@@ -30,6 +35,14 @@ export class AcronymsComponent implements OnInit {
   searchText = '';
   selectedCategory = 'All';
   categories: string[] = ['All'];
+
+  flashcardMode = false;
+  expandedAcronym: string | null = null;
+  flippedCards = new Set<string>();
+  cardDetails = new Map<string, AcronymDetail>();
+  loadingDetails = new Set<string>();
+  detailErrors = new Set<string>();
+  quizSelected = new Map<string, string>();
 
   ngOnInit() {
     this.load();
@@ -57,5 +70,117 @@ export class AcronymsComponent implements OnInit {
       const matchCat = this.selectedCategory === 'All' || a.category === this.selectedCategory;
       return matchSearch && matchCat;
     });
+    if (this.expandedAcronym && !this.filteredAcronyms.some(a => a.acronym === this.expandedAcronym)) {
+      this.expandedAcronym = null;
+    }
+  }
+
+  toggleFlashcardMode() {
+    this.flashcardMode = !this.flashcardMode;
+    this.expandedAcronym = null;
+    this.flippedCards.clear();
+  }
+
+  toggleExpand(acronym: Acronym, event: MouseEvent) {
+    event.stopPropagation();
+    const key = acronym.acronym;
+    if (this.expandedAcronym === key) {
+      this.expandedAcronym = null;
+      return;
+    }
+    this.expandedAcronym = key;
+    if (!this.cardDetails.has(key) && !this.loadingDetails.has(key)) {
+      this.loadDetail(acronym);
+    }
+  }
+
+  loadDetail(acronym: Acronym) {
+    const key = acronym.acronym;
+    this.loadingDetails.add(key);
+    this.detailErrors.delete(key);
+    this.contentService.getAcronymDetail(key, acronym.expansion).subscribe({
+      next: d => {
+        this.cardDetails.set(key, d);
+        this.loadingDetails.delete(key);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loadingDetails.delete(key);
+        this.detailErrors.add(key);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  toggleFlip(key: string, event: MouseEvent) {
+    event.stopPropagation();
+    if (this.flippedCards.has(key)) this.flippedCards.delete(key);
+    else this.flippedCards.add(key);
+  }
+
+  selectQuizOption(acronym: string, letter: string, event: MouseEvent) {
+    event.stopPropagation();
+    if (!this.quizSelected.has(acronym)) {
+      this.quizSelected.set(acronym, letter);
+    }
+  }
+
+  isQuizCorrect(acronym: string): boolean {
+    const selected = this.quizSelected.get(acronym);
+    const detail = this.cardDetails.get(acronym);
+    return !!selected && !!detail && selected === detail.quizAnswer;
+  }
+
+  navigateToAcronym(acr: string, event: MouseEvent) {
+    event.stopPropagation();
+    const target = this.allAcronyms.find(a => a.acronym === acr);
+    if (!target) return;
+    this.searchText = '';
+    this.selectedCategory = 'All';
+    this.filter();
+    this.expandedAcronym = acr;
+    if (!this.cardDetails.has(acr) && !this.loadingDetails.has(acr)) {
+      this.loadDetail(target);
+    }
+    setTimeout(() => {
+      document.getElementById('acr-' + acr)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+  }
+
+  onDetailClick(event: MouseEvent) {
+    const el = (event.target as HTMLElement).closest('[data-acr]') as HTMLElement | null;
+    if (el?.dataset['acr']) {
+      this.navigateToAcronym(el.dataset['acr'], event);
+    }
+  }
+
+  linkify(text: string, currentAcronym: string): SafeHtml {
+    if (!text) return this.sanitizer.bypassSecurityTrustHtml('');
+    const sorted = [...this.allAcronyms]
+      .filter(a => a.acronym !== currentAcronym)
+      .sort((a, b) => b.acronym.length - a.acronym.length);
+    let result = this.escapeHtml(text);
+    for (const a of sorted) {
+      const esc = a.acronym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(
+        new RegExp(`(?<![\\w/])${esc}(?![\\w/])`, 'g'),
+        `<span class="acr-link" data-acr="${a.acronym}">${a.acronym}</span>`
+      );
+    }
+    return this.sanitizer.bypassSecurityTrustHtml(result);
+  }
+
+  private escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  getRelatedList(relatedAcronyms: string): string[] {
+    if (!relatedAcronyms) return [];
+    return relatedAcronyms.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  getDetail(acronym: string): AcronymDetail | undefined {
+    return this.cardDetails.get(acronym);
   }
 }
