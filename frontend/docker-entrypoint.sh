@@ -13,11 +13,16 @@ case "$BACKEND_URL" in
   *) BACKEND_URL="https://$BACKEND_URL" ;;
 esac
 
-export BACKEND_URL
-echo "Using BACKEND_URL: $BACKEND_URL"
+# Read the system DNS resolver so nginx can resolve private hostnames at
+# request time rather than startup time (avoids "host not found" on boot).
+RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || echo "127.0.0.11")
 
-# Substitute only BACKEND_URL so nginx \$variable syntax is preserved
-envsubst '${BACKEND_URL}' \
+export BACKEND_URL RESOLVER
+echo "Using BACKEND_URL: $BACKEND_URL"
+echo "Using DNS resolver: $RESOLVER"
+
+# Substitute only our two variables — nginx \$variables are left untouched
+envsubst '${BACKEND_URL} ${RESOLVER}' \
   < /etc/nginx/templates/default.conf.template \
   > /etc/nginx/conf.d/default.conf
 
