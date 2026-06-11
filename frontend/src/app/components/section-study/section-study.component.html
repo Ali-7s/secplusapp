@@ -42,7 +42,7 @@
         @if (loadingExplanation) {
           <div class="loading-container">
             <mat-spinner></mat-spinner>
-            <p>Generating concept explanation with Claude AI...</p>
+            <p>Generating concept explanation...</p>
           </div>
         } @else if (explanationError) {
           <div class="error-container">
@@ -52,7 +52,7 @@
             <button mat-raised-button (click)="explanationError=''; loadExplanation()">Retry</button>
           </div>
         } @else if (regeneratingExplanation) {
-          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating with Claude AI...</p></div>
+          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating explanation...</p></div>
         } @else if (explanation) {
           <div class="learn-content">
             <div class="learn-overview">
@@ -418,7 +418,7 @@
             </div>
             <mat-icon class="exam-intro-icon">assignment</mat-icon>
             <h2>Section Exam: {{ section.name }}</h2>
-            <p>25 exam-level questions · Jason Dion difficulty · Must score ≥ 75% to pass</p>
+            <p>25 exam-level questions · CompTIA difficulty · Must score ≥ 75% to pass</p>
 
             @if (sectionProgress?.examAttempts > 0) {
               <div class="prev-score">

@@ -27,7 +27,7 @@ public class ContentService {
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
-        Your questions match the EXACT difficulty level of Jason Dion's practice exams:
+        Your questions match the EXACT difficulty level of the official CompTIA Security+ exam:
         - Long scenario-based questions that test real-world application
         - Plausible distractors that require deep understanding to eliminate
         - Current threats, technologies, and compliance standards
@@ -166,7 +166,7 @@ public class ContentService {
             Generate %d CompTIA Security+ SY0-701 practice questions for objective %s: "%s"
             Topics: %s
 
-            CRITICAL: Match EXACTLY the difficulty and style of Jason Dion's practice exams:
+            CRITICAL: Match EXACTLY the difficulty and style of the official CompTIA Security+ exam:
             - Include scenario-based questions with detailed context (2-4 paragraphs for hard questions)
             - Make wrong answers plausible — they should be close to correct, require real knowledge to eliminate
             - Mix difficulty: 30%% Easy, 50%% Medium, 20%% Hard
@@ -270,7 +270,7 @@ public class ContentService {
             String prompt = String.format("""
                 Generate %d CompTIA Security+ SY0-701 FULL EXAM questions for %s (%s).
 
-                Match Jason Dion difficulty exactly:
+                Match official CompTIA Security+ exam difficulty:
                 - At least 35%% scenario-based questions with detailed context
                 - At least 15%% multi-select (SELECT ALL THAT APPLY / SELECT TWO)
                 - All wrong answers must be technically plausible
@@ -394,7 +394,7 @@ public class ContentService {
                 Valid category values: Access Control, Cryptography, Network, Protocol, Compliance, Attack, Tool, Cloud, Identity
                 """, batch[1]);
 
-            String response = claude.callClaude(SYSTEM_PROMPT, prompt, 8192);
+            String response = claude.callClaude(SYSTEM_PROMPT, prompt, 16384);
             try {
                 List<Acronym> chunk = mapper.readValue(response, new TypeReference<List<Acronym>>() {});
                 all.addAll(chunk);

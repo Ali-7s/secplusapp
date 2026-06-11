@@ -12,7 +12,7 @@
         <div class="spec"><mat-icon>quiz</mat-icon><span>90 Questions</span></div>
         <div class="spec"><mat-icon>timer</mat-icon><span>90 Minutes</span></div>
         <div class="spec"><mat-icon>bar_chart</mat-icon><span>750/900 to Pass</span></div>
-        <div class="spec"><mat-icon>psychology</mat-icon><span>Jason Dion Difficulty</span></div>
+        <div class="spec"><mat-icon>psychology</mat-icon><span>Exam-Level Difficulty</span></div>
       </div>
       <div class="domain-weights">
         @for (d of ['domain1','domain2','domain3','domain4','domain5']; track d) {
@@ -41,7 +41,7 @@
   @if (state === 'loading') {
     <div class="loading-container">
       <mat-spinner></mat-spinner>
-      <p>Generating 90 exam-level questions with Claude AI...<br><small>This may take 30–60 seconds</small></p>
+      <p>Generating 90 exam-level questions...<br><small>This may take 30–60 seconds</small></p>
     </div>
   }
 
