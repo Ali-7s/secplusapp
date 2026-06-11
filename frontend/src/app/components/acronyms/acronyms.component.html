@@ -1,0 +1,67 @@
+<div class="page-container">
+  <div class="page-header">
+    <mat-icon>abc</mat-icon>
+    <div>
+      <h1>Acronym Glossary</h1>
+      <p>All CompTIA Security+ SY0-701 acronyms with definitions and exam context</p>
+    </div>
+    @if (!loading && allAcronyms.length) {
+      <div class="count-badge">{{ filteredAcronyms.length }} / {{ allAcronyms.length }}</div>
+    }
+  </div>
+
+  <div class="filter-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search acronyms...</mat-label>
+      <input matInput [(ngModel)]="searchText" (ngModelChange)="filter()" placeholder="e.g. AES, encryption...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="cat-field">
+      <mat-label>Category</mat-label>
+      <mat-select [(value)]="selectedCategory" (selectionChange)="filter()">
+        @for (cat of categories; track cat) {
+          <mat-option [value]="cat">{{ cat }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Generating complete acronym list with Claude AI...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <h3>Error loading acronyms</h3>
+      <p>{{ error }}</p>
+      <button mat-raised-button color="primary" (click)="error=''; load()">Retry</button>
+    </div>
+  } @else if (filteredAcronyms.length === 0) {
+    <div class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <p>No acronyms match "{{ searchText }}"</p>
+    </div>
+  } @else {
+    <div class="acronyms-grid">
+      @for (a of filteredAcronyms; track a.acronym) {
+        <mat-card class="acronym-card">
+          <div class="acr-header">
+            <span class="acr-letters">{{ a.acronym }}</span>
+            <span class="acr-category">{{ a.category }}</span>
+          </div>
+          <div class="acr-expansion">{{ a.expansion }}</div>
+          <div class="acr-definition">{{ a.definition }}</div>
+          @if (a.examContext) {
+            <div class="acr-exam"><mat-icon>school</mat-icon> {{ a.examContext }}</div>
+          }
+          @if (a.relatedAcronyms) {
+            <div class="acr-related">Related: {{ a.relatedAcronyms }}</div>
+          }
+        </mat-card>
+      }
+    </div>
+  }
+</div>

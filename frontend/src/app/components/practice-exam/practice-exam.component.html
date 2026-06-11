@@ -1,0 +1,222 @@
+<div class="page-container">
+
+  <!-- INTRO -->
+  @if (state === 'intro') {
+    <div class="intro-page">
+      <div class="intro-hero">
+        <mat-icon>assignment</mat-icon>
+        <h1>Full Practice Exam</h1>
+        <p>Simulate the real CompTIA Security+ SY0-701 exam experience</p>
+      </div>
+      <div class="exam-specs">
+        <div class="spec"><mat-icon>quiz</mat-icon><span>90 Questions</span></div>
+        <div class="spec"><mat-icon>timer</mat-icon><span>90 Minutes</span></div>
+        <div class="spec"><mat-icon>bar_chart</mat-icon><span>750/900 to Pass</span></div>
+        <div class="spec"><mat-icon>psychology</mat-icon><span>Jason Dion Difficulty</span></div>
+      </div>
+      <div class="domain-weights">
+        @for (d of ['domain1','domain2','domain3','domain4','domain5']; track d) {
+          <div class="weight-row">
+            <div class="weight-dot" [style.background]="getDomainColor(d)"></div>
+            <span>{{ getDomainLabel(d) }}</span>
+          </div>
+        }
+      </div>
+      <div class="intro-tips">
+        <mat-icon>lightbulb</mat-icon>
+        <ul>
+          <li>Read each scenario carefully — most traps are in the details</li>
+          <li>Flag uncertain questions and review before submitting</li>
+          <li>Multi-select questions have no partial credit</li>
+          <li>Eliminate obviously wrong answers first</li>
+        </ul>
+      </div>
+      <button mat-raised-button color="primary" class="start-btn" (click)="startExam()">
+        <mat-icon>play_arrow</mat-icon> Start Exam
+      </button>
+    </div>
+  }
+
+  <!-- LOADING -->
+  @if (state === 'loading') {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Generating 90 exam-level questions with Claude AI...<br><small>This may take 30–60 seconds</small></p>
+    </div>
+  }
+
+  <!-- ANSWERING -->
+  @if (state === 'answering') {
+    <div class="exam-page">
+      <!-- Top bar -->
+      <div class="exam-topbar" [class.warning]="timerWarning">
+        <div class="exam-topbar-left">
+          <span class="exam-title">Security+ SY0-701 Practice Exam</span>
+          <span class="q-progress">{{ answeredCount }} / {{ questions.length }} answered</span>
+        </div>
+        <div class="exam-timer" [class.danger]="timerWarning">
+          <mat-icon>timer</mat-icon> {{ timerDisplay }}
+        </div>
+        <button mat-raised-button color="warn" (click)="submitExam()" class="submit-top-btn">
+          Submit Exam
+        </button>
+      </div>
+
+      <!-- Timer bar -->
+      <mat-progress-bar mode="determinate" [value]="timerPercent"
+        [color]="timerWarning ? 'warn' : 'primary'">
+      </mat-progress-bar>
+
+      <div class="exam-body">
+        <!-- Navigator -->
+        <div class="q-navigator">
+          <div class="nav-header">Questions</div>
+          <div class="nav-grid">
+            @for (q of questions; track q.id; let i = $index) {
+              <button class="nav-btn"
+                [class.answered]="answers[q.id]"
+                [class.flagged]="flagged.has(q.id)"
+                [class.current]="i === currentIndex"
+                (click)="currentIndex = i">{{ i + 1 }}</button>
+            }
+          </div>
+          <mat-divider></mat-divider>
+          <div class="nav-legend">
+            <div class="leg"><div class="leg-dot current"></div> Current</div>
+            <div class="leg"><div class="leg-dot answered"></div> Answered</div>
+            <div class="leg"><div class="leg-dot flagged"></div> Flagged</div>
+            <div class="leg"><div class="leg-dot"></div> Unanswered</div>
+          </div>
+        </div>
+
+        <!-- Question -->
+        <div class="q-main">
+          @let q = currentQ;
+          <mat-card class="question-card">
+            <mat-card-content>
+              <div class="q-header">
+                <span class="q-number">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
+                <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                <div class="domain-tag" [style.background]="getDomainColor(q.domainId) + '22'" [style.color]="getDomainColor(q.domainId)">
+                  {{ q.domainId }}
+                </div>
+                @if (q.type === 'MULTI_SELECT') {
+                  <span class="q-type">SELECT ALL THAT APPLY</span>
+                }
+                <button mat-icon-button (click)="toggleFlag(q.id)" [class.flagged-btn]="flagged.has(q.id)"
+                  [title]="flagged.has(q.id) ? 'Remove flag' : 'Flag for review'">
+                  <mat-icon>{{ flagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
+                </button>
+              </div>
+
+              @if (q.scenario) {
+                <div class="scenario-box">
+                  <div class="scenario-label">SCENARIO</div>
+                  {{ q.scenario }}
+                </div>
+              }
+
+              <p class="q-stem">{{ q.stem }}</p>
+
+              <div class="options">
+                @for (opt of q.options; track opt) {
+                  <button class="option-btn" [class.selected]="isSelected(q.id, opt.charAt(0))"
+                    (click)="selectAnswer(q.id, opt.charAt(0))">
+                    <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                    <span class="opt-text">{{ opt.slice(3) }}</span>
+                  </button>
+                }
+              </div>
+
+              <div class="q-nav-btns">
+                <button mat-stroked-button [disabled]="currentIndex === 0" (click)="currentIndex = currentIndex - 1">
+                  <mat-icon>chevron_left</mat-icon> Previous
+                </button>
+                <button mat-raised-button color="primary"
+                  [disabled]="currentIndex === questions.length - 1"
+                  (click)="currentIndex = currentIndex + 1">
+                  Next <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- SUBMITTING -->
+  @if (state === 'submitting') {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Grading your exam...</p>
+    </div>
+  }
+
+  <!-- RESULT -->
+  @if (state === 'result' && result) {
+    <div class="result-page">
+      <div class="result-hero" [class.passed]="result.passed">
+        <mat-icon class="result-icon">{{ result.passed ? 'emoji_events' : 'school' }}</mat-icon>
+        <h1>{{ result.passed ? 'Congratulations!' : 'Keep Studying' }}</h1>
+        <div class="result-score-row">
+          <div class="result-pct">{{ result.scorePercent | number:'1.1-1' }}%</div>
+          <div class="result-scaled">Scaled Score: {{ getScaledScore() }} / 900</div>
+          <div class="result-passing">Passing: 750/900 (83%)</div>
+        </div>
+        <div class="result-stats">
+          <span>{{ result.correctAnswers }} correct</span>
+          <span>{{ result.totalQuestions - result.correctAnswers }} incorrect</span>
+          <span>Time: {{ formatTime(result.timeTakenSeconds) }}</span>
+        </div>
+      </div>
+
+      <mat-card class="result-feedback">
+        <p>{{ result.feedback }}</p>
+        <p class="next-steps">{{ result.nextSteps }}</p>
+      </mat-card>
+
+      <!-- Domain breakdown -->
+      <h2>Domain Performance</h2>
+      <div class="domain-breakdown">
+        @for (entry of $any(result.domainBreakdown) | keyvalue; track entry.key) {
+          <div class="db-row">
+            <div class="db-dot" [style.background]="getDomainColor($any(entry.key))"></div>
+            <div class="db-name">{{ getDomainLabel($any(entry.key)) }}</div>
+            <mat-progress-bar mode="determinate" [value]="$any(entry.value)"
+              [style.--mdc-linear-progress-active-indicator-color]="getDomainColor($any(entry.key))">
+            </mat-progress-bar>
+            <div class="db-pct" [style.color]="getDomainColor($any(entry.key))">{{ $any(entry.value) }}%</div>
+          </div>
+        }
+      </div>
+
+      <div class="result-actions">
+        <button mat-raised-button (click)="retake()"><mat-icon>refresh</mat-icon> Take Another Exam</button>
+        <button mat-raised-button color="primary" routerLink="/progress">
+          <mat-icon>insights</mat-icon> View Full Progress
+        </button>
+      </div>
+
+      <!-- Question review -->
+      <h2>Question Review</h2>
+      @for (r of result.results; track r.questionId; let i = $index) {
+        <mat-card class="review-card" [class.correct-card]="r.correct" [class.wrong-card]="!r.correct">
+          <mat-card-content>
+            <div class="rr-header">
+              <mat-icon [style.color]="r.correct ? '#2e7d32' : '#c62828'">{{ r.correct ? 'check_circle' : 'cancel' }}</mat-icon>
+              <span class="q-number">Q{{ i + 1 }}</span>
+              <span class="badge {{ r.difficulty.toLowerCase() }}">{{ r.difficulty }}</span>
+            </div>
+            <p class="rr-stem">{{ r.stem }}</p>
+            <div class="rr-ans">
+              <span>Your answer: <strong>{{ r.selectedAnswer || 'None' }}</strong></span>
+              @if (!r.correct) { <span class="rr-correct-ans">Correct: <strong>{{ r.correctAnswer }}</strong></span> }
+            </div>
+            <div class="explanation-box"><mat-icon>info</mat-icon><p>{{ r.explanation }}</p></div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

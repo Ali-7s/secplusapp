@@ -1,0 +1,277 @@
+<div class="admin-page">
+  <!-- Header -->
+  <div class="admin-header">
+    <div class="admin-title">
+      <button mat-icon-button routerLink="/" class="back-btn">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <mat-icon>admin_panel_settings</mat-icon>
+      <div>
+        <h1>Admin Panel</h1>
+        <p>Manage users and track their progress</p>
+      </div>
+    </div>
+    <div class="admin-stats">
+      <div class="stat-chip">
+        <mat-icon>people</mat-icon>
+        <span>{{ stats.totalUsers }} users</span>
+      </div>
+      <div class="stat-chip active">
+        <mat-icon>how_to_reg</mat-icon>
+        <span>{{ stats.enabledUsers }} active</span>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading users...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-raised-button (click)="loadUsers()">Retry</button>
+    </div>
+  } @else {
+
+    <!-- User Table -->
+    <mat-card class="users-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>people</mat-icon> All Users
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="users" class="users-table">
+
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef>Email</th>
+              <td mat-cell *matCellDef="let user">
+                <div class="user-email">
+                  <mat-icon class="user-avatar">account_circle</mat-icon>
+                  <span>{{ user.email }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef>Role</th>
+              <td mat-cell *matCellDef="let user">
+                <span class="role-chip" [class.admin]="user.role === 'ADMIN'">
+                  {{ user.role }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="enabled">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let user">
+                <mat-slide-toggle
+                  [checked]="user.enabled"
+                  (change)="toggleEnabled(user)"
+                  [color]="'primary'">
+                  {{ user.enabled ? 'Active' : 'Disabled' }}
+                </mat-slide-toggle>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="created">
+              <th mat-header-cell *matHeaderCellDef>Joined</th>
+              <td mat-cell *matCellDef="let user" class="date-cell">
+                {{ user.createdAt | date:'MMM d, y' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="lastLogin">
+              <th mat-header-cell *matHeaderCellDef>Last Login</th>
+              <td mat-cell *matCellDef="let user" class="date-cell">
+                {{ user.lastLogin ? (user.lastLogin | date:'MMM d, y') : 'Never' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="progress">
+              <th mat-header-cell *matHeaderCellDef>Progress</th>
+              <td mat-cell *matCellDef="let user">
+                <div class="progress-cell">
+                  <mat-progress-bar mode="determinate"
+                    [value]="user.progressSummary?.overallProgress || 0"
+                    class="progress-bar">
+                  </mat-progress-bar>
+                  <span class="progress-pct">
+                    {{ (user.progressSummary?.overallProgress || 0) | number:'1.0-0' }}%
+                  </span>
+                </div>
+                <div class="progress-sub">
+                  {{ user.progressSummary?.sectionsPassed || 0 }} /
+                  {{ user.progressSummary?.totalSections || 0 }} sections passed
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let user">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary"
+                          (click)="selectUser(user.id)"
+                          [matTooltip]="selectedUserId === user.id ? 'Hide progress' : 'View progress'">
+                    <mat-icon>{{ selectedUserId === user.id ? 'expand_less' : 'bar_chart' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn"
+                          (click)="deleteUser(user)"
+                          matTooltip="Delete user">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                [class.selected-row]="selectedUserId === row.id"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Progress Detail Panel -->
+    @if (selectedUserId) {
+      <mat-card class="progress-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>bar_chart</mat-icon>
+            Progress — {{ selectedUser()?.email }}
+          </mat-card-title>
+          <mat-card-subtitle>
+            {{ (selectedUser()?.progressSummary?.overallProgress || 0) | number:'1.0-0' }}% complete ·
+            {{ selectedUser()?.progressSummary?.sectionsPassed || 0 }} sections passed
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (progressLoading) {
+            <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+          } @else if (userProgress.length === 0) {
+            <p class="no-data">No progress data yet.</p>
+          } @else {
+
+            <!-- Edit form -->
+            @if (editingSection) {
+              <div class="edit-panel">
+                <h3>Edit: Section {{ editingSection.sectionId }}</h3>
+                <form [formGroup]="editForm" class="edit-form">
+                  <div class="edit-row">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Best Exam Score (%)</mat-label>
+                      <input matInput type="number" formControlName="bestExamScore" min="0" max="100" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Exam Attempts</mat-label>
+                      <input matInput type="number" formControlName="examAttempts" min="0" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Flashcards Reviewed</mat-label>
+                      <input matInput type="number" formControlName="flashcardsReviewed" min="0" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Questions Answered</mat-label>
+                      <input matInput type="number" formControlName="practiceQuestionsAnswered" min="0" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Questions Correct</mat-label>
+                      <input matInput type="number" formControlName="practiceQuestionsCorrect" min="0" />
+                    </mat-form-field>
+                  </div>
+                  <div class="edit-toggles">
+                    <mat-slide-toggle formControlName="examPassed" color="primary">Exam Passed</mat-slide-toggle>
+                    <mat-slide-toggle formControlName="labCompleted" color="primary">Lab Completed</mat-slide-toggle>
+                    <mat-slide-toggle formControlName="conceptRead" color="primary">Concept Read</mat-slide-toggle>
+                    <mat-slide-toggle formControlName="unlocked" color="primary">Unlocked</mat-slide-toggle>
+                  </div>
+                  <div class="edit-actions">
+                    <button mat-raised-button color="primary" type="button" (click)="saveEdit()">
+                      <mat-icon>save</mat-icon> Save
+                    </button>
+                    <button mat-button type="button" (click)="cancelEdit()">Cancel</button>
+                  </div>
+                </form>
+              </div>
+            }
+
+            <!-- Progress table -->
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="userProgress" class="progress-table">
+
+                <ng-container matColumnDef="section">
+                  <th mat-header-cell *matHeaderCellDef>Section</th>
+                  <td mat-cell *matCellDef="let p">
+                    <span class="section-id">{{ p.sectionId }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let p">
+                    @if (p.examPassed) {
+                      <span class="status-badge passed"><mat-icon>verified</mat-icon> Passed</span>
+                    } @else if (p.examAttempts > 0) {
+                      <span class="status-badge attempted">Attempted</span>
+                    } @else if (p.unlocked) {
+                      <span class="status-badge unlocked">Unlocked</span>
+                    } @else {
+                      <span class="status-badge locked"><mat-icon>lock</mat-icon></span>
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="score">
+                  <th mat-header-cell *matHeaderCellDef>Best Score</th>
+                  <td mat-cell *matCellDef="let p">
+                    @if (p.examAttempts > 0) {
+                      <span [class.passed-score]="p.bestExamScore >= 75">
+                        {{ p.bestExamScore | number:'1.0-0' }}%
+                      </span>
+                    } @else { — }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="activity">
+                  <th mat-header-cell *matHeaderCellDef>Activity</th>
+                  <td mat-cell *matCellDef="let p">
+                    <div class="activity-chips">
+                      <span class="mini-chip" [class.done]="p.conceptRead" matTooltip="Learn">
+                        <mat-icon>menu_book</mat-icon>
+                      </span>
+                      <span class="mini-chip" [class.done]="p.flashcardsReviewed >= 10" matTooltip="Flashcards">
+                        <mat-icon>style</mat-icon>
+                      </span>
+                      <span class="mini-chip" [class.done]="p.labCompleted" matTooltip="Lab">
+                        <mat-icon>science</mat-icon>
+                      </span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="edit">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let p">
+                    <button mat-icon-button color="primary" (click)="startEdit(p)" matTooltip="Edit progress">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['section','status','score','activity','edit']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['section','status','score','activity','edit'];"
+                    [class.editing-row]="editingSection?.sectionId === row.sectionId"></tr>
+              </table>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

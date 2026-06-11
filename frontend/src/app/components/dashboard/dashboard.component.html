@@ -1,0 +1,156 @@
+<div class="page-container">
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading curriculum...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <h3>Could not connect to backend</h3>
+      <p>{{ error }}</p>
+      <button mat-raised-button color="primary" (click)="ngOnInit()">Retry</button>
+    </div>
+  } @else {
+
+    <!-- Hero section -->
+    <div class="hero">
+      <div class="hero-text">
+        <h1>CompTIA Security+ SY0-701</h1>
+        <p>Master all 5 domains with AI-powered flashcards, scenario questions, and hands-on labs — at Jason Dion difficulty.</p>
+        <div class="hero-actions">
+          <button mat-raised-button color="primary" [routerLink]="['/section', getCurrentSection()]">
+            <mat-icon>play_arrow</mat-icon> Continue Studying
+          </button>
+          <button mat-raised-button [routerLink]="'/roadmap'">
+            <mat-icon>map</mat-icon> View Roadmap
+          </button>
+          <button mat-raised-button [routerLink]="'/exam/full'">
+            <mat-icon>assignment</mat-icon> Full Practice Exam
+          </button>
+        </div>
+      </div>
+
+      @if (summary) {
+        <div class="hero-stats">
+          <div class="stat-ring">
+            <svg viewBox="0 0 100 100" class="ring-svg">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#3f51b5" stroke-width="8"
+                [attr.stroke-dasharray]="(summary.overallProgress / 100) * 251.2 + ' 251.2'"
+                stroke-dashoffset="0" stroke-linecap="round"
+                transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="ring-label">
+              <span class="ring-pct">{{ summary.overallProgress | number:'1.0-0' }}%</span>
+              <span class="ring-sub">Complete</span>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="stat-value">{{ summary.sectionsPassed }}</span>
+              <span class="stat-label">Sections Passed</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ summary.totalSections }}</span>
+              <span class="stat-label">Total Sections</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ summary.totalQuestionsAnswered }}</span>
+              <span class="stat-label">Questions Done</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ summary.overallAccuracy | number:'1.0-0' }}%</span>
+              <span class="stat-label">Accuracy</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Domains grid -->
+    <h2 class="section-title">Study Domains</h2>
+    <div class="domains-grid">
+      @for (domain of domains; track domain.id) {
+        <mat-card class="domain-card" [routerLink]="['/domain', domain.id]">
+          <mat-card-header>
+            <div class="domain-icon" [style.background]="domain.color + '22'" [style.color]="domain.color">
+              <mat-icon>{{ domain.icon }}</mat-icon>
+            </div>
+            <div>
+              <mat-card-title>{{ domain.number }}</mat-card-title>
+              <mat-card-subtitle>{{ domain.name }}</mat-card-subtitle>
+            </div>
+            <div class="domain-weight">{{ domain.examWeight }}%</div>
+          </mat-card-header>
+
+          <mat-card-content>
+            <p class="domain-desc">{{ domain.description }}</p>
+
+            <div class="domain-progress">
+              <div class="prog-label">
+                <span>{{ domain.sections.length }} sections</span>
+                <span>{{ getDomainProgress(domain.id) | number:'1.0-0' }}%</span>
+              </div>
+              <mat-progress-bar mode="determinate"
+                [value]="getDomainProgress(domain.id)"
+                [color]="getDomainProgress(domain.id) >= 100 ? 'accent' : 'primary'">
+              </mat-progress-bar>
+            </div>
+
+            <div class="section-pills">
+              @for (section of domain.sections; track section.id) {
+                <div class="section-pill"
+                  [class.passed]="getSectionStatus(section.id) === 'passed'"
+                  [class.unlocked]="getSectionStatus(section.id) === 'unlocked'"
+                  [class.locked]="getSectionStatus(section.id) === 'locked'"
+                  [matTooltip]="section.name">
+                  {{ section.objectiveNumber }}
+                </div>
+              }
+            </div>
+          </mat-card-content>
+
+          <mat-card-actions>
+            <button mat-button [routerLink]="['/domain', domain.id]" (click)="$event.stopPropagation()">
+              VIEW SECTIONS
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      }
+    </div>
+
+    <!-- Quick actions -->
+    <h2 class="section-title">Quick Access</h2>
+    <div class="quick-grid">
+      <mat-card class="quick-card" routerLink="/acronyms">
+        <mat-icon style="color: #7b1fa2">abc</mat-icon>
+        <div>
+          <div class="quick-title">Acronym Glossary</div>
+          <div class="quick-sub">All SY0-701 acronyms with definitions</div>
+        </div>
+      </mat-card>
+      <mat-card class="quick-card" routerLink="/exam/full">
+        <mat-icon style="color: #c62828">assignment</mat-icon>
+        <div>
+          <div class="quick-title">Full Practice Exam</div>
+          <div class="quick-sub">90 questions · 90 minutes · Dion difficulty</div>
+        </div>
+      </mat-card>
+      <mat-card class="quick-card" routerLink="/progress">
+        <mat-icon style="color: #1565c0">insights</mat-icon>
+        <div>
+          <div class="quick-title">My Progress</div>
+          <div class="quick-sub">Scores, accuracy, and weak areas</div>
+        </div>
+      </mat-card>
+      <mat-card class="quick-card" routerLink="/roadmap">
+        <mat-icon style="color: #2e7d32">map</mat-icon>
+        <div>
+          <div class="quick-title">Study Roadmap</div>
+          <div class="quick-sub">Recommended study order and timeline</div>
+        </div>
+      </mat-card>
+    </div>
+  }
+</div>

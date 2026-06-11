@@ -1,0 +1,98 @@
+<div class="page-container">
+  <div class="setup-page">
+    <div class="setup-header">
+      <mat-icon>key</mat-icon>
+      <h1>Setup Claude API</h1>
+      <p>The study platform uses Claude AI to generate questions, flashcards, explanations, and labs. You need an Anthropic API key to unlock AI features.</p>
+    </div>
+
+    <div class="setup-steps">
+
+      <!-- Step 1: Get API key -->
+      <mat-card class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Get an Anthropic API Key</h3>
+          <p>Sign up at <strong>console.anthropic.com</strong> and create an API key. New accounts get free credits.</p>
+          <div class="step-note">The key starts with <code>sk-ant-...</code></div>
+        </div>
+      </mat-card>
+
+      <!-- Step 2: Set environment variable -->
+      <mat-card class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Set the Environment Variable</h3>
+          <p>The backend reads your key from the <code>ANTHROPIC_API_KEY</code> environment variable. Set it before starting Spring Boot:</p>
+          <div class="code-block">
+            <div class="code-line"><span class="code-comment"># macOS / Linux</span></div>
+            <div class="code-line">export ANTHROPIC_API_KEY="sk-ant-your-key-here"</div>
+            <div class="code-line"><span class="code-comment"># Then start the backend:</span></div>
+            <div class="code-line">cd backend && mvn spring-boot:run</div>
+          </div>
+          <div class="code-block" style="margin-top:10px">
+            <div class="code-line"><span class="code-comment"># Windows PowerShell</span></div>
+            <div class="code-line">$env:ANTHROPIC_API_KEY="sk-ant-your-key-here"</div>
+            <div class="code-line">cd backend; mvn spring-boot:run</div>
+          </div>
+          <div class="step-note" style="margin-top:10px">
+            Alternatively, add it to <code>backend/src/main/resources/application.properties</code>:<br>
+            <code>anthropic.api.key=sk-ant-your-key-here</code>
+          </div>
+        </div>
+      </mat-card>
+
+      <!-- Step 3: Start frontend -->
+      <mat-card class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Start the Angular Frontend</h3>
+          <div class="code-block">
+            <div class="code-line">cd frontend && ng serve</div>
+          </div>
+          <p style="margin-top:10px">Frontend runs on <code>http://localhost:4200</code> · Backend on <code>http://localhost:8080</code></p>
+        </div>
+      </mat-card>
+
+      <!-- Step 4: Test -->
+      <mat-card class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Test the Connection</h3>
+          <p>Click below to verify the backend is running and the API key is configured.</p>
+
+          <button mat-raised-button color="primary" (click)="testConnection()" [disabled]="testing">
+            <mat-icon [class.spin]="testing">{{ testing ? 'refresh' : 'wifi' }}</mat-icon>
+            {{ testing ? 'Testing...' : 'Test Connection' }}
+          </button>
+
+          @if (testResult === 'success') {
+            <div class="result-success">
+              <mat-icon>check_circle</mat-icon>
+              <div>
+                <strong>Connected!</strong> Claude API is configured and ready.
+                <br><a routerLink="/">Go to Dashboard →</a>
+              </div>
+            </div>
+          }
+          @if (testResult === 'error') {
+            <div class="result-error">
+              <mat-icon>error</mat-icon>
+              <div><strong>Connection failed:</strong> {{ testError }}</div>
+            </div>
+          }
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- Pricing note -->
+    <mat-card class="pricing-note">
+      <mat-icon>info</mat-icon>
+      <div>
+        <strong>API Cost Estimate:</strong> Each section's flashcards/questions costs ~$0.01–0.05 with Claude Sonnet.
+        A full study session (all 28 sections × 5 features) costs approximately $2–5 total.
+        Responses are cached, so retrying the same section is free.
+      </div>
+    </mat-card>
+  </div>
+</div>

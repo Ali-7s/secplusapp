@@ -1,0 +1,109 @@
+<div class="page-container">
+  <div class="page-header">
+    <mat-icon>insights</mat-icon>
+    <div><h1>My Progress</h1><p>Track your scores, accuracy, and study activity</p></div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container"><mat-spinner></mat-spinner><p>Loading progress...</p></div>
+  } @else if (summary) {
+
+    <!-- Top stats -->
+    <div class="stats-row">
+      <mat-card class="stat-card">
+        <mat-icon style="color:#3f51b5">school</mat-icon>
+        <div class="stat-val">{{ summary.sectionsPassed }} / {{ summary.totalSections }}</div>
+        <div class="stat-lbl">Sections Passed</div>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-icon style="color:#2e7d32">trending_up</mat-icon>
+        <div class="stat-val">{{ summary.overallProgress | number:'1.0-0' }}%</div>
+        <div class="stat-lbl">Overall Progress</div>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-icon style="color:#e65100">quiz</mat-icon>
+        <div class="stat-val">{{ summary.totalQuestionsAnswered }}</div>
+        <div class="stat-lbl">Questions Answered</div>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-icon style="color:#7b1fa2">percent</mat-icon>
+        <div class="stat-val">{{ summary.overallAccuracy | number:'1.0-0' }}%</div>
+        <div class="stat-lbl">Overall Accuracy</div>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-icon style="color:#1565c0">style</mat-icon>
+        <div class="stat-val">{{ summary.totalFlashcardsReviewed }}</div>
+        <div class="stat-lbl">Flashcards Reviewed</div>
+      </mat-card>
+    </div>
+
+    <!-- Domain breakdown -->
+    <h2 class="section-title">Domain Breakdown</h2>
+    <div class="domain-cards">
+      @for (dp of summary.domainProgress; track dp.domainId) {
+        <mat-card class="domain-prog-card">
+          <div class="dp-header" [style.border-left-color]="dp.color">
+            <div class="dp-name">{{ dp.domainName }}</div>
+            <div class="dp-pct" [style.color]="dp.color">{{ dp.progress | number:'1.0-0' }}%</div>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="dp.progress"
+            [style.--mdc-linear-progress-active-indicator-color]="dp.color">
+          </mat-progress-bar>
+          <div class="dp-sub">{{ dp.sectionsPassed }} / {{ dp.totalSections }} sections passed</div>
+        </mat-card>
+      }
+    </div>
+
+    <!-- Per-section detail -->
+    <h2 class="section-title">Section Details</h2>
+    @for (domain of domains; track domain.id) {
+      <div class="domain-section-group">
+        <div class="dsgroup-header" [style.background]="domain.color + '22'" [style.border-left-color]="domain.color">
+          <mat-icon [style.color]="domain.color">{{ domain.icon }}</mat-icon>
+          <span>{{ domain.number }} — {{ domain.name }}</span>
+          <span class="domain-weight">{{ domain.examWeight }}%</span>
+        </div>
+        @for (sp of getDomainSections(domain.id); track sp.sectionId) {
+          <div class="section-row" [class.passed-row]="sp.examPassed" [class.locked-row]="!sp.unlocked">
+            <div class="sr-status">
+              <mat-icon [style.color]="sp.examPassed ? '#2e7d32' : sp.unlocked ? '#1565c0' : '#bbb'">
+                {{ sp.examPassed ? 'check_circle' : sp.unlocked ? 'lock_open' : 'lock' }}
+              </mat-icon>
+            </div>
+            <div class="sr-name">{{ getSectionName(sp.sectionId) }}</div>
+            <div class="sr-meta">
+              @if (sp.examPassed) {
+                <span class="sr-badge passed">{{ sp.bestExamScore | number:'1.0-0' }}%</span>
+              } @else if (sp.examAttempts > 0) {
+                <span class="sr-badge failed">Best: {{ sp.bestExamScore | number:'1.0-0' }}%</span>
+              }
+              <span class="sr-info"><mat-icon>style</mat-icon>{{ sp.flashcardsReviewed }}</span>
+              <span class="sr-info"><mat-icon>quiz</mat-icon>{{ sp.practiceQuestionsAnswered }}</span>
+              @if (sp.labCompleted) { <span class="sr-badge lab">Lab ✓</span> }
+            </div>
+            @if (sp.unlocked) {
+              <a mat-icon-button [routerLink]="['/section', sp.sectionId]">
+                <mat-icon>arrow_forward</mat-icon>
+              </a>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Weak areas -->
+    @if (getWeakAreas().length) {
+      <h2 class="section-title">Areas to Improve</h2>
+      <mat-card class="weak-card">
+        @for (p of getWeakAreas(); track p.sectionId) {
+          <div class="weak-row">
+            <mat-icon style="color:#f44336">trending_down</mat-icon>
+            <div class="weak-name">{{ getSectionName(p.sectionId) }}</div>
+            <div class="weak-score">{{ p.bestExamScore | number:'1.0-0' }}% (need 75%)</div>
+            <a mat-button color="primary" [routerLink]="['/section', p.sectionId]">Study</a>
+          </div>
+        }
+      </mat-card>
+    }
+  }
+</div>

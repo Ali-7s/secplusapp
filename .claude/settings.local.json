@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java --version)",
+      "Bash(npm list *)",
+      "Bash(npx @angular/cli version)",
+      "Bash(mvn --version)",
+      "Bash(ng new *)",
+      "Bash(sudo chmod -R 755 /Users/ali/.npm/_cacache)",
+      "Bash(npm cache *)",
+      "Bash(sudo chown -R 501:20 \"/Users/ali/.npm\")",
+      "Bash(ls /Users/ali/.npm/ 2>/dev/null || echo \"no npm dir\")",
+      "Bash(rm -rf /Users/ali/.npm/_cacache/tmp 2>/dev/null || true; ng new frontend --routing --style=scss --standalone --skip-git --no-interactive --skip-install 2>&1 | tail -5)",
+      "Bash(npm install *)",
+      "Bash(Read /private/tmp/claude-501/-Users-ali-Desktop-comptia/38143f3e-e638-4b32-a9cc-5791b7f58853/tasks/b0fi23hx8.output)",
+      "Bash(ng add *)",
+      "Bash(mvn compile *)",
+      "Bash(ng build *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(mvn spring-boot:run -q)",
+      "Bash(echo \"BACKEND_STARTING_PID=$!\")",
+      "Bash(ng serve *)",
+      "Bash(curl -s http://localhost:8080/api/status)",
+      "Bash(pkill -f \"spring-boot:run\")",
+      "Bash(pkill -f \"SecurityPlusApplication\")",
+      "Bash(curl -s \"http://localhost:8080/api/content/explain/1.1\")",
+      "Bash(tail -30 /tmp/backend.log)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['projects'][list\\(d['projects']\\)[0]]['architect']['build']['options'].get\\('outputPath','not found'\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('name'\\)\\); print\\(d.get\\('scripts',{}\\).get\\('build',''\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(npx ng *)",
+      "Bash(mvn package *)"
+    ]
+  }
+}

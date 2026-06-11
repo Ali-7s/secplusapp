@@ -1,0 +1,130 @@
+<mat-sidenav-container class="app-container">
+
+  <!-- Sidenav — always in DOM so #sidenav ref is always valid -->
+  <mat-sidenav #sidenav mode="over" class="app-sidenav">
+    @if (isLoggedIn) {
+      <div class="sidenav-header">
+        <mat-icon class="logo-icon">shield</mat-icon>
+        <div>
+          <div class="logo-title">Security+</div>
+          <div class="logo-sub">SY0-701 Study Platform</div>
+        </div>
+      </div>
+
+      <div class="sidenav-user">
+        <div class="user-avatar-sm">{{ userInitial }}</div>
+        <div class="user-info-sm">
+          <div class="user-email-sm">{{ userEmail }}</div>
+          <div class="user-role-sm">{{ isAdmin ? 'Administrator' : 'Student' }}</div>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>Overall Progress</span>
+          <span>{{ overallProgress | number:'1.0-0' }}%</span>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="overallProgress" color="accent"></mat-progress-bar>
+      </div>
+
+      <mat-nav-list>
+        @for (item of navItems; track item.path) {
+          <a mat-list-item [routerLink]="item.path" routerLinkActive="active-link"
+             [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+             (click)="sidenav.close()">
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+          </a>
+        }
+        @if (isAdmin) {
+          <mat-divider></mat-divider>
+          <a mat-list-item routerLink="/admin" routerLinkActive="active-link" (click)="sidenav.close()">
+            <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+            <span matListItemTitle>Admin Panel</span>
+          </a>
+        }
+      </mat-nav-list>
+
+      <div class="sidenav-bottom">
+        @if (!isConfigured) {
+          <div class="config-warning">
+            <mat-icon>warning</mat-icon>
+            <span>API key not configured</span>
+            <a mat-button [routerLink]="'/setup'" (click)="sidenav.close()">Setup</a>
+          </div>
+        }
+        <button mat-button class="logout-btn" (click)="logout(); sidenav.close()">
+          <mat-icon>logout</mat-icon> Sign Out
+        </button>
+      </div>
+    }
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="app-toolbar" color="primary">
+      @if (isLoggedIn) {
+        <button mat-icon-button (click)="sidenav.toggle()" class="menu-btn">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <div class="toolbar-brand" routerLink="/">
+        <mat-icon>shield</mat-icon>
+        <span class="brand-text">Security+ SY0-701</span>
+      </div>
+      <span class="toolbar-spacer"></span>
+
+      @if (isLoggedIn) {
+        <nav class="desktop-nav">
+          @for (item of navItems; track item.path) {
+            <a mat-button [routerLink]="item.path" routerLinkActive="active-nav"
+               [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
+              <mat-icon>{{ item.icon }}</mat-icon>
+              {{ item.label }}
+            </a>
+          }
+        </nav>
+
+        <!-- User avatar menu -->
+        <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-btn">
+          <div class="user-avatar">{{ userInitial }}</div>
+          <mat-icon class="chevron-icon">expand_more</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <div class="menu-user-info">
+            <div class="menu-email">{{ userEmail }}</div>
+            <div class="menu-role">{{ isAdmin ? 'Administrator' : 'Student' }}</div>
+          </div>
+          <mat-divider></mat-divider>
+          @if (isAdmin) {
+            <button mat-menu-item routerLink="/admin">
+              <mat-icon>admin_panel_settings</mat-icon>
+              Admin Panel
+            </button>
+          }
+          <button mat-menu-item routerLink="/progress">
+            <mat-icon>insights</mat-icon>
+            My Progress
+          </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            Sign Out
+          </button>
+        </mat-menu>
+      } @else {
+        <a mat-button routerLink="/login">Sign In</a>
+        <a mat-raised-button routerLink="/register" class="register-btn">Get Started</a>
+      }
+    </mat-toolbar>
+
+    <main class="app-content">
+      @if (isLoggedIn && !isConfigured) {
+        <div class="api-banner">
+          <mat-icon>info</mat-icon>
+          <span>Claude API not configured. <a routerLink="/setup">Set your API key</a> to enable AI content.</span>
+        </div>
+      }
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

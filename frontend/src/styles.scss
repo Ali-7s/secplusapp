@@ -1,0 +1,84 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; background: #f5f5f5; }
+
+/* Page containers */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  @media (max-width: 600px) { padding: 12px; }
+}
+
+/* Cards */
+.card-grid {
+  display: grid;
+  gap: 16px;
+  &.cols-2 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+  &.cols-3 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+  &.cols-5 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+  @media (max-width: 480px) {
+    gap: 12px;
+    &.cols-2, &.cols-3, &.cols-5 { grid-template-columns: 1fr; }
+  }
+}
+
+/* Domain colors */
+.domain-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;
+}
+
+/* Loading state */
+.loading-container {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; gap: 16px;
+  mat-spinner { opacity: 0.7; }
+  p { color: #666; font-size: 14px; }
+}
+
+/* Error state */
+.error-container {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 20px; gap: 12px; text-align: center;
+  mat-icon { font-size: 48px; width: 48px; height: 48px; color: #f44336; }
+  h3 { margin: 0; color: #333; }
+  p { margin: 0; color: #666; font-size: 14px; max-width: 400px; }
+}
+
+/* Progress ring utility */
+.progress-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Difficulty badges */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+  &.easy { background: #e8f5e9; color: #2e7d32; }
+  &.medium { background: #fff3e0; color: #e65100; }
+  &.hard { background: #fce4ec; color: #c62828; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 3px; }
+
+/* Utility */
+.text-muted { color: #757575; }
+.text-success { color: #2e7d32; }
+.text-danger { color: #c62828; }
+.fw-600 { font-weight: 600; }
+.gap-8 { gap: 8px; }
+.flex-center { display: flex; align-items: center; }

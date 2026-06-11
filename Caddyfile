@@ -1,0 +1,4 @@
+# Replace with your actual domain. Caddy handles HTTPS automatically.
+study.yourdomain.com {
+    reverse_proxy frontend:80
+}

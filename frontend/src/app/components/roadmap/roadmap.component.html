@@ -1,0 +1,132 @@
+<div class="page-container">
+  <div class="page-header">
+    <mat-icon>map</mat-icon>
+    <div>
+      <h1>Study Roadmap</h1>
+      <p>Recommended study order · ~{{ totalWeeks }} weeks total · {{ domains.length }} domains · 28 objectives</p>
+    </div>
+  </div>
+
+  <!-- Timeline overview -->
+  <mat-card class="timeline-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>schedule</mat-icon>
+      <mat-card-title>Exam Prep Timeline</mat-card-title>
+      <mat-card-subtitle>Study plan based on official exam weights</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="timeline-bar">
+        @for (plan of studyPlan; track plan.domainId) {
+          @let domain = getDomain(plan.domainId);
+          <div class="timeline-segment"
+            [style.flex]="plan.weeks"
+            [style.background]="domain?.color"
+            [matTooltip]="domain?.name + ' — ' + plan.weeks + ' weeks'">
+            <span class="seg-label">{{ domain?.number }}</span>
+          </div>
+        }
+      </div>
+      <div class="timeline-legend">
+        @for (plan of studyPlan; track plan.domainId) {
+          @let domain = getDomain(plan.domainId);
+          <div class="legend-item">
+            <div class="legend-dot" [style.background]="domain?.color"></div>
+            <span>{{ domain?.number }} — {{ plan.weeks }}w</span>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Current position callout -->
+  @if (currentSection && !loading) {
+    <div class="current-callout">
+      <mat-icon>play_circle</mat-icon>
+      <div>
+        <div class="callout-title">You're here</div>
+        <div class="callout-sub">Continue with section {{ currentSection.sectionId }}</div>
+      </div>
+      <button mat-raised-button color="primary" [routerLink]="['/section', currentSection.sectionId]">
+        Continue <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-container"><mat-spinner></mat-spinner></div>
+  } @else {
+    <!-- Domain roadmap -->
+    @for (plan of studyPlan; track plan.domainId; let i = $index) {
+      @let domain = getDomain(plan.domainId);
+      @let progress = getDomainProgress(plan.domainId);
+      @if (domain) {
+        <div class="roadmap-domain">
+          <div class="rd-connector" [class.first]="i === 0"></div>
+
+          <div class="rd-header" [style.border-color]="domain.color">
+            <div class="rd-phase-num" [style.background]="domain.color">{{ i + 1 }}</div>
+            <div class="rd-header-content">
+              <div class="rd-domain-num" [style.color]="domain.color">{{ domain.number }}</div>
+              <h2>{{ domain.name }}</h2>
+              <div class="rd-meta">
+                <span class="priority-badge" [class]="'priority-' + plan.priority.toLowerCase()">{{ plan.priority }}</span>
+                <span><mat-icon>schedule</mat-icon>{{ plan.weeks }} weeks</span>
+                <span><mat-icon>percent</mat-icon>{{ domain.examWeight }}% of exam</span>
+              </div>
+            </div>
+            <div class="rd-progress">
+              <div class="rd-pct" [style.color]="domain.color">{{ progress }}%</div>
+              <mat-progress-bar mode="determinate" [value]="progress" style="width:80px"></mat-progress-bar>
+            </div>
+          </div>
+
+          <!-- Study tips -->
+          <div class="study-tips">
+            @for (tip of plan.tips; track tip) {
+              <div class="tip-item"><mat-icon>lightbulb</mat-icon><span>{{ tip }}</span></div>
+            }
+          </div>
+
+          <!-- Sections list -->
+          <div class="rd-sections">
+            @for (section of domain.sections; track section.id) {
+              @let status = getStatus(section.id);
+              <div class="rd-section" [class.current]="isCurrentSection(section.id)"
+                [class.passed]="status === 'passed'" [class.locked]="status === 'locked'">
+                <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : status === 'unlocked' ? domain.color : '#bbb'">
+                  <mat-icon>{{ status === 'passed' ? 'check_circle' : status === 'unlocked' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                </div>
+                <div class="rds-content">
+                  <div class="rds-num">{{ section.objectiveNumber }}</div>
+                  <div class="rds-name">{{ section.name }}</div>
+                  <div class="rds-desc">{{ section.description }}</div>
+                </div>
+                @if (status !== 'locked') {
+                  <a mat-icon-button [routerLink]="['/section', section.id]"
+                    [style.color]="domain.color">
+                    <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
+                  </a>
+                }
+                @if (isCurrentSection(section.id)) {
+                  <div class="current-badge">CURRENT</div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    <!-- Final exam callout -->
+    <div class="final-exam-callout">
+      <mat-icon>emoji_events</mat-icon>
+      <div>
+        <h3>Ready for the Real Exam?</h3>
+        <p>Take the full 90-question practice exam to gauge your readiness</p>
+      </div>
+      <button mat-raised-button color="primary" routerLink="/exam/full">
+        <mat-icon>assignment</mat-icon> Full Practice Exam
+      </button>
+    </div>
+  }
+</div>

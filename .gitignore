@@ -1,0 +1,22 @@
+# Environment / secrets — never commit
+.env
+*.env
+.env.*
+!.env.example
+
+# H2 database files — persisted via Railway volume, not source control
+backend/data/
+
+# Build outputs
+backend/target/
+frontend/dist/
+frontend/.angular/
+
+# Dependencies
+frontend/node_modules/
+
+# IDE / OS
+.DS_Store
+*.iml
+.idea/
+.vscode/

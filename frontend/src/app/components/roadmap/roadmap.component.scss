@@ -1,0 +1,67 @@
+.page-header { display:flex; align-items:center; gap:16px; margin-bottom:24px;
+  mat-icon { font-size:48px; width:48px; height:48px; color:#2e7d32; }
+  h1 { margin:0 0 4px; font-size:24px; font-weight:700; } p { margin:0; color:#666; font-size:14px; }
+}
+.timeline-card { margin-bottom:24px;
+  .timeline-bar { display:flex; height:40px; border-radius:8px; overflow:hidden; margin-bottom:12px;
+    .timeline-segment { display:flex; align-items:center; justify-content:center; cursor:default; transition:filter .2s;
+      &:hover{filter:brightness(.9);}
+      .seg-label { color:white; font-size:11px; font-weight:700; }
+    }
+  }
+  .timeline-legend { display:flex; gap:16px; flex-wrap:wrap;
+    .legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:#555;
+      .legend-dot { width:10px; height:10px; border-radius:50%; }
+    }
+  }
+}
+.current-callout { display:flex; align-items:center; gap:14px; background:linear-gradient(90deg,#1a237e,#3949ab); color:white; border-radius:12px; padding:16px 24px; margin-bottom:24px; flex-wrap:wrap;
+  mat-icon { font-size:32px; width:32px; height:32px; }
+  .callout-title { font-weight:700; font-size:16px; }
+  .callout-sub { font-size:13px; opacity:.85; }
+  button { margin-left:auto; }
+}
+.roadmap-domain { position:relative; margin-bottom:28px;
+  .rd-connector { position:absolute; left:24px; top:0; bottom:-28px; width:2px; background:#e0e0e0; z-index:0;
+    &.first { top:40px; }
+  }
+  .rd-header { display:flex; align-items:flex-start; gap:14px; border:2px solid; border-radius:14px; padding:18px 20px; background:white; margin-bottom:10px; position:relative; z-index:1;
+    .rd-phase-num { width:36px; height:36px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; flex-shrink:0; }
+    .rd-header-content { flex:1;
+      .rd-domain-num { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+      h2 { margin:0 0 8px; font-size:18px; font-weight:700; color:#1a1a1a; }
+      .rd-meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:#666;
+        span { display:flex; align-items:center; gap:3px; mat-icon{font-size:14px;width:14px;height:14px;} }
+        .priority-badge { padding:2px 8px; border-radius:10px; font-weight:700; font-size:11px;
+          &.priority-foundation { background:#e3f2fd; color:#1565c0; }
+          &.priority-critical { background:#fce4ec; color:#b71c1c; }
+          &.priority-high { background:#fff3e0; color:#e65100; }
+          &.priority-highest { background:#fce4ec; color:#b71c1c; border:1px solid #f44336; }
+        }
+      }
+    }
+    .rd-progress { display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;
+      .rd-pct { font-size:18px; font-weight:700; }
+    }
+  }
+  .study-tips { margin-left:50px; margin-bottom:10px; display:flex; flex-direction:column; gap:6px;
+    .tip-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#555; line-height:1.4;
+      mat-icon { font-size:16px; width:16px; height:16px; color:#f9a825; flex-shrink:0; margin-top:1px; }
+    }
+  }
+  .rd-sections { margin-left:50px; display:flex; flex-direction:column; gap:6px;
+    .rd-section { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-radius:10px; background:white; border:1px solid #e8e8e8; transition:all .2s; position:relative;
+      &:hover { box-shadow:0 2px 8px rgba(0,0,0,.08); } &.passed { background:#f1f8e9; border-color:#c8e6c9; }
+      &.locked { opacity:.6; }
+      &.current { border-width:2px; box-shadow:0 0 0 3px rgba(63,81,181,.15); }
+      .rds-icon { flex-shrink:0; mat-icon{font-size:20px;width:20px;height:20px;} }
+      .rds-content { flex:1; .rds-num { font-size:11px; color:#888; font-weight:600; } .rds-name { font-size:14px; font-weight:600; color:#1a1a1a; } .rds-desc { font-size:12px; color:#777; line-height:1.3; margin-top:2px; } }
+      .current-badge { position:absolute; top:-8px; right:12px; background:#3f51b5; color:white; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; letter-spacing:.5px; }
+    }
+  }
+}
+.final-exam-callout { display:flex; align-items:center; gap:16px; background:linear-gradient(135deg,#e65100,#bf360c); color:white; border-radius:14px; padding:24px 28px; margin-top:8px; flex-wrap:wrap;
+  mat-icon { font-size:40px; width:40px; height:40px; }
+  h3 { margin:0 0 4px; font-size:18px; } p { margin:0; opacity:.85; font-size:14px; }
+  button { margin-left:auto; }
+}

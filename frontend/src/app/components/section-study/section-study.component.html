@@ -1,0 +1,567 @@
+<div class="page-container">
+
+  @if (!isUnlocked) {
+    <div class="locked-page">
+      <mat-icon>lock</mat-icon>
+      <h2>Section Locked</h2>
+      <p>You must pass the previous section exam to unlock this section.</p>
+      <button mat-raised-button color="primary" routerLink="/">Back to Dashboard</button>
+    </div>
+  } @else if (section) {
+
+    <!-- Section Header -->
+    <div class="section-header">
+      <button mat-icon-button [routerLink]="['/domain', section.domainId]" class="back-btn">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="header-content">
+        <div class="obj-number">Objective {{ section.objectiveNumber }}</div>
+        <h1>{{ section.name }}</h1>
+        <p>{{ section.description }}</p>
+      </div>
+      @if (sectionProgress) {
+        <div class="header-status">
+          @if (sectionProgress.examPassed) {
+            <div class="status-passed"><mat-icon>verified</mat-icon> Passed ({{ sectionProgress.bestExamScore | number:'1.0-0' }}%)</div>
+          } @else if (sectionProgress.examAttempts > 0) {
+            <div class="status-attempted">Best: {{ sectionProgress.bestExamScore | number:'1.0-0' }}% · Need 75%</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Tabs -->
+    <mat-tab-group (selectedIndexChange)="onTabChange($event)" animationDuration="200ms">
+
+      <!-- ── TAB 1: LEARN ─────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">menu_book</mat-icon> Learn
+        </ng-template>
+
+        @if (loadingExplanation) {
+          <div class="loading-container">
+            <mat-spinner></mat-spinner>
+            <p>Generating concept explanation with Claude AI...</p>
+          </div>
+        } @else if (explanationError) {
+          <div class="error-container">
+            <mat-icon>error_outline</mat-icon>
+            <h3>Could not load explanation</h3>
+            <p>{{ explanationError }}</p>
+            <button mat-raised-button (click)="explanationError=''; loadExplanation()">Retry</button>
+          </div>
+        } @else if (regeneratingExplanation) {
+          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating with Claude AI...</p></div>
+        } @else if (explanation) {
+          <div class="learn-content">
+            <div class="learn-overview">
+              <div class="content-header-row">
+                <h2>{{ explanation.title }}</h2>
+                <button mat-icon-button class="regen-btn" (click)="regenerateExplanation()" title="Regenerate with fresh AI content">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </div>
+              <p class="overview-text">{{ explanation.overview }}</p>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="learn-body" [innerHTML]="explanation.detailedExplanation"></div>
+
+            <div class="learn-cards-grid">
+              <mat-card class="info-card key-points">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar style="color:#1565c0">checklist</mat-icon>
+                  <mat-card-title>Key Points</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ul>@for (p of explanation.keyPoints; track p) { <li>{{ p }}</li> }</ul>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card class="info-card exam-tips">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar style="color:#e65100">lightbulb</mat-icon>
+                  <mat-card-title>Exam Tips</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ul>@for (t of explanation.examTips; track t) { <li>{{ t }}</li> }</ul>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card class="info-card examples">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar style="color:#2e7d32">work</mat-icon>
+                  <mat-card-title>Real-World Examples</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ul>@for (e of explanation.realWorldExamples; track e) { <li>{{ e }}</li> }</ul>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card class="info-card mistakes">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar style="color:#c62828">warning</mat-icon>
+                  <mat-card-title>Common Mistakes</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ul>@for (m of explanation.commonMistakes; track m) { <li>{{ m }}</li> }</ul>
+                </mat-card-content>
+              </mat-card>
+            </div>
+
+            @if (explanation.analogyExplanation) {
+              <mat-card class="analogy-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar style="color:#7b1fa2">psychology</mat-icon>
+                  <mat-card-title>Think of it this way...</mat-card-title>
+                </mat-card-header>
+                <mat-card-content><p>{{ explanation.analogyExplanation }}</p></mat-card-content>
+              </mat-card>
+            }
+          </div>
+        }
+      </mat-tab>
+
+      <!-- ── TAB 2: FLASHCARDS ─────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">style</mat-icon> Flashcards
+          @if (flashcards.length) { <span class="tab-count">{{ flashcards.length }}</span> }
+        </ng-template>
+
+        @if (loadingFlashcards || regeneratingFlashcards) {
+          <div class="loading-container"><mat-spinner></mat-spinner><p>{{ regeneratingFlashcards ? 'Regenerating flashcards...' : 'Generating flashcards...' }}</p></div>
+        } @else if (flashcards.length) {
+          <div class="flashcard-container">
+
+            <div class="fc-progress-row">
+              <span>Card {{ currentFlashcardIndex + 1 }} / {{ flashcards.length }}</span>
+              <span class="fc-known">{{ flashcardsDone.size }} known</span>
+              <mat-progress-bar mode="determinate" [value]="(currentFlashcardIndex / flashcards.length) * 100"></mat-progress-bar>
+              <button mat-icon-button class="regen-btn" (click)="regenerateFlashcards()" title="Regenerate with fresh AI content">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+
+            <div class="flashcard" [class.flipped]="flashcardFlipped" (click)="flipCard()">
+              <div class="fc-front">
+                <div class="fc-category">{{ flashcards[currentFlashcardIndex].category }}</div>
+                <div class="fc-question">{{ flashcards[currentFlashcardIndex].front }}</div>
+                <div class="fc-hint">Click to reveal answer</div>
+              </div>
+              <div class="fc-back">
+                <div class="fc-answer">{{ flashcards[currentFlashcardIndex].back }}</div>
+                @if (flashcards[currentFlashcardIndex].mnemonic) {
+                  <div class="fc-mnemonic">💡 {{ flashcards[currentFlashcardIndex].mnemonic }}</div>
+                }
+                @if (flashcards[currentFlashcardIndex].examTip) {
+                  <div class="fc-tip">📋 {{ flashcards[currentFlashcardIndex].examTip }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="fc-controls">
+              <button mat-stroked-button (click)="prevCard()" [disabled]="currentFlashcardIndex === 0">
+                <mat-icon>chevron_left</mat-icon> Prev
+              </button>
+              @if (flashcardFlipped) {
+                <button mat-raised-button color="warn" (click)="nextCard(false)">
+                  <mat-icon>close</mat-icon> Still Learning
+                </button>
+                <button mat-raised-button color="primary" (click)="nextCard(true)">
+                  <mat-icon>check</mat-icon> Got It
+                </button>
+              } @else {
+                <button mat-raised-button (click)="flipCard()">
+                  <mat-icon>flip</mat-icon> Flip Card
+                </button>
+              }
+              <button mat-stroked-button (click)="prevCard()" style="visibility:hidden">spacer</button>
+              <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+
+            <div class="fc-dots">
+              @for (card of flashcards; track $index) {
+                <div class="fc-dot"
+                  [class.active]="$index === currentFlashcardIndex"
+                  [class.known]="flashcardsDone.has($index)">
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </mat-tab>
+
+      <!-- ── TAB 3: PRACTICE ─────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">quiz</mat-icon> Practice
+        </ng-template>
+
+        @if (loadingPractice || regeneratingPractice) {
+          <div class="loading-container"><mat-spinner></mat-spinner><p>{{ regeneratingPractice ? 'Regenerating questions...' : 'Generating practice questions at Dion difficulty...' }}</p></div>
+        } @else if (practiceState === 'answering') {
+          <div class="practice-container">
+            <div class="practice-header">
+              <span>{{ practiceQuestions.length }} Practice Questions</span>
+              <span class="answered-count">Answered: {{ Object.keys(practiceAnswers).length }} / {{ practiceQuestions.length }}</span>
+              <button mat-icon-button class="regen-btn" (click)="regeneratePractice()" title="Regenerate with fresh AI content">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+
+            @for (q of practiceQuestions; track q.id; let i = $index) {
+              <mat-card class="question-card">
+                <mat-card-content>
+                  <div class="q-header">
+                    <span class="q-number">Q{{ i + 1 }}</span>
+                    <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                    <span class="q-type">{{ q.type === 'MULTI_SELECT' ? 'SELECT ALL THAT APPLY' : 'Single Answer' }}</span>
+                  </div>
+                  @if (q.scenario) {
+                    <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div>
+                  }
+                  <p class="q-stem">{{ q.stem }}</p>
+                  <div class="options">
+                    @for (opt of q.options; track opt) {
+                      <button class="option-btn"
+                        [class.selected]="isPracticeSelected(q.id, opt.charAt(0))"
+                        (click)="selectPracticeAnswer(q.id, opt.charAt(0))">
+                        <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                        <span class="opt-text">{{ opt.slice(3) }}</span>
+                      </button>
+                    }
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+
+            <div class="submit-row">
+              <button mat-raised-button color="primary" (click)="submitPractice()"
+                [disabled]="Object.keys(practiceAnswers).length < practiceQuestions.length">
+                Submit All Answers
+              </button>
+            </div>
+          </div>
+
+        } @else if (practiceState === 'review') {
+          <div class="practice-container">
+            <div class="score-banner" [class.passed]="practiceScore / practiceTotal >= 0.75">
+              <mat-icon>{{ practiceScore / practiceTotal >= 0.75 ? 'check_circle' : 'cancel' }}</mat-icon>
+              <div>
+                <div class="score-main">{{ practiceScore }} / {{ practiceTotal }} correct ({{ (practiceScore / practiceTotal * 100) | number:'1.0-0' }}%)</div>
+                <div class="score-sub">{{ practiceScore / practiceTotal >= 0.75 ? 'Great performance!' : 'Keep studying and try again.' }}</div>
+              </div>
+              <button mat-stroked-button (click)="reloadPractice()"><mat-icon>refresh</mat-icon> New Questions</button>
+            </div>
+
+            @for (q of practiceQuestions; track q.id; let i = $index) {
+              <mat-card class="question-card review-card" [class.correct-card]="isPracticeCorrect(q)" [class.wrong-card]="!isPracticeCorrect(q)">
+                <mat-card-content>
+                  <div class="q-header">
+                    <span class="q-number">Q{{ i + 1 }}</span>
+                    <mat-icon [style.color]="isPracticeCorrect(q) ? '#2e7d32' : '#c62828'">
+                      {{ isPracticeCorrect(q) ? 'check_circle' : 'cancel' }}
+                    </mat-icon>
+                    <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                  </div>
+                  @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
+                  <p class="q-stem">{{ q.stem }}</p>
+                  <div class="options review-options">
+                    @for (opt of q.options; track opt) {
+                      <div class="option-result"
+                        [class.correct-opt]="isCorrectOption(q, opt)"
+                        [class.wrong-opt]="isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)"
+                        [class.selected-opt]="isPracticeSelected(q.id, opt.charAt(0))">
+                        <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                        <span class="opt-text">{{ opt.slice(3) }}</span>
+                        @if (isCorrectOption(q, opt)) { <mat-icon class="result-icon">check</mat-icon> }
+                        @if (isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)) { <mat-icon class="result-icon">close</mat-icon> }
+                      </div>
+                    }
+                  </div>
+                  <div class="explanation-box">
+                    <mat-icon>info</mat-icon>
+                    <p>{{ q.explanation }}</p>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        }
+      </mat-tab>
+
+      <!-- ── TAB 4: LAB ──────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">science</mat-icon> Lab
+          @if (labCompleted) { <mat-icon class="tab-done">check_circle</mat-icon> }
+        </ng-template>
+
+        @if (loadingLab || regeneratingLab) {
+          <div class="loading-container"><mat-spinner></mat-spinner><p>{{ regeneratingLab ? 'Regenerating lab...' : 'Generating hands-on lab scenario...' }}</p></div>
+        } @else if (labError) {
+          <div class="error-container">
+            <mat-icon>error_outline</mat-icon><h3>Error</h3><p>{{ labError }}</p>
+            <button mat-raised-button (click)="labError=''; loadLab()">Retry</button>
+          </div>
+        } @else if (lab) {
+          <div class="lab-container">
+
+            <div class="lab-header-card">
+              <div class="lab-title-row">
+                <mat-icon>science</mat-icon>
+                <h2>{{ lab.title }}</h2>
+                @if (labCompleted) { <div class="lab-done-badge"><mat-icon>verified</mat-icon> Completed</div> }
+                <button mat-icon-button class="regen-btn regen-btn-light" (click)="regenerateLab()" title="Regenerate with fresh AI content" style="margin-left:auto">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </div>
+              <div class="lab-meta">
+                <span><mat-icon>timer</mat-icon> ~{{ lab.estimatedMinutes }} min</span>
+                <span><mat-icon>bar_chart</mat-icon> {{ lab.difficulty }}</span>
+                @for (tool of lab.tools; track tool) { <span class="tool-chip">{{ tool }}</span> }
+              </div>
+              <div class="lab-section"><strong>Objective:</strong> {{ lab.objective }}</div>
+              <div class="lab-section"><strong>Scenario:</strong> {{ lab.scenario }}</div>
+              <div class="lab-section"><strong>Background:</strong> {{ lab.background }}</div>
+            </div>
+
+            <h3 class="lab-steps-title">Lab Steps</h3>
+            @for (step of lab.steps; track step.stepNumber) {
+              <mat-card class="lab-step-card" [class.expanded]="labStepExpanded.has(step.stepNumber)">
+                <div class="step-header" (click)="toggleStep(step.stepNumber)">
+                  <div class="step-num">{{ step.stepNumber }}</div>
+                  <div class="step-title">{{ step.title }}</div>
+                  <mat-icon>{{ labStepExpanded.has(step.stepNumber) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </div>
+                @if (labStepExpanded.has(step.stepNumber)) {
+                  <div class="step-body">
+                    <p>{{ step.instruction }}</p>
+                    @if (step.command) {
+                      <div class="command-block">
+                        <span class="command-prompt">$</span>
+                        <code>{{ step.command }}</code>
+                      </div>
+                    }
+                    @if (step.expectedOutput) {
+                      <div class="output-block"><strong>Expected output:</strong> {{ step.expectedOutput }}</div>
+                    }
+                    @if (step.hint) {
+                      <div class="hint-block"><mat-icon>lightbulb</mat-icon> <span>{{ step.hint }}</span></div>
+                    }
+                  </div>
+                }
+              </mat-card>
+            }
+
+            @if (lab.questions.length) {
+              <h3 class="lab-steps-title">Comprehension Questions</h3>
+              @for (q of lab.questions; track $index; let i = $index) {
+                <mat-card class="lab-q-card">
+                  <mat-card-content>
+                    <p class="lab-q-text">{{ i + 1 }}. {{ q.question }}</p>
+                    @if (!labAnswerShown.has(i)) {
+                      <button mat-stroked-button (click)="showLabAnswer(i)">Show Answer</button>
+                    } @else {
+                      <div class="lab-answer"><strong>Answer:</strong> {{ q.answer }}</div>
+                      <div class="lab-explain">{{ q.explanation }}</div>
+                    }
+                  </mat-card-content>
+                </mat-card>
+              }
+            }
+
+            @if (lab.walkthrough) {
+              <mat-card class="walkthrough-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar>menu_book</mat-icon>
+                  <mat-card-title>Lab Walkthrough</mat-card-title>
+                </mat-card-header>
+                <mat-card-content><p>{{ lab.walkthrough }}</p></mat-card-content>
+              </mat-card>
+            }
+
+            @if (!labCompleted) {
+              <div class="complete-lab-row">
+                <button mat-raised-button color="primary" (click)="completeLab()">
+                  <mat-icon>check_circle</mat-icon> Mark Lab Complete
+                </button>
+              </div>
+            } @else {
+              <div class="lab-complete-msg">
+                <mat-icon>verified</mat-icon> Lab completed! You can now take the section exam.
+              </div>
+            }
+          </div>
+        }
+      </mat-tab>
+
+      <!-- ── TAB 5: SECTION EXAM ──────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">assignment</mat-icon> Section Exam
+        </ng-template>
+
+        @if (regeneratingExam) {
+          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating exam questions...</p></div>
+        } @else if (examState === 'idle') {
+          <div class="exam-intro">
+            <div class="content-header-row" style="width:100%;justify-content:flex-end;margin-bottom:-8px;">
+              <button mat-icon-button class="regen-btn" (click)="regenerateSectionExam()" title="Regenerate with fresh AI questions">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+            <mat-icon class="exam-intro-icon">assignment</mat-icon>
+            <h2>Section Exam: {{ section.name }}</h2>
+            <p>25 exam-level questions · Jason Dion difficulty · Must score ≥ 75% to pass</p>
+
+            @if (sectionProgress?.examAttempts > 0) {
+              <div class="prev-score">
+                Previous best: <strong>{{ sectionProgress.bestExamScore | number:'1.0-0' }}%</strong>
+                ({{ sectionProgress.examAttempts }} attempt{{ sectionProgress.examAttempts > 1 ? 's' : '' }})
+              </div>
+            }
+
+            <div class="exam-checklist">
+              <div class="check-item" [class.done]="sectionProgress?.conceptRead">
+                <mat-icon>{{ sectionProgress?.conceptRead ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                Read concept explanation
+              </div>
+              <div class="check-item" [class.done]="sectionProgress?.flashcardsReviewed >= 10">
+                <mat-icon>{{ sectionProgress?.flashcardsReviewed >= 10 ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                Reviewed flashcards ({{ sectionProgress?.flashcardsReviewed ?? 0 }}/10 min)
+              </div>
+              <div class="check-item" [class.done]="sectionProgress?.practiceQuestionsAnswered >= 10">
+                <mat-icon>{{ sectionProgress?.practiceQuestionsAnswered >= 10 ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                Answered practice questions ({{ sectionProgress?.practiceQuestionsAnswered ?? 0 }}/10 min)
+              </div>
+              <div class="check-item" [class.done]="sectionProgress?.labCompleted">
+                <mat-icon>{{ sectionProgress?.labCompleted ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                Completed the lab
+              </div>
+            </div>
+
+            @if (loadingExam) {
+              <div style="margin-top:24px"><mat-spinner diameter="40"></mat-spinner></div>
+            } @else {
+              <button mat-raised-button color="primary" (click)="loadExam()" style="margin-top:20px">
+                <mat-icon>play_arrow</mat-icon> Start Exam
+              </button>
+            }
+          </div>
+
+        } @else if (examState === 'answering') {
+          <div class="exam-container">
+            <div class="exam-toolbar">
+              <span>{{ section.name }}</span>
+              <span class="exam-timer"><mat-icon>timer</mat-icon> {{ examTimerDisplay }}</span>
+              <span>{{ examAnsweredCount }} / {{ examQuestions.length }} answered</span>
+              <button mat-raised-button color="warn" (click)="submitExam()"
+                [disabled]="examAnsweredCount < examQuestions.length">
+                Submit Exam
+              </button>
+            </div>
+
+            <div class="exam-nav">
+              @for (q of examQuestions; track q.id; let i = $index) {
+                <button class="nav-bubble"
+                  [class.answered]="examAnswers[q.id]"
+                  [class.flagged]="examFlagged.has(q.id)"
+                  [class.current]="i === currentExamIndex"
+                  (click)="currentExamIndex = i">
+                  {{ i + 1 }}
+                </button>
+              }
+            </div>
+
+            @let q = examQuestions[currentExamIndex];
+            <mat-card class="question-card exam-question-card">
+              <mat-card-content>
+                <div class="q-header">
+                  <span class="q-number">Q{{ currentExamIndex + 1 }} of {{ examQuestions.length }}</span>
+                  <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                  <span class="q-type">{{ q.type === 'MULTI_SELECT' ? 'SELECT ALL THAT APPLY' : 'Single Answer' }}</span>
+                  <button mat-icon-button (click)="toggleFlag(q.id)" [class.flagged-btn]="examFlagged.has(q.id)">
+                    <mat-icon>{{ examFlagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
+                  </button>
+                </div>
+                @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
+                <p class="q-stem">{{ q.stem }}</p>
+                <div class="options">
+                  @for (opt of q.options; track opt) {
+                    <button class="option-btn"
+                      [class.selected]="isExamSelected(q.id, opt.charAt(0))"
+                      (click)="selectExamAnswer(q.id, opt.charAt(0))">
+                      <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                      <span class="opt-text">{{ opt.slice(3) }}</span>
+                    </button>
+                  }
+                </div>
+                <div class="exam-nav-btns">
+                  <button mat-stroked-button [disabled]="currentExamIndex === 0" (click)="currentExamIndex = currentExamIndex - 1">
+                    <mat-icon>chevron_left</mat-icon> Previous
+                  </button>
+                  <button mat-raised-button color="primary"
+                    [disabled]="currentExamIndex === examQuestions.length - 1"
+                    (click)="currentExamIndex = currentExamIndex + 1">
+                    Next <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
+        } @else if (examState === 'result' && examResult) {
+          <div class="result-container">
+            <div class="result-hero" [class.passed]="examResult.passed">
+              <mat-icon class="result-icon-big">{{ examResult.passed ? 'emoji_events' : 'school' }}</mat-icon>
+              <h2>{{ examResult.passed ? 'Section Passed!' : 'Not Yet Passed' }}</h2>
+              <div class="result-score">{{ examResult.scorePercent | number:'1.1-1' }}%</div>
+              <div class="result-sub">{{ examResult.correctAnswers }} / {{ examResult.totalQuestions }} correct · Passing: 75%</div>
+              <div class="result-time">Time: {{ formatTime(examResult.timeTakenSeconds) }}</div>
+            </div>
+
+            <mat-card class="feedback-card">
+              <p>{{ examResult.feedback }}</p>
+              <p class="next-steps">{{ examResult.nextSteps }}</p>
+            </mat-card>
+
+            <div class="result-actions">
+              <button mat-raised-button (click)="retakeExam()"><mat-icon>refresh</mat-icon> Retake Exam</button>
+              @if (examResult.passed) {
+                <button mat-raised-button color="primary" routerLink="/">
+                  <mat-icon>arrow_forward</mat-icon> Continue to Next Section
+                </button>
+              }
+            </div>
+
+            <h3>Question Review</h3>
+            @for (r of examResult.results; track r.questionId; let i = $index) {
+              <mat-card class="review-result-card" [class.correct-card]="r.correct" [class.wrong-card]="!r.correct">
+                <mat-card-content>
+                  <div class="rr-header">
+                    <mat-icon [style.color]="r.correct ? '#2e7d32' : '#c62828'">{{ r.correct ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span class="q-number">Q{{ i + 1 }}</span>
+                    <span class="badge {{ r.difficulty.toLowerCase() }}">{{ r.difficulty }}</span>
+                  </div>
+                  <p class="rr-stem">{{ r.stem }}</p>
+                  <div class="rr-answers">
+                    <span class="rr-your">Your answer: <strong>{{ r.selectedAnswer || 'Not answered' }}</strong></span>
+                    @if (!r.correct) { <span class="rr-correct">Correct: <strong>{{ r.correctAnswer }}</strong></span> }
+                  </div>
+                  <div class="explanation-box"><mat-icon>info</mat-icon><p>{{ r.explanation }}</p></div>
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        }
+      </mat-tab>
+
+    </mat-tab-group>
+  }
+</div>

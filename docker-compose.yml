@@ -1,0 +1,45 @@
+services:
+
+  backend:
+    build: ./backend
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - comptia-data:/app/data      # persists H2 database files
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/status | grep -q configured || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      BACKEND_URL: http://backend:8080   # uses Docker Compose internal hostname
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: uncomment to enable automatic HTTPS with a domain name
+  # caddy:
+  #   image: caddy:2-alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #     - caddy-data:/data
+  #   depends_on:
+  #     - frontend
+  #   restart: unless-stopped
+
+volumes:
+  comptia-data:
+  # caddy-data:
