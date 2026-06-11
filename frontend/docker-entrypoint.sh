@@ -15,7 +15,12 @@ esac
 
 # Read the system DNS resolver so nginx can resolve private hostnames at
 # request time rather than startup time (avoids "host not found" on boot).
-RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || echo "127.0.0.11")
+# IPv6 addresses must be wrapped in brackets for nginx resolver syntax.
+RAW_RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || echo "127.0.0.11")
+case "$RAW_RESOLVER" in
+  *:*) RESOLVER="[$RAW_RESOLVER]" ;;  # IPv6
+  *)   RESOLVER="$RAW_RESOLVER"    ;;  # IPv4
+esac
 
 export BACKEND_URL RESOLVER
 echo "Using BACKEND_URL: $BACKEND_URL"
