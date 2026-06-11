@@ -1,3 +1,63 @@
+// ── Study mode toggle ─────────────────────────────────────────
+.mode-toggle-bar {
+  display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
+}
+
+.mode-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 10px; border: 1.5px solid var(--c-border);
+  background: var(--c-surface); color: var(--c-muted); cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .2s;
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+  &:hover  { border-color: var(--c-accent); color: var(--c-accent); }
+
+  &.active {
+    border-color: var(--c-accent); background: var(--c-accent-light); color: var(--c-accent);
+    cursor: default;
+  }
+  &.recommended-btn.active {
+    border-color: #0f766e; background: #ccfbf1; color: #0f766e;
+  }
+  &.recommended-btn:hover:not(.active) {
+    border-color: #0f766e; color: #0f766e;
+  }
+}
+
+.mode-pill {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  background: #0f766e; color: white; padding: 1px 6px; border-radius: 6px;
+}
+
+// ── Phase banner ──────────────────────────────────────────────
+.phase-banner {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  border: 2px solid; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px;
+  background: var(--c-surface); transition: border-color .2s;
+}
+
+.phase-icon-wrap {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  mat-icon { color: white; font-size: 22px; width: 22px; height: 22px; }
+}
+
+.phase-banner-text {
+  flex: 1; min-width: 120px;
+  .phase-banner-label    { font-size: 10px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: .5px; }
+  .phase-banner-name     { font-size: 15px; font-weight: 800; margin: 2px 0; }
+  .phase-banner-progress { font-size: 11px; color: var(--c-muted); }
+}
+
+.phase-banner-bar {
+  width: 120px; flex-shrink: 0;
+  @media (max-width: 600px) { width: 100%; order: 5; }
+}
+
+.phase-banner-link {
+  display: flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 13px; font-weight: 600;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
 // ── Hero ─────────────────────────────────────────────────────
 .hero {
   display: flex;
@@ -179,6 +239,9 @@
 }
 
 :host-context([data-theme="dark"]) {
+  .mode-btn.recommended-btn.active { background: rgba(5,150,105,.15); border-color: #059669; color: #34d399; }
+  .mode-pill { background: #059669; }
+  .phase-banner { background: var(--c-surface); }
   .domain-card        { border-color: var(--c-border); }
   .domain-weight      { background: var(--c-surface-2); color: var(--c-text-2); }
   .domain-desc        { color: var(--c-muted); }

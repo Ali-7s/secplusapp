@@ -11,6 +11,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { Domain, ProgressSummary, SectionProgress } from '../../models/curriculum.model';
+import { StudyPathService } from '../../services/study-path.service';
+import { StudyPhase } from '../../config/study-path.config';
 
 @Component({
   selector: 'app-dashboard',
@@ -25,6 +27,7 @@ import { Domain, ProgressSummary, SectionProgress } from '../../models/curriculu
 export class DashboardComponent implements OnInit {
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
+  readonly studyPath = inject(StudyPathService);
 
   domains: Domain[] = [];
   summary: ProgressSummary | null = null;
@@ -34,28 +37,16 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.contentService.getCurriculum().subscribe({
-      next: domains => {
-        this.domains = domains;
-        this.loading = false;
-      },
+      next: domains => { this.domains = domains; this.loading = false; },
       error: e => { this.error = e.message; this.loading = false; }
     });
-
-    this.progressService.loadSummary().subscribe({
-      next: s => this.summary = s,
-      error: () => {}
-    });
-
-    this.progressService.loadAll().subscribe({
-      next: p => this.allProgress = p,
-      error: () => {}
-    });
+    this.progressService.loadSummary().subscribe({ next: s => this.summary = s, error: () => {} });
+    this.progressService.loadAll().subscribe({ next: p => this.allProgress = p, error: () => {} });
   }
 
   getDomainProgress(domainId: string): number {
     if (!this.summary) return 0;
-    const dp = this.summary.domainProgress?.find(d => d.domainId === domainId);
-    return dp?.progress ?? 0;
+    return this.summary.domainProgress?.find(d => d.domainId === domainId)?.progress ?? 0;
   }
 
   getSectionStatus(sectionId: string): 'locked' | 'unlocked' | 'passed' {
@@ -67,7 +58,29 @@ export class DashboardComponent implements OnInit {
   }
 
   getCurrentSection(): string {
-    const next = this.allProgress.find(p => p.unlocked && !p.examPassed);
-    return next?.sectionId ?? '1.1';
+    if (this.studyPath.recommended()) {
+      const allSections = this.domains.flatMap(d => d.sections);
+      return this.studyPath.getNextSection(allSections, this.allProgress);
+    }
+    return this.allProgress.find(p => p.unlocked && !p.examPassed)?.sectionId ?? '1.1';
+  }
+
+  get currentPhase(): StudyPhase | undefined {
+    if (!this.studyPath.recommended()) return undefined;
+    const allSections = this.domains.flatMap(d => d.sections);
+    const idx = this.studyPath.getCurrentPhaseIndex(allSections, this.allProgress);
+    return this.studyPath.phases[idx];
+  }
+
+  get currentPhaseIndex(): number {
+    const allSections = this.domains.flatMap(d => d.sections);
+    return this.studyPath.getCurrentPhaseIndex(allSections, this.allProgress);
+  }
+
+  get currentPhaseProgress(): { passed: number; total: number } {
+    const phase = this.currentPhase;
+    if (!phase) return { passed: 0, total: 0 };
+    const allSections = this.domains.flatMap(d => d.sections);
+    return this.studyPath.getPhaseProgress(phase, allSections, this.allProgress);
   }
 }

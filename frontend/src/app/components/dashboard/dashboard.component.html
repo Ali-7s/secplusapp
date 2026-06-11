@@ -14,10 +14,27 @@
   } @else {
 
     <!-- Hero section -->
+    <!-- Study mode toggle -->
+    <div class="mode-toggle-bar">
+      <button class="mode-btn" [class.active]="!studyPath.recommended()"
+        (click)="studyPath.recommended() && studyPath.toggle()">
+        <mat-icon>list_numbered</mat-icon> Standard Order
+      </button>
+      <button class="mode-btn recommended-btn" [class.active]="studyPath.recommended()"
+        (click)="!studyPath.recommended() && studyPath.toggle()">
+        <mat-icon>school</mat-icon> Recommended Path
+        <span class="mode-pill">optimized</span>
+      </button>
+    </div>
+
     <div class="hero">
       <div class="hero-text">
         <h1>CompTIA Security+ SY0-701</h1>
-        <p>Master all 5 domains with AI-powered flashcards, scenario questions, and hands-on labs — at exam-level difficulty.</p>
+        @if (studyPath.recommended()) {
+          <p>Following the <strong>Recommended Path</strong> — topics ordered for maximum retention, not domain number.</p>
+        } @else {
+          <p>Master all 5 domains with AI-powered flashcards, scenario questions, and hands-on labs — at exam-level difficulty.</p>
+        }
         <div class="hero-actions">
           <button mat-raised-button color="primary" [routerLink]="['/section', getCurrentSection()]">
             <mat-icon>play_arrow</mat-icon> Continue Studying
@@ -67,6 +84,30 @@
         </div>
       }
     </div>
+
+    <!-- Recommended path: current phase banner -->
+    @if (studyPath.recommended() && currentPhase) {
+      <div class="phase-banner" [style.border-color]="currentPhase.color">
+        <div class="phase-icon-wrap" [style.background]="currentPhase.color">
+          <mat-icon>{{ currentPhase.icon }}</mat-icon>
+        </div>
+        <div class="phase-banner-text">
+          <div class="phase-banner-label">Phase {{ currentPhaseIndex + 1 }} of {{ studyPath.phases.length }}</div>
+          <div class="phase-banner-name" [style.color]="currentPhase.color">{{ currentPhase.name }}</div>
+          <div class="phase-banner-progress">
+            {{ currentPhaseProgress.passed }} / {{ currentPhaseProgress.total }} sections complete
+          </div>
+        </div>
+        <div class="phase-banner-bar">
+          <mat-progress-bar mode="determinate"
+            [value]="currentPhaseProgress.total ? (currentPhaseProgress.passed / currentPhaseProgress.total) * 100 : 0">
+          </mat-progress-bar>
+        </div>
+        <button mat-button routerLink="/roadmap" class="phase-banner-link">
+          View Full Path <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    }
 
     <!-- Domains grid -->
     <h2 class="section-title">Study Domains</h2>

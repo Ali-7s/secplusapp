@@ -10,7 +10,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
-import { Domain, SectionProgress } from '../../models/curriculum.model';
+import { Domain, Section, SectionProgress } from '../../models/curriculum.model';
+import { StudyPathService } from '../../services/study-path.service';
+import { StudyPhase } from '../../config/study-path.config';
 
 @Component({
   selector: 'app-roadmap',
@@ -23,6 +25,7 @@ import { Domain, SectionProgress } from '../../models/curriculum.model';
 export class RoadmapComponent implements OnInit {
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
+  readonly studyPath = inject(StudyPathService);
 
   domains: Domain[] = [];
   allProgress: SectionProgress[] = [];
@@ -67,6 +70,41 @@ export class RoadmapComponent implements OnInit {
   }
 
   get currentSection() {
+    if (this.studyPath.recommended()) {
+      const allSections = this.domains.flatMap(d => d.sections);
+      const nextId = this.studyPath.getNextSection(allSections, this.allProgress);
+      return this.allProgress.find(p => p.sectionId === nextId) ?? this.allProgress.find(p => p.unlocked && !p.examPassed);
+    }
     return this.allProgress.find(p => p.unlocked && !p.examPassed);
+  }
+
+  // ── Recommended-mode helpers ─────────────────────────────
+
+  get allSections(): Section[] {
+    return this.domains.flatMap(d => d.sections);
+  }
+
+  getSectionsForPhase(phase: StudyPhase): Section[] {
+    return phase.objectives
+      .map(obj => this.allSections.find(s => s.objectiveNumber === obj))
+      .filter((s): s is Section => !!s);
+  }
+
+  getDomainForSection(sectionId: string): Domain | undefined {
+    return this.domains.find(d => d.sections.some(s => s.id === sectionId));
+  }
+
+  getPhaseProgress(phase: StudyPhase): { passed: number; total: number; pct: number } {
+    const r = this.studyPath.getPhaseProgress(phase, this.allSections, this.allProgress);
+    return { ...r, pct: r.total ? Math.round((r.passed / r.total) * 100) : 0 };
+  }
+
+  isCurrentPhase(phase: StudyPhase): boolean {
+    return this.studyPath.getCurrentPhaseIndex(this.allSections, this.allProgress) ===
+      this.studyPath.phases.indexOf(phase);
+  }
+
+  getTotalRecommendedWeeks(): number {
+    return this.studyPath.phases.reduce((s, p) => s + p.estWeeks, 0);
   }
 }

@@ -3,8 +3,29 @@
     <mat-icon>map</mat-icon>
     <div>
       <h1>Study Roadmap</h1>
-      <p>Recommended study order · ~{{ totalWeeks }} weeks total · {{ domains.length }} domains · 28 objectives</p>
+      <p>
+        @if (studyPath.recommended()) {
+          Recommended path · ~{{ getTotalRecommendedWeeks() }} weeks · 8 phases · 28 objectives
+        } @else {
+          Standard order · ~{{ totalWeeks }} weeks · {{ domains.length }} domains · 28 objectives
+        }
+      </p>
     </div>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle-bar">
+    <button class="mode-btn" [class.active]="!studyPath.recommended()"
+      (click)="studyPath.recommended() && studyPath.toggle()">
+      <mat-icon>list_numbered</mat-icon>
+      <span>Standard (Domain 1→5)</span>
+    </button>
+    <button class="mode-btn recommended-btn" [class.active]="studyPath.recommended()"
+      (click)="!studyPath.recommended() && studyPath.toggle()">
+      <mat-icon>school</mat-icon>
+      <span>Recommended Path</span>
+      <span class="mode-pill">optimized for retention</span>
+    </button>
   </div>
 
   <!-- Timeline overview -->
@@ -12,27 +33,49 @@
     <mat-card-header>
       <mat-icon mat-card-avatar>schedule</mat-icon>
       <mat-card-title>Exam Prep Timeline</mat-card-title>
-      <mat-card-subtitle>Study plan based on official exam weights</mat-card-subtitle>
+      <mat-card-subtitle>
+        {{ studyPath.recommended() ? 'Ordered for maximum retention — not domain number' : 'Study plan based on official exam weights' }}
+      </mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <div class="timeline-bar">
-        @for (plan of studyPlan; track plan.domainId) {
-          @let domain = getDomain(plan.domainId);
-          <div class="timeline-segment"
-            [style.flex]="plan.weeks"
-            [style.background]="domain?.color"
-            [matTooltip]="domain?.name + ' — ' + plan.weeks + ' weeks'">
-            <span class="seg-label">{{ domain?.number }}</span>
-          </div>
+        @if (studyPath.recommended()) {
+          @for (phase of studyPath.phases; track phase.id; let i = $index) {
+            <div class="timeline-segment"
+              [style.flex]="phase.estWeeks"
+              [style.background]="phase.color"
+              [matTooltip]="phase.name + ' — ' + phase.estWeeks + ' weeks'">
+              <span class="seg-label">P{{ i + 1 }}</span>
+            </div>
+          }
+        } @else {
+          @for (plan of studyPlan; track plan.domainId) {
+            @let domain = getDomain(plan.domainId);
+            <div class="timeline-segment"
+              [style.flex]="plan.weeks"
+              [style.background]="domain?.color"
+              [matTooltip]="domain?.name + ' — ' + plan.weeks + ' weeks'">
+              <span class="seg-label">{{ domain?.number }}</span>
+            </div>
+          }
         }
       </div>
       <div class="timeline-legend">
-        @for (plan of studyPlan; track plan.domainId) {
-          @let domain = getDomain(plan.domainId);
-          <div class="legend-item">
-            <div class="legend-dot" [style.background]="domain?.color"></div>
-            <span>{{ domain?.number }} — {{ plan.weeks }}w</span>
-          </div>
+        @if (studyPath.recommended()) {
+          @for (phase of studyPath.phases; track phase.id; let i = $index) {
+            <div class="legend-item">
+              <div class="legend-dot" [style.background]="phase.color"></div>
+              <span>P{{ i + 1 }} {{ phase.name }} — {{ phase.estWeeks }}w</span>
+            </div>
+          }
+        } @else {
+          @for (plan of studyPlan; track plan.domainId) {
+            @let domain = getDomain(plan.domainId);
+            <div class="legend-item">
+              <div class="legend-dot" [style.background]="domain?.color"></div>
+              <span>{{ domain?.number }} — {{ plan.weeks }}w</span>
+            </div>
+          }
         }
       </div>
     </mat-card-content>
@@ -55,55 +98,93 @@
   @if (loading) {
     <div class="loading-container"><mat-spinner></mat-spinner></div>
   } @else {
-    <!-- Domain roadmap -->
-    @for (plan of studyPlan; track plan.domainId; let i = $index) {
-      @let domain = getDomain(plan.domainId);
-      @let progress = getDomainProgress(plan.domainId);
-      @if (domain) {
-        <div class="roadmap-domain">
-          <div class="rd-connector" [class.first]="i === 0"></div>
 
-          <div class="rd-header" [style.border-color]="domain.color">
-            <div class="rd-phase-num" [style.background]="domain.color">{{ i + 1 }}</div>
-            <div class="rd-header-content">
-              <div class="rd-domain-num" [style.color]="domain.color">{{ domain.number }}</div>
-              <h2>{{ domain.name }}</h2>
-              <div class="rd-meta">
-                <span class="priority-badge" [class]="'priority-' + plan.priority.toLowerCase()">{{ plan.priority }}</span>
-                <span><mat-icon>schedule</mat-icon>{{ plan.weeks }} weeks</span>
-                <span><mat-icon>percent</mat-icon>{{ domain.examWeight }}% of exam</span>
+    <!-- ══ RECOMMENDED PHASE VIEW ══════════════════════════════════ -->
+    @if (studyPath.recommended()) {
+
+      <div class="rec-intro">
+        <mat-icon>tips_and_updates</mat-icon>
+        <p>
+          Most Security+ courses don't follow the domain order — and for good reason.
+          This path groups topics so each phase builds directly on the one before it,
+          which means less backtracking and stronger retention. Sections are still unlocked
+          the same way; this path just tells you <em>which one to tackle next</em>.
+        </p>
+      </div>
+
+      @for (phase of studyPath.phases; track phase.id; let i = $index) {
+        @let prog = getPhaseProgress(phase);
+        @let sections = getSectionsForPhase(phase);
+        @let isCurrent = isCurrentPhase(phase);
+
+        <div class="phase-block" [class.phase-current]="isCurrent" [class.phase-done]="prog.pct === 100">
+          <div class="phase-connector" [class.first]="i === 0"></div>
+
+          <!-- Phase header -->
+          <div class="phase-header" [style.border-color]="phase.color">
+            <div class="phase-num-badge" [style.background]="phase.color">
+              @if (prog.pct === 100) {
+                <mat-icon>check</mat-icon>
+              } @else {
+                {{ i + 1 }}
+              }
+            </div>
+            <div class="phase-icon-circle" [style.background]="phase.color + '18'" [style.color]="phase.color">
+              <mat-icon>{{ phase.icon }}</mat-icon>
+            </div>
+            <div class="phase-header-content">
+              <div class="phase-label" [style.color]="phase.color">Phase {{ i + 1 }} of {{ studyPath.phases.length }}</div>
+              <h2>{{ phase.name }}</h2>
+              <div class="phase-meta">
+                <span><mat-icon>schedule</mat-icon>~{{ phase.estWeeks }} weeks</span>
+                <span><mat-icon>menu_book</mat-icon>{{ sections.length }} section{{ sections.length !== 1 ? 's' : '' }}</span>
+                @if (isCurrent) {
+                  <span class="current-phase-badge">CURRENT PHASE</span>
+                }
               </div>
             </div>
-            <div class="rd-progress">
-              <div class="rd-pct" [style.color]="domain.color">{{ progress }}%</div>
-              <mat-progress-bar mode="determinate" [value]="progress" style="width:80px"></mat-progress-bar>
+            <div class="phase-progress-wrap">
+              <div class="phase-pct" [style.color]="phase.color">{{ prog.pct }}%</div>
+              <mat-progress-bar mode="determinate" [value]="prog.pct" style="width:80px"
+                [style.--mdc-linear-progress-active-indicator-color]="phase.color">
+              </mat-progress-bar>
+              <div class="phase-count">{{ prog.passed }}/{{ prog.total }}</div>
             </div>
           </div>
 
-          <!-- Study tips -->
-          <div class="study-tips">
-            @for (tip of plan.tips; track tip) {
-              <div class="tip-item"><mat-icon>lightbulb</mat-icon><span>{{ tip }}</span></div>
-            }
+          <!-- Why this phase -->
+          <div class="phase-rationale">
+            <mat-icon>info</mat-icon>
+            <p>{{ phase.rationale }}</p>
           </div>
 
-          <!-- Sections list -->
+          <!-- Sections in this phase -->
           <div class="rd-sections">
-            @for (section of domain.sections; track section.id) {
+            @for (section of sections; track section.id) {
               @let status = getStatus(section.id);
-              <div class="rd-section" [class.current]="isCurrentSection(section.id)"
-                [class.passed]="status === 'passed'" [class.locked]="status === 'locked'">
-                <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : status === 'unlocked' ? domain.color : '#bbb'">
+              @let domain = getDomainForSection(section.id);
+              <div class="rd-section"
+                [class.current]="isCurrentSection(section.id)"
+                [class.passed]="status === 'passed'"
+                [class.locked]="status === 'locked'">
+
+                <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : status === 'unlocked' ? phase.color : '#bbb'">
                   <mat-icon>{{ status === 'passed' ? 'check_circle' : status === 'unlocked' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
                 </div>
                 <div class="rds-content">
-                  <div class="rds-num">{{ section.objectiveNumber }}</div>
+                  <div class="rds-num-row">
+                    <span class="rds-num">{{ section.objectiveNumber }}</span>
+                    @if (domain) {
+                      <span class="domain-chip" [style.background]="domain.color + '20'" [style.color]="domain.color">
+                        {{ domain.number }}
+                      </span>
+                    }
+                  </div>
                   <div class="rds-name">{{ section.name }}</div>
                   <div class="rds-desc">{{ section.description }}</div>
                 </div>
                 @if (status !== 'locked') {
-                  <a mat-icon-button [routerLink]="['/section', section.id]"
-                    [style.color]="domain.color">
+                  <a mat-icon-button [routerLink]="['/section', section.id]" [style.color]="phase.color">
                     <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
                   </a>
                 }
@@ -115,6 +196,68 @@
           </div>
         </div>
       }
+
+    } @else {
+
+      <!-- ══ STANDARD DOMAIN VIEW (unchanged) ═══════════════════════ -->
+      @for (plan of studyPlan; track plan.domainId; let i = $index) {
+        @let domain = getDomain(plan.domainId);
+        @let progress = getDomainProgress(plan.domainId);
+        @if (domain) {
+          <div class="roadmap-domain">
+            <div class="rd-connector" [class.first]="i === 0"></div>
+
+            <div class="rd-header" [style.border-color]="domain.color">
+              <div class="rd-phase-num" [style.background]="domain.color">{{ i + 1 }}</div>
+              <div class="rd-header-content">
+                <div class="rd-domain-num" [style.color]="domain.color">{{ domain.number }}</div>
+                <h2>{{ domain.name }}</h2>
+                <div class="rd-meta">
+                  <span class="priority-badge" [class]="'priority-' + plan.priority.toLowerCase()">{{ plan.priority }}</span>
+                  <span><mat-icon>schedule</mat-icon>{{ plan.weeks }} weeks</span>
+                  <span><mat-icon>percent</mat-icon>{{ domain.examWeight }}% of exam</span>
+                </div>
+              </div>
+              <div class="rd-progress">
+                <div class="rd-pct" [style.color]="domain.color">{{ progress }}%</div>
+                <mat-progress-bar mode="determinate" [value]="progress" style="width:80px"></mat-progress-bar>
+              </div>
+            </div>
+
+            <div class="study-tips">
+              @for (tip of plan.tips; track tip) {
+                <div class="tip-item"><mat-icon>lightbulb</mat-icon><span>{{ tip }}</span></div>
+              }
+            </div>
+
+            <div class="rd-sections">
+              @for (section of domain.sections; track section.id) {
+                @let status = getStatus(section.id);
+                <div class="rd-section" [class.current]="isCurrentSection(section.id)"
+                  [class.passed]="status === 'passed'" [class.locked]="status === 'locked'">
+                  <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : status === 'unlocked' ? domain.color : '#bbb'">
+                    <mat-icon>{{ status === 'passed' ? 'check_circle' : status === 'unlocked' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                  </div>
+                  <div class="rds-content">
+                    <div class="rds-num">{{ section.objectiveNumber }}</div>
+                    <div class="rds-name">{{ section.name }}</div>
+                    <div class="rds-desc">{{ section.description }}</div>
+                  </div>
+                  @if (status !== 'locked') {
+                    <a mat-icon-button [routerLink]="['/section', section.id]" [style.color]="domain.color">
+                      <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
+                    </a>
+                  }
+                  @if (isCurrentSection(section.id)) {
+                    <div class="current-badge">CURRENT</div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+
     }
 
     <!-- Final exam callout -->
