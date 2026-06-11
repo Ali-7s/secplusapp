@@ -109,6 +109,11 @@ public class ContentController {
         return ResponseEntity.ok(contentService.getTerms());
     }
 
+    @PostMapping("/terms/generate-missing")
+    public ResponseEntity<List<Term>> generateMissingTerms(@RequestBody List<String> termNames) {
+        return ResponseEntity.ok(contentService.generateMissingTerms(termNames));
+    }
+
     // ── Regenerate (evict DB entry then re-generate) ──────────────────────────
 
     @PostMapping("/explain/{sectionId}/regenerate")

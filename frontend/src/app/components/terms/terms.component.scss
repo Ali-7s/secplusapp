@@ -17,6 +17,16 @@
   @media (max-width: 600px) { margin-left: 0; }
 }
 
+.gap-fill-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #0f766e;
+  background: #ccfbf1; border: 1px solid #99f6e4;
+  padding: 4px 12px; border-radius: 20px; flex-shrink: 0;
+  mat-spinner { flex-shrink: 0; }
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+  &.done { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+}
+
 // ── Toolbar ────────────────────────────────────────────────
 .toolbar {
   display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
@@ -204,10 +214,22 @@
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
   .related-label { font-size: 11px; color: var(--c-muted); font-weight: 600; }
   .rel-chip {
+    display: inline-flex; align-items: center; gap: 4px;
     font-size: 11px; font-weight: 700; color: #0f766e;
     background: #ccfbf1; border: 1px solid rgba(5,150,105,.2);
     border-radius: 6px; padding: 2px 8px; cursor: pointer; transition: all .15s;
     &:hover { background: #059669; color: white; }
+
+    &.no-card {
+      color: var(--c-muted); background: var(--c-surface-2);
+      border-color: var(--c-border); cursor: default;
+      &:hover { background: var(--c-surface-2); color: var(--c-muted); }
+    }
+    &.generating {
+      color: #0f766e; background: #f0fdfa; border-color: #99f6e4;
+      cursor: default; opacity: .75;
+      &:hover { background: #f0fdfa; color: #0f766e; }
+    }
   }
 }
 
@@ -299,7 +321,14 @@
   .fc-complete { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.2); color: var(--c-success); mat-icon { color: var(--c-success); } }
   .fc-dots .fc-dot { &.active { background: #059669; } }
 
-  .rel-chip { background: rgba(5,150,105,.15); border-color: rgba(5,150,105,.3); color: #34d399; &:hover { background: #059669; color: white; } }
+  .rel-chip {
+    background: rgba(5,150,105,.15); border-color: rgba(5,150,105,.3); color: #34d399;
+    &:hover { background: #059669; color: white; }
+    &.no-card { background: var(--c-surface-2); border-color: var(--c-border); color: var(--c-muted); &:hover { background: var(--c-surface-2); color: var(--c-muted); } }
+    &.generating { background: rgba(5,150,105,.08); border-color: rgba(5,150,105,.2); color: #34d399; &:hover { background: rgba(5,150,105,.08); } }
+  }
+  .gap-fill-badge { background: rgba(5,150,105,.15); border-color: rgba(5,150,105,.25); color: #34d399;
+    &.done { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.2); color: #4ade80; } }
 
   .quiz-btn {
     &.wrong { background: rgba(239,68,68,.12) !important; border-color: var(--c-error) !important; }

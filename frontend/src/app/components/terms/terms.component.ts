@@ -42,6 +42,11 @@ export class TermsComponent implements OnInit {
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
 
+  // Gap-fill state
+  fillingGaps = false;
+  gapsFound = 0;
+  gapsAdded = 0;
+
   // Carousel state
   fcIndex = 0;
   fcFlipped = false;
@@ -54,12 +59,51 @@ export class TermsComponent implements OnInit {
     this.contentService.getTerms().subscribe({
       next: t => {
         this.allTerms = t.sort((a, b) => a.term.localeCompare(b.term));
-        const cats = [...new Set(t.map(x => x.category).filter(Boolean))].sort();
-        this.categories = ['All', ...cats];
+        this.rebuildCategories();
         this.filter();
         this.loading = false;
+        // After initial load, check for and fill any missing related terms
+        this.fillMissingRelatedTerms();
       },
       error: e => { this.error = e.message; this.loading = false; }
+    });
+  }
+
+  private rebuildCategories() {
+    const cats = [...new Set(this.allTerms.map(x => x.category).filter(Boolean))].sort();
+    this.categories = ['All', ...cats];
+  }
+
+  private fillMissingRelatedTerms() {
+    const existingNames = new Set(this.allTerms.map(t => t.term.toLowerCase()));
+    const missing = new Set<string>();
+
+    for (const term of this.allTerms) {
+      for (const rel of this.getRelatedList(term.relatedTerms)) {
+        if (!existingNames.has(rel.toLowerCase())) {
+          missing.add(rel);
+        }
+      }
+    }
+
+    if (missing.size === 0) return;
+
+    this.gapsFound = missing.size;
+    this.gapsAdded = 0;
+    this.fillingGaps = true;
+
+    this.contentService.generateMissingTerms([...missing]).subscribe({
+      next: newTerms => {
+        if (newTerms.length > 0) {
+          this.gapsAdded = newTerms.length;
+          this.allTerms = [...this.allTerms, ...newTerms].sort((a, b) => a.term.localeCompare(b.term));
+          this.rebuildCategories();
+          this.filter();
+          this.cdr.markForCheck();
+        }
+        this.fillingGaps = false;
+      },
+      error: () => { this.fillingGaps = false; }
     });
   }
 
@@ -130,6 +174,11 @@ export class TermsComponent implements OnInit {
   getRelatedList(relatedTerms: string): string[] {
     if (!relatedTerms) return [];
     return relatedTerms.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  /** Returns true if this related-term name has a card to link to. */
+  hasCard(name: string): boolean {
+    return this.allTerms.some(t => t.term.toLowerCase() === name.toLowerCase());
   }
 
   navigateToTerm(name: string, event: MouseEvent) {

@@ -73,6 +73,10 @@ export class ContentService {
     return this.api.post<Term[]>('/content/terms/regenerate', {});
   }
 
+  generateMissingTerms(termNames: string[]): Observable<Term[]> {
+    return this.api.post<Term[]>('/content/terms/generate-missing', termNames);
+  }
+
   regenerateExplanation(sectionId: string): Observable<ConceptExplanation> {
     return this.api.post<ConceptExplanation>(`/content/explain/${sectionId}/regenerate`, {});
   }

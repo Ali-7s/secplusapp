@@ -539,6 +539,99 @@ public class ContentService {
         return all;
     }
 
+    /**
+     * Generates definitions for terms that are referenced as related-terms
+     * but don't yet have cards. Appends to the terms:all cache.
+     */
+    public List<Term> generateMissingTerms(List<String> requestedNames) {
+        if (requestedNames == null || requestedNames.isEmpty()) return Collections.emptyList();
+
+        // Load existing terms from cache
+        List<Term> existing = new ArrayList<>();
+        Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey("terms:all");
+        if (cached.isPresent()) {
+            try {
+                existing = mapper.readValue(cached.get().getJsonContent(), new TypeReference<List<Term>>() {});
+            } catch (Exception e) {
+                log.warning("Could not parse existing terms for gap-fill: " + e.getMessage());
+            }
+        }
+
+        Set<String> existingLower = existing.stream()
+            .map(t -> t.getTerm().toLowerCase())
+            .collect(Collectors.toSet());
+
+        // De-duplicate and filter to truly missing names
+        List<String> toGenerate = requestedNames.stream()
+            .map(String::trim)
+            .filter(n -> !n.isEmpty())
+            .distinct()
+            .filter(n -> !existingLower.contains(n.toLowerCase()))
+            .collect(Collectors.toList());
+
+        if (toGenerate.isEmpty()) return Collections.emptyList();
+
+        log.info("Generating " + toGenerate.size() + " missing terms: " + toGenerate);
+
+        // Batch into groups of 12 and run in parallel
+        final int BATCH = 12;
+        List<List<String>> batches = new ArrayList<>();
+        for (int i = 0; i < toGenerate.size(); i += BATCH) {
+            batches.add(toGenerate.subList(i, Math.min(i + BATCH, toGenerate.size())));
+        }
+
+        final String promptTemplate = """
+                Generate Security+ SY0-701 term definitions for EXACTLY this list: %s
+
+                Return a JSON array — one entry per term in the list above, no additions or omissions:
+                [
+                  {
+                    "term": "Non-repudiation",
+                    "definition": "The assurance that an entity cannot deny having performed an action such as sending a message or completing a transaction",
+                    "category": "Core Concepts",
+                    "examContext": "Frequently tested with digital signatures and audit logs — requires both authentication and integrity controls",
+                    "analogy": "Like a signed receipt: the signature proves you received the package and you cannot later claim you did not",
+                    "relatedTerms": "Digital signature, Authentication, Integrity, Accountability"
+                  }
+                ]
+                Valid category values: Core Concepts, Cryptography, Network Security, Threat Intelligence, Attack Types, Malware, Identity & Access, Governance, Incident Response, Architecture
+                """;
+
+        List<CompletableFuture<List<Term>>> futures = batches.stream()
+            .map(batch -> {
+                String prompt = String.format(promptTemplate, String.join(", ", batch));
+                return CompletableFuture.supplyAsync(() -> {
+                    String response = claude.callClaude(SYSTEM_PROMPT, prompt, 8192);
+                    try {
+                        return mapper.<List<Term>>readValue(response, new TypeReference<List<Term>>() {});
+                    } catch (Exception e) {
+                        log.warning("Failed to parse missing term batch " + batch + ": " + e.getMessage()
+                            + ". Response: " + response.substring(0, Math.min(300, response.length())));
+                        return new ArrayList<Term>();
+                    }
+                });
+            })
+            .collect(Collectors.toList());
+
+        List<Term> newTerms = futures.stream()
+            .map(CompletableFuture::join)
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+
+        if (!newTerms.isEmpty()) {
+            List<Term> combined = new ArrayList<>(existing);
+            combined.addAll(newTerms);
+            evict("terms:all");
+            try {
+                persist("terms:all", mapper.writeValueAsString(combined));
+            } catch (Exception e) {
+                log.warning("Could not persist updated terms after gap-fill: " + e.getMessage());
+            }
+        }
+
+        return newTerms;
+    }
+
     public AcronymDetail getTermDetail(String term, String definition) {
         String key = "term_detail:" + term.toLowerCase().replaceAll("[^a-z0-9]", "_");
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
