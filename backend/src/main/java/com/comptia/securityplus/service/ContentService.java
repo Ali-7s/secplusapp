@@ -5,6 +5,7 @@ import com.comptia.securityplus.entity.GeneratedContentEntity;
 import com.comptia.securityplus.model.*;
 import com.comptia.securityplus.repository.GeneratedContentRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,8 @@ public class ContentService {
     private final ClaudeService claude;
     private final CurriculumData curriculum;
     private final GeneratedContentRepository contentRepo;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
