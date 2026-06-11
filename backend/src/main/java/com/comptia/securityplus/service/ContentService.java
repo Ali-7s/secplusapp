@@ -10,7 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Service
 public class ContentService {
@@ -368,16 +370,19 @@ public class ContentService {
             }
         }
 
-        // Split into 3 batches by letter range to keep each call under the timeout
+        // 7 smaller batches (~28 acronyms each) run in parallel — keeps each call
+        // fast enough to avoid the Railway 60-second nginx timeout.
         String[][] batches = {
-            { "A-D", "AAA, ACL, AD, AES, AH, AI, AIS, ALE, AP, API, APT, ARO, ARP, ASLR, ATT&CK, AUP, AV, BASH, BCP, BGP, BIA, BIOS, BPA, BYOD, CA, CAB, CAPTCHA, CBC, CCMP, CERT, CI/CD, CIRT, CMDB, COPE, CPU, CRC, CRL, CSIRT, CSP, CSR, CSRF, CVE, CVSS, CYOD, DAC, DDoS, DEP, DES, DHCP, DLL, DLP, DMZ, DNAT, DNS, DNSSEC, DoS, DRP, DSA" },
-            { "E-N", "EAP, ECC, EDR, EF, EFS, EMM, EOL, EOS, ESP, FDE, FIM, FPGA, FTP, FTPS, GRE, HA, HDD, HMAC, HOTP, HSM, HTML, HTTP, HTTPS, HVAC, IaaS, IaC, IAM, ICMP, ICS, IDS, IKE, IM, IMAP, IoT, IP, IPS, IPsec, IR, IRP, ISO, IV, KDC, KEK, KMS, LDAP, LDAPS, MAC, MAM, MBR, MD5, MDM, MFA, MITM, MOA, MOU, MSA, MSP, MSSP, MTBF, MTTR, MTU, NAC, NAT, NDA, NFC, NIDS, NIST, NOC, NTLM, NVD" },
-            { "O-Z", "OAUTH, OCSP, OID, OSINT, OT, OVAL, PAM, PAP, PAT, PCI, PEM, PGP, PHI, PII, PKI, PKCS, POP, RADIUS, RAID, RAS, RAT, RBAC, RC4, RDP, RF, RFC, RMF, RPO, RSA, RTO, S/MIME, SaaS, SAML, SCAP, SCSI, SDK, SDLC, SED, SFTP, SHA, SIEM, SIM, SLA, SMB, SMTP, SMTPS, SNMP, SOAP, SOC, SOW, SPF, SQL, SSH, SSL, SSO, SSID, STIG, TAXII, TKIP, TLS, TOTP, TPM, TTPs, UAT, UEFI, UPS, URL, USB, UTM, UEBA, VBA, VPC, VPN, WAF, WEP, WIDS, WPA2, WPA3, XDR, XSRF, XSS, ZTNA" }
+            { "A-C1", "AAA, ACL, AD, AES, AH, AI, AIS, ALE, AP, API, APT, ARO, ARP, ASLR, ATT&CK, AUP, AV, BASH, BCP, BGP, BIA, BIOS, BPA, BYOD, CA, CAB, CAPTCHA, CBC" },
+            { "C2-D", "CCMP, CERT, CI/CD, CIRT, CMDB, COPE, CPU, CRC, CRL, CSIRT, CSP, CSR, CSRF, CVE, CVSS, CYOD, DAC, DDoS, DEP, DES, DHCP, DLL, DLP, DMZ, DNAT, DNS, DNSSEC, DoS, DRP, DSA" },
+            { "E-I",  "EAP, ECC, EDR, EF, EFS, EMM, EOL, EOS, ESP, FDE, FIM, FPGA, FTP, FTPS, GRE, HA, HDD, HMAC, HOTP, HSM, HTML, HTTP, HTTPS, HVAC, IaaS, IaC, IAM, ICMP, ICS, IDS" },
+            { "IK-N", "IKE, IM, IMAP, IoT, IP, IPS, IPsec, IR, IRP, ISO, IV, KDC, KEK, KMS, LDAP, LDAPS, MAC, MAM, MBR, MD5, MDM, MFA, MITM, MOA, MOU, MSA, MSP, MSSP, MTBF, MTTR, MTU, NAC, NAT, NDA, NFC, NIDS, NIST, NOC, NTLM, NVD" },
+            { "O-R",  "OAUTH, OCSP, OID, OSINT, OT, OVAL, PAM, PAP, PAT, PCI, PEM, PGP, PHI, PII, PKI, PKCS, POP, RADIUS, RAID, RAS, RAT, RBAC, RC4, RDP, RF, RFC, RMF, RPO, RSA, RTO" },
+            { "S",    "S/MIME, SaaS, SAML, SCAP, SCSI, SDK, SDLC, SED, SFTP, SHA, SIEM, SIM, SLA, SMB, SMTP, SMTPS, SNMP, SOAP, SOC, SOW, SPF, SQL, SSH, SSL, SSO, SSID, STIG" },
+            { "T-Z",  "TAXII, TKIP, TLS, TOTP, TPM, TTPs, UAT, UEFI, UPS, URL, USB, UTM, UEBA, VBA, VPC, VPN, WAF, WEP, WIDS, WPA2, WPA3, XDR, XSRF, XSS, ZTNA" }
         };
 
-        List<Acronym> all = new ArrayList<>();
-        for (String[] batch : batches) {
-            String prompt = String.format("""
+        final String promptTemplate = """
                 Generate Security+ SY0-701 acronym definitions for EXACTLY this list: %s
 
                 Return a JSON array — one entry per acronym in the list above, no additions or omissions:
@@ -392,18 +397,31 @@ public class ContentService {
                   }
                 ]
                 Valid category values: Access Control, Cryptography, Network, Protocol, Compliance, Attack, Tool, Cloud, Identity
-                """, batch[1]);
+                """;
 
-            String response = claude.callClaude(SYSTEM_PROMPT, prompt, 16384);
-            try {
-                List<Acronym> chunk = mapper.readValue(response, new TypeReference<List<Acronym>>() {});
-                all.addAll(chunk);
-            } catch (Exception e) {
-                log.severe("Failed to parse acronym batch " + batch[0] + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
-                    + response.substring(0, Math.min(1000, response.length())));
-                throw new RuntimeException("Failed to parse acronym batch " + batch[0] + ": " + e.getMessage());
-            }
-        }
+        // Fire all batches concurrently — total latency = slowest single call (~15s)
+        // instead of sum of all calls (~90s) which triggers Railway's 60s timeout.
+        List<CompletableFuture<List<Acronym>>> futures = Arrays.stream(batches)
+            .map(batch -> {
+                String prompt = String.format(promptTemplate, batch[1]);
+                String batchName = batch[0];
+                return CompletableFuture.supplyAsync(() -> {
+                    String response = claude.callClaude(SYSTEM_PROMPT, prompt, 8192);
+                    try {
+                        return mapper.<List<Acronym>>readValue(response, new TypeReference<List<Acronym>>() {});
+                    } catch (Exception e) {
+                        log.severe("Failed to parse acronym batch " + batchName + ": " + e.getMessage()
+                            + ". Response start: " + response.substring(0, Math.min(500, response.length())));
+                        throw new RuntimeException("Failed to parse acronym batch " + batchName + ": " + e.getMessage());
+                    }
+                });
+            })
+            .collect(Collectors.toList());
+
+        List<Acronym> all = futures.stream()
+            .map(CompletableFuture::join)   // waits for all; throws CompletionException on any failure
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
 
         try {
             persist(key, mapper.writeValueAsString(all));
