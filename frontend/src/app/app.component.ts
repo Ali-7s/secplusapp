@@ -42,6 +42,7 @@ export class AppComponent implements OnInit {
     { path: '/roadmap', icon: 'map', label: 'Study Roadmap' },
     { path: '/exam/full', icon: 'assignment', label: 'Full Practice Exam' },
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary' },
+    { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
     { path: '/progress', icon: 'insights', label: 'My Progress' },
   ];
 

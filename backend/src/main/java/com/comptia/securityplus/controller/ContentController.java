@@ -91,6 +91,24 @@ public class ContentController {
         return ResponseEntity.ok(contentService.getAcronymDetail(acronym, expansion));
     }
 
+    @GetMapping("/terms")
+    public ResponseEntity<List<Term>> getTerms() {
+        return ResponseEntity.ok(contentService.getTerms());
+    }
+
+    @GetMapping("/terms/{term}/detail")
+    public ResponseEntity<AcronymDetail> getTermDetail(
+            @PathVariable String term,
+            @RequestParam(required = false, defaultValue = "") String definition) {
+        return ResponseEntity.ok(contentService.getTermDetail(term, definition));
+    }
+
+    @PostMapping("/terms/regenerate")
+    public ResponseEntity<List<Term>> regenerateTerms() {
+        contentService.evict("terms:all");
+        return ResponseEntity.ok(contentService.getTerms());
+    }
+
     // ── Regenerate (evict DB entry then re-generate) ──────────────────────────
 
     @PostMapping("/explain/{sectionId}/regenerate")

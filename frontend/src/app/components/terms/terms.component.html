@@ -1,0 +1,253 @@
+<div class="page-container">
+  <div class="page-header">
+    <mat-icon>menu_book</mat-icon>
+    <div>
+      <h1>Key Terms</h1>
+      <p>Core Security+ SY0-701 concepts explained in plain language — click any card to expand it</p>
+    </div>
+    @if (!loading && allTerms.length) {
+      <div class="count-badge">{{ filteredTerms.length }} / {{ allTerms.length }}</div>
+    }
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-bar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search terms...</mat-label>
+        <input matInput [(ngModel)]="searchText" (ngModelChange)="filter()"
+          placeholder="e.g. non-repudiation, encryption...">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="cat-field">
+        <mat-label>Category</mat-label>
+        <mat-select [(value)]="selectedCategory" (selectionChange)="filter()">
+          @for (cat of categories; track cat) {
+            <mat-option [value]="cat">{{ cat }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <button class="mode-toggle" [class.active]="flashcardMode" (click)="toggleFlashcardMode()"
+      matTooltip="{{ flashcardMode ? 'Switch to browse mode' : 'Switch to flashcard mode' }}">
+      <mat-icon>{{ flashcardMode ? 'view_module' : 'flip_to_back' }}</mat-icon>
+      {{ flashcardMode ? 'Browse' : 'Flashcards' }}
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Generating key terms glossary...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <h3>Error loading terms</h3>
+      <p>{{ error }}</p>
+      <button mat-raised-button color="primary" (click)="error=''; load()">Retry</button>
+    </div>
+  } @else if (filteredTerms.length === 0) {
+    <div class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <p>No terms match "{{ searchText }}"</p>
+    </div>
+  } @else if (flashcardMode) {
+
+    <!-- ── Flashcard Carousel ──────────────────────────────────── -->
+    <div class="flashcard-container">
+
+      <div class="fc-progress-row">
+        <span>Card {{ fcIndex + 1 }} / {{ filteredTerms.length }}</span>
+        <span class="fc-known">{{ fcDone.size }} known</span>
+        <mat-progress-bar mode="determinate"
+          [value]="(fcIndex / filteredTerms.length) * 100">
+        </mat-progress-bar>
+        <button mat-icon-button (click)="fcReset()" matTooltip="Restart deck">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <div class="flashcard" [class.flipped]="fcFlipped" (click)="fcFlip()">
+        <div class="fc-front">
+          <div class="fc-category">{{ filteredTerms[fcIndex].category }}</div>
+          <div class="fc-question">{{ filteredTerms[fcIndex].term }}</div>
+          <div class="fc-hint">Click to reveal answer</div>
+        </div>
+        <div class="fc-back">
+          <div class="fc-answer">{{ filteredTerms[fcIndex].definition }}</div>
+          @if (filteredTerms[fcIndex].analogy) {
+            <div class="fc-mnemonic">💡 {{ filteredTerms[fcIndex].analogy }}</div>
+          }
+          @if (filteredTerms[fcIndex].examContext) {
+            <div class="fc-tip">📋 {{ filteredTerms[fcIndex].examContext }}</div>
+          }
+        </div>
+      </div>
+
+      <div class="fc-controls">
+        <button mat-stroked-button (click)="fcPrev()" [disabled]="fcIndex === 0">
+          <mat-icon>chevron_left</mat-icon> Prev
+        </button>
+        @if (fcFlipped) {
+          <button mat-raised-button color="warn" (click)="fcNext(false)">
+            <mat-icon>close</mat-icon> Still Learning
+          </button>
+          <button mat-raised-button color="primary" (click)="fcNext(true)">
+            <mat-icon>check</mat-icon> Got It
+          </button>
+        } @else {
+          <button mat-raised-button (click)="fcFlip()">
+            <mat-icon>flip</mat-icon> Flip Card
+          </button>
+        }
+        <button mat-stroked-button [disabled]="fcIndex === filteredTerms.length - 1"
+          (click)="fcNext(false)">
+          Next <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+
+      @if (fcIndex === filteredTerms.length - 1 && fcFlipped) {
+        <div class="fc-complete">
+          <mat-icon>emoji_events</mat-icon>
+          Deck complete! {{ fcDone.size }} / {{ filteredTerms.length }} marked as known.
+          <button mat-button color="primary" (click)="fcReset()">Restart</button>
+        </div>
+      }
+
+      <div class="fc-dots">
+        @for (t of filteredTerms; track $index) {
+          <div class="fc-dot"
+            [class.active]="$index === fcIndex"
+            [class.known]="fcDone.has($index)"
+            (click)="fcIndex = $index; fcFlipped = false">
+          </div>
+        }
+      </div>
+
+    </div>
+
+  } @else {
+
+    <!-- ── Browse Grid ─────────────────────────────────────────── -->
+    <div class="terms-grid">
+      @for (t of filteredTerms; track t.term) {
+
+        <mat-card class="term-card" [class.expanded]="expandedTerm === t.term"
+          [id]="'term-' + t.term" (click)="toggleExpand(t, $event)">
+
+          <div class="term-header">
+            <span class="term-name">{{ t.term }}</span>
+            <span class="term-category">{{ t.category }}</span>
+            <mat-icon class="expand-chevron">
+              {{ expandedTerm === t.term ? 'expand_less' : 'expand_more' }}
+            </mat-icon>
+          </div>
+
+          @if (expandedTerm !== t.term) {
+            <!-- Collapsed preview -->
+            <div class="term-definition term-preview">{{ t.definition }}</div>
+            @if (t.analogy) {
+              <div class="term-analogy"><mat-icon>lightbulb</mat-icon> {{ t.analogy }}</div>
+            }
+            @if (t.relatedTerms) {
+              <div class="term-related">Related: {{ t.relatedTerms }}</div>
+            }
+          }
+
+          @if (expandedTerm === t.term) {
+            <!-- Expanded detail -->
+            <div class="expanded-body">
+
+              <div class="term-definition">{{ t.definition }}</div>
+
+              @if (t.analogy) {
+                <div class="analogy-box">
+                  <mat-icon>lightbulb</mat-icon>
+                  <span>{{ t.analogy }}</span>
+                </div>
+              }
+
+              @if (t.examContext) {
+                <div class="term-exam">
+                  <mat-icon>school</mat-icon>
+                  <span>{{ t.examContext }}</span>
+                </div>
+              }
+
+              @if (t.relatedTerms) {
+                <div class="related-chips">
+                  <span class="related-label">Related:</span>
+                  @for (rel of getRelatedList(t.relatedTerms); track rel) {
+                    <span class="rel-chip" (click)="navigateToTerm(rel, $event)"
+                      [matTooltip]="'Jump to ' + rel">{{ rel }}</span>
+                  }
+                </div>
+              }
+
+              @if (loadingDetails.has(t.term)) {
+                <div class="detail-loading">
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Loading scenario &amp; quiz...</span>
+                </div>
+              } @else {
+                @if (getDetail(t.term); as detail) {
+
+                  <div class="scenario-section">
+                    <div class="detail-label"><mat-icon>person</mat-icon> Real-World Scenario</div>
+                    <p class="scenario-text">{{ detail.practicalScenario }}</p>
+                  </div>
+
+                  <div class="quiz-section">
+                    <div class="detail-label"><mat-icon>quiz</mat-icon> Quick Check</div>
+                    <p class="quiz-question">{{ detail.quizQuestion }}</p>
+                    <div class="quiz-options">
+                      @for (opt of detail.quizOptions; track opt) {
+                        @let letter = opt.charAt(0);
+                        <button class="quiz-btn"
+                          [class.correct]="quizSelected.has(t.term) && letter === detail.quizAnswer"
+                          [class.wrong]="quizSelected.get(t.term) === letter && letter !== detail.quizAnswer"
+                          [class.selected]="quizSelected.get(t.term) === letter"
+                          (click)="selectQuizOption(t.term, letter, $event)"
+                          [disabled]="quizSelected.has(t.term)">
+                          <span class="quiz-letter">{{ letter }}</span>
+                          <span class="quiz-text">{{ opt.slice(3) }}</span>
+                          @if (quizSelected.has(t.term) && letter === detail.quizAnswer) {
+                            <mat-icon class="quiz-icon correct-icon">check_circle</mat-icon>
+                          }
+                          @if (quizSelected.get(t.term) === letter && letter !== detail.quizAnswer) {
+                            <mat-icon class="quiz-icon wrong-icon">cancel</mat-icon>
+                          }
+                        </button>
+                      }
+                    </div>
+                    @if (quizSelected.has(t.term)) {
+                      <div class="quiz-result" [class.pass]="isQuizCorrect(t.term)">
+                        <mat-icon>{{ isQuizCorrect(t.term) ? 'check_circle' : 'info' }}</mat-icon>
+                        {{ isQuizCorrect(t.term) ? 'Correct!' : 'Correct answer: ' + detail.quizAnswer }}
+                      </div>
+                    }
+                  </div>
+
+                } @else if (detailErrors.has(t.term)) {
+                  <div class="detail-error">
+                    <mat-icon>error_outline</mat-icon>
+                    Could not load additional details.
+                    <button mat-button color="primary" (click)="loadDetail(t); $event.stopPropagation()">
+                      Retry
+                    </button>
+                  </div>
+                }
+              }
+
+            </div>
+          }
+
+        </mat-card>
+
+      }
+    </div>
+
+  }
+</div>

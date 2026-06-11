@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Domain, Section } from '../models/curriculum.model';
 import { Question, ExamSubmission, ExamResult } from '../models/question.model';
-import { Flashcard, ConceptExplanation, Lab, Acronym, AcronymDetail } from '../models/flashcard.model';
+import { Flashcard, ConceptExplanation, Lab, Acronym, AcronymDetail, Term, TermDetail } from '../models/flashcard.model';
 
 @Injectable({ providedIn: 'root' })
 export class ContentService {
@@ -59,6 +59,18 @@ export class ContentService {
 
   getAcronymDetail(acronym: string, expansion: string): Observable<AcronymDetail> {
     return this.api.get<AcronymDetail>(`/content/acronyms/${encodeURIComponent(acronym)}/detail?expansion=${encodeURIComponent(expansion)}`);
+  }
+
+  getTerms(): Observable<Term[]> {
+    return this.api.get<Term[]>('/content/terms');
+  }
+
+  getTermDetail(term: string, definition: string): Observable<TermDetail> {
+    return this.api.get<TermDetail>(`/content/terms/${encodeURIComponent(term)}/detail?definition=${encodeURIComponent(definition)}`);
+  }
+
+  regenerateTerms(): Observable<Term[]> {
+    return this.api.post<Term[]>('/content/terms/regenerate', {});
   }
 
   regenerateExplanation(sectionId: string): Observable<ConceptExplanation> {

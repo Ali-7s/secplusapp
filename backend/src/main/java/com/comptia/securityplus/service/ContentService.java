@@ -468,4 +468,112 @@ public class ContentService {
             throw new RuntimeException("Failed to generate detail for " + acronym + ": " + e.getMessage());
         }
     }
+
+    // ── Terms ──────────────────────────────────────────────────────────────────
+
+    public List<Term> getTerms() {
+        String key = "terms:all";
+        Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
+        if (cached.isPresent()) {
+            try {
+                return mapper.readValue(cached.get().getJsonContent(), new TypeReference<List<Term>>() {});
+            } catch (Exception e) {
+                evict(key);
+            }
+        }
+
+        // 6 parallel batches of ~22 terms each
+        String[][] batches = {
+            { "core",     "Confidentiality, Integrity, Availability, Non-repudiation, Authentication, Authorization, Accountability, CIA triad, Defense in depth, Least privilege, Separation of duties, Need to know, Zero trust, Fail secure, Fail open, Implicit deny, Due diligence, Due care, Governance, Risk management, Privacy, Data sovereignty" },
+            { "threats",  "Threat actor, Vulnerability, Threat, Risk, Exploit, Attack vector, Attack surface, Zero-day, Social engineering, Phishing, Spear phishing, Whaling, Vishing, Smishing, Pretexting, Tailgating, Shoulder surfing, Dumpster diving, Watering hole attack, Supply chain attack, Insider threat, Advanced persistent threat" },
+            { "malware",  "Malware, Ransomware, Spyware, Rootkit, Keylogger, Worm, Virus, Trojan horse, Backdoor, Botnet, Logic bomb, Cryptojacking, Steganography, Obfuscation, Privilege escalation, Lateral movement, Persistence, Exfiltration, Pivoting, Command and control, Pass-the-hash, Man-in-the-middle attack, Buffer overflow" },
+            { "crypto",   "Encryption, Symmetric encryption, Asymmetric encryption, Hashing, Salting, Digital signature, Certificate, Public key, Private key, Key exchange, Key escrow, Key stretching, Block cipher, Stream cipher, Cipher suite, Perfect forward secrecy, Tokenization, Data masking, Certificate authority, Chain of trust, Replay attack, Hybrid encryption" },
+            { "network",  "Firewall, Stateful inspection, Packet filtering, Proxy server, Honeypot, Honeynet, Network segmentation, Microsegmentation, Network tap, Port mirroring, Hardening, Baseline configuration, Patch management, Vulnerability scanning, Penetration testing, Red team, Blue team, Purple team, Threat hunting, Threat intelligence, Indicator of compromise" },
+            { "identity", "Federation, Single sign-on, Multifactor authentication, Biometrics, Smart card, Account lockout, Role-based access control, Mandatory access control, Discretionary access control, Incident response, Business continuity, Disaster recovery, Fault tolerance, High availability, Load balancing, Failover, Change management, Data classification, Data loss prevention, Brute force attack, Dictionary attack, Credential stuffing" }
+        };
+
+        final String promptTemplate = """
+                Generate Security+ SY0-701 term definitions for EXACTLY this list: %s
+
+                Return a JSON array — one entry per term in the list above, no additions or omissions:
+                [
+                  {
+                    "term": "Non-repudiation",
+                    "definition": "The assurance that an entity cannot deny having performed an action such as sending a message or completing a transaction",
+                    "category": "Core Concepts",
+                    "examContext": "Frequently tested with digital signatures and audit logs — requires both authentication and integrity controls",
+                    "analogy": "Like a signed receipt: the signature proves you received the package and you cannot later claim you did not",
+                    "relatedTerms": "Digital signature, Authentication, Integrity, Accountability"
+                  }
+                ]
+                Valid category values: Core Concepts, Cryptography, Network Security, Threat Intelligence, Attack Types, Malware, Identity & Access, Governance, Incident Response, Architecture
+                """;
+
+        List<CompletableFuture<List<Term>>> futures = Arrays.stream(batches)
+            .map(batch -> {
+                String prompt = String.format(promptTemplate, batch[1]);
+                String batchName = batch[0];
+                return CompletableFuture.supplyAsync(() -> {
+                    String response = claude.callClaude(SYSTEM_PROMPT, prompt, 8192);
+                    try {
+                        return mapper.<List<Term>>readValue(response, new TypeReference<List<Term>>() {});
+                    } catch (Exception e) {
+                        log.severe("Failed to parse term batch " + batchName + ": " + e.getMessage()
+                            + ". Response start: " + response.substring(0, Math.min(500, response.length())));
+                        throw new RuntimeException("Failed to parse term batch " + batchName + ": " + e.getMessage());
+                    }
+                });
+            })
+            .collect(Collectors.toList());
+
+        List<Term> all = futures.stream()
+            .map(CompletableFuture::join)
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+
+        try {
+            persist(key, mapper.writeValueAsString(all));
+        } catch (Exception e) {
+            log.warning("Could not persist terms: " + e.getMessage());
+        }
+        return all;
+    }
+
+    public AcronymDetail getTermDetail(String term, String definition) {
+        String key = "term_detail:" + term.toLowerCase().replaceAll("[^a-z0-9]", "_");
+        Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
+        if (cached.isPresent()) {
+            try {
+                return mapper.readValue(cached.get().getJsonContent(), AcronymDetail.class);
+            } catch (Exception e) {
+                evict(key);
+            }
+        }
+
+        String prompt = String.format("""
+                For the Security+ SY0-701 concept "%s" (%s):
+                Return ONLY this JSON object — no markdown, no code fences, nothing else:
+                {
+                  "practicalScenario": "2-3 sentence real-world scenario using a specific person name (Alex, Maria, Sam). Describe exactly what they configure/implement and the concrete security outcome.",
+                  "quizQuestion": "A realistic exam-style scenario question testing application of this concept — not just its definition. 1-2 sentences.",
+                  "quizOptions": ["A) ...", "B) ...", "C) ...", "D) ..."],
+                  "quizAnswer": "B"
+                }
+                Rules:
+                - quizAnswer must be exactly one letter (A, B, C, or D) matching the correct option
+                - All four options must be plausible distractors — related concepts a student might confuse
+                - Do not make the answer obvious from the question stem alone
+                """, term, definition);
+
+        String response = claude.callClaude(SYSTEM_PROMPT, prompt, 1024);
+        try {
+            AcronymDetail detail = mapper.readValue(response, AcronymDetail.class);
+            persist(key, mapper.writeValueAsString(detail));
+            return detail;
+        } catch (Exception e) {
+            log.severe("Failed to parse term detail for " + term + ": " + e.getMessage()
+                + ". Response: " + response.substring(0, Math.min(300, response.length())));
+            throw new RuntimeException("Failed to generate detail for term " + term + ": " + e.getMessage());
+        }
+    }
 }

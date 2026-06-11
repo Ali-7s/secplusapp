@@ -67,3 +67,14 @@ export interface AcronymDetail {
   quizOptions: string[];
   quizAnswer: string;
 }
+
+export interface Term {
+  term: string;
+  definition: string;
+  category: string;
+  examContext: string;
+  analogy: string;
+  relatedTerms: string;
+}
+
+export type TermDetail = AcronymDetail;
