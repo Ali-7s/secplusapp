@@ -106,8 +106,12 @@ export class SectionStudyComponent implements OnInit {
         this.sectionProgress = p;
         this.isUnlocked = p.unlocked;
         this.labCompleted = p.labCompleted;
+        if (p.unlocked) this.loadExplanation();
       },
-      error: () => { this.isUnlocked = this.sectionId === '1.1'; }
+      error: () => {
+        this.isUnlocked = this.sectionId === '1.1';
+        if (this.isUnlocked) this.loadExplanation();
+      }
     });
   }
 
