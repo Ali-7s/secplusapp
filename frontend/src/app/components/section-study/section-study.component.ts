@@ -97,6 +97,11 @@ export class SectionStudyComponent implements OnInit {
 
   ngOnInit() {
     this.sectionId = this.route.snapshot.paramMap.get('id')!;
+
+    // Learn is always the default tab — start fetching immediately so it's
+    // ready (or loading) the moment the tab group renders.
+    this.loadExplanation();
+
     this.contentService.getSection(this.sectionId).subscribe({
       next: s => this.section = s,
       error: () => {}
@@ -106,12 +111,8 @@ export class SectionStudyComponent implements OnInit {
         this.sectionProgress = p;
         this.isUnlocked = p.unlocked;
         this.labCompleted = p.labCompleted;
-        if (p.unlocked) this.loadExplanation();
       },
-      error: () => {
-        this.isUnlocked = this.sectionId === '1.1';
-        if (this.isUnlocked) this.loadExplanation();
-      }
+      error: () => { this.isUnlocked = this.sectionId === '1.1'; }
     });
   }
 
