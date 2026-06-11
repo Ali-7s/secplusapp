@@ -182,7 +182,22 @@
     }
   }
   .lab-q-card { .lab-q-text { font-size:14px; font-weight:500; margin-bottom:12px; } .lab-answer { background:#e8f5e9; border-radius:6px; padding:8px 12px; font-size:14px; margin-bottom:6px; } .lab-explain { font-size:13px; color:#666; line-height:1.4; } }
-  .walkthrough-card { background:#f3f4f6; p{font-size:14px;line-height:1.6;color:#444;} }
+  .walkthrough-card {
+    background: #f3f4f6;
+    .walkthrough-body {
+      p {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #444;
+        margin: 0 0 12px 0;
+        &:last-child { margin-bottom: 0; }
+      }
+      strong {
+        color: #1a237e;
+        font-weight: 600;
+      }
+    }
+  }
   .complete-lab-row { display:flex; justify-content:center; padding:8px 0; }
   .lab-complete-msg { display:flex; align-items:center; gap:8px; justify-content:center; color:#2e7d32; font-size:15px; font-weight:600; padding:16px; background:#e8f5e9; border-radius:10px; mat-icon{font-size:24px;width:24px;height:24px;} }
 }

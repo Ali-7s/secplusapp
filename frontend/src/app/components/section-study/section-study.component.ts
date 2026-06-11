@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -35,6 +36,7 @@ export class SectionStudyComponent implements OnInit {
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
   private snackBar = inject(MatSnackBar);
+  private sanitizer = inject(DomSanitizer);
 
   protected readonly Object = Object;
 
@@ -389,5 +391,22 @@ export class SectionStudyComponent implements OnInit {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  formatMarkdown(text: string | undefined | null): SafeHtml {
+    if (!text) return this.sanitizer.bypassSecurityTrustHtml('');
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // Each **Heading** starts a new paragraph
+    const html = '<p>' + escaped
+      .replace(/\*\*([^*\n]+)\*\*/g, (_, h) => `</p><p><strong>${h}</strong>`)
+      .replace(/\n\n+/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      + '</p>'
+      // Remove empty paragraphs left by leading/trailing replacements
+      .replace(/<p>\s*<\/p>/g, '');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 }

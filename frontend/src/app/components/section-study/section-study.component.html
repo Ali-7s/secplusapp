@@ -382,7 +382,7 @@
                   <mat-icon mat-card-avatar>menu_book</mat-icon>
                   <mat-card-title>Lab Walkthrough</mat-card-title>
                 </mat-card-header>
-                <mat-card-content><p>{{ lab.walkthrough }}</p></mat-card-content>
+                <mat-card-content class="walkthrough-body" [innerHTML]="formatMarkdown(lab.walkthrough)"></mat-card-content>
               </mat-card>
             }
 
