@@ -344,7 +344,7 @@ public class ContentService {
             section.getObjectiveNumber(), section.getName(),
             String.join(", ", section.getKeyTopics()), sectionId);
 
-        String response = fetchOrGenerate(key, prompt, 6144);
+        String response = fetchOrGenerate(key, prompt, 16384);
         try {
             return mapper.readValue(response, Lab.class);
         } catch (Exception e) {
