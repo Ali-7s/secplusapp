@@ -57,6 +57,7 @@ export class SectionStudyComponent implements OnInit {
   flashcards: Flashcard[] = [];
   loadingFlashcards = false;
   flashcardFlipped = false;
+  fcWriteAnswer = '';    // user's typed recall attempt before flip
   fcPass = 1;
   fcQueue: number[] = [];         // card indices for this pass
   fcQueuePos = 0;                  // position within fcQueue
@@ -165,6 +166,7 @@ export class SectionStudyComponent implements OnInit {
       this.fcRetry.add(idx);
     }
     this.flashcardFlipped = false;
+    this.fcWriteAnswer = '';
 
     if (this.fcQueuePos < this.fcQueue.length - 1) {
       this.fcQueuePos++;
@@ -182,11 +184,12 @@ export class SectionStudyComponent implements OnInit {
   }
 
   prevCard() {
-    if (this.fcQueuePos > 0) { this.fcQueuePos--; this.flashcardFlipped = false; }
+    if (this.fcQueuePos > 0) { this.fcQueuePos--; this.flashcardFlipped = false; this.fcWriteAnswer = ''; }
   }
 
   resetFlashcards() {
     this.fcPass = 1;
+    this.fcWriteAnswer = '';
     this.fcQueue = this.flashcards.map((_, i) => i);
     this.fcQueuePos = 0;
     this.flashcardFlipped = false;

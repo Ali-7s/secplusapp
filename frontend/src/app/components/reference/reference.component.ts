@@ -389,6 +389,151 @@ export class ReferenceComponent {
     return this.filteredReplacements.filter(r => r.category === cat);
   }
 
+  // ── Recall Drill ───────────────────────────────────────────
+  drillActive = false;
+  drillTabName = '';
+  drillLabel = '';
+  drillItems: { question: string; hint: string; answer: string; explanation: string; status: string }[] = [];
+  drillIdx = 0;
+  drillInput = '';
+  drillChecked = false;
+  drillCorrect = false;
+  drillScore = 0;
+  drillFinished = false;
+
+  get drillItem() { return this.drillItems[this.drillIdx]; }
+  get drillProgress() { return this.drillItems.length ? (this.drillIdx / this.drillItems.length) * 100 : 0; }
+
+  startDrill(tabKey: string, tabLabel: string) {
+    const items = this.generateDrillItems(tabKey);
+    if (!items.length) return;
+    this.drillTabName = tabKey;
+    this.drillLabel = tabLabel;
+    this.drillItems = this.shuffle(items);
+    this.drillIdx = 0;
+    this.drillInput = '';
+    this.drillChecked = false;
+    this.drillCorrect = false;
+    this.drillScore = 0;
+    this.drillFinished = false;
+    this.drillActive = true;
+  }
+
+  private generateDrillItems(key: string) {
+    switch (key) {
+      case 'ports':
+        return this.PORTS.map(p => ({
+          question: p.protocol,
+          hint: `${p.service} · ${p.transport}`,
+          answer: p.port,
+          explanation: p.notes,
+          status: p.status
+        }));
+      case 'ciphers':
+        return this.CIPHERS.map(c => ({
+          question: c.name,
+          hint: `${c.type} · Used for: ${c.use}`,
+          answer: c.keySize,
+          explanation: c.notes,
+          status: c.status
+        }));
+      case 'hashes':
+        return this.HASHES.map(h => ({
+          question: h.name,
+          hint: `Used for: ${h.use}`,
+          answer: h.outputBits,
+          explanation: h.notes,
+          status: h.status
+        }));
+      case 'auth':
+        return this.AUTH_PROTOCOLS.map(a => ({
+          question: a.name,
+          hint: a.type,
+          answer: a.port,
+          explanation: a.notes,
+          status: a.status
+        }));
+      case 'vpn':
+        return this.VPN_PROTOCOLS.map(v => ({
+          question: v.name,
+          hint: v.type,
+          answer: v.port,
+          explanation: v.notes,
+          status: v.status
+        }));
+      case 'wireless':
+        return this.WIRELESS.map(w => ({
+          question: w.name,
+          hint: w.notes,
+          answer: this.statusLabel(w.status),
+          explanation: w.notes,
+          status: w.status
+        }));
+      case 'legacy':
+        return this.REPLACEMENTS.map(r => ({
+          question: r.from.name,
+          hint: `${r.from.port} · ${r.from.why}`,
+          answer: r.to.name,
+          explanation: `${r.to.name} (${r.to.port}): ${r.to.why}`,
+          status: 'neutral'
+        }));
+      default:
+        return [];
+    }
+  }
+
+  submitDrill() {
+    if (this.drillChecked || !this.drillInput.trim()) return;
+    this.drillChecked = true;
+    this.drillCorrect = this.matchAnswer(this.drillInput, this.drillItem.answer);
+    if (this.drillCorrect) this.drillScore++;
+  }
+
+  nextDrill() {
+    if (this.drillIdx < this.drillItems.length - 1) {
+      this.drillIdx++;
+      this.drillInput = '';
+      this.drillChecked = false;
+      this.drillCorrect = false;
+    } else {
+      this.drillFinished = true;
+    }
+  }
+
+  restartDrill() {
+    this.startDrill(this.drillTabName, this.drillLabel);
+  }
+
+  exitDrill() {
+    this.drillActive = false;
+    this.drillItems = [];
+  }
+
+  private matchAnswer(input: string, correct: string): boolean {
+    const u = input.trim().toLowerCase();
+    const a = correct.toLowerCase();
+    if (!u) return false;
+    if (u === a) return true;
+    // Digit match — for ports, key sizes, output bits
+    const uNums: string[] = u.match(/\d+/g) ?? [];
+    const aNums: string[] = a.match(/\d+/g) ?? [];
+    if (uNums.length && aNums.length && uNums.some(n => aNums.includes(n))) return true;
+    // Normalized name match
+    const uNorm = u.replace(/[^a-z0-9]/g, '');
+    const aNorm = a.replace(/[^a-z0-9]/g, '');
+    if (uNorm.length >= 3 && (aNorm.includes(uNorm) || uNorm.includes(aNorm))) return true;
+    return false;
+  }
+
+  private shuffle<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   statusLabel(s: string): string {
     return { secure: 'Secure', insecure: 'Weak/Insecure', deprecated: 'Deprecated', neutral: 'Context-dependent' }[s] ?? s;
   }

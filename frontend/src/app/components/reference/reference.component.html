@@ -22,12 +22,93 @@
     </mat-form-field>
   </div>
 
+  @if (drillActive) {
+    <div class="drill-container">
+      <div class="drill-header">
+        <div class="drill-meta">
+          <mat-icon>fitness_center</mat-icon>
+          <span class="drill-title">Recall Drill — {{ drillLabel }}</span>
+          <span class="drill-score">{{ drillScore }} / {{ drillItems.length }} correct</span>
+        </div>
+        <button mat-button (click)="exitDrill()">
+          <mat-icon>close</mat-icon> Exit Drill
+        </button>
+      </div>
+
+      <mat-progress-bar mode="determinate" [value]="drillProgress" class="drill-progress"></mat-progress-bar>
+
+      @if (drillFinished) {
+        <div class="drill-finished">
+          <mat-icon>{{ drillScore === drillItems.length ? 'emoji_events' : 'check_circle' }}</mat-icon>
+          <div>
+            <strong>Drill complete!</strong>
+            <span>{{ drillScore }} / {{ drillItems.length }} correct ({{ (drillScore / drillItems.length * 100) | number:'1.0-0' }}%)</span>
+          </div>
+          <div class="drill-finish-actions">
+            <button mat-raised-button color="primary" (click)="restartDrill()">
+              <mat-icon>refresh</mat-icon> Drill Again
+            </button>
+            <button mat-stroked-button (click)="exitDrill()">Back to Table</button>
+          </div>
+        </div>
+      } @else {
+        <div class="drill-card">
+          <div class="drill-q-label">What is the answer for:</div>
+          <div class="drill-question">{{ drillItem.question }}</div>
+          <div class="drill-hint">{{ drillItem.hint }}</div>
+
+          @if (!drillChecked) {
+            <div class="drill-input-row">
+              <input
+                class="drill-input"
+                type="text"
+                [(ngModel)]="drillInput"
+                placeholder="Type your answer and press Enter..."
+                (keydown.enter)="submitDrill()"
+                autofocus>
+              <button mat-raised-button color="primary" (click)="submitDrill()" [disabled]="!drillInput.trim()">
+                Check
+              </button>
+            </div>
+          } @else {
+            <div class="drill-result" [class.correct]="drillCorrect" [class.wrong]="!drillCorrect">
+              <div class="drill-result-header">
+                <mat-icon>{{ drillCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
+                <strong>{{ drillCorrect ? 'Correct!' : 'Not quite' }}</strong>
+                @if (!drillCorrect) {
+                  <span class="drill-your-answer">You wrote: "{{ drillInput }}"</span>
+                }
+              </div>
+              <div class="drill-answer-row">
+                <span class="drill-answer-label">Answer:</span>
+                <span class="drill-answer-value">{{ drillItem.answer }}</span>
+              </div>
+              <div class="drill-explanation">{{ drillItem.explanation }}</div>
+            </div>
+            <div class="drill-next-row">
+              <span class="drill-counter">{{ drillIdx + 1 }} / {{ drillItems.length }}</span>
+              <button mat-raised-button color="primary" (click)="nextDrill()">
+                {{ drillIdx < drillItems.length - 1 ? 'Next' : 'See Results' }}
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+
   <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false">
 
     <!-- ── Ports ──────────────────────────────────────────── -->
     <mat-tab label="Network Ports">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('ports', 'Network Ports')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -64,7 +145,12 @@
     <!-- ── Ciphers ─────────────────────────────────────────── -->
     <mat-tab label="Encryption Ciphers">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('ciphers', 'Encryption Ciphers')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -100,7 +186,12 @@
     <!-- ── Hashing ─────────────────────────────────────────── -->
     <mat-tab label="Hashing &amp; MACs">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('hashes', 'Hashing & MACs')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -134,7 +225,12 @@
     <!-- ── Auth Protocols ──────────────────────────────────── -->
     <mat-tab label="Auth Protocols">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('auth', 'Auth Protocols')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -168,7 +264,12 @@
     <!-- ── VPN ─────────────────────────────────────────────── -->
     <mat-tab label="VPN &amp; Tunneling">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredVpn.length }} protocols · know tunnel vs transport mode and which provide forward secrecy</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredVpn.length }} protocols · know tunnel vs transport mode and which provide forward secrecy</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('vpn', 'VPN & Tunneling')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -202,7 +303,12 @@
     <!-- ── Wireless ────────────────────────────────────────── -->
     <mat-tab label="Wireless Security">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredWireless.length }} standards · know WPA2 vs WPA3 differences and what WPS vulnerability is</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredWireless.length }} standards · know WPA2 vs WPA3 differences and what WPS vulnerability is</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('wireless', 'Wireless Security')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
         <div class="table-wrap">
           <table class="ref-table">
             <thead>
@@ -236,7 +342,12 @@
     <!-- ── Legacy → Modern ───────────────────────────────────── -->
     <mat-tab label="Legacy → Modern">
       <div class="tab-content">
-        <p class="tab-hint">{{ filteredReplacements.length }} replacements · the exam frequently asks "which protocol/port REPLACED X?" — this tab answers exactly that</p>
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredReplacements.length }} replacements · the exam frequently asks "which protocol/port REPLACED X?" — this tab answers exactly that</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('legacy', 'Legacy → Modern')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
 
         @if (filteredReplacements.length === 0) {
           <div class="no-results-block">No replacements match "{{ searchText }}"</div>
@@ -278,5 +389,7 @@
     </mat-tab>
 
   </mat-tab-group>
+
+  } <!-- end @else (drill inactive) -->
 
 </div>
