@@ -76,11 +76,8 @@
       @if (fcClozeMode) {
         <div class="cloze-card">
           <div class="cloze-category">{{ filteredAcronyms[fcIndex].category }}</div>
-          <div class="cloze-prompt">What's the acronym for:</div>
-          <div class="cloze-expansion">{{ filteredAcronyms[fcIndex].expansion }}</div>
-          @if (filteredAcronyms[fcIndex].definition) {
-            <div class="cloze-def-hint">{{ filteredAcronyms[fcIndex].definition }}</div>
-          }
+          <div class="cloze-prompt">What acronym matches this description?</div>
+          <div class="cloze-expansion">{{ filteredAcronyms[fcIndex].definition }}</div>
         </div>
         @if (!fcClozeChecked) {
           <div class="cloze-input-row">
@@ -94,7 +91,10 @@
         } @else {
           <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
             <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-            <span>{{ fcClozeCorrect ? 'Correct!' : 'Answer: ' + filteredAcronyms[fcIndex].acronym }}</span>
+            <span>{{ fcClozeCorrect ? 'Correct! ' : 'Answer: ' }}
+              <strong>{{ filteredAcronyms[fcIndex].acronym }}</strong>
+              — {{ filteredAcronyms[fcIndex].expansion }}
+            </span>
             @if (!fcClozeCorrect) {
               <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
             }
