@@ -241,22 +241,35 @@ export class SectionStudyComponent implements OnInit {
   }
 
   private extractCloze(back: string): { before: string; answer: string; after: string } {
+    if (!back?.trim()) return { before: '', answer: '', after: '' };
+    // 1. Dash/colon delimiter — cleanest structured format
     for (const d of [' — ', ' – ', ': ', ' - ']) {
       const i = back.indexOf(d);
       if (i > 0 && i <= 80) {
         return { before: '', answer: back.substring(0, i).trim(), after: back.substring(i) };
       }
     }
-    const dot = back.indexOf('. ');
-    if (dot > 4 && dot <= 120) {
-      return { before: '', answer: back.substring(0, dot + 1).trim(), after: back.substring(dot + 1) };
+    // 2. First sentence ending
+    for (const end of ['. ', '! ']) {
+      const i = back.indexOf(end);
+      if (i > 4 && i <= 140) {
+        return { before: '', answer: back.substring(0, i + 1).trim(), after: ' ' + back.substring(i + 2).trim() };
+      }
     }
-    return { before: '', answer: '', after: back };
+    // 3. First comma clause
+    const ci = back.indexOf(', ');
+    if (ci > 6 && ci <= 80) {
+      return { before: '', answer: back.substring(0, ci).trim(), after: back.substring(ci) };
+    }
+    // 4. Word-boundary cut at ~50 chars (always finds something)
+    const max = Math.min(back.length - 1, 60);
+    const spaceIdx = back.lastIndexOf(' ', max);
+    const cut = spaceIdx > 15 ? spaceIdx : Math.min(40, back.length);
+    return { before: '', answer: back.substring(0, cut).trim(), after: ' ' + back.substring(cut).trim() };
   }
 
   hasCloze(back: string): boolean {
-    const { answer } = this.extractCloze(back);
-    return answer.length > 0 && answer.length <= 80;
+    return !!(back?.trim());
   }
 
   checkCloze() {

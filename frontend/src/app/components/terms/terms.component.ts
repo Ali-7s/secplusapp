@@ -55,6 +55,12 @@ export class TermsComponent implements OnInit {
   fcFlipped = false;
   fcDone = new Set<number>();
 
+  // Cloze mode
+  fcClozeMode = false;
+  fcClozeInput = '';
+  fcClozeChecked = false;
+  fcClozeCorrect = false;
+
   ngOnInit() {
     const q = this.route.snapshot.queryParamMap.get('q');
     if (q) this.pendingTerm = q;
@@ -198,18 +204,45 @@ export class TermsComponent implements OnInit {
     }, 80);
   }
 
+  private fcClozeReset() {
+    this.fcClozeInput = '';
+    this.fcClozeChecked = false;
+    this.fcClozeCorrect = false;
+  }
+
+  toggleFcCloze() {
+    this.fcClozeMode = !this.fcClozeMode;
+    this.fcClozeReset();
+  }
+
+  checkTermCloze() {
+    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
+    this.fcClozeChecked = true;
+    const u = this.fcClozeInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const a = this.filteredTerms[this.fcIndex].term.toLowerCase().replace(/[^a-z0-9]/g, '');
+    this.fcClozeCorrect = u === a || a.includes(u) || u.includes(a);
+  }
+
+  fcClozeNext(known: boolean) {
+    if (known) this.fcDone.add(this.fcIndex);
+    this.fcClozeReset();
+    if (this.fcIndex < this.filteredTerms.length - 1) this.fcIndex++;
+  }
+
   // Carousel
+  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; this.fcClozeReset(); }
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
+    this.fcClozeReset();
     if (this.fcIndex < this.filteredTerms.length - 1) this.fcIndex++;
   }
 
   fcPrev() {
-    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; }
+    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; this.fcClozeReset(); }
   }
 
-  fcReset() { this.fcIndex = 0; this.fcFlipped = false; this.fcDone.clear(); }
+  fcReset() { this.fcIndex = 0; this.fcFlipped = false; this.fcDone.clear(); this.fcClozeReset(); }
 }

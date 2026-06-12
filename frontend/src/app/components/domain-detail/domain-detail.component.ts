@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +17,7 @@ import { Domain, SectionProgress } from '../../models/curriculum.model';
   selector: 'app-domain-detail',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
+    CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressBarModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule
   ],
   templateUrl: './domain-detail.component.html',
@@ -31,6 +32,13 @@ export class DomainDetailComponent implements OnInit {
   allProgress: SectionProgress[] = [];
   loading = true;
   error = '';
+
+  // Domain brain dump
+  brainDump = '';
+  brainDumpChecked = false;
+  brainDumpCovered = 0;
+  brainDumpTotal = 0;
+  brainDumpResults: { name: string; topics: { text: string; found: boolean }[] }[] = [];
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
@@ -63,5 +71,36 @@ export class DomainDetailComponent implements OnInit {
     if (status === 'passed')      return '#2e7d32';
     if (status === 'in_progress') return '#d97706';
     return '#1565c0';
+  }
+
+  checkBrainDump() {
+    if (!this.domain || !this.brainDump.trim()) return;
+    const dump = this.brainDump.toLowerCase();
+    let total = 0; let covered = 0;
+    this.brainDumpResults = this.domain.sections.map(s => {
+      const topics = (s.keyTopics ?? []).map(topic => {
+        total++;
+        const words = topic.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+        const found = words.length === 0 ? true : words.some(w => dump.includes(w));
+        if (found) covered++;
+        return { text: topic, found };
+      });
+      return { name: s.name, topics };
+    });
+    this.brainDumpCovered = covered;
+    this.brainDumpTotal = total;
+    this.brainDumpChecked = true;
+  }
+
+  resetBrainDump() {
+    this.brainDump = '';
+    this.brainDumpChecked = false;
+    this.brainDumpResults = [];
+    this.brainDumpCovered = 0;
+    this.brainDumpTotal = 0;
+  }
+
+  get brainDumpScorePct(): number {
+    return this.brainDumpTotal ? Math.round(this.brainDumpCovered / this.brainDumpTotal * 100) : 0;
   }
 }

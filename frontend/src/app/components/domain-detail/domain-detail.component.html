@@ -23,7 +23,7 @@
     </div>
 
     <h2 class="section-title">Objectives</h2>
-    <div class="sections-list">
+    <div class="sections-list" id="objectives-list">
       @for (section of domain.sections; track section.id) {
         @let status = getStatus(section.id);
         @let progress = getProgress(section.id);
@@ -86,6 +86,58 @@
             </div>
           </div>
         </mat-card>
+      }
+    </div>
+
+    <!-- ── Domain Brain Dump ─────────────────────────────────── -->
+    <h2 class="section-title" style="margin-top:32px">Brain Dump</h2>
+    <div class="domain-brain-dump">
+      <div class="dbd-header">
+        <mat-icon>fitness_center</mat-icon>
+        <div>
+          <strong>Write everything you know about {{ domain.name }}</strong>
+          <span>Cover key concepts, techniques, attack types, controls, protocols, and terms — then check your coverage</span>
+        </div>
+      </div>
+      @if (!brainDumpChecked) {
+        <textarea class="dbd-textarea" [(ngModel)]="brainDump" rows="7"
+          placeholder="Type freely: symmetric encryption, AES, RSA, hashing, PKI, certificates, digital signatures, TLS, key exchange…">
+        </textarea>
+        <div class="dbd-actions">
+          <button mat-raised-button color="primary" [disabled]="!brainDump.trim()" (click)="checkBrainDump()">
+            <mat-icon>fact_check</mat-icon> Check Coverage
+          </button>
+        </div>
+      } @else {
+        <div class="dbd-score"
+          [class.good]="brainDumpScorePct >= 70"
+          [class.ok]="brainDumpScorePct >= 40 && brainDumpScorePct < 70"
+          [class.poor]="brainDumpScorePct < 40">
+          <mat-icon>{{ brainDumpScorePct >= 70 ? 'emoji_events' : brainDumpScorePct >= 40 ? 'insights' : 'school' }}</mat-icon>
+          <span><strong>{{ brainDumpCovered }} / {{ brainDumpTotal }}</strong> key topics covered&ensp;({{ brainDumpScorePct }}%)</span>
+        </div>
+        <div class="dbd-sections">
+          @for (r of brainDumpResults; track r.name) {
+            @if (r.topics.length) {
+              <div class="dbd-section">
+                <div class="dbd-section-name">{{ r.name }}</div>
+                <div class="dbd-topics">
+                  @for (t of r.topics; track t.text) {
+                    <span class="dbd-topic" [class.found]="t.found" [class.missing]="!t.found">
+                      <mat-icon>{{ t.found ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                      {{ t.text }}
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+        <div class="dbd-actions">
+          <button mat-stroked-button (click)="resetBrainDump()">
+            <mat-icon>refresh</mat-icon> Try Again
+          </button>
+        </div>
       }
     </div>
   }

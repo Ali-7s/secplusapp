@@ -49,6 +49,12 @@ export class AcronymsComponent implements OnInit {
   fcFlipped = false;
   fcDone = new Set<number>();
 
+  // Cloze mode
+  fcClozeMode = false;
+  fcClozeInput = '';
+  fcClozeChecked = false;
+  fcClozeCorrect = false;
+
   ngOnInit() {
     this.load();
   }
@@ -88,24 +94,52 @@ export class AcronymsComponent implements OnInit {
     this.fcReset();
   }
 
+  private fcClozeReset() {
+    this.fcClozeInput = '';
+    this.fcClozeChecked = false;
+    this.fcClozeCorrect = false;
+  }
+
+  toggleFcCloze() {
+    this.fcClozeMode = !this.fcClozeMode;
+    this.fcClozeReset();
+  }
+
+  checkAcronymCloze() {
+    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
+    this.fcClozeChecked = true;
+    const u = this.fcClozeInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const a = this.filteredAcronyms[this.fcIndex].acronym.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    this.fcClozeCorrect = u === a || a.startsWith(u) || u.startsWith(a);
+  }
+
+  fcClozeNext(known: boolean) {
+    if (known) this.fcDone.add(this.fcIndex);
+    this.fcClozeReset();
+    if (this.fcIndex < this.filteredAcronyms.length - 1) this.fcIndex++;
+  }
+
+  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; this.fcClozeReset(); }
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
+    this.fcClozeReset();
     if (this.fcIndex < this.filteredAcronyms.length - 1) {
       this.fcIndex++;
     }
   }
 
   fcPrev() {
-    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; }
+    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; this.fcClozeReset(); }
   }
 
   fcReset() {
     this.fcIndex = 0;
     this.fcFlipped = false;
     this.fcDone.clear();
+    this.fcClozeReset();
   }
 
   get fcDeckComplete(): boolean {
