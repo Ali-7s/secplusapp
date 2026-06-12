@@ -7,6 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatButtonModule } from '@angular/material/button';
 
 export interface PortEntry {
   port: string;
@@ -46,7 +48,8 @@ export interface AuthEntry {
   selector: 'app-reference',
   standalone: true,
   imports: [CommonModule, FormsModule, MatTabsModule, MatInputModule,
-    MatFormFieldModule, MatIconModule, MatTooltipModule, MatChipsModule],
+    MatFormFieldModule, MatIconModule, MatTooltipModule, MatChipsModule,
+    MatProgressBarModule, MatButtonModule],
   templateUrl: './reference.component.html',
   styleUrl: './reference.component.scss'
 })

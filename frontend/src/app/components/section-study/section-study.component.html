@@ -120,6 +120,52 @@
                 <mat-card-content><p [innerHTML]="linkTerms(explanation.analogyExplanation)"></p></mat-card-content>
               </mat-card>
             }
+
+            <div class="brain-dump-section">
+              <div class="brain-dump-header">
+                <mat-icon>fitness_center</mat-icon>
+                <div class="brain-dump-header-text">
+                  <strong>Brain Dump</strong>
+                  <span>Put the material away — write everything you know about this topic from memory</span>
+                </div>
+              </div>
+              @if (!brainDumpChecked) {
+                <textarea
+                  class="brain-dump-textarea"
+                  [(ngModel)]="brainDumpText"
+                  placeholder="Key terms, how it works, important numbers, why it matters, anything you remember..."
+                  rows="5">
+                </textarea>
+                <div class="brain-dump-actions">
+                  <button mat-raised-button color="primary" [disabled]="!brainDumpText.trim()" (click)="checkBrainDump()">
+                    <mat-icon>fact_check</mat-icon> Check Recall
+                  </button>
+                </div>
+              } @else {
+                <div class="brain-dump-results">
+                  <div class="brain-dump-score"
+                    [class.score-good]="brainDumpCoveredCount / brainDumpResults.length >= 0.7"
+                    [class.score-ok]="brainDumpCoveredCount / brainDumpResults.length >= 0.4 && brainDumpCoveredCount / brainDumpResults.length < 0.7"
+                    [class.score-poor]="brainDumpCoveredCount / brainDumpResults.length < 0.4">
+                    <mat-icon>{{ brainDumpCoveredCount / brainDumpResults.length >= 0.7 ? 'emoji_events' : 'insights' }}</mat-icon>
+                    <span><strong>{{ brainDumpCoveredCount }} / {{ brainDumpResults.length }}</strong> key points recalled</span>
+                  </div>
+                  <ul class="brain-dump-points">
+                    @for (r of brainDumpResults; track r.point) {
+                      <li [class.covered]="r.covered" [class.missed]="!r.covered">
+                        <mat-icon>{{ r.covered ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                        {{ r.point }}
+                      </li>
+                    }
+                  </ul>
+                  <div class="brain-dump-actions">
+                    <button mat-stroked-button (click)="resetBrainDump()">
+                      <mat-icon>refresh</mat-icon> Try Again
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
         }
       </mat-tab>
@@ -141,6 +187,9 @@
               <span>Card {{ fcQueuePos + 1 }} / {{ fcQueue.length }}</span>
               <span class="fc-known">{{ fcMastered.size }} mastered</span>
               <mat-progress-bar mode="determinate" [value]="(fcMastered.size / flashcards.length) * 100"></mat-progress-bar>
+              <button mat-stroked-button class="cloze-toggle-btn" [class.active]="fcClozeMode" (click)="toggleClozeMode()" matTooltip="Fill-in-the-blank mode">
+                <mat-icon>edit_note</mat-icon> {{ fcClozeMode ? 'Standard' : 'Cloze' }}
+              </button>
               <button mat-icon-button class="regen-btn" (click)="regenerateFlashcards()" title="Regenerate with fresh AI content">
                 <mat-icon>refresh</mat-icon>
               </button>
@@ -158,62 +207,125 @@
                 </button>
               </div>
             } @else if (fcCard) {
-              <div class="flashcard" [class.flipped]="flashcardFlipped" (click)="!flashcardFlipped && flipCard()">
-                <div class="fc-front">
-                  <div class="fc-category">{{ fcCard.category }}</div>
-                  <div class="fc-question">{{ fcCard.front }}</div>
-                  <div class="fc-hint">Write your answer below, then flip</div>
-                </div>
-                <div class="fc-back">
-                  <div class="fc-answer">{{ fcCard.back }}</div>
-                  @if (fcCard.mnemonic) {
-                    <div class="fc-mnemonic">💡 {{ fcCard.mnemonic }}</div>
+
+              @if (fcClozeMode && hasCloze(fcCard.back)) {
+
+                <div class="cloze-card">
+                  <div class="cloze-q-hint">
+                    <mat-icon>help_outline</mat-icon>
+                    {{ fcCard.front }}
+                  </div>
+                  <div class="cloze-context">
+                    <span class="cloze-blank">_____</span>{{ fcClozeComp.after }}
+                  </div>
+                  @if (fcCard.category) {
+                    <div class="cloze-category">{{ fcCard.category }}</div>
                   }
-                  @if (fcCard.examTip) {
-                    <div class="fc-tip">📋 {{ fcCard.examTip }}</div>
-                  }
                 </div>
-              </div>
 
-              @if (!flashcardFlipped) {
-                <div class="fc-write-box">
-                  <textarea
-                    class="fc-write-input"
-                    [(ngModel)]="fcWriteAnswer"
-                    placeholder="Write what you know before flipping — even a failed attempt cements memory..."
-                    rows="3"
-                    (click)="$event.stopPropagation()">
-                  </textarea>
-                </div>
-              }
-
-              @if (flashcardFlipped && fcWriteAnswer.trim()) {
-                <div class="fc-attempt-strip">
-                  <span class="fc-attempt-label">Your attempt</span>
-                  <span class="fc-attempt-text">{{ fcWriteAnswer }}</span>
-                </div>
-              }
-
-              <div class="fc-controls">
-                <button mat-stroked-button (click)="prevCard()" [disabled]="fcQueuePos === 0">
-                  <mat-icon>chevron_left</mat-icon> Prev
-                </button>
-                @if (flashcardFlipped) {
-                  <button mat-raised-button color="warn" (click)="nextCard(false)">
-                    <mat-icon>close</mat-icon> Still Learning
-                  </button>
-                  <button mat-raised-button color="primary" (click)="nextCard(true)">
-                    <mat-icon>check</mat-icon> Got It
-                  </button>
+                @if (!fcClozeChecked) {
+                  <div class="cloze-input-row">
+                    <input
+                      class="cloze-input"
+                      type="text"
+                      [(ngModel)]="fcClozeInput"
+                      placeholder="Fill in the blank..."
+                      (keydown.enter)="checkCloze()">
+                    <button mat-raised-button color="primary" [disabled]="!fcClozeInput.trim()" (click)="checkCloze()">
+                      <mat-icon>check</mat-icon> Check
+                    </button>
+                  </div>
                 } @else {
-                  <button mat-raised-button (click)="flipCard()">
-                    <mat-icon>flip</mat-icon> Flip Card
-                  </button>
+                  <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
+                    <div class="cloze-result-header">
+                      <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
+                      <strong>{{ fcClozeCorrect ? 'Correct!' : 'Not quite' }}</strong>
+                      @if (!fcClozeCorrect) {
+                        <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
+                      }
+                    </div>
+                    <div class="cloze-answer-reveal">
+                      <span class="cloze-answer-label">Answer:</span>
+                      <span class="cloze-answer-value">{{ fcClozeComp.answer }}</span>
+                    </div>
+                    <div class="cloze-full-back">{{ fcCard.back }}</div>
+                  </div>
+                  <div class="fc-controls">
+                    <button mat-stroked-button (click)="prevCard()" [disabled]="fcQueuePos === 0">
+                      <mat-icon>chevron_left</mat-icon> Prev
+                    </button>
+                    <button mat-raised-button color="warn" (click)="nextCard(false)">
+                      <mat-icon>close</mat-icon> Still Learning
+                    </button>
+                    <button mat-raised-button color="primary" (click)="nextCard(true)">
+                      <mat-icon>check</mat-icon> Got It
+                    </button>
+                    <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
+                      <mat-icon>refresh</mat-icon>
+                    </button>
+                  </div>
                 }
-                <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
-                  <mat-icon>refresh</mat-icon>
-                </button>
-              </div>
+
+              } @else {
+
+                <div class="flashcard" [class.flipped]="flashcardFlipped" (click)="!flashcardFlipped && flipCard()">
+                  <div class="fc-front">
+                    <div class="fc-category">{{ fcCard.category }}</div>
+                    <div class="fc-question">{{ fcCard.front }}</div>
+                    <div class="fc-hint">Write your answer below, then flip</div>
+                  </div>
+                  <div class="fc-back">
+                    <div class="fc-answer">{{ fcCard.back }}</div>
+                    @if (fcCard.mnemonic) {
+                      <div class="fc-mnemonic">💡 {{ fcCard.mnemonic }}</div>
+                    }
+                    @if (fcCard.examTip) {
+                      <div class="fc-tip">📋 {{ fcCard.examTip }}</div>
+                    }
+                  </div>
+                </div>
+
+                @if (!flashcardFlipped) {
+                  <div class="fc-write-box">
+                    <textarea
+                      class="fc-write-input"
+                      [(ngModel)]="fcWriteAnswer"
+                      placeholder="Write what you know before flipping — even a failed attempt cements memory..."
+                      rows="3"
+                      (click)="$event.stopPropagation()">
+                    </textarea>
+                  </div>
+                }
+
+                @if (flashcardFlipped && fcWriteAnswer.trim()) {
+                  <div class="fc-attempt-strip">
+                    <span class="fc-attempt-label">Your attempt</span>
+                    <span class="fc-attempt-text">{{ fcWriteAnswer }}</span>
+                  </div>
+                }
+
+                <div class="fc-controls">
+                  <button mat-stroked-button (click)="prevCard()" [disabled]="fcQueuePos === 0">
+                    <mat-icon>chevron_left</mat-icon> Prev
+                  </button>
+                  @if (flashcardFlipped) {
+                    <button mat-raised-button color="warn" (click)="nextCard(false)">
+                      <mat-icon>close</mat-icon> Still Learning
+                    </button>
+                    <button mat-raised-button color="primary" (click)="nextCard(true)">
+                      <mat-icon>check</mat-icon> Got It
+                    </button>
+                  } @else {
+                    <button mat-raised-button (click)="flipCard()">
+                      <mat-icon>flip</mat-icon> Flip Card
+                    </button>
+                  }
+                  <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
+                    <mat-icon>refresh</mat-icon>
+                  </button>
+                </div>
+
+              }
 
               <div class="fc-dots">
                 @for (card of flashcards; track $index) {

@@ -65,6 +65,19 @@ export class SectionStudyComponent implements OnInit {
   fcRetry = new Set<number>();    // "Still Learning" — replayed next pass
   fcDone = false;
 
+  // Cloze mode
+  fcClozeMode = false;
+  fcClozeComp: { before: string; answer: string; after: string } = { before: '', answer: '', after: '' };
+  fcClozeInput = '';
+  fcClozeChecked = false;
+  fcClozeCorrect = false;
+
+  // Brain dump (Learn tab)
+  brainDumpText = '';
+  brainDumpChecked = false;
+  brainDumpResults: { point: string; covered: boolean }[] = [];
+  brainDumpCoveredCount = 0;
+
   // Practice tab
   practiceQuestions: Question[] = [];
   loadingPractice = false;
@@ -167,6 +180,9 @@ export class SectionStudyComponent implements OnInit {
     }
     this.flashcardFlipped = false;
     this.fcWriteAnswer = '';
+    this.fcClozeInput = '';
+    this.fcClozeChecked = false;
+    this.fcClozeCorrect = false;
 
     if (this.fcQueuePos < this.fcQueue.length - 1) {
       this.fcQueuePos++;
@@ -181,21 +197,116 @@ export class SectionStudyComponent implements OnInit {
         this.contentService.updateFlashcardProgress(this.sectionId, this.fcMastered.size).subscribe();
       }
     }
+    if (!this.fcDone && this.fcClozeMode) {
+      const c = this.fcCard;
+      if (c) this.fcClozeComp = this.extractCloze(c.back);
+    }
   }
 
   prevCard() {
-    if (this.fcQueuePos > 0) { this.fcQueuePos--; this.flashcardFlipped = false; this.fcWriteAnswer = ''; }
+    if (this.fcQueuePos > 0) {
+      this.fcQueuePos--;
+      this.flashcardFlipped = false;
+      this.fcWriteAnswer = '';
+      this.fcClozeInput = '';
+      this.fcClozeChecked = false;
+      this.fcClozeCorrect = false;
+      if (this.fcClozeMode) { const c = this.fcCard; if (c) this.fcClozeComp = this.extractCloze(c.back); }
+    }
   }
 
   resetFlashcards() {
     this.fcPass = 1;
     this.fcWriteAnswer = '';
+    this.fcClozeInput = '';
+    this.fcClozeChecked = false;
+    this.fcClozeCorrect = false;
     this.fcQueue = this.flashcards.map((_, i) => i);
     this.fcQueuePos = 0;
     this.flashcardFlipped = false;
     this.fcMastered.clear();
     this.fcRetry.clear();
     this.fcDone = false;
+    if (this.fcClozeMode) { const c = this.fcCard; if (c) this.fcClozeComp = this.extractCloze(c.back); }
+  }
+
+  toggleClozeMode() {
+    this.fcClozeMode = !this.fcClozeMode;
+    this.fcClozeInput = '';
+    this.fcClozeChecked = false;
+    this.fcClozeCorrect = false;
+    if (this.fcClozeMode && this.fcCard) {
+      this.fcClozeComp = this.extractCloze(this.fcCard.back);
+    }
+  }
+
+  private extractCloze(back: string): { before: string; answer: string; after: string } {
+    for (const d of [' — ', ' – ', ': ', ' - ']) {
+      const i = back.indexOf(d);
+      if (i > 0 && i <= 80) {
+        return { before: '', answer: back.substring(0, i).trim(), after: back.substring(i) };
+      }
+    }
+    const dot = back.indexOf('. ');
+    if (dot > 4 && dot <= 120) {
+      return { before: '', answer: back.substring(0, dot + 1).trim(), after: back.substring(dot + 1) };
+    }
+    return { before: '', answer: '', after: back };
+  }
+
+  hasCloze(back: string): boolean {
+    const { answer } = this.extractCloze(back);
+    return answer.length > 0 && answer.length <= 80;
+  }
+
+  checkCloze() {
+    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
+    this.fcClozeChecked = true;
+    this.fcClozeCorrect = this.fuzzyMatch(this.fcClozeInput, this.fcClozeComp.answer);
+  }
+
+  private fuzzyMatch(input: string, answer: string): boolean {
+    const u = input.trim().toLowerCase();
+    const a = answer.toLowerCase();
+    if (!u) return false;
+    if (u === a) return true;
+    const uNums: string[] = u.match(/\d+/g) ?? [];
+    const aNums: string[] = a.match(/\d+/g) ?? [];
+    if (uNums.length && aNums.length && uNums.some(n => aNums.includes(n))) return true;
+    const uNorm = u.replace(/[^a-z0-9]/g, '');
+    const aNorm = a.replace(/[^a-z0-9]/g, '');
+    if (uNorm.length >= 2 && (aNorm.includes(uNorm) || uNorm.includes(aNorm))) return true;
+    return false;
+  }
+
+  private readonly STOP_WORDS = new Set([
+    'that','this','with','from','they','have','more','when','your',
+    'which','there','their','also','into','some','than','then','been',
+    'were','will','would','could','should','each','used','uses','using',
+    'often','include','includes','provides','most','allows','between',
+    'through','because','without','against','another','these','those',
+    'helps','ensure','requires','require','multiple','different','both'
+  ]);
+
+  checkBrainDump() {
+    if (!this.explanation?.keyPoints?.length || !this.brainDumpText.trim()) return;
+    const dump = this.brainDumpText.toLowerCase();
+    this.brainDumpResults = this.explanation.keyPoints.map(point => {
+      const words = (point.match(/\b[A-Z0-9]{2,}\b|\b[a-zA-Z]{4,}\b/g) ?? [])
+        .filter(w => !this.STOP_WORDS.has(w.toLowerCase()));
+      if (!words.length) return { point, covered: true };
+      const hits = words.filter(w => dump.includes(w.toLowerCase())).length;
+      return { point, covered: hits / words.length >= 0.4 };
+    });
+    this.brainDumpCoveredCount = this.brainDumpResults.filter(r => r.covered).length;
+    this.brainDumpChecked = true;
+  }
+
+  resetBrainDump() {
+    this.brainDumpText = '';
+    this.brainDumpChecked = false;
+    this.brainDumpResults = [];
+    this.brainDumpCoveredCount = 0;
   }
 
   // ── Practice ──────────────────────────────────────────────────────
