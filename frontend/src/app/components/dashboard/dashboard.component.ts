@@ -11,8 +11,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { Domain, ProgressSummary, SectionProgress } from '../../models/curriculum.model';
-import { StudyPathService } from '../../services/study-path.service';
-import { StudyPhase } from '../../config/study-path.config';
 
 @Component({
   selector: 'app-dashboard',
@@ -27,7 +25,6 @@ import { StudyPhase } from '../../config/study-path.config';
 export class DashboardComponent implements OnInit {
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
-  readonly studyPath = inject(StudyPathService);
 
   domains: Domain[] = [];
   summary: ProgressSummary | null = null;
@@ -58,29 +55,6 @@ export class DashboardComponent implements OnInit {
   }
 
   getCurrentSection(): string {
-    if (this.studyPath.recommended()) {
-      const allSections = this.domains.flatMap(d => d.sections);
-      return this.studyPath.getNextSection(allSections, this.allProgress);
-    }
     return this.allProgress.find(p => p.unlocked && !p.examPassed)?.sectionId ?? '1.1';
-  }
-
-  get currentPhase(): StudyPhase | undefined {
-    if (!this.studyPath.recommended()) return undefined;
-    const allSections = this.domains.flatMap(d => d.sections);
-    const idx = this.studyPath.getCurrentPhaseIndex(allSections, this.allProgress);
-    return this.studyPath.phases[idx];
-  }
-
-  get currentPhaseIndex(): number {
-    const allSections = this.domains.flatMap(d => d.sections);
-    return this.studyPath.getCurrentPhaseIndex(allSections, this.allProgress);
-  }
-
-  get currentPhaseProgress(): { passed: number; total: number } {
-    const phase = this.currentPhase;
-    if (!phase) return { passed: 0, total: 0 };
-    const allSections = this.domains.flatMap(d => d.sections);
-    return this.studyPath.getPhaseProgress(phase, allSections, this.allProgress);
   }
 }

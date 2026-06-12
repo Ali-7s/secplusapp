@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +27,9 @@ import { Term, TermDetail } from '../../models/flashcard.model';
 export class TermsComponent implements OnInit {
   private contentService = inject(ContentService);
   private cdr = inject(ChangeDetectorRef);
+  private route = inject(ActivatedRoute);
+
+  private pendingTerm = '';
 
   allTerms: Term[] = [];
   filteredTerms: Term[] = [];
@@ -42,9 +46,8 @@ export class TermsComponent implements OnInit {
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
 
-  // Gap-fill state
-  fillingGaps = false;
-  gapsFound = 0;
+  // Gap-fill state: tracks which specific term names are being generated
+  generatingTerms = new Set<string>();
   gapsAdded = 0;
 
   // Carousel state
@@ -52,7 +55,11 @@ export class TermsComponent implements OnInit {
   fcFlipped = false;
   fcDone = new Set<number>();
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    const q = this.route.snapshot.queryParamMap.get('q');
+    if (q) this.pendingTerm = q;
+    this.load();
+  }
 
   load() {
     this.loading = true;
@@ -62,8 +69,10 @@ export class TermsComponent implements OnInit {
         this.rebuildCategories();
         this.filter();
         this.loading = false;
-        // After initial load, check for and fill any missing related terms
-        this.fillMissingRelatedTerms();
+        if (this.pendingTerm) {
+          this.navigateToTerm(this.pendingTerm);
+          this.pendingTerm = '';
+        }
       },
       error: e => { this.error = e.message; this.loading = false; }
     });
@@ -74,36 +83,27 @@ export class TermsComponent implements OnInit {
     this.categories = ['All', ...cats];
   }
 
-  private fillMissingRelatedTerms() {
+  private fillMissingForTerm(term: Term) {
     const existingNames = new Set(this.allTerms.map(t => t.term.toLowerCase()));
-    const missing = new Set<string>();
+    const missing = this.getRelatedList(term.relatedTerms).filter(
+      rel => !existingNames.has(rel.toLowerCase()) && !this.generatingTerms.has(rel)
+    );
+    if (!missing.length) return;
 
-    for (const term of this.allTerms) {
-      for (const rel of this.getRelatedList(term.relatedTerms)) {
-        if (!existingNames.has(rel.toLowerCase())) {
-          missing.add(rel);
-        }
-      }
-    }
+    missing.forEach(m => this.generatingTerms.add(m));
 
-    if (missing.size === 0) return;
-
-    this.gapsFound = missing.size;
-    this.gapsAdded = 0;
-    this.fillingGaps = true;
-
-    this.contentService.generateMissingTerms([...missing]).subscribe({
+    this.contentService.generateMissingTerms(missing).subscribe({
       next: newTerms => {
-        if (newTerms.length > 0) {
-          this.gapsAdded = newTerms.length;
+        missing.forEach(m => this.generatingTerms.delete(m));
+        if (newTerms.length) {
+          this.gapsAdded += newTerms.length;
           this.allTerms = [...this.allTerms, ...newTerms].sort((a, b) => a.term.localeCompare(b.term));
           this.rebuildCategories();
           this.filter();
           this.cdr.markForCheck();
         }
-        this.fillingGaps = false;
       },
-      error: () => { this.fillingGaps = false; }
+      error: () => { missing.forEach(m => this.generatingTerms.delete(m)); }
     });
   }
 
@@ -136,6 +136,7 @@ export class TermsComponent implements OnInit {
     if (!this.cardDetails.has(key) && !this.loadingDetails.has(key)) {
       this.loadDetail(term);
     }
+    this.fillMissingForTerm(term);
   }
 
   loadDetail(term: Term) {
@@ -181,8 +182,8 @@ export class TermsComponent implements OnInit {
     return this.allTerms.some(t => t.term.toLowerCase() === name.toLowerCase());
   }
 
-  navigateToTerm(name: string, event: MouseEvent) {
-    event.stopPropagation();
+  navigateToTerm(name: string, event?: MouseEvent) {
+    event?.stopPropagation();
     const target = this.allTerms.find(t => t.term.toLowerCase() === name.toLowerCase());
     if (!target) return;
     this.searchText = '';

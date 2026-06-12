@@ -1,3 +1,10 @@
+// ── Term hyperlinks ─────────────────────────────────────────
+:host ::ng-deep .term-link {
+  color: #0f766e; text-decoration: underline; text-decoration-style: dotted;
+  text-underline-offset: 2px; cursor: pointer; font-weight: inherit;
+  &:hover { color: #059669; text-decoration-style: solid; }
+}
+
 // ── Locked page ────────────────────────────────────────────
 .locked-page {
   text-align: center; padding: 80px 24px;

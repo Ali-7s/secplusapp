@@ -18,7 +18,7 @@ import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { Section } from '../../models/curriculum.model';
 import { Question, ExamResult, ExamSubmission } from '../../models/question.model';
-import { Flashcard, ConceptExplanation, Lab } from '../../models/flashcard.model';
+import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard.model';
 
 @Component({
   selector: 'app-section-study',
@@ -39,6 +39,8 @@ export class SectionStudyComponent implements OnInit {
   private sanitizer = inject(DomSanitizer);
 
   protected readonly Object = Object;
+
+  terms: Term[] = [];
 
   sectionId = '';
   section: Section | null = null;
@@ -97,9 +99,7 @@ export class SectionStudyComponent implements OnInit {
 
   ngOnInit() {
     this.sectionId = this.route.snapshot.paramMap.get('id')!;
-
-    // Learn is always the default tab — start fetching immediately so it's
-    // ready (or loading) the moment the tab group renders.
+    this.contentService.getTerms().subscribe({ next: t => this.terms = t, error: () => {} });
     this.loadExplanation();
 
     this.contentService.getSection(this.sectionId).subscribe({
@@ -396,6 +396,24 @@ export class SectionStudyComponent implements OnInit {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  linkTerms(text: string | undefined | null): SafeHtml {
+    if (!text) return this.sanitizer.bypassSecurityTrustHtml('');
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (!this.terms.length) return this.sanitizer.bypassSecurityTrustHtml(escaped);
+
+    const sorted = [...this.terms].sort((a, b) => b.term.length - a.term.length);
+    const termMap = new Map(sorted.map(t => [t.term.toLowerCase(), t.term]));
+    const pattern = sorted
+      .map(t => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|');
+
+    const result = escaped.replace(new RegExp(`\\b(${pattern})\\b`, 'gi'), (match) => {
+      const canonical = termMap.get(match.toLowerCase()) ?? match;
+      return `<a class="term-link" href="/terms?q=${encodeURIComponent(canonical)}">${match}</a>`;
+    });
+    return this.sanitizer.bypassSecurityTrustHtml(result);
   }
 
   formatMarkdown(text: string | undefined | null): SafeHtml {

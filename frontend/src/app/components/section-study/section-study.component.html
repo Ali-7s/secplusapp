@@ -76,7 +76,7 @@
                   <mat-card-title>Key Points</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <ul>@for (p of explanation.keyPoints; track p) { <li>{{ p }}</li> }</ul>
+                  <ul>@for (p of explanation.keyPoints; track p) { <li [innerHTML]="linkTerms(p)"></li> }</ul>
                 </mat-card-content>
               </mat-card>
 
@@ -86,7 +86,7 @@
                   <mat-card-title>Exam Tips</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <ul>@for (t of explanation.examTips; track t) { <li>{{ t }}</li> }</ul>
+                  <ul>@for (t of explanation.examTips; track t) { <li [innerHTML]="linkTerms(t)"></li> }</ul>
                 </mat-card-content>
               </mat-card>
 
@@ -96,7 +96,7 @@
                   <mat-card-title>Real-World Examples</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <ul>@for (e of explanation.realWorldExamples; track e) { <li>{{ e }}</li> }</ul>
+                  <ul>@for (e of explanation.realWorldExamples; track e) { <li [innerHTML]="linkTerms(e)"></li> }</ul>
                 </mat-card-content>
               </mat-card>
 
@@ -106,7 +106,7 @@
                   <mat-card-title>Common Mistakes</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <ul>@for (m of explanation.commonMistakes; track m) { <li>{{ m }}</li> }</ul>
+                  <ul>@for (m of explanation.commonMistakes; track m) { <li [innerHTML]="linkTerms(m)"></li> }</ul>
                 </mat-card-content>
               </mat-card>
             </div>
@@ -117,7 +117,7 @@
                   <mat-icon mat-card-avatar style="color:#7b1fa2">psychology</mat-icon>
                   <mat-card-title>Think of it this way...</mat-card-title>
                 </mat-card-header>
-                <mat-card-content><p>{{ explanation.analogyExplanation }}</p></mat-card-content>
+                <mat-card-content><p [innerHTML]="linkTerms(explanation.analogyExplanation)"></p></mat-card-content>
               </mat-card>
             }
           </div>
