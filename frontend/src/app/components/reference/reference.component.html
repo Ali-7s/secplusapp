@@ -1,0 +1,238 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <mat-icon>table_chart</mat-icon>
+    <div>
+      <h1>Reference Cheat Sheet</h1>
+      <p>Ports, ciphers, hashing, auth &amp; VPN protocols — quick-reference for SY0-701</p>
+    </div>
+    <div class="legend">
+      <span class="badge secure">Secure</span>
+      <span class="badge neutral">Context</span>
+      <span class="badge deprecated">Deprecated</span>
+      <span class="badge insecure">Weak/Insecure</span>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search across all tables...</mat-label>
+      <input matInput [(ngModel)]="searchText" placeholder="e.g. AES, 443, RADIUS, WPA3...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false">
+
+    <!-- ── Ports ──────────────────────────────────────────── -->
+    <mat-tab label="Network Ports">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Port</th>
+                <th>Protocol / Service</th>
+                <th>Transport</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredPorts; track row.port) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.port }}</td>
+                  <td>
+                    <span class="proto-name">{{ row.protocol }}</span>
+                    <span class="svc-desc">{{ row.service }}</span>
+                  </td>
+                  <td class="mono">{{ row.transport }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredPorts.length === 0) {
+                <tr><td colspan="5" class="no-results">No ports match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Ciphers ─────────────────────────────────────────── -->
+    <mat-tab label="Encryption Ciphers">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Type</th>
+                <th>Key Size</th>
+                <th>Status</th>
+                <th>Primary Use</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredCiphers; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td class="mono">{{ row.keySize }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.use }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredCiphers.length === 0) {
+                <tr><td colspan="6" class="no-results">No ciphers match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Hashing ─────────────────────────────────────────── -->
+    <mat-tab label="Hashing &amp; MACs">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Output</th>
+                <th>Status</th>
+                <th>Use Case</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredHashes; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.outputBits }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.use }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredHashes.length === 0) {
+                <tr><td colspan="5" class="no-results">No algorithms match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Auth Protocols ──────────────────────────────────── -->
+    <mat-tab label="Auth Protocols">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Protocol</th>
+                <th>Port / Layer</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredAuth; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.port }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredAuth.length === 0) {
+                <tr><td colspan="5" class="no-results">No protocols match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── VPN ─────────────────────────────────────────────── -->
+    <mat-tab label="VPN &amp; Tunneling">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredVpn.length }} protocols · know tunnel vs transport mode and which provide forward secrecy</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Protocol</th>
+                <th>Port</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredVpn; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.port }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredVpn.length === 0) {
+                <tr><td colspan="5" class="no-results">No protocols match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Wireless ────────────────────────────────────────── -->
+    <mat-tab label="Wireless Security">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredWireless.length }} standards · know WPA2 vs WPA3 differences and what WPS vulnerability is</p>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Standard</th>
+                <th>Port / Auth</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredWireless; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.port }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredWireless.length === 0) {
+                <tr><td colspan="5" class="no-results">No standards match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>

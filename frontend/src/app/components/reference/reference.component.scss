@@ -1,0 +1,140 @@
+// ── Header ─────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  mat-icon {
+    font-size: 36px; width: 36px; height: 36px;
+    color: #1d4ed8; flex-shrink: 0;
+  }
+
+  h1 { margin: 0; font-size: 24px; font-weight: 800; }
+  p  { margin: 4px 0 0; font-size: 13px; color: #64748b; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto;
+    @media (max-width: 600px) { margin-left: 0; width: 100%; }
+  }
+
+  @media (max-width: 600px) { flex-wrap: wrap; }
+}
+
+// ── Status badges ──────────────────────────────────────────
+.badge {
+  display: inline-block;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  white-space: nowrap;
+
+  &.secure     { background: #dcfce7; color: #15803d; }
+  &.neutral    { background: #fef9c3; color: #92400e; }
+  &.deprecated { background: #ffedd5; color: #c2410c; }
+  &.insecure   { background: #fee2e2; color: #dc2626; }
+}
+
+// ── Search ─────────────────────────────────────────────────
+.search-bar {
+  margin-bottom: 16px;
+  .search-field { width: 100%; max-width: 480px; }
+}
+
+// ── Tab content ────────────────────────────────────────────
+.tab-content {
+  padding: 20px 0 12px;
+}
+
+.tab-hint {
+  margin: 0 0 14px;
+  font-size: 13px; color: #64748b; font-style: italic;
+}
+
+// ── Table ──────────────────────────────────────────────────
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead tr {
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: #475569; white-space: nowrap;
+  }
+
+  td {
+    padding: 9px 14px;
+    vertical-align: top;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  tbody tr {
+    transition: background .15s;
+
+    &:last-child td { border-bottom: none; }
+    &:hover { background: #f8fafc; }
+
+    // Row tinting by status
+    &.insecure   { background: #fff7f7; &:hover { background: #fee2e2; } }
+    &.deprecated { background: #fffbf0; &:hover { background: #fef3c7; } }
+    &.secure     { } // default white is fine
+  }
+
+  .mono  { font-family: 'Courier New', monospace; font-size: 12px; }
+  .bold  { font-weight: 700; }
+
+  .proto-name {
+    display: block; font-weight: 600; color: #0f172a;
+  }
+  .svc-desc {
+    display: block; font-size: 11px; color: #64748b; margin-top: 1px;
+  }
+
+  .type-cell  { font-size: 12px; color: #475569; }
+  .notes-cell { font-size: 12px; color: #475569; max-width: 340px; line-height: 1.45; }
+
+  .no-results {
+    text-align: center; padding: 32px; color: #94a3b8; font-style: italic;
+  }
+}
+
+// ── Dark mode ──────────────────────────────────────────────
+:host-context([data-theme="dark"]) {
+  .page-header mat-icon { color: var(--c-accent); }
+  .page-header p        { color: var(--c-muted); }
+
+  .badge {
+    &.secure     { background: #14532d44; color: #4ade80; }
+    &.neutral    { background: #78350f44; color: #fbbf24; }
+    &.deprecated { background: #7c2d1244; color: #fb923c; }
+    &.insecure   { background: #7f1d1d44; color: #f87171; }
+  }
+
+  .table-wrap { border-color: var(--c-border); }
+
+  .ref-table {
+    thead tr { background: var(--c-surface-2); border-color: var(--c-border); }
+    th        { color: var(--c-text-2); }
+    td        { border-color: var(--c-border); }
+    tbody tr  {
+      &:hover          { background: var(--c-surface-2); }
+      &.insecure       { background: #7f1d1d18; &:hover { background: #7f1d1d33; } }
+      &.deprecated     { background: #78350f18; &:hover { background: #78350f33; } }
+    }
+    .proto-name { color: var(--c-text); }
+    .svc-desc, .type-cell, .notes-cell { color: var(--c-muted); }
+  }
+
+  .tab-hint { color: var(--c-muted); }
+}

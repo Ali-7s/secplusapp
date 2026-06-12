@@ -85,6 +85,10 @@
                   <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
                   {{ status === 'passed' ? 'Review' : 'Study' }}
                 </button>
+                <button mat-stroked-button [routerLink]="['/section', section.id]" [queryParams]="{tab: 'practice'}"
+                  matTooltip="Jump straight to practice questions">
+                  <mat-icon>quiz</mat-icon> Quick Test
+                </button>
               }
             </div>
           </div>

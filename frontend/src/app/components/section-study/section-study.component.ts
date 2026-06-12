@@ -46,6 +46,7 @@ export class SectionStudyComponent implements OnInit {
   section: Section | null = null;
   sectionProgress: any = null;
   isUnlocked = false;
+  initialTabIndex = 0;
 
   // Learn tab
   explanation: ConceptExplanation | null = null;
@@ -55,9 +56,13 @@ export class SectionStudyComponent implements OnInit {
   // Flashcards tab
   flashcards: Flashcard[] = [];
   loadingFlashcards = false;
-  currentFlashcardIndex = 0;
   flashcardFlipped = false;
-  flashcardsDone = new Set<number>();
+  fcPass = 1;
+  fcQueue: number[] = [];         // card indices for this pass
+  fcQueuePos = 0;                  // position within fcQueue
+  fcMastered = new Set<number>(); // "Got It" — removed from future passes
+  fcRetry = new Set<number>();    // "Still Learning" — replayed next pass
+  fcDone = false;
 
   // Practice tab
   practiceQuestions: Question[] = [];
@@ -99,6 +104,11 @@ export class SectionStudyComponent implements OnInit {
 
   ngOnInit() {
     this.sectionId = this.route.snapshot.paramMap.get('id')!;
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+    if (tab === 'practice') {
+      this.initialTabIndex = 2;
+      this.loadPractice();
+    }
     this.contentService.getTerms().subscribe({ next: t => this.terms = t, error: () => {} });
     this.loadExplanation();
 
@@ -109,10 +119,10 @@ export class SectionStudyComponent implements OnInit {
     this.progressService.getSectionProgress(this.sectionId).subscribe({
       next: p => {
         this.sectionProgress = p;
-        this.isUnlocked = p.unlocked;
+        this.isUnlocked = true;
         this.labCompleted = p.labCompleted;
       },
-      error: () => { this.isUnlocked = this.sectionId === '1.1'; }
+      error: () => { this.isUnlocked = true; }
     });
   }
 
@@ -132,32 +142,57 @@ export class SectionStudyComponent implements OnInit {
     if (this.flashcards.length || this.loadingFlashcards) return;
     this.loadingFlashcards = true;
     this.contentService.getFlashcards(this.sectionId).subscribe({
-      next: cards => { this.flashcards = cards; this.loadingFlashcards = false; },
+      next: cards => {
+        this.flashcards = cards;
+        this.fcQueue = cards.map((_, i) => i);
+        this.loadingFlashcards = false;
+      },
       error: err => { this.loadingFlashcards = false; this.snackBar.open(err.message, 'OK', { duration: 4000 }); }
     });
+  }
+
+  get fcCard(): Flashcard | null {
+    return this.fcQueue.length ? this.flashcards[this.fcQueue[this.fcQueuePos]] : null;
   }
 
   flipCard() { this.flashcardFlipped = !this.flashcardFlipped; }
 
   nextCard(known: boolean) {
-    if (known) this.flashcardsDone.add(this.currentFlashcardIndex);
-    this.flashcardFlipped = false;
-    if (this.currentFlashcardIndex < this.flashcards.length - 1) {
-      this.currentFlashcardIndex++;
+    const idx = this.fcQueue[this.fcQueuePos];
+    if (known) {
+      this.fcMastered.add(idx);
     } else {
-      this.contentService.updateFlashcardProgress(this.sectionId, this.flashcardsDone.size).subscribe();
-      this.snackBar.open(`Deck complete! ${this.flashcardsDone.size}/${this.flashcards.length} marked as known.`, 'OK', { duration: 3000 });
+      this.fcRetry.add(idx);
+    }
+    this.flashcardFlipped = false;
+
+    if (this.fcQueuePos < this.fcQueue.length - 1) {
+      this.fcQueuePos++;
+    } else {
+      if (this.fcRetry.size > 0) {
+        this.fcPass++;
+        this.fcQueue = [...this.fcRetry];
+        this.fcRetry.clear();
+        this.fcQueuePos = 0;
+      } else {
+        this.fcDone = true;
+        this.contentService.updateFlashcardProgress(this.sectionId, this.fcMastered.size).subscribe();
+      }
     }
   }
 
   prevCard() {
-    if (this.currentFlashcardIndex > 0) { this.currentFlashcardIndex--; this.flashcardFlipped = false; }
+    if (this.fcQueuePos > 0) { this.fcQueuePos--; this.flashcardFlipped = false; }
   }
 
   resetFlashcards() {
-    this.currentFlashcardIndex = 0;
+    this.fcPass = 1;
+    this.fcQueue = this.flashcards.map((_, i) => i);
+    this.fcQueuePos = 0;
     this.flashcardFlipped = false;
-    this.flashcardsDone.clear();
+    this.fcMastered.clear();
+    this.fcRetry.clear();
+    this.fcDone = false;
   }
 
   // ── Practice ──────────────────────────────────────────────────────
@@ -347,11 +382,19 @@ export class SectionStudyComponent implements OnInit {
   regenerateFlashcards() {
     this.regeneratingFlashcards = true;
     this.flashcards = [];
-    this.currentFlashcardIndex = 0;
+    this.fcPass = 1;
+    this.fcQueue = [];
+    this.fcQueuePos = 0;
     this.flashcardFlipped = false;
-    this.flashcardsDone.clear();
+    this.fcMastered.clear();
+    this.fcRetry.clear();
+    this.fcDone = false;
     this.contentService.regenerateFlashcards(this.sectionId).subscribe({
-      next: cards => { this.flashcards = cards; this.regeneratingFlashcards = false; },
+      next: cards => {
+        this.flashcards = cards;
+        this.fcQueue = cards.map((_, i) => i);
+        this.regeneratingFlashcards = false;
+      },
       error: err => { this.regeneratingFlashcards = false; this.snackBar.open(err.message, 'OK', { duration: 4000 }); }
     });
   }

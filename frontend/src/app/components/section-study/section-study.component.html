@@ -31,7 +31,7 @@
     </div>
 
     <!-- Tabs -->
-    <mat-tab-group (selectedIndexChange)="onTabChange($event)" animationDuration="200ms">
+    <mat-tab-group (selectedIndexChange)="onTabChange($event)" animationDuration="200ms" [selectedIndex]="initialTabIndex">
 
       <!-- ── TAB 1: LEARN ─────────────────────────────── -->
       <mat-tab>
@@ -137,61 +137,75 @@
           <div class="flashcard-container">
 
             <div class="fc-progress-row">
-              <span>Card {{ currentFlashcardIndex + 1 }} / {{ flashcards.length }}</span>
-              <span class="fc-known">{{ flashcardsDone.size }} known</span>
-              <mat-progress-bar mode="determinate" [value]="(currentFlashcardIndex / flashcards.length) * 100"></mat-progress-bar>
+              <span class="fc-pass-label">Pass {{ fcPass }}</span>
+              <span>Card {{ fcQueuePos + 1 }} / {{ fcQueue.length }}</span>
+              <span class="fc-known">{{ fcMastered.size }} mastered</span>
+              <mat-progress-bar mode="determinate" [value]="(fcMastered.size / flashcards.length) * 100"></mat-progress-bar>
               <button mat-icon-button class="regen-btn" (click)="regenerateFlashcards()" title="Regenerate with fresh AI content">
                 <mat-icon>refresh</mat-icon>
               </button>
             </div>
 
-            <div class="flashcard" [class.flipped]="flashcardFlipped" (click)="flipCard()">
-              <div class="fc-front">
-                <div class="fc-category">{{ flashcards[currentFlashcardIndex].category }}</div>
-                <div class="fc-question">{{ flashcards[currentFlashcardIndex].front }}</div>
-                <div class="fc-hint">Click to reveal answer</div>
-              </div>
-              <div class="fc-back">
-                <div class="fc-answer">{{ flashcards[currentFlashcardIndex].back }}</div>
-                @if (flashcards[currentFlashcardIndex].mnemonic) {
-                  <div class="fc-mnemonic">💡 {{ flashcards[currentFlashcardIndex].mnemonic }}</div>
-                }
-                @if (flashcards[currentFlashcardIndex].examTip) {
-                  <div class="fc-tip">📋 {{ flashcards[currentFlashcardIndex].examTip }}</div>
-                }
-              </div>
-            </div>
-
-            <div class="fc-controls">
-              <button mat-stroked-button (click)="prevCard()" [disabled]="currentFlashcardIndex === 0">
-                <mat-icon>chevron_left</mat-icon> Prev
-              </button>
-              @if (flashcardFlipped) {
-                <button mat-raised-button color="warn" (click)="nextCard(false)">
-                  <mat-icon>close</mat-icon> Still Learning
-                </button>
-                <button mat-raised-button color="primary" (click)="nextCard(true)">
-                  <mat-icon>check</mat-icon> Got It
-                </button>
-              } @else {
-                <button mat-raised-button (click)="flipCard()">
-                  <mat-icon>flip</mat-icon> Flip Card
-                </button>
-              }
-              <button mat-stroked-button (click)="prevCard()" style="visibility:hidden">spacer</button>
-              <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
-                <mat-icon>refresh</mat-icon>
-              </button>
-            </div>
-
-            <div class="fc-dots">
-              @for (card of flashcards; track $index) {
-                <div class="fc-dot"
-                  [class.active]="$index === currentFlashcardIndex"
-                  [class.known]="flashcardsDone.has($index)">
+            @if (fcDone) {
+              <div class="fc-complete-banner">
+                <mat-icon>emoji_events</mat-icon>
+                <div>
+                  <strong>Deck mastered!</strong>
+                  <span>{{ fcMastered.size }} / {{ flashcards.length }} cards known in {{ fcPass }} pass{{ fcPass !== 1 ? 'es' : '' }}</span>
                 </div>
-              }
-            </div>
+                <button mat-stroked-button (click)="resetFlashcards()">
+                  <mat-icon>refresh</mat-icon> Restart
+                </button>
+              </div>
+            } @else if (fcCard) {
+              <div class="flashcard" [class.flipped]="flashcardFlipped" (click)="flipCard()">
+                <div class="fc-front">
+                  <div class="fc-category">{{ fcCard.category }}</div>
+                  <div class="fc-question">{{ fcCard.front }}</div>
+                  <div class="fc-hint">Click to reveal answer</div>
+                </div>
+                <div class="fc-back">
+                  <div class="fc-answer">{{ fcCard.back }}</div>
+                  @if (fcCard.mnemonic) {
+                    <div class="fc-mnemonic">💡 {{ fcCard.mnemonic }}</div>
+                  }
+                  @if (fcCard.examTip) {
+                    <div class="fc-tip">📋 {{ fcCard.examTip }}</div>
+                  }
+                </div>
+              </div>
+
+              <div class="fc-controls">
+                <button mat-stroked-button (click)="prevCard()" [disabled]="fcQueuePos === 0">
+                  <mat-icon>chevron_left</mat-icon> Prev
+                </button>
+                @if (flashcardFlipped) {
+                  <button mat-raised-button color="warn" (click)="nextCard(false)">
+                    <mat-icon>close</mat-icon> Still Learning
+                  </button>
+                  <button mat-raised-button color="primary" (click)="nextCard(true)">
+                    <mat-icon>check</mat-icon> Got It
+                  </button>
+                } @else {
+                  <button mat-raised-button (click)="flipCard()">
+                    <mat-icon>flip</mat-icon> Flip Card
+                  </button>
+                }
+                <button mat-icon-button (click)="resetFlashcards()" matTooltip="Restart deck">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </div>
+
+              <div class="fc-dots">
+                @for (card of flashcards; track $index) {
+                  <div class="fc-dot"
+                    [class.active]="fcQueue[fcQueuePos] === $index"
+                    [class.known]="fcMastered.has($index)"
+                    [class.retry]="fcRetry.has($index)">
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
       </mat-tab>

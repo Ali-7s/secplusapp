@@ -43,6 +43,7 @@ export class AppComponent implements OnInit {
     { path: '/exam/full', icon: 'assignment', label: 'Full Practice Exam' },
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary' },
     { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
+    { path: '/reference', icon: 'table_chart', label: 'Reference Sheet' },
     { path: '/progress', icon: 'insights', label: 'My Progress' },
   ];
 

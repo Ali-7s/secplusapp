@@ -27,7 +27,6 @@ public class ProgressService {
     @Transactional
     public void initUserProgress(Long userId) {
         List<Domain> domains = curriculum.getAllDomains();
-        boolean firstSection = true;
         for (Domain domain : domains) {
             for (Section section : domain.getSections()) {
                 if (repo.findByUserIdAndSectionId(userId, section.getId()).isEmpty()) {
@@ -35,10 +34,9 @@ public class ProgressService {
                     p.setUserId(userId);
                     p.setSectionId(section.getId());
                     p.setDomainId(domain.getId());
-                    p.setUnlocked(firstSection);
+                    p.setUnlocked(true);
                     repo.save(p);
                 }
-                firstSection = false;
             }
         }
     }
@@ -54,6 +52,7 @@ public class ProgressService {
                     p.setUserId(userId);
                     p.setSectionId(sectionId);
                     p.setDomainId("unknown");
+                    p.setUnlocked(true);
                     return repo.save(p);
                 });
     }
