@@ -27,7 +27,7 @@
       @for (section of domain.sections; track section.id) {
         @let status = getStatus(section.id);
         @let progress = getProgress(section.id);
-        <mat-card class="section-card" [class.locked-card]="status === 'locked'">
+        <mat-card class="section-card" [class.passed-card]="status === 'passed'" [class.progress-card]="status === 'in_progress'">
           <div class="section-card-inner">
             <div class="section-status-icon" [style.color]="getStatusColor(status)">
               <mat-icon>{{ getStatusIcon(status) }}</mat-icon>
@@ -44,7 +44,7 @@
                     <mat-icon>menu_book</mat-icon> Learn
                   </div>
                   <div class="mini-stat" [class.done]="progress.flashcardsReviewed >= 10">
-                    <mat-icon>style</mat-icon> Flashcards ({{ progress.flashcardsReviewed }})
+                    <mat-icon>flip</mat-icon> Flashcards ({{ progress.flashcardsReviewed }})
                   </div>
                   <div class="mini-stat" [class.done]="progress.practiceQuestionsAnswered >= 10">
                     <mat-icon>quiz</mat-icon> Practice ({{ progress.practiceQuestionsAnswered }})
@@ -75,21 +75,14 @@
             </div>
 
             <div class="section-actions">
-              @if (status === 'locked') {
-                <div class="locked-msg">
-                  <mat-icon>lock</mat-icon>
-                  <span>Pass previous section to unlock</span>
-                </div>
-              } @else {
-                <button mat-raised-button color="primary" [routerLink]="['/section', section.id]">
-                  <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
-                  {{ status === 'passed' ? 'Review' : 'Study' }}
-                </button>
-                <button mat-stroked-button [routerLink]="['/section', section.id]" [queryParams]="{tab: 'practice'}"
-                  matTooltip="Jump straight to practice questions">
-                  <mat-icon>quiz</mat-icon> Quick Test
-                </button>
-              }
+              <button mat-raised-button color="primary" [routerLink]="['/section', section.id]">
+                <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
+                {{ status === 'passed' ? 'Review' : 'Study' }}
+              </button>
+              <button mat-stroked-button [routerLink]="['/section', section.id]" [queryParams]="{tab: 'practice'}"
+                matTooltip="Jump straight to practice questions">
+                <mat-icon>quiz</mat-icon> Quick Test
+              </button>
             </div>
           </div>
         </mat-card>

@@ -45,23 +45,23 @@ export class DomainDetailComponent implements OnInit {
     return this.allProgress.find(p => p.sectionId === sectionId);
   }
 
-  getStatus(sectionId: string): 'locked' | 'unlocked' | 'passed' {
+  getStatus(sectionId: string): 'unlocked' | 'passed' | 'in_progress' {
     const p = this.getProgress(sectionId);
-    if (!p) return 'locked';
+    if (!p) return 'unlocked';
     if (p.examPassed) return 'passed';
-    if (p.unlocked) return 'unlocked';
-    return 'locked';
+    const hasActivity = p.flashcardsReviewed > 0 || p.practiceQuestionsAnswered > 0 || p.conceptRead || p.examAttempts > 0;
+    return hasActivity ? 'in_progress' : 'unlocked';
   }
 
   getStatusIcon(status: string): string {
-    if (status === 'passed') return 'check_circle';
-    if (status === 'unlocked') return 'lock_open';
-    return 'lock';
+    if (status === 'passed')      return 'check_circle';
+    if (status === 'in_progress') return 'pending';
+    return 'play_circle';
   }
 
   getStatusColor(status: string): string {
-    if (status === 'passed') return '#2e7d32';
-    if (status === 'unlocked') return '#1565c0';
-    return '#9e9e9e';
+    if (status === 'passed')      return '#2e7d32';
+    if (status === 'in_progress') return '#d97706';
+    return '#1565c0';
   }
 }
