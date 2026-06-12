@@ -233,6 +233,50 @@
       </div>
     </mat-tab>
 
+    <!-- ── Legacy → Modern ───────────────────────────────────── -->
+    <mat-tab label="Legacy → Modern">
+      <div class="tab-content">
+        <p class="tab-hint">{{ filteredReplacements.length }} replacements · the exam frequently asks "which protocol/port REPLACED X?" — this tab answers exactly that</p>
+
+        @if (filteredReplacements.length === 0) {
+          <div class="no-results-block">No replacements match "{{ searchText }}"</div>
+        }
+
+        @for (cat of replacementCategories; track cat) {
+          @if (getReplacementsForCategory(cat).length > 0) {
+            <div class="rep-category">
+              <h3 class="rep-cat-label">{{ cat }}</h3>
+              <div class="rep-grid">
+                @for (r of getReplacementsForCategory(cat); track r.from.name) {
+                  <div class="rep-card">
+                    <div class="rep-side from">
+                      <span class="rep-badge insecure">Replaced</span>
+                      <div class="rep-name">{{ r.from.name }}</div>
+                      <div class="rep-port">{{ r.from.port }}</div>
+                      <div class="rep-why">{{ r.from.why }}</div>
+                    </div>
+                    <div class="rep-arrow">
+                      <mat-icon>arrow_forward</mat-icon>
+                    </div>
+                    <div class="rep-side to">
+                      <span class="rep-badge secure">Use Instead</span>
+                      <div class="rep-name">{{ r.to.name }}</div>
+                      <div class="rep-port">{{ r.to.port }}</div>
+                      <div class="rep-why">{{ r.to.why }}</div>
+                    </div>
+                    <div class="rep-reason">
+                      <mat-icon>info_outline</mat-icon>
+                      {{ r.reason }}
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </mat-tab>
+
   </mat-tab-group>
 
 </div>

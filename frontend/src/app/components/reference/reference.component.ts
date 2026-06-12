@@ -231,6 +231,164 @@ export class ReferenceComponent {
     );
   }
 
+  readonly REPLACEMENTS: Array<{
+    category: string;
+    from: { name: string; port: string; why: string };
+    to: { name: string; port: string; why: string };
+    reason: string;
+  }> = [
+    // ── Ports / Services ───────────────────────────────────────
+    {
+      category: 'Remote Access',
+      from: { name: 'Telnet', port: 'TCP 23', why: 'Cleartext — credentials and data fully visible on wire' },
+      to:   { name: 'SSH', port: 'TCP 22', why: 'Encrypted channel; supports key-based auth' },
+      reason: 'Telnet sends everything in plaintext. An attacker with a packet sniffer captures your password immediately.'
+    },
+    {
+      category: 'File Transfer',
+      from: { name: 'FTP', port: 'TCP 20/21', why: 'Cleartext credentials + data; no integrity check' },
+      to:   { name: 'SFTP / SCP', port: 'TCP 22 (SSH)', why: 'Full encryption over SSH; same port, no extra config' },
+      reason: 'FTP was designed in 1971. Use SFTP (SSH file transfer) or SCP for encrypted transfers, or FTPS (989/990) for TLS-wrapped FTP.'
+    },
+    {
+      category: 'Web Traffic',
+      from: { name: 'HTTP', port: 'TCP 80', why: 'Cleartext — passwords, cookies, content all exposed' },
+      to:   { name: 'HTTPS', port: 'TCP 443', why: 'TLS 1.2/1.3 encrypts everything; certificate authenticates server' },
+      reason: 'HTTP carries no encryption. HTTPS with TLS 1.3 + HSTS is the only acceptable standard for any site handling users.'
+    },
+    {
+      category: 'Email — Retrieval',
+      from: { name: 'POP3', port: 'TCP 110', why: 'Cleartext; downloads mail then deletes from server' },
+      to:   { name: 'POP3S', port: 'TCP 995', why: 'POP3 over TLS — same behaviour, encrypted' },
+      reason: 'POP3 on port 110 sends your username/password in plain text. Port 995 wraps the same protocol in TLS.'
+    },
+    {
+      category: 'Email — Retrieval',
+      from: { name: 'IMAP', port: 'TCP 143', why: 'Cleartext; mail left on server but credentials exposed' },
+      to:   { name: 'IMAPS', port: 'TCP 993', why: 'IMAP over TLS — server-side mail access, encrypted' },
+      reason: 'IMAP is superior to POP3 for multi-device use but shares the same plaintext problem on port 143.'
+    },
+    {
+      category: 'Email — Sending',
+      from: { name: 'SMTP (relay)', port: 'TCP 25', why: 'Unencrypted relay; used for server-to-server; open relays allow spam' },
+      to:   { name: 'SMTP Submission + STARTTLS', port: 'TCP 587', why: 'Client mail submission; STARTTLS upgrades to TLS; requires auth' },
+      reason: 'Port 25 is for MTA-to-MTA relay and is commonly blocked by ISPs. Client-to-server submission uses 587 with mandatory STARTTLS.'
+    },
+    {
+      category: 'Directory Services',
+      from: { name: 'LDAP', port: 'TCP 389', why: 'Cleartext directory queries and bind credentials' },
+      to:   { name: 'LDAPS', port: 'TCP 636', why: 'LDAP wrapped in TLS from connection start' },
+      reason: 'LDAP credentials (including AD service accounts) are exposed on port 389. Use LDAPS or LDAP+STARTTLS for all directory queries.'
+    },
+    {
+      category: 'Logging',
+      from: { name: 'Syslog (UDP)', port: 'UDP 514', why: 'No auth, no encryption, no delivery guarantee; logs can be forged' },
+      to:   { name: 'Syslog over TLS', port: 'TCP 6514', why: 'RFC 5425 — mutual TLS auth, encrypted, TCP delivery' },
+      reason: 'Plain Syslog lets attackers read your logs or inject fake entries. TLS syslog prevents both and adds delivery guarantees.'
+    },
+    {
+      category: 'Network Management',
+      from: { name: 'SNMPv1 / SNMPv2c', port: 'UDP 161/162', why: 'Community strings sent in cleartext; "public" is default' },
+      to:   { name: 'SNMPv3', port: 'UDP 161/162', why: 'Adds authentication (SHA) + encryption (AES); per-user security' },
+      reason: 'SNMP community strings are essentially cleartext passwords. SNMPv3 is the only version that provides real authentication and encryption.'
+    },
+    {
+      category: 'Remote Desktop',
+      from: { name: 'VNC (unauthenticated/cleartext)', port: 'TCP 5900', why: 'Often no auth or weak password; screen data unencrypted' },
+      to:   { name: 'VNC over SSH tunnel', port: 'TCP 22', why: 'Bind VNC to localhost, forward through encrypted SSH' },
+      reason: 'VNC has no built-in encryption. Always tunnel it through SSH (ssh -L 5901:localhost:5900 ...) or use RDP with NLA instead.'
+    },
+    // ── VPN / Tunneling ────────────────────────────────────────
+    {
+      category: 'VPN',
+      from: { name: 'PPTP', port: 'TCP 1723', why: 'MS-CHAPv2 is trivially crackable; data encryption is weak' },
+      to:   { name: 'IKEv2/IPSec or WireGuard', port: 'UDP 500+4500 / UDP 51820', why: 'Strong encryption, forward secrecy, modern cipher suites' },
+      reason: 'PPTP was cracked by cloudcracker / asleap attacks. Its MS-CHAPv2 handshake can be captured and cracked offline in hours.'
+    },
+    // ── Wireless ───────────────────────────────────────────────
+    {
+      category: 'Wireless Security',
+      from: { name: 'WEP', port: 'N/A', why: 'RC4 with static IV reuse; crack in minutes with aircrack-ng' },
+      to:   { name: 'WPA3', port: 'N/A', why: 'SAE handshake; brute-force protection; forward secrecy' },
+      reason: 'WEP reuses 24-bit IVs — collect ~50k packets and the key falls out. WPA2 is the minimum acceptable; WPA3 is the target.'
+    },
+    {
+      category: 'Wireless Security',
+      from: { name: 'WPA / TKIP', port: 'N/A', why: 'TKIP is a patch for WEP hardware; known attacks (TKIP MIC)' },
+      to:   { name: 'WPA2-Enterprise (AES-CCMP)', port: '802.1X', why: 'Per-user creds via RADIUS + EAP; no shared passphrase' },
+      reason: 'WPA-TKIP was a stop-gap. WPA2 with AES-CCMP is the current minimum; WPA3-Enterprise with 192-bit mode is preferred for corporate.'
+    },
+    {
+      category: 'Wireless Setup',
+      from: { name: 'WPS (PIN method)', port: 'N/A', why: '8-digit PIN splits into two 4-digit halves = 11,000 guesses max' },
+      to:   { name: 'Disable WPS entirely', port: 'N/A', why: 'No substitute needed — use WPA3 passphrase setup' },
+      reason: 'Reaver exploits the WPS PIN split to brute-force the passphrase in under 8 hours. Disable WPS on every access point.'
+    },
+    // ── Authentication ─────────────────────────────────────────
+    {
+      category: 'Authentication',
+      from: { name: 'PAP', port: 'PPP', why: 'Password sent in cleartext; zero protection' },
+      to:   { name: 'EAP-TLS', port: '802.1X', why: 'Mutual certificate-based auth; nothing sensitive on the wire' },
+      reason: 'PAP is the original PPP auth method and transmits passwords as plaintext. EAP-TLS uses certificates and a TLS tunnel instead.'
+    },
+    {
+      category: 'Authentication',
+      from: { name: 'NTLM', port: 'Windows SMB/HTTP', why: 'Pass-the-hash, relay attacks; no mutual auth' },
+      to:   { name: 'Kerberos', port: 'TCP/UDP 88', why: 'Ticket-based; mutual auth; no password on wire; PKI option' },
+      reason: 'NTLM hashes can be captured and replayed directly without cracking (pass-the-hash). Kerberos is the Active Directory default since Windows 2000.'
+    },
+    // ── Ciphers ────────────────────────────────────────────────
+    {
+      category: 'Symmetric Encryption',
+      from: { name: 'DES', port: '56-bit key', why: 'Brute-forced in 22 hours in 1999; trivial today' },
+      to:   { name: 'AES-256', port: '256-bit key', why: 'No practical attack; NIST standard; hardware accelerated' },
+      reason: 'DES has only 56 effective key bits. Modern CPUs can exhaust the keyspace in seconds. AES-256 with a random key is computationally secure.'
+    },
+    {
+      category: 'Symmetric Encryption',
+      from: { name: '3DES / TDEA', port: '112-bit effective', why: 'Sweet32 birthday attack at 64-bit block size; slow' },
+      to:   { name: 'AES-128 / AES-256', port: '128 or 256-bit key', why: '128-bit block size eliminates Sweet32; 10× faster in hardware' },
+      reason: '3DES was a bridge while AES was standardized. Its 64-bit block size allows Sweet32 attacks after ~32 GB of data on the same key.'
+    },
+    {
+      category: 'Stream Cipher',
+      from: { name: 'RC4', port: 'Variable key', why: 'Statistical biases in first bytes; BEAST, RC4 NOMORE attacks' },
+      to:   { name: 'ChaCha20-Poly1305', port: '256-bit key', why: 'AEAD stream cipher; no IV reuse issues; fast in software' },
+      reason: 'RC4 was banned from TLS by RFC 7465 after researchers demonstrated practical attacks. ChaCha20 is used in TLS 1.3 on mobile/embedded devices.'
+    },
+    // ── Hashing ────────────────────────────────────────────────
+    {
+      category: 'Hashing',
+      from: { name: 'MD5', port: '128-bit output', why: 'Collision found in seconds; Flame malware forged MD5 certificate' },
+      to:   { name: 'SHA-256', port: '256-bit output', why: 'No known collision; NIST standard; ubiquitous in TLS/code signing' },
+      reason: 'MD5 collisions are trivially producible — two different files with identical MD5 hashes. Never use for certificate fingerprints, signatures, or passwords.'
+    },
+    {
+      category: 'Hashing',
+      from: { name: 'SHA-1', port: '160-bit output', why: 'SHAttered attack (2017) produced first collision for $110k in cloud compute' },
+      to:   { name: 'SHA-256 / SHA-3', port: '256-bit output', why: 'SHA-2 family still secure; SHA-3 uses different algorithm (Keccak)' },
+      reason: 'The Shattered attack proved SHA-1 collisions are practical. Major CAs stopped issuing SHA-1 certs in 2016; browsers reject them.'
+    },
+  ];
+
+  get filteredReplacements() {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.REPLACEMENTS;
+    return this.REPLACEMENTS.filter(r =>
+      r.from.name.toLowerCase().includes(q) || r.to.name.toLowerCase().includes(q) ||
+      r.category.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q) ||
+      r.from.port.toLowerCase().includes(q) || r.to.port.toLowerCase().includes(q)
+    );
+  }
+
+  get replacementCategories(): string[] {
+    return [...new Set(this.REPLACEMENTS.map(r => r.category))];
+  }
+
+  getReplacementsForCategory(cat: string) {
+    return this.filteredReplacements.filter(r => r.category === cat);
+  }
+
   statusLabel(s: string): string {
     return { secure: 'Secure', insecure: 'Weak/Insecure', deprecated: 'Deprecated', neutral: 'Context-dependent' }[s] ?? s;
   }

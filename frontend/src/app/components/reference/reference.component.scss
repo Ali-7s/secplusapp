@@ -109,6 +109,93 @@
   }
 }
 
+// ── Legacy → Modern ────────────────────────────────────────
+.no-results-block {
+  text-align: center; padding: 40px; color: #94a3b8; font-style: italic;
+}
+
+.rep-category { margin-bottom: 32px; }
+
+.rep-cat-label {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: #475569; margin: 0 0 12px;
+}
+
+.rep-grid {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.rep-card {
+  border: 1px solid #e2e8f0; border-radius: 14px;
+  overflow: hidden; background: white;
+}
+
+.rep-sides {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+}
+
+.rep-side {
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+
+  &.from {
+    background: #fff7f7; border-right: 1px solid #fecaca;
+    .rep-name { color: #dc2626; }
+    .rep-port { color: #ef4444; font-family: 'Courier New', monospace; font-size: 12px; }
+    .rep-why  { color: #b91c1c99; }
+  }
+  &.to {
+    background: #f0fdf4;
+    .rep-name { color: #15803d; }
+    .rep-port { color: #16a34a; font-family: 'Courier New', monospace; font-size: 12px; }
+    .rep-why  { color: #15803d99; }
+  }
+}
+
+.rep-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 8px; margin-bottom: 6px; width: fit-content;
+  &.insecure { background: #fee2e2; color: #dc2626; }
+  &.secure   { background: #dcfce7; color: #15803d; }
+}
+
+.rep-name {
+  font-size: 15px; font-weight: 700; line-height: 1.2;
+}
+
+.rep-why {
+  font-size: 11px; line-height: 1.4; margin-top: 2px;
+}
+
+.rep-arrow {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px; background: #f8fafc;
+  border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;
+  mat-icon { color: #64748b; font-size: 20px; width: 20px; height: 20px; }
+}
+
+.rep-reason {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 16px; font-size: 12px; color: #475569; line-height: 1.5;
+  border-top: 1px solid #f1f5f9; background: #f8fafc;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; color: #94a3b8; }
+}
+
+// The rep-card uses a grid inside — apply it directly
+.rep-card {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+
+  .rep-side  { }
+  .rep-arrow { grid-row: 1; }
+  .rep-reason {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 // ── Dark mode ──────────────────────────────────────────────
 :host-context([data-theme="dark"]) {
   .page-header mat-icon { color: var(--c-accent); }
@@ -137,4 +224,26 @@
   }
 
   .tab-hint { color: var(--c-muted); }
+
+  .rep-cat-label { color: var(--c-text); }
+  .rep-card {
+    background: var(--c-surface-2);
+    border-color: var(--c-border);
+  }
+  .rep-side.from {
+    background: #7f1d1d18;
+    border-color: #7f1d1d55;
+    .rep-name { color: #f87171; }
+    .rep-port { color: #fca5a5; }
+    .rep-why  { color: #fca5a5cc; }
+  }
+  .rep-side.to {
+    background: #14532d18;
+    border-color: #14532d55;
+    .rep-name { color: #4ade80; }
+    .rep-port { color: #86efac; }
+    .rep-why  { color: #86efaccc; }
+  }
+  .rep-arrow mat-icon { color: var(--c-muted); }
+  .rep-reason { color: var(--c-muted); border-color: var(--c-border); }
 }
