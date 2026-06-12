@@ -43,7 +43,7 @@
   display: inline-flex; align-items: center; gap: 4px;
   background: rgba(255,255,255,.18); padding: 4px 12px;
   border-radius: 20px; font-size: 12px; font-weight: 600;
-  mat-icon { font-size: 14px; }
+  mat-icon { font-size: 14px; width: 14px; height: 14px; line-height: 1; }
 }
 
 // ── Sections list ──────────────────────────────────────────
