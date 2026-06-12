@@ -91,14 +91,14 @@
   display: flex; align-items: center; gap: 4px;
   font-size: 11px; font-weight: 600; color: #94a3b8;
   background: #f1f5f9; padding: 3px 8px; border-radius: 6px;
-  mat-icon { font-size: 13px; }
+  mat-icon { font-size: 13px; width: 13px; height: 13px; line-height: 1; }
   &.done { color: #15803d; background: #dcfce7; mat-icon { color: #059669; } }
 }
 
 .exam-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px;
-  mat-icon { font-size: 13px; }
+  mat-icon { font-size: 13px; width: 13px; height: 13px; line-height: 1; }
   &.passed { background: #dcfce7; color: #15803d; }
   &.failed { background: #fee2e2; color: #dc2626; }
 }
