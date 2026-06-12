@@ -173,30 +173,53 @@ public class ContentService {
             - Make wrong answers plausible — they should be close to correct, require real knowledge to eliminate
             - Mix difficulty: 30%% Easy, 50%% Medium, 20%% Hard
             - Include at least 2 multi-select questions (SELECT TWO/THREE THAT APPLY)
-            - Include at least 3 scenario/performance-based questions
+            - Include at least 2 scenario-based questions (SCENARIO type with detailed scenario field)
+            - Include 1-2 DRAG_DROP matching questions (match terms to definitions or protocols to ports)
+            - Include 1-2 ORDER_LIST sequencing questions (put steps or phases in correct order)
             - Test application, not just recall
 
-            Return JSON array:
-            [
-              {
-                "id": "q-uuid",
-                "sectionId": "%s",
-                "domainId": "domain-id",
-                "type": "MULTIPLE_CHOICE|MULTI_SELECT|SCENARIO",
-                "scenario": "detailed scenario paragraph (null if no scenario)",
-                "stem": "the actual question",
-                "options": ["A. option one", "B. option two", "C. option three", "D. option four"],
-                "correctAnswer": "A",
-                "correctAnswers": ["A","C"],
-                "explanation": "detailed explanation of why the correct answer is right AND why wrong answers are wrong",
-                "difficulty": "Easy|Medium|Hard",
-                "tags": ["tag1", "tag2"],
-                "points": 1
-              }
-            ]
+            Return JSON array. Each question uses ONE of these formats:
+
+            Standard MC/Scenario question:
+            {
+              "id": "q-<uuid>", "sectionId": "%s", "domainId": "domain-id",
+              "type": "MULTIPLE_CHOICE|MULTI_SELECT|SCENARIO",
+              "scenario": "paragraph context or null",
+              "stem": "the question",
+              "options": ["A. option one", "B. option two", "C. option three", "D. option four"],
+              "correctAnswer": "A",
+              "correctAnswers": ["A","C"],
+              "explanation": "why correct and why wrong",
+              "difficulty": "Easy|Medium|Hard", "tags": [], "points": 1
+            }
+
+            DRAG_DROP matching question (match each term to its definition):
+            {
+              "id": "q-<uuid>", "sectionId": "%s", "domainId": "domain-id",
+              "type": "DRAG_DROP",
+              "stem": "Match each term to its correct description",
+              "options": [], "correctAnswer": null, "correctAnswers": null,
+              "dragPairs": [{"id":"a","label":"AES"},{"id":"b","label":"RSA"},{"id":"c","label":"SHA-256"}],
+              "dropTargets": [{"id":"1","label":"Asymmetric key exchange algorithm"},{"id":"2","label":"Symmetric block cipher"},{"id":"3","label":"Cryptographic hash function"}],
+              "correctPairs": {"a":"2","b":"1","c":"3"},
+              "explanation": "why each pairing is correct",
+              "difficulty": "Medium", "tags": [], "points": 1
+            }
+
+            ORDER_LIST sequencing question (put steps in correct order):
+            {
+              "id": "q-<uuid>", "sectionId": "%s", "domainId": "domain-id",
+              "type": "ORDER_LIST",
+              "stem": "Place these incident response phases in the correct order",
+              "options": [], "correctAnswer": null, "correctAnswers": null,
+              "orderItems": ["Eradication","Identification","Recovery","Containment","Lessons Learned"],
+              "correctOrder": ["Identification","Containment","Eradication","Recovery","Lessons Learned"],
+              "explanation": "why this order follows NIST incident response guidelines",
+              "difficulty": "Medium", "tags": [], "points": 1
+            }
             """,
             count, section.getObjectiveNumber(), section.getName(),
-            String.join(", ", section.getKeyTopics()), sectionId);
+            String.join(", ", section.getKeyTopics()), sectionId, sectionId, sectionId);
 
         String response = fetchOrGenerate(key, prompt, 10240);
         try {
@@ -222,13 +245,13 @@ public class ContentService {
             Requirements:
             - 40%% scenario-based (detailed real-world scenarios, 2-4 paragraphs each)
             - 20%% multi-select questions (SELECT ALL THAT APPLY or SELECT TWO)
+            - 2-3 DRAG_DROP matching questions (match protocols/concepts/terms to descriptions)
+            - 2-3 ORDER_LIST sequencing questions (procedures, attack phases, response steps)
             - All distractors must be technically plausible
-            - Include performance-based question scenarios
             - Minimum 60%% Medium/Hard difficulty
             - Cover ALL key topics comprehensively
-            - Include questions that require cross-topic knowledge
 
-            Return same JSON format as practice questions.
+            Use the same JSON format as practice questions — DRAG_DROP uses dragPairs/dropTargets/correctPairs fields, ORDER_LIST uses orderItems/correctOrder fields, both with options:[].
             """,
             section.getObjectiveNumber(), section.getName(),
             String.join(", ", section.getKeyTopics()));

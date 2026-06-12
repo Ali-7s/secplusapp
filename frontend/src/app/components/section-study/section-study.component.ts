@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatBadgeModule } from '@angular/material/badge';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { Section } from '../../models/curriculum.model';
@@ -24,7 +25,7 @@ import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard
   selector: 'app-section-study',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, FormsModule, MatTabsModule, MatCardModule, MatButtonModule,
+    CommonModule, RouterLink, FormsModule, DragDropModule, MatTabsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatProgressBarModule, MatChipsModule, MatProgressSpinnerModule,
     MatDividerModule, MatSnackBarModule, MatDialogModule, MatBadgeModule
   ],
@@ -99,6 +100,11 @@ export class SectionStudyComponent implements OnInit {
   examStartTime = 0;
   examTimerInterval: any;
   examElapsedSeconds = 0;
+
+  // PBQ state (shared; question IDs differ between practice/exam so no collision)
+  ddMatches: Record<string, Record<string, string>> = {};  // qId → {pairId: targetId}
+  ddSelected: Record<string, string> = {};                  // qId → currently picked target id
+  olItems: Record<string, string[]> = {};                   // qId → current order array
 
   // Lab tab
   lab: Lab | null = null;
@@ -349,14 +355,92 @@ export class SectionStudyComponent implements OnInit {
     return Array.isArray(ans) ? ans.includes(option) : ans === option;
   }
 
+  // ── PBQ: Drag-drop matching ────────────────────────────────
+  ddSelectTarget(qId: string, targetId: string) {
+    this.ddSelected[qId] = this.ddSelected[qId] === targetId ? '' : targetId;
+  }
+
+  ddAssignPair(qId: string, pairId: string) {
+    const sel = this.ddSelected[qId];
+    if (!sel) return;
+    if (!this.ddMatches[qId]) this.ddMatches[qId] = {};
+    // unassign this target from any other pair first
+    for (const key of Object.keys(this.ddMatches[qId])) {
+      if (this.ddMatches[qId][key] === sel) delete this.ddMatches[qId][key];
+    }
+    this.ddMatches[qId][pairId] = sel;
+    this.ddSelected[qId] = '';
+    this.ddMatches = { ...this.ddMatches };
+  }
+
+  ddUnassign(qId: string, pairId: string, e: Event) {
+    e.stopPropagation();
+    if (this.ddMatches[qId]) {
+      delete this.ddMatches[qId][pairId];
+      this.ddMatches = { ...this.ddMatches };
+    }
+  }
+
+  ddGetMatch(qId: string, pairId: string): string {
+    return this.ddMatches[qId]?.[pairId] ?? '';
+  }
+
+  ddIsAssigned(qId: string, targetId: string): boolean {
+    return Object.values(this.ddMatches[qId] ?? {}).includes(targetId);
+  }
+
+  ddGetTargetLabel(q: Question, targetId: string): string {
+    return q.dropTargets?.find(t => t.id === targetId)?.label ?? '';
+  }
+
+  ddAllMatched(q: Question): boolean {
+    const m = this.ddMatches[q.id] ?? {};
+    return (q.dragPairs?.length ?? 0) > 0 && Object.keys(m).length === q.dragPairs!.length;
+  }
+
+  isPairCorrect(q: Question, pairId: string): boolean {
+    return this.ddMatches[q.id]?.[pairId] === q.correctPairs?.[pairId];
+  }
+
+  // ── PBQ: Order list ────────────────────────────────────────
+  getOlItems(qId: string, q: Question): string[] {
+    if (!this.olItems[qId]) {
+      this.olItems[qId] = [...(q.orderItems ?? [])];
+    }
+    return this.olItems[qId];
+  }
+
+  dropOl(event: CdkDragDrop<string[]>, qId: string, q: Question) {
+    const items = this.getOlItems(qId, q);
+    moveItemInArray(items, event.previousIndex, event.currentIndex);
+    this.olItems = { ...this.olItems };
+  }
+
+  isOrderItemCorrect(q: Question, item: string, index: number): boolean {
+    return q.correctOrder?.[index] === item;
+  }
+
+  olAllOrdered(q: Question): boolean {
+    return (this.olItems[q.id]?.length ?? 0) === (q.orderItems?.length ?? 0);
+  }
+
+  // ── Shared correctness / submit ────────────────────────────
+  isPracticeAnswered(q: Question): boolean {
+    if (q.type === 'DRAG_DROP') return this.ddAllMatched(q);
+    if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
+    const ans = this.practiceAnswers[q.id];
+    return Array.isArray(ans) ? ans.length > 0 : !!ans;
+  }
+
+  get allPracticeAnswered(): boolean {
+    return this.practiceQuestions.length > 0 &&
+           this.practiceQuestions.every(q => this.isPracticeAnswered(q));
+  }
+
   submitPractice() {
     let correct = 0;
     this.practiceQuestions.forEach(q => {
-      const given = this.practiceAnswers[q.id];
-      const isCorrect = q.type === 'MULTI_SELECT'
-        ? JSON.stringify([...(given as string[] || [])].sort()) === JSON.stringify([...(q.correctAnswers || [])].sort())
-        : given === q.correctAnswer;
-      if (isCorrect) correct++;
+      if (this.isPracticeCorrect(q)) correct++;
     });
     this.practiceScore = correct;
     this.practiceTotal = this.practiceQuestions.length;
@@ -365,6 +449,15 @@ export class SectionStudyComponent implements OnInit {
   }
 
   isPracticeCorrect(q: Question): boolean {
+    if (q.type === 'DRAG_DROP') {
+      if (!q.correctPairs || !q.dragPairs?.length) return false;
+      const m = this.ddMatches[q.id] ?? {};
+      return q.dragPairs.every(p => m[p.id] === q.correctPairs![p.id]);
+    }
+    if (q.type === 'ORDER_LIST') {
+      if (!q.correctOrder?.length) return false;
+      return JSON.stringify(this.olItems[q.id] ?? []) === JSON.stringify(q.correctOrder);
+    }
     const given = this.practiceAnswers[q.id];
     if (q.type === 'MULTI_SELECT') {
       return JSON.stringify([...(given as string[] || [])].sort()) === JSON.stringify([...(q.correctAnswers || [])].sort());
@@ -380,6 +473,9 @@ export class SectionStudyComponent implements OnInit {
   reloadPractice() {
     this.practiceQuestions = [];
     this.practiceAnswers = {};
+    this.ddMatches = {};
+    this.ddSelected = {};
+    this.olItems = {};
     this.practiceState = 'idle';
     this.practiceShowExplanation = {};
     this.loadPractice();
@@ -449,6 +545,9 @@ export class SectionStudyComponent implements OnInit {
     this.examQuestions = [];
     this.examState = 'idle';
     this.examResult = null;
+    this.ddMatches = {};
+    this.ddSelected = {};
+    this.olItems = {};
     this.loadExam();
   }
 
@@ -458,11 +557,15 @@ export class SectionStudyComponent implements OnInit {
     return `${m}:${s}`;
   }
 
+  isExamAnswered(q: Question): boolean {
+    if (q.type === 'DRAG_DROP') return this.ddAllMatched(q);
+    if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
+    const ans = this.examAnswers[q.id];
+    return Array.isArray(ans) ? ans.length > 0 : !!ans;
+  }
+
   get examAnsweredCount(): number {
-    return Object.keys(this.examAnswers).filter(k => {
-      const v = this.examAnswers[k];
-      return Array.isArray(v) ? v.length > 0 : !!v;
-    }).length;
+    return this.examQuestions.filter(q => this.isExamAnswered(q)).length;
   }
 
   // ── Lab ────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ package com.comptia.securityplus.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
+import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Question {
@@ -19,7 +20,26 @@ public class Question {
     private List<String> tags;
     private Integer points;
 
+    // PBQ: Matching
+    private List<PairItem> dragPairs;
+    private List<PairItem> dropTargets;
+    private Map<String, String> correctPairs;
+
+    // PBQ: Sequencing
+    private List<String> orderItems;
+    private List<String> correctOrder;
+
     public enum QuestionType { MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class PairItem {
+        private String id;
+        private String label;
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public String getLabel() { return label; }
+        public void setLabel(String label) { this.label = label; }
+    }
 
     public Question() {}
 
@@ -49,4 +69,15 @@ public class Question {
     public void setTags(List<String> tags) { this.tags = tags; }
     public Integer getPoints() { return points; }
     public void setPoints(Integer points) { this.points = points; }
+
+    public List<PairItem> getDragPairs() { return dragPairs; }
+    public void setDragPairs(List<PairItem> dragPairs) { this.dragPairs = dragPairs; }
+    public List<PairItem> getDropTargets() { return dropTargets; }
+    public void setDropTargets(List<PairItem> dropTargets) { this.dropTargets = dropTargets; }
+    public Map<String, String> getCorrectPairs() { return correctPairs; }
+    public void setCorrectPairs(Map<String, String> correctPairs) { this.correctPairs = correctPairs; }
+    public List<String> getOrderItems() { return orderItems; }
+    public void setOrderItems(List<String> orderItems) { this.orderItems = orderItems; }
+    public List<String> getCorrectOrder() { return correctOrder; }
+    public void setCorrectOrder(List<String> correctOrder) { this.correctOrder = correctOrder; }
 }

@@ -1,5 +1,10 @@
 export type QuestionType = 'MULTIPLE_CHOICE' | 'MULTI_SELECT' | 'SCENARIO' | 'DRAG_DROP' | 'ORDER_LIST';
 
+export interface PairItem {
+  id: string;
+  label: string;
+}
+
 export interface Question {
   id: string;
   sectionId: string;
@@ -17,6 +22,15 @@ export interface Question {
   selectedAnswer?: string;
   selectedAnswers?: string[];
   flagged?: boolean;
+
+  // PBQ: Matching (DRAG_DROP)
+  dragPairs?: PairItem[];
+  dropTargets?: PairItem[];
+  correctPairs?: Record<string, string>;
+
+  // PBQ: Sequencing (ORDER_LIST)
+  orderItems?: string[];
+  correctOrder?: string[];
 }
 
 export interface ExamSubmission {

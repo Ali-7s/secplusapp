@@ -360,34 +360,106 @@
             </div>
 
             @for (q of practiceQuestions; track q.id; let i = $index) {
-              <mat-card class="question-card">
+              <mat-card class="question-card" [class.pbq-card]="q.type === 'DRAG_DROP' || q.type === 'ORDER_LIST'">
                 <mat-card-content>
                   <div class="q-header">
                     <span class="q-number">Q{{ i + 1 }}</span>
                     <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
-                    <span class="q-type">{{ q.type === 'MULTI_SELECT' ? 'SELECT ALL THAT APPLY' : 'Single Answer' }}</span>
+                    @if (q.type === 'MULTI_SELECT') { <span class="q-type">SELECT ALL THAT APPLY</span> }
+                    @if (q.type === 'DRAG_DROP')    { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                    @if (q.type === 'ORDER_LIST')   { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
                   </div>
                   @if (q.scenario) {
                     <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div>
                   }
                   <p class="q-stem">{{ q.stem }}</p>
-                  <div class="options">
-                    @for (opt of q.options; track opt) {
-                      <button class="option-btn"
-                        [class.selected]="isPracticeSelected(q.id, opt.charAt(0))"
-                        (click)="selectPracticeAnswer(q.id, opt.charAt(0))">
-                        <span class="opt-letter">{{ opt.charAt(0) }}</span>
-                        <span class="opt-text">{{ opt.slice(3) }}</span>
-                      </button>
-                    }
-                  </div>
+
+                  <!-- ── DRAG-DROP matching ── -->
+                  @if (q.type === 'DRAG_DROP') {
+                    <div class="dd-container">
+                      <div class="dd-pairs-col">
+                        @for (pair of q.dragPairs ?? []; track pair.id) {
+                          @let matched = ddGetMatch(q.id, pair.id);
+                          <div class="dd-row">
+                            <div class="dd-term">{{ pair.label }}</div>
+                            <div class="dd-slot"
+                              [class.dd-slot-ready]="!matched && !!ddSelected[q.id]"
+                              [class.dd-slot-filled]="!!matched"
+                              (click)="ddAssignPair(q.id, pair.id)">
+                              @if (matched) {
+                                <span class="dd-slot-text">{{ ddGetTargetLabel(q, matched) }}</span>
+                                <button mat-icon-button class="dd-clear-btn" (click)="ddUnassign(q.id, pair.id, $event)">
+                                  <mat-icon>close</mat-icon>
+                                </button>
+                              } @else {
+                                <span class="dd-slot-hint">{{ ddSelected[q.id] ? '↑ click to place' : 'no match yet' }}</span>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                      <div class="dd-pool">
+                        <div class="dd-pool-label">
+                          <mat-icon>touch_app</mat-icon>
+                          Select a match below, then click a slot above
+                        </div>
+                        <div class="dd-pool-chips">
+                          @for (target of q.dropTargets ?? []; track target.id) {
+                            @if (!ddIsAssigned(q.id, target.id)) {
+                              <div class="dd-chip"
+                                [class.dd-chip-active]="ddSelected[q.id] === target.id"
+                                (click)="ddSelectTarget(q.id, target.id)">
+                                {{ target.label }}
+                              </div>
+                            }
+                          }
+                          @if (ddAllMatched(q)) {
+                            <div class="dd-pool-done">
+                              <mat-icon>check_circle</mat-icon> All matched — scroll up to review
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                  <!-- ── Order list ── -->
+                  } @else if (q.type === 'ORDER_LIST') {
+                    <div class="ol-hint">
+                      <mat-icon>drag_indicator</mat-icon> Drag items into the correct sequence
+                    </div>
+                    <div class="ol-list" cdkDropList (cdkDropListDropped)="dropOl($event, q.id, q)">
+                      @for (item of getOlItems(q.id, q); track item; let oi = $index) {
+                        <div class="ol-item" cdkDrag>
+                          <mat-icon class="ol-handle" cdkDragHandle>drag_indicator</mat-icon>
+                          <span class="ol-rank">{{ oi + 1 }}</span>
+                          <span class="ol-text">{{ item }}</span>
+                          <div class="ol-preview" *cdkDragPreview>
+                            <mat-icon>drag_indicator</mat-icon> {{ item }}
+                          </div>
+                        </div>
+                      }
+                    </div>
+
+                  <!-- ── Standard MC / Scenario ── -->
+                  } @else {
+                    <div class="options">
+                      @for (opt of q.options; track opt) {
+                        <button class="option-btn"
+                          [class.selected]="isPracticeSelected(q.id, opt.charAt(0))"
+                          (click)="selectPracticeAnswer(q.id, opt.charAt(0))">
+                          <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                          <span class="opt-text">{{ opt.slice(3) }}</span>
+                        </button>
+                      }
+                    </div>
+                  }
                 </mat-card-content>
               </mat-card>
             }
 
             <div class="submit-row">
               <button mat-raised-button color="primary" (click)="submitPractice()"
-                [disabled]="Object.keys(practiceAnswers).length < practiceQuestions.length">
+                [disabled]="!allPracticeAnswered">
                 Submit All Answers
               </button>
             </div>
@@ -413,22 +485,71 @@
                       {{ isPracticeCorrect(q) ? 'check_circle' : 'cancel' }}
                     </mat-icon>
                     <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                    @if (q.type === 'DRAG_DROP')  { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                    @if (q.type === 'ORDER_LIST') { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
                   </div>
                   @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
                   <p class="q-stem">{{ q.stem }}</p>
-                  <div class="options review-options">
-                    @for (opt of q.options; track opt) {
-                      <div class="option-result"
-                        [class.correct-opt]="isCorrectOption(q, opt)"
-                        [class.wrong-opt]="isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)"
-                        [class.selected-opt]="isPracticeSelected(q.id, opt.charAt(0))">
-                        <span class="opt-letter">{{ opt.charAt(0) }}</span>
-                        <span class="opt-text">{{ opt.slice(3) }}</span>
-                        @if (isCorrectOption(q, opt)) { <mat-icon class="result-icon">check</mat-icon> }
-                        @if (isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)) { <mat-icon class="result-icon">close</mat-icon> }
-                      </div>
-                    }
-                  </div>
+
+                  <!-- ── Review: Drag-drop ── -->
+                  @if (q.type === 'DRAG_DROP') {
+                    <div class="dd-review">
+                      @for (pair of q.dragPairs ?? []; track pair.id) {
+                        @let userTarget = ddGetMatch(q.id, pair.id);
+                        @let correct = isPairCorrect(q, pair.id);
+                        <div class="dd-review-row" [class.dd-rev-correct]="correct" [class.dd-rev-wrong]="!correct">
+                          <mat-icon>{{ correct ? 'check_circle' : 'cancel' }}</mat-icon>
+                          <span class="dd-rev-term">{{ pair.label }}</span>
+                          <mat-icon class="dd-rev-arrow">arrow_forward</mat-icon>
+                          <div class="dd-rev-answers">
+                            <span class="dd-rev-yours" [class.wrong-text]="!correct">
+                              {{ userTarget ? ddGetTargetLabel(q, userTarget) : '(no answer)' }}
+                            </span>
+                            @if (!correct) {
+                              <span class="dd-rev-correct-label">
+                                ✓ {{ ddGetTargetLabel(q, q.correctPairs?.[pair.id] ?? '') }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+
+                  <!-- ── Review: Order list ── -->
+                  } @else if (q.type === 'ORDER_LIST') {
+                    <div class="ol-review">
+                      @for (item of (olItems[q.id] ?? q.orderItems ?? []); track item; let oi = $index) {
+                        @let correct = isOrderItemCorrect(q, item, oi);
+                        <div class="ol-review-item" [class.ol-rev-correct]="correct" [class.ol-rev-wrong]="!correct">
+                          <mat-icon>{{ correct ? 'check_circle' : 'cancel' }}</mat-icon>
+                          <span class="ol-rev-rank">{{ oi + 1 }}.</span>
+                          <span class="ol-rev-text">{{ item }}</span>
+                          @if (!correct) {
+                            <span class="ol-rev-expected">
+                              (should be: {{ q.correctOrder?.[oi] }})
+                            </span>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                  <!-- ── Review: Standard MC ── -->
+                  } @else {
+                    <div class="options review-options">
+                      @for (opt of q.options; track opt) {
+                        <div class="option-result"
+                          [class.correct-opt]="isCorrectOption(q, opt)"
+                          [class.wrong-opt]="isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)"
+                          [class.selected-opt]="isPracticeSelected(q.id, opt.charAt(0))">
+                          <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                          <span class="opt-text">{{ opt.slice(3) }}</span>
+                          @if (isCorrectOption(q, opt)) { <mat-icon class="result-icon">check</mat-icon> }
+                          @if (isPracticeSelected(q.id, opt.charAt(0)) && !isCorrectOption(q, opt)) { <mat-icon class="result-icon">close</mat-icon> }
+                        </div>
+                      }
+                    </div>
+                  }
+
                   <div class="explanation-box">
                     <mat-icon>info</mat-icon>
                     <p>{{ q.explanation }}</p>
@@ -615,7 +736,7 @@
             <div class="exam-nav">
               @for (q of examQuestions; track q.id; let i = $index) {
                 <button class="nav-bubble"
-                  [class.answered]="examAnswers[q.id]"
+                  [class.answered]="isExamAnswered(q)"
                   [class.flagged]="examFlagged.has(q.id)"
                   [class.current]="i === currentExamIndex"
                   (click)="currentExamIndex = i">
@@ -625,28 +746,101 @@
             </div>
 
             @let q = examQuestions[currentExamIndex];
-            <mat-card class="question-card exam-question-card">
+            <mat-card class="question-card exam-question-card" [class.pbq-card]="q.type === 'DRAG_DROP' || q.type === 'ORDER_LIST'">
               <mat-card-content>
                 <div class="q-header">
                   <span class="q-number">Q{{ currentExamIndex + 1 }} of {{ examQuestions.length }}</span>
                   <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
-                  <span class="q-type">{{ q.type === 'MULTI_SELECT' ? 'SELECT ALL THAT APPLY' : 'Single Answer' }}</span>
+                  @if (q.type === 'MULTI_SELECT') { <span class="q-type">SELECT ALL THAT APPLY</span> }
+                  @if (q.type === 'DRAG_DROP')    { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                  @if (q.type === 'ORDER_LIST')   { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
                   <button mat-icon-button (click)="toggleFlag(q.id)" [class.flagged-btn]="examFlagged.has(q.id)">
                     <mat-icon>{{ examFlagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
                   </button>
                 </div>
                 @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
                 <p class="q-stem">{{ q.stem }}</p>
-                <div class="options">
-                  @for (opt of q.options; track opt) {
-                    <button class="option-btn"
-                      [class.selected]="isExamSelected(q.id, opt.charAt(0))"
-                      (click)="selectExamAnswer(q.id, opt.charAt(0))">
-                      <span class="opt-letter">{{ opt.charAt(0) }}</span>
-                      <span class="opt-text">{{ opt.slice(3) }}</span>
-                    </button>
-                  }
-                </div>
+
+                <!-- ── Exam: Drag-drop matching ── -->
+                @if (q.type === 'DRAG_DROP') {
+                  <div class="dd-container">
+                    <div class="dd-pairs-col">
+                      @for (pair of q.dragPairs ?? []; track pair.id) {
+                        @let matched = ddGetMatch(q.id, pair.id);
+                        <div class="dd-row">
+                          <div class="dd-term">{{ pair.label }}</div>
+                          <div class="dd-slot"
+                            [class.dd-slot-ready]="!matched && !!ddSelected[q.id]"
+                            [class.dd-slot-filled]="!!matched"
+                            (click)="ddAssignPair(q.id, pair.id)">
+                            @if (matched) {
+                              <span class="dd-slot-text">{{ ddGetTargetLabel(q, matched) }}</span>
+                              <button mat-icon-button class="dd-clear-btn" (click)="ddUnassign(q.id, pair.id, $event)">
+                                <mat-icon>close</mat-icon>
+                              </button>
+                            } @else {
+                              <span class="dd-slot-hint">{{ ddSelected[q.id] ? '↑ click to place' : 'no match yet' }}</span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                    <div class="dd-pool">
+                      <div class="dd-pool-label">
+                        <mat-icon>touch_app</mat-icon>
+                        Select a match below, then click a slot above
+                      </div>
+                      <div class="dd-pool-chips">
+                        @for (target of q.dropTargets ?? []; track target.id) {
+                          @if (!ddIsAssigned(q.id, target.id)) {
+                            <div class="dd-chip"
+                              [class.dd-chip-active]="ddSelected[q.id] === target.id"
+                              (click)="ddSelectTarget(q.id, target.id)">
+                              {{ target.label }}
+                            </div>
+                          }
+                        }
+                        @if (ddAllMatched(q)) {
+                          <div class="dd-pool-done">
+                            <mat-icon>check_circle</mat-icon> All matched
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                <!-- ── Exam: Order list ── -->
+                } @else if (q.type === 'ORDER_LIST') {
+                  <div class="ol-hint">
+                    <mat-icon>drag_indicator</mat-icon> Drag items into the correct sequence
+                  </div>
+                  <div class="ol-list" cdkDropList (cdkDropListDropped)="dropOl($event, q.id, q)">
+                    @for (item of getOlItems(q.id, q); track item; let oi = $index) {
+                      <div class="ol-item" cdkDrag>
+                        <mat-icon class="ol-handle" cdkDragHandle>drag_indicator</mat-icon>
+                        <span class="ol-rank">{{ oi + 1 }}</span>
+                        <span class="ol-text">{{ item }}</span>
+                        <div class="ol-preview" *cdkDragPreview>
+                          <mat-icon>drag_indicator</mat-icon> {{ item }}
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                <!-- ── Exam: Standard MC / Scenario ── -->
+                } @else {
+                  <div class="options">
+                    @for (opt of q.options; track opt) {
+                      <button class="option-btn"
+                        [class.selected]="isExamSelected(q.id, opt.charAt(0))"
+                        (click)="selectExamAnswer(q.id, opt.charAt(0))">
+                        <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                        <span class="opt-text">{{ opt.slice(3) }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+
                 <div class="exam-nav-btns">
                   <button mat-stroked-button [disabled]="currentExamIndex === 0" (click)="currentExamIndex = currentExamIndex - 1">
                     <mat-icon>chevron_left</mat-icon> Previous
