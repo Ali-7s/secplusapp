@@ -44,6 +44,24 @@ public class ContentService {
         this.contentRepo = contentRepo;
     }
 
+    // ── Question parse helper ───────────────────────────────────────────────────
+
+    private List<Question> parseQuestions(String response) throws Exception {
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(response);
+        if (root.isArray()) {
+            return mapper.convertValue(root, new TypeReference<List<Question>>() {});
+        }
+        // Claude returned a wrapper object — find the questions array inside it
+        for (String field : new String[]{"questions", "Questions", "items", "data"}) {
+            if (root.has(field) && root.get(field).isArray()) {
+                log.warning("AI returned wrapped object; extracting '" + field + "' array");
+                return mapper.convertValue(root.get(field), new TypeReference<List<Question>>() {});
+            }
+        }
+        // No known array field — rethrow the original error with context
+        return mapper.readValue(response, new TypeReference<List<Question>>() {});
+    }
+
     // ── DB helpers ─────────────────────────────────────────────────────────────
 
     private String fetchOrGenerate(String key, String prompt, int maxTokens) {
@@ -223,7 +241,7 @@ public class ContentService {
 
         String response = fetchOrGenerate(key, prompt, 10240);
         try {
-            return mapper.readValue(response, new TypeReference<List<Question>>() {});
+            return parseQuestions(response);
         } catch (Exception e) {
             log.severe("Failed to parse questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
                 + response.substring(0, Math.min(1000, response.length())));
@@ -251,14 +269,17 @@ public class ContentService {
             - Minimum 60%% Medium/Hard difficulty
             - Cover ALL key topics comprehensively
 
-            Use the same JSON format as practice questions — DRAG_DROP uses dragPairs/dropTargets/correctPairs fields, ORDER_LIST uses orderItems/correctOrder fields, both with options:[].
+            Use the same per-question JSON format as practice questions — DRAG_DROP uses dragPairs/dropTargets/correctPairs fields, ORDER_LIST uses orderItems/correctOrder fields, both with options:[].
+
+            IMPORTANT: Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
+            Do NOT wrap in an object or add any metadata fields (examTitle, objective, totalQuestions, etc.).
             """,
             section.getObjectiveNumber(), section.getName(),
             String.join(", ", section.getKeyTopics()));
 
         String response = fetchOrGenerate(key, prompt, 16384);
         try {
-            return mapper.readValue(response, new TypeReference<List<Question>>() {});
+            return parseQuestions(response);
         } catch (Exception e) {
             log.severe("Failed to parse exam questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
                 + response.substring(0, Math.min(1000, response.length())));
@@ -302,12 +323,13 @@ public class ContentService {
                 - Current exam objectives including cloud, IoT, zero trust, SASE
                 - Set domainId to "%s" in every question
 
-                Return JSON array using the standard question format.
+                Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
+                Do NOT wrap in an object or add metadata fields.
                 """, spec.count(), spec.name(), spec.id(), spec.id());
 
             String response = claude.callClaude(SYSTEM_PROMPT, prompt, 16384);
             try {
-                List<Question> chunk = mapper.readValue(response, new TypeReference<List<Question>>() {});
+                List<Question> chunk = parseQuestions(response);
                 all.addAll(chunk);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to parse full exam chunk for " + spec.id() + ": " + e.getMessage());

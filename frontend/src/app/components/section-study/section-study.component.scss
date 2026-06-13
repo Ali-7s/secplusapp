@@ -560,8 +560,13 @@
 }
 
 .cloze-context {
-  font-size: 18px; font-weight: 600; color: #0f172a; line-height: 1.6;
-  @media (max-width: 600px) { font-size: 15px; }
+  font-size: 16px; font-weight: 400; color: #0f172a; line-height: 1.7;
+  @media (max-width: 600px) { font-size: 14px; }
+}
+
+.cloze-before {
+  font-size: 13px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .4px; margin-right: 2px;
 }
 
 .cloze-blank {

@@ -246,32 +246,88 @@ export class SectionStudyComponent implements OnInit {
     }
   }
 
+  private readonly PHRASE_TERMINALS = new Set([
+    'is','are','was','were','be','been','being',
+    'can','will','would','could','should','must','may',
+    'that','which','when','where','how','if',
+    'in','on','at','of','to','for','by','with','from','as','into','than',
+    'a','an','the',
+    'implemented','used','means','refers','defines','occurs','enables',
+    'provides','protects','ensures','allows','prevents','detects','requires',
+  ]);
+
   private extractCloze(back: string): { before: string; answer: string; after: string } {
     if (!back?.trim()) return { before: '', answer: '', after: '' };
-    // 1. Dash/colon delimiter — cleanest structured format
-    for (const d of [' — ', ' – ', ': ', ' - ']) {
+
+    // 1. "Short Label: VALUE" — blank the VALUE, not the label
+    //    e.g. "Category: Physical | Type: Detective..." → before="Category: " answer="Physical"
+    const colonIdx = back.indexOf(': ');
+    if (colonIdx > 0 && colonIdx <= 20) {
+      const label = back.substring(0, colonIdx);
+      if (label.split(' ').length <= 2) {
+        const rest = back.substring(colonIdx + 2);
+        let end = rest.length;
+        for (const sep of [' | ', '. ', '! ', ', ']) {
+          const si = rest.indexOf(sep);
+          if (si >= 0 && si < end) end = si;
+        }
+        end = Math.min(end, 50);
+        const ws = rest.lastIndexOf(' ', end);
+        if (ws > 3) end = ws;
+        return { before: label + ': ', answer: rest.substring(0, end).trim(), after: ' ' + rest.substring(end).trim() };
+      }
+    }
+
+    // 2. Em dash / en dash — blank the term before it
+    for (const d of [' — ', ' – ']) {
       const i = back.indexOf(d);
-      if (i > 0 && i <= 80) {
+      if (i > 0 && i <= 50) {
         return { before: '', answer: back.substring(0, i).trim(), after: back.substring(i) };
       }
     }
-    // 2. First sentence ending
+
+    // 3. First sentence (short answers that ARE the definition)
     for (const end of ['. ', '! ']) {
       const i = back.indexOf(end);
-      if (i > 4 && i <= 140) {
+      if (i > 4 && i <= 80) {
         return { before: '', answer: back.substring(0, i + 1).trim(), after: ' ' + back.substring(i + 2).trim() };
       }
     }
-    // 3. First comma clause
+
+    // 4. Comma clause
     const ci = back.indexOf(', ');
-    if (ci > 6 && ci <= 80) {
+    if (ci > 4 && ci <= 50) {
       return { before: '', answer: back.substring(0, ci).trim(), after: back.substring(ci) };
     }
-    // 4. Word-boundary cut at ~50 chars (always finds something)
-    const max = Math.min(back.length - 1, 60);
+
+    // 5. First noun phrase (stop before function words) — e.g. "Compensating control implemented when..."
+    const words = back.split(' ');
+    let phrase = words[0];
+    for (let w = 1; w < Math.min(words.length - 1, 5); w++) {
+      const tok = words[w].toLowerCase().replace(/[^a-z]/g, '');
+      if (this.PHRASE_TERMINALS.has(tok)) break;
+      const next = phrase + ' ' + words[w];
+      if (next.length > 35) break;
+      phrase = next;
+    }
+    if (phrase.length > 3 && phrase.length < back.length - 1) {
+      return { before: '', answer: phrase.trim(), after: ' ' + back.substring(phrase.length).trim() };
+    }
+
+    // 6. Hard fallback — word-boundary cut at 40 chars
+    const max = Math.min(back.length - 1, 45);
     const spaceIdx = back.lastIndexOf(' ', max);
-    const cut = spaceIdx > 15 ? spaceIdx : Math.min(40, back.length);
+    const cut = spaceIdx > 10 ? spaceIdx : Math.min(35, back.length);
     return { before: '', answer: back.substring(0, cut).trim(), after: ' ' + back.substring(cut).trim() };
+  }
+
+  renderBack(text: string): string {
+    if (!text?.trim()) return '';
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+      .replace(/ \| /g, '<br>')
+      .replace(/ - (?=[A-Z\d])/g, '<br>• ');
   }
 
   hasCloze(back: string): boolean {

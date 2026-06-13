@@ -216,7 +216,11 @@
                     {{ fcCard.front }}
                   </div>
                   <div class="cloze-context">
-                    <span class="cloze-blank">_____</span>{{ fcClozeComp.after }}
+                    @if (fcClozeComp.before) {
+                      <span class="cloze-before">{{ fcClozeComp.before }}</span>
+                    }
+                    <span class="cloze-blank">_____</span>
+                    <span [innerHTML]="renderBack(fcClozeComp.after)"></span>
                   </div>
                   @if (fcCard.category) {
                     <div class="cloze-category">{{ fcCard.category }}</div>
@@ -248,7 +252,7 @@
                       <span class="cloze-answer-label">Answer:</span>
                       <span class="cloze-answer-value">{{ fcClozeComp.answer }}</span>
                     </div>
-                    <div class="cloze-full-back">{{ fcCard.back }}</div>
+                    <div class="cloze-full-back" [innerHTML]="renderBack(fcCard.back)"></div>
                   </div>
                   <div class="fc-controls">
                     <button mat-stroked-button (click)="prevCard()" [disabled]="fcQueuePos === 0">
