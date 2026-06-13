@@ -6,8 +6,11 @@ import com.comptia.securityplus.model.*;
 import com.comptia.securityplus.repository.GeneratedContentRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -49,19 +52,93 @@ public class ContentService {
     // ── Question parse helper ───────────────────────────────────────────────────
 
     private List<Question> parseQuestions(String response) throws Exception {
-        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(response);
+        JsonNode root = mapper.readTree(response);
+
+        // Locate the questions array — bare array, or wrapped inside a metadata object
+        JsonNode arrayNode = null;
         if (root.isArray()) {
-            return mapper.convertValue(root, new TypeReference<List<Question>>() {});
-        }
-        // Claude returned a wrapper object — find the questions array inside it
-        for (String field : new String[]{"questions", "Questions", "items", "data"}) {
-            if (root.has(field) && root.get(field).isArray()) {
-                log.warning("AI returned wrapped object; extracting '" + field + "' array");
-                return mapper.convertValue(root.get(field), new TypeReference<List<Question>>() {});
+            arrayNode = root;
+        } else {
+            for (String field : new String[]{"questions", "Questions", "items", "data"}) {
+                if (root.has(field) && root.get(field).isArray()) {
+                    log.warning("AI returned wrapped object; extracting '" + field + "' array");
+                    arrayNode = root.get(field);
+                    break;
+                }
             }
         }
-        // No known array field — rethrow the original error with context
-        return mapper.readValue(response, new TypeReference<List<Question>>() {});
+        if (arrayNode == null) {
+            // No recognizable array — let readValue throw with full context for the log
+            return mapper.readValue(response, new TypeReference<List<Question>>() {});
+        }
+
+        // Coerce known AI-drift shapes into what the Question model expects, BEFORE binding.
+        // This is independent of Jackson annotations (which convertValue does not always honor).
+        for (JsonNode n : arrayNode) {
+            if (n.isObject()) normalizeQuestionNode((ObjectNode) n);
+        }
+        return mapper.convertValue(arrayNode, new TypeReference<List<Question>>() {});
+    }
+
+    /** Rewrite a single question node so the AI's looser JSON binds cleanly to {@link Question}. */
+    private void normalizeQuestionNode(ObjectNode q) {
+        // 1. stem: accept "question"/"prompt"/"text"/"q" as aliases
+        if (!q.hasNonNull("stem")) {
+            for (String alt : new String[]{"question", "prompt", "text", "q"}) {
+                if (q.hasNonNull(alt)) { q.set("stem", q.get(alt)); break; }
+            }
+        }
+
+        // 2. type: normalize to UPPER_SNAKE so it matches the enum (e.g. "scenario", "drag-drop")
+        if (q.hasNonNull("type") && q.get("type").isTextual()) {
+            q.put("type", q.get("type").asText().trim().toUpperCase().replace('-', '_').replace(' ', '_'));
+        }
+
+        // 3. correctAnswer: AI sometimes sends ["B"] — take the first element; preserve the rest
+        JsonNode ca = q.get("correctAnswer");
+        if (ca != null && ca.isArray()) {
+            if (!q.hasNonNull("correctAnswers") && ca.size() > 1) {
+                q.set("correctAnswers", ca.deepCopy());   // multi-answer leaked into correctAnswer
+            }
+            q.put("correctAnswer", ca.size() > 0 ? ca.get(0).asText() : null);
+        }
+
+        // 4. correctPairs: must be an object map {dragId: targetId}; salvage if sent as an array
+        JsonNode cp = q.get("correctPairs");
+        if (cp != null && cp.isArray()) {
+            ObjectNode map = mapper.createObjectNode();
+            for (JsonNode pair : cp) {
+                if (!pair.isObject()) continue;
+                String k = firstText(pair, "key", "from", "left", "pairId", "dragId", "drag", "source", "id");
+                String v = firstText(pair, "value", "to", "right", "targetId", "dropId", "drop", "target", "definition", "match");
+                if (k != null && v != null) { map.put(k, v); continue; }
+                if (pair.size() == 1) {   // single-entry object like {"a":"2"}
+                    String f = pair.fieldNames().next();
+                    map.put(f, pair.get(f).asText());
+                }
+            }
+            if (map.size() > 0) q.set("correctPairs", map); else q.remove("correctPairs");
+        }
+
+        // 5. Fields that MUST be arrays — wrap a stray scalar, drop a stray object
+        for (String f : new String[]{"options", "correctAnswers", "correctOrder", "orderItems", "tags"}) {
+            JsonNode v = q.get(f);
+            if (v == null || v.isNull() || v.isArray()) continue;
+            if (v.isValueNode()) {
+                ArrayNode arr = mapper.createArrayNode();
+                arr.add(v.asText());
+                q.set(f, arr);
+            } else {
+                q.remove(f);
+            }
+        }
+    }
+
+    private String firstText(JsonNode obj, String... keys) {
+        for (String k : keys) {
+            if (obj.hasNonNull(k) && obj.get(k).isValueNode()) return obj.get(k).asText();
+        }
+        return null;
     }
 
     // ── DB helpers ─────────────────────────────────────────────────────────────
@@ -198,6 +275,13 @@ public class ContentService {
             - Include 1-2 ORDER_LIST sequencing questions (put steps or phases in correct order)
             - Test application, not just recall
 
+            FIELD RULES (must follow exactly):
+            - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
+            - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
+            - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
+            - "type" is UPPERCASE: MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, or ORDER_LIST.
+            - The question text field is named "stem", not "question".
+
             Return JSON array. Each question uses ONE of these formats:
 
             Standard MC/Scenario question:
@@ -272,6 +356,12 @@ public class ContentService {
             - Cover ALL key topics comprehensively
 
             Use the same per-question JSON format as practice questions — DRAG_DROP uses dragPairs/dropTargets/correctPairs fields, ORDER_LIST uses orderItems/correctOrder fields, both with options:[].
+
+            FIELD RULES (must follow exactly):
+            - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
+            - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
+            - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
+            - "type" is UPPERCASE; the question text field is named "stem", not "question".
 
             IMPORTANT: Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
             Do NOT wrap in an object or add any metadata fields (examTitle, objective, totalQuestions, etc.).
