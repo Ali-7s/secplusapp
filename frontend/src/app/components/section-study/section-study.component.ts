@@ -487,12 +487,12 @@ export class SectionStudyComponent implements OnInit {
     this.brainDumpChecked = true;
     const pct = this.brainDumpResults.length
       ? Math.round(this.brainDumpCoveredCount / this.brainDumpResults.length * 100) : 0;
-    localStorage.setItem(`brainDump_${this.sectionId}`, JSON.stringify({
-      score: this.brainDumpCoveredCount, total: this.brainDumpResults.length, pct, ts: Date.now()
-    }));
-    // Schedule this section for spaced review — quality derived from recall score
-    const card = this.srs.review(this.sectionId, this.section?.name ?? this.sectionId, this.srs.qualityFromScore(pct));
-    this.nextReviewLabel = this.srs.describeDue(card.due);
+    // Schedule this section for spaced review on the server — quality + score from recall
+    this.srs.review(this.sectionId, this.section?.name ?? this.sectionId, this.srs.qualityFromScore(pct), pct)
+      .subscribe({
+        next: card => this.nextReviewLabel = this.srs.describeDue(card.due),
+        error: () => this.nextReviewLabel = '',
+      });
   }
 
   resetBrainDump() {

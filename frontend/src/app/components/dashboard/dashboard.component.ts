@@ -40,50 +40,46 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.contentService.getCurriculum().subscribe({
-      next: domains => {
-        this.domains = domains;
-        this.loading = false;
-        this.refreshReviewQueue();
-      },
+      next: domains => { this.domains = domains; this.loading = false; },
       error: e => { this.error = e.message; this.loading = false; }
     });
     this.progressService.loadSummary().subscribe({ next: s => this.summary = s, error: () => {} });
     this.progressService.loadAll().subscribe({ next: p => this.allProgress = p, error: () => {} });
+
+    // Migrate any old per-device schedule to the server once, then load the queue
+    const migrate = this.srs.migrateLegacy();
+    if (migrate) migrate.subscribe({ next: () => this.refreshReviewQueue(), error: () => this.refreshReviewQueue() });
+    else this.refreshReviewQueue();
   }
 
   refreshReviewQueue() {
-    this.dueCards = this.srs.getDue();
-    this.forecastCount = this.srs.forecastCount(7);
-    this.computeWeakSpots();
+    this.srs.getAll().subscribe(cards => {
+      const now = Date.now();
+      this.dueCards = cards
+        .filter(c => c.due <= now || this.reviewedThisVisit.has(c.sectionId))
+        .sort((a, b) => a.due - b.due);
+      this.forecastCount = cards.filter(c => c.due > now).length;
+
+      // Weak spots: lowest recall scores among sections NOT already in the due queue
+      const dueIds = new Set(this.dueCards.map(c => c.sectionId));
+      this.weakSpots = cards
+        .filter(c => c.lastScore != null && !dueIds.has(c.sectionId))
+        .sort((a, b) => (a.lastScore ?? 0) - (b.lastScore ?? 0))
+        .slice(0, 3)
+        .map(c => ({ sectionId: c.sectionId, sectionName: c.name, pct: c.lastScore ?? 0 }));
+    });
   }
 
   /** Grade a due card in place (self-rated recall) without leaving the dashboard. */
   gradeDue(card: SrsCard, quality: number, e: Event) {
     e.preventDefault();
     e.stopPropagation();
-    this.srs.review(card.id, card.name, quality);
-    this.reviewedThisVisit.add(card.id);
-    // Drop it from the visible due list once graded
-    this.dueCards = this.dueCards.filter(c => c.id !== card.id);
-    this.forecastCount = this.srs.forecastCount(7);
-  }
-
-  computeWeakSpots() {
-    const dueIds = new Set(this.dueCards.map(c => c.id));
-    const scores: { sectionId: string; sectionName: string; pct: number; ts: number }[] = [];
-    for (const domain of this.domains) {
-      for (const section of domain.sections ?? []) {
-        if (dueIds.has(section.id)) continue;   // don't double-list a section that's already due
-        try {
-          const raw = localStorage.getItem(`brainDump_${section.id}`);
-          if (raw) {
-            const entry = JSON.parse(raw);
-            scores.push({ sectionId: section.id, sectionName: section.name, pct: entry.pct ?? 0, ts: entry.ts ?? 0 });
-          }
-        } catch {}
-      }
-    }
-    this.weakSpots = scores.sort((a, b) => a.pct - b.pct).slice(0, 3);
+    this.reviewedThisVisit.add(card.sectionId);
+    this.dueCards = this.dueCards.filter(c => c.sectionId !== card.sectionId);
+    this.srs.review(card.sectionId, card.name, quality).subscribe({
+      next: () => this.forecastCount++,
+      error: () => {},
+    });
   }
 
   getDomainProgress(domainId: string): number {

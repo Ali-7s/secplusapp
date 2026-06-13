@@ -1,123 +1,94 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+import { ApiService } from './api.service';
 
 /**
- * Spaced-repetition scheduler (SM-2 variant), persisted to localStorage.
+ * Spaced-repetition scheduler — backed by the server so a learner's review
+ * schedule follows them across every device, not trapped in one browser.
  *
- * Items are scheduled at the *section* grain: each time you review a section
- * (via a brain dump or an explicit self-rating), the section's next due date
- * is pushed out along an expanding interval — unless you did poorly, in which
- * case it comes back tomorrow. This is the spacing effect: re-retrieving at
- * growing intervals is what turns short-term recall into durable memory.
+ * The SM-2 math runs on the backend (see SrsService.java). This client just
+ * reads the schedule, posts reviews, and formats due dates. `qualityFromScore`
+ * and `describeDue` are pure helpers kept here for the components to use.
  */
 
 export interface SrsCard {
-  id: string;            // sectionId
-  name: string;          // section name (for display)
-  ease: number;          // ease factor (SM-2), starts at 2.5, floor 1.3
-  intervalDays: number;  // current scheduling interval in days
-  reps: number;          // consecutive successful reviews
+  sectionId: string;
+  name: string;
+  ease: number;
+  intervalDays: number;
+  reps: number;
+  lapses: number;
+  lastScore: number | null;
   due: number;           // epoch ms when next due
   lastReviewed: number;  // epoch ms of last review
-  lapses: number;        // times forgotten (quality < 3)
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-const KEY = 'srs_cards_v1';
+const LEGACY_KEY = 'srs_cards_v1';
 
 @Injectable({ providedIn: 'root' })
 export class SrsService {
-  /** Bumped whenever the store changes so components can react. */
-  readonly version = signal(0);
+  private api = inject(ApiService);
 
-  private load(): Record<string, SrsCard> {
-    try {
-      const raw = localStorage.getItem(KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
+  /** All of the current user's cards. */
+  getAll(): Observable<SrsCard[]> {
+    return this.api.get<SrsCard[]>('/srs').pipe(catchError(() => of([])));
   }
 
-  private save(cards: Record<string, SrsCard>) {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(cards));
-      this.version.update(v => v + 1);
-    } catch {}
-  }
-
-  getAll(): SrsCard[] {
-    return Object.values(this.load());
-  }
-
-  getCard(id: string): SrsCard | null {
-    return this.load()[id] ?? null;
-  }
-
-  /** Sections due now (due timestamp in the past), soonest first. */
-  getDue(): SrsCard[] {
-    const now = Date.now();
-    return this.getAll()
-      .filter(c => c.due <= now)
-      .sort((a, b) => a.due - b.due);
-  }
-
-  getDueCount(): number {
-    return this.getDue().length;
-  }
-
-  /** Count of cards becoming due within the next `days` days (excludes already-due). */
-  forecastCount(days: number): number {
-    const now = Date.now();
-    const horizon = now + days * DAY;
-    return this.getAll().filter(c => c.due > now && c.due <= horizon).length;
+  /** Record a review; backend reschedules and returns the updated card. */
+  review(sectionId: string, name: string, quality: number, score?: number): Observable<SrsCard> {
+    return this.api.post<SrsCard>('/srs/review', { sectionId, name, quality, score });
   }
 
   /**
-   * Record a review and reschedule. `quality` is 0–5 (SM-2 convention):
-   *   5 = perfect/easy, 4 = good, 3 = passed with effort,
-   *   2 = wrong but familiar, 1 = wrong, 0 = blackout.
-   * quality < 3 is a lapse: reset the interval and review again tomorrow.
+   * One-time migration of a browser's old localStorage schedule to the server.
+   * Returns the merged server list, or null if there was nothing to migrate.
    */
-  review(id: string, name: string, quality: number): SrsCard {
-    const cards = this.load();
-    const now = Date.now();
-    const existing = cards[id];
+  migrateLegacy(): Observable<SrsCard[]> | null {
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(LEGACY_KEY); } catch { return null; }
+    if (!raw) return null;
 
-    let ease = existing?.ease ?? 2.5;
-    let reps = existing?.reps ?? 0;
-    let interval = existing?.intervalDays ?? 0;
-    let lapses = existing?.lapses ?? 0;
+    let parsed: Record<string, any>;
+    try { parsed = JSON.parse(raw); } catch { localStorage.removeItem(LEGACY_KEY); return null; }
 
-    // SM-2 ease update
-    ease = ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-    if (ease < 1.3) ease = 1.3;
+    const cards = Object.values(parsed).map((c: any) => ({
+      sectionId: c.id ?? c.sectionId,
+      name: c.name,
+      ease: c.ease ?? 2.5,
+      intervalDays: c.intervalDays ?? 0,
+      reps: c.reps ?? 0,
+      lapses: c.lapses ?? 0,
+      // pull the old per-section brain-dump score across too, if present
+      lastScore: this.readLegacyScore(c.id ?? c.sectionId),
+      due: c.due ?? Date.now(),
+      lastReviewed: c.lastReviewed ?? 0,
+    })).filter(c => c.sectionId);
 
-    if (quality < 3) {
-      // Lapse — relearn from the start
-      reps = 0;
-      interval = 1;
-      lapses += 1;
-    } else {
-      if (reps === 0) interval = 1;
-      else if (reps === 1) interval = 6;
-      else interval = Math.round(interval * ease);
-      reps += 1;
-    }
-    if (interval < 1) interval = 1;
+    if (!cards.length) { localStorage.removeItem(LEGACY_KEY); return null; }
 
-    const card: SrsCard = {
-      id,
-      name: name || existing?.name || id,
-      ease,
-      intervalDays: interval,
-      reps,
-      due: now + interval * DAY,
-      lastReviewed: now,
-      lapses,
-    };
-    cards[id] = card;
-    this.save(cards);
-    return card;
+    return this.api.post<SrsCard[]>('/srs/import', cards).pipe(
+      tap(() => {
+        try {
+          localStorage.removeItem(LEGACY_KEY);
+          // legacy brain-dump scores are now on the server cards
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('brainDump_'))
+            .forEach(k => localStorage.removeItem(k));
+        } catch {}
+      }),
+      catchError(() => of([])),
+    );
+  }
+
+  private readLegacyScore(sectionId: string): number | null {
+    try {
+      const raw = localStorage.getItem(`brainDump_${sectionId}`);
+      if (!raw) return null;
+      const e = JSON.parse(raw);
+      return typeof e.pct === 'number' ? e.pct : null;
+    } catch { return null; }
   }
 
   /** Map a brain-dump coverage percentage (0–100) to an SM-2 quality grade. */
@@ -129,16 +100,9 @@ export class SrsService {
     return 1;
   }
 
-  remove(id: string) {
-    const cards = this.load();
-    delete cards[id];
-    this.save(cards);
-  }
-
   /** Human-friendly "due" description, e.g. "tomorrow", "in 5 days", "in 3 weeks". */
   describeDue(ts: number): string {
-    const now = Date.now();
-    const diff = ts - now;
+    const diff = ts - Date.now();
     if (diff <= 0) return 'now';
     const days = Math.round(diff / DAY);
     if (days <= 0) return 'today';

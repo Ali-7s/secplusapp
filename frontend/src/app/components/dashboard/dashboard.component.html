@@ -76,9 +76,9 @@
           <span class="rb-sub">Recall first, then rate yourself — that's what builds long-term memory</span>
         </div>
         <div class="rb-cards">
-          @for (card of dueCards; track card.id) {
+          @for (card of dueCards; track card.sectionId) {
             <div class="rb-card">
-              <a class="rb-card-title" [routerLink]="['/section', card.id]">
+              <a class="rb-card-title" [routerLink]="['/section', card.sectionId]">
                 <mat-icon>menu_book</mat-icon>
                 <span>{{ card.name }}</span>
               </a>
