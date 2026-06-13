@@ -66,12 +66,13 @@ export class SectionStudyComponent implements OnInit {
   fcRetry = new Set<number>();    // "Still Learning" — replayed next pass
   fcDone = false;
 
-  // Cloze mode
+  // Cloze (active recall) mode
   fcClozeMode = false;
-  fcClozeComp: { before: string; answer: string; after: string } = { before: '', answer: '', after: '' };
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
+  clozeCoveredCount = 0;
+  clozeTotalWords = 0;
 
   // Brain dump (Learn tab)
   brainDumpText = '';
@@ -189,6 +190,8 @@ export class SectionStudyComponent implements OnInit {
     this.fcClozeInput = '';
     this.fcClozeChecked = false;
     this.fcClozeCorrect = false;
+    this.clozeCoveredCount = 0;
+    this.clozeTotalWords = 0;
 
     if (this.fcQueuePos < this.fcQueue.length - 1) {
       this.fcQueuePos++;
@@ -203,10 +206,6 @@ export class SectionStudyComponent implements OnInit {
         this.contentService.updateFlashcardProgress(this.sectionId, this.fcMastered.size).subscribe();
       }
     }
-    if (!this.fcDone && this.fcClozeMode) {
-      const c = this.fcCard;
-      if (c) this.fcClozeComp = this.extractCloze(c.back);
-    }
   }
 
   prevCard() {
@@ -217,7 +216,8 @@ export class SectionStudyComponent implements OnInit {
       this.fcClozeInput = '';
       this.fcClozeChecked = false;
       this.fcClozeCorrect = false;
-      if (this.fcClozeMode) { const c = this.fcCard; if (c) this.fcClozeComp = this.extractCloze(c.back); }
+      this.clozeCoveredCount = 0;
+      this.clozeTotalWords = 0;
     }
   }
 
@@ -227,13 +227,14 @@ export class SectionStudyComponent implements OnInit {
     this.fcClozeInput = '';
     this.fcClozeChecked = false;
     this.fcClozeCorrect = false;
+    this.clozeCoveredCount = 0;
+    this.clozeTotalWords = 0;
     this.fcQueue = this.flashcards.map((_, i) => i);
     this.fcQueuePos = 0;
     this.flashcardFlipped = false;
     this.fcMastered.clear();
     this.fcRetry.clear();
     this.fcDone = false;
-    if (this.fcClozeMode) { const c = this.fcCard; if (c) this.fcClozeComp = this.extractCloze(c.back); }
   }
 
   toggleClozeMode() {
@@ -241,9 +242,8 @@ export class SectionStudyComponent implements OnInit {
     this.fcClozeInput = '';
     this.fcClozeChecked = false;
     this.fcClozeCorrect = false;
-    if (this.fcClozeMode && this.fcCard) {
-      this.fcClozeComp = this.extractCloze(this.fcCard.back);
-    }
+    this.clozeCoveredCount = 0;
+    this.clozeTotalWords = 0;
   }
 
   private readonly PHRASE_TERMINALS = new Set([
@@ -335,9 +335,24 @@ export class SectionStudyComponent implements OnInit {
   }
 
   checkCloze() {
-    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
+    if (this.fcClozeChecked) return;
     this.fcClozeChecked = true;
-    this.fcClozeCorrect = this.fuzzyMatch(this.fcClozeInput, this.fcClozeComp.answer);
+    const back = this.fcCard?.back ?? '';
+    if (!back) { this.fcClozeCorrect = true; return; }
+    const userText = this.fcClozeInput.toLowerCase();
+    const keywords = back.toLowerCase()
+      .split(/\s+/)
+      .map(w => w.replace(/[^a-z0-9]/g, ''))
+      .filter(w => w.length >= 4 && !this.STOP_WORDS.has(w));
+    if (!keywords.length) { this.fcClozeCorrect = true; return; }
+    const covered = keywords.filter(w => userText.includes(w)).length;
+    this.clozeCoveredCount = covered;
+    this.clozeTotalWords = keywords.length;
+    this.fcClozeCorrect = covered / keywords.length >= 0.45;
+  }
+
+  get clozeScorePct(): number {
+    return this.clozeTotalWords ? Math.round(this.clozeCoveredCount / this.clozeTotalWords * 100) : 0;
   }
 
   private fuzzyMatch(input: string, answer: string): boolean {

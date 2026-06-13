@@ -208,50 +208,47 @@
               </div>
             } @else if (fcCard) {
 
-              @if (fcClozeMode && hasCloze(fcCard.back)) {
+              @if (fcClozeMode && fcCard) {
 
+                <!-- Active recall: show front, user writes description, reveal back -->
                 <div class="cloze-card">
-                  <div class="cloze-q-hint">
-                    <mat-icon>help_outline</mat-icon>
-                    {{ fcCard.front }}
-                  </div>
-                  <div class="cloze-context">
-                    @if (fcClozeComp.before) {
-                      <span class="cloze-before">{{ fcClozeComp.before }}</span>
-                    }
-                    <span class="cloze-blank">_____</span>
-                    <span [innerHTML]="renderBack(fcClozeComp.after)"></span>
-                  </div>
                   @if (fcCard.category) {
                     <div class="cloze-category">{{ fcCard.category }}</div>
                   }
+                  <div class="cloze-prompt">{{ fcCard.front }}</div>
                 </div>
 
                 @if (!fcClozeChecked) {
+                  <textarea
+                    class="cloze-textarea"
+                    [(ngModel)]="fcClozeInput"
+                    placeholder="Write your answer from memory…"
+                    rows="4"
+                    (keydown.ctrl.enter)="checkCloze()"
+                    (keydown.meta.enter)="checkCloze()">
+                  </textarea>
                   <div class="cloze-input-row">
-                    <input
-                      class="cloze-input"
-                      type="text"
-                      [(ngModel)]="fcClozeInput"
-                      placeholder="Fill in the blank..."
-                      (keydown.enter)="checkCloze()">
-                    <button mat-raised-button color="primary" [disabled]="!fcClozeInput.trim()" (click)="checkCloze()">
-                      <mat-icon>check</mat-icon> Check
+                    <button mat-raised-button color="primary" (click)="checkCloze()">
+                      <mat-icon>visibility</mat-icon> Reveal Answer
+                    </button>
+                    <button mat-stroked-button (click)="checkCloze()">
+                      Skip
                     </button>
                   </div>
                 } @else {
-                  <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
+                  <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect && !!fcClozeInput.trim()">
                     <div class="cloze-result-header">
-                      <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-                      <strong>{{ fcClozeCorrect ? 'Correct!' : 'Not quite' }}</strong>
-                      @if (!fcClozeCorrect) {
-                        <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
+                      <mat-icon>{{ fcClozeCorrect ? 'check_circle' : (fcClozeInput.trim() ? 'info' : 'visibility') }}</mat-icon>
+                      <strong>{{ fcClozeCorrect ? 'Great recall!' : (fcClozeInput.trim() ? 'Keep studying' : 'Answer revealed') }}</strong>
+                      @if (clozeTotalWords > 0) {
+                        <span class="cloze-coverage-badge" [class.good]="clozeScorePct >= 60" [class.ok]="clozeScorePct >= 30 && clozeScorePct < 60" [class.poor]="clozeScorePct < 30">
+                          {{ clozeCoveredCount }}/{{ clozeTotalWords }} key terms
+                        </span>
                       }
                     </div>
-                    <div class="cloze-answer-reveal">
-                      <span class="cloze-answer-label">Answer:</span>
-                      <span class="cloze-answer-value">{{ fcClozeComp.answer }}</span>
-                    </div>
+                    @if (clozeTotalWords > 0) {
+                      <mat-progress-bar class="cloze-progress" mode="determinate" [value]="clozeScorePct"></mat-progress-bar>
+                    }
                     <div class="cloze-full-back" [innerHTML]="renderBack(fcCard.back)"></div>
                   </div>
                   <div class="fc-controls">
