@@ -55,6 +55,28 @@
           <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating explanation...</p></div>
         } @else if (explanation) {
           <div class="learn-content">
+
+            <!-- ── Reading guide: preview topics BEFORE reading ── -->
+            @if (section?.keyTopics?.length) {
+              <div class="reading-guide" [class.rg-collapsed]="!readingGuideOpen">
+                <div class="rg-header" (click)="readingGuideOpen = !readingGuideOpen">
+                  <mat-icon>travel_explore</mat-icon>
+                  <span>Before you read — look for these {{ section!.keyTopics.length }} topics</span>
+                  <mat-icon class="rg-chevron">{{ readingGuideOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </div>
+                @if (readingGuideOpen) {
+                  <div class="rg-body">
+                    <div class="rg-hint">These are exactly what the Brain Dump checks. Read to understand each one.</div>
+                    <div class="rg-topics">
+                      @for (t of section!.keyTopics; track t) {
+                        <div class="rg-topic"><mat-icon>radio_button_unchecked</mat-icon>{{ t }}</div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
             <div class="learn-overview">
               <div class="content-header-row">
                 <h2>{{ explanation.title }}</h2>
@@ -68,6 +90,25 @@
             <mat-divider></mat-divider>
 
             <div class="learn-body" [innerHTML]="explanation.detailedExplanation"></div>
+
+            <!-- ── Recall checkpoint 1: after main explanation ── -->
+            <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[0].done">
+              @if (!chunkRecalls[0].done) {
+                <div class="rc-label"><mat-icon>edit_note</mat-icon>Quick check</div>
+                <p class="rc-question">Close your eyes for 3 seconds, then explain the core concept in your own words.</p>
+                <div class="rc-row">
+                  <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[0].input"
+                    placeholder="One sentence is enough…" (keydown.enter)="submitChunkRecall(0)">
+                  <button mat-flat-button color="primary" (click)="submitChunkRecall(0)">Got it</button>
+                  <button mat-button (click)="submitChunkRecall(0)">Skip</button>
+                </div>
+              } @else {
+                <div class="rc-done-row">
+                  <mat-icon>check_circle</mat-icon>
+                  <span>{{ chunkRecalls[0].input || 'Checkpoint skipped' }}</span>
+                </div>
+              }
+            </div>
 
             <div class="learn-cards-grid">
               <mat-card class="info-card key-points">
@@ -109,6 +150,25 @@
                   <ul>@for (m of explanation.commonMistakes; track m) { <li [innerHTML]="linkTerms(m)"></li> }</ul>
                 </mat-card-content>
               </mat-card>
+            </div>
+
+            <!-- ── Recall checkpoint 2: after key-point cards ── -->
+            <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[1].done">
+              @if (!chunkRecalls[1].done) {
+                <div class="rc-label"><mat-icon>edit_note</mat-icon>Pause &amp; recall</div>
+                <p class="rc-question">Without looking — what are the 2–3 most important things from those cards?</p>
+                <div class="rc-row">
+                  <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[1].input"
+                    placeholder="Key points, exam traps, anything…" (keydown.enter)="submitChunkRecall(1)">
+                  <button mat-flat-button color="primary" (click)="submitChunkRecall(1)">Got it</button>
+                  <button mat-button (click)="submitChunkRecall(1)">Skip</button>
+                </div>
+              } @else {
+                <div class="rc-done-row">
+                  <mat-icon>check_circle</mat-icon>
+                  <span>{{ chunkRecalls[1].input || 'Checkpoint skipped' }}</span>
+                </div>
+              }
             </div>
 
             @if (explanation.analogyExplanation) {

@@ -74,6 +74,15 @@ export class SectionStudyComponent implements OnInit {
   clozeCoveredCount = 0;
   clozeTotalWords = 0;
 
+  // Reading guide + recall checkpoints (Learn tab)
+  readingGuideOpen = true;
+  chunkRecalls: { input: string; done: boolean }[] = [
+    { input: '', done: false },
+    { input: '', done: false },
+  ];
+
+  submitChunkRecall(i: number) { this.chunkRecalls[i].done = true; }
+
   // Brain dump (Learn tab)
   brainDumpText = '';
   brainDumpChecked = false;

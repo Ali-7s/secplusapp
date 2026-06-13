@@ -79,6 +79,78 @@
 // ── Learn tab ──────────────────────────────────────────────
 .learn-content { padding: 4px 0 24px; }
 
+// ── Reading guide ──────────────────────────────────────────
+.reading-guide {
+  border: 1px solid rgba(99,102,241,.3); border-radius: 14px;
+  overflow: hidden; margin-bottom: 24px;
+}
+
+.rg-header {
+  display: flex; align-items: center; gap: 10px; padding: 13px 18px;
+  background: rgba(99,102,241,.07); cursor: pointer; user-select: none;
+  mat-icon:first-child { color: #6366f1; font-size: 20px; width: 20px; height: 20px; }
+  span { flex: 1; font-size: 13px; font-weight: 700; color: #3730a3; }
+  .rg-chevron { color: #6366f1; font-size: 20px; width: 20px; height: 20px; }
+  &:hover { background: rgba(99,102,241,.12); }
+}
+
+.rg-body { padding: 14px 18px 16px; }
+
+.rg-hint {
+  font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 12px;
+  padding-bottom: 10px; border-bottom: 1px solid rgba(99,102,241,.15);
+}
+
+.rg-topics { display: flex; flex-direction: column; gap: 7px; }
+
+.rg-topic {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 500; color: #1e1b4b;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; color: #6366f1; flex-shrink: 0; }
+}
+
+// ── Recall checkpoints ─────────────────────────────────────
+.recall-checkpoint {
+  border: 1px dashed #c7d2fe; border-radius: 12px;
+  padding: 16px 20px; margin: 20px 0; background: #f5f3ff;
+
+  &.rc-done {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    padding: 12px 20px;
+  }
+}
+
+.rc-label {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; color: #6366f1; }
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: #6366f1;
+}
+
+.rc-question {
+  font-size: 14px; font-weight: 600; color: #1e1b4b;
+  margin: 0 0 12px; line-height: 1.45;
+}
+
+.rc-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  .rc-input {
+    flex: 1; min-width: 180px; padding: 8px 12px;
+    border: 1px solid #c7d2fe; border-radius: 8px;
+    font-size: 14px; font-family: inherit; outline: none;
+    background: white;
+    &:focus { border-color: #6366f1; }
+    &::placeholder { color: #a5b4fc; }
+  }
+  button { border-radius: 8px !important; }
+}
+
+.rc-done-row {
+  display: flex; align-items: center; gap: 10px;
+  mat-icon { color: #16a34a; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+  span { font-size: 13px; color: #374151; font-style: italic; }
+}
+
 .learn-overview {
   margin-bottom: 20px;
   h2 { margin: 0 0 10px; font-size: 21px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
@@ -850,6 +922,18 @@
   .learn-body ::ng-deep h2,
   .learn-body ::ng-deep h3  { color: var(--c-primary); }
   .learn-body ::ng-deep code { background: var(--c-surface-2); color: var(--c-accent); }
+
+  .reading-guide  { border-color: rgba(99,102,241,.25); background: transparent; }
+  .rg-header      { background: rgba(99,102,241,.1); span { color: #a5b4fc; } &:hover { background: rgba(99,102,241,.18); } }
+  .rg-hint        { color: var(--c-muted); border-color: rgba(99,102,241,.15); }
+  .rg-topic       { color: var(--c-text-2); }
+
+  .recall-checkpoint { background: rgba(99,102,241,.07); border-color: rgba(99,102,241,.25);
+    &.rc-done { background: #14532d18; border-color: #14532d44; } }
+  .rc-question    { color: var(--c-text); }
+  .rc-row .rc-input { background: var(--c-surface); border-color: rgba(99,102,241,.35);
+    color: var(--c-text); &:focus { border-color: #6366f1; } &::placeholder { color: var(--c-muted); } }
+  .rc-done-row span { color: var(--c-text-2); }
   .info-card                { border-color: var(--c-border); }
   .info-card li             { color: var(--c-text-2); }
   .analogy-card             { background: rgba(139,92,246,.08) !important; border-color: rgba(139,92,246,.25) !important; p { color: #c4b5fd; } }
