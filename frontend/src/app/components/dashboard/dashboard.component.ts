@@ -31,14 +31,35 @@ export class DashboardComponent implements OnInit {
   allProgress: SectionProgress[] = [];
   loading = true;
   error = '';
+  weakSpots: { sectionId: string; sectionName: string; pct: number }[] = [];
 
   ngOnInit() {
     this.contentService.getCurriculum().subscribe({
-      next: domains => { this.domains = domains; this.loading = false; },
+      next: domains => {
+        this.domains = domains;
+        this.loading = false;
+        this.computeWeakSpots();
+      },
       error: e => { this.error = e.message; this.loading = false; }
     });
     this.progressService.loadSummary().subscribe({ next: s => this.summary = s, error: () => {} });
     this.progressService.loadAll().subscribe({ next: p => this.allProgress = p, error: () => {} });
+  }
+
+  computeWeakSpots() {
+    const scores: { sectionId: string; sectionName: string; pct: number; ts: number }[] = [];
+    for (const domain of this.domains) {
+      for (const section of domain.sections ?? []) {
+        try {
+          const raw = localStorage.getItem(`brainDump_${section.id}`);
+          if (raw) {
+            const entry = JSON.parse(raw);
+            scores.push({ sectionId: section.id, sectionName: section.name, pct: entry.pct ?? 0, ts: entry.ts ?? 0 });
+          }
+        } catch {}
+      }
+    }
+    this.weakSpots = scores.sort((a, b) => a.pct - b.pct).slice(0, 3);
   }
 
   getDomainProgress(domainId: string): number {

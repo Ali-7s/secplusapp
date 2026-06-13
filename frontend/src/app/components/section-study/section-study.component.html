@@ -39,7 +39,24 @@
           <mat-icon class="tab-icon">menu_book</mat-icon> Learn
         </ng-template>
 
-        @if (loadingExplanation) {
+        <!-- ── Pre-test (quiz-first): shown before content on each visit ── -->
+        @if (!preTestDone) {
+          <div class="pre-test-screen">
+            <div class="pt-icon"><mat-icon>psychology_alt</mat-icon></div>
+            <h3>Before you read...</h3>
+            <p>Write everything you already know about <strong>{{ section?.name }}</strong>.<br>
+               Wrong answers are fine — struggling to recall now makes the real content stick better.</p>
+            <textarea class="pt-textarea" [(ngModel)]="preTestInput" rows="5"
+              placeholder="Jot down anything — terms, how it works, vague ideas, even guesses…"
+              (keydown.ctrl.enter)="submitPreTest()"></textarea>
+            <div class="pt-actions">
+              <button mat-flat-button color="primary" (click)="submitPreTest()">
+                <mat-icon>arrow_forward</mat-icon> Start Studying
+              </button>
+              <button mat-button (click)="skipPreTest()">I know this topic, skip</button>
+            </div>
+          </div>
+        } @else if (loadingExplanation) {
           <div class="loading-container">
             <mat-spinner></mat-spinner>
             <p>Generating concept explanation...</p>
@@ -54,7 +71,7 @@
         } @else if (regeneratingExplanation) {
           <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating explanation...</p></div>
         } @else if (explanation) {
-          <div class="learn-content">
+          <div class="learn-content" [class.recall-blurred]="recallFocused">
 
             <!-- ── Reading guide (hidden in AR mode — topics are revealed per-block) ── -->
             @if (section?.keyTopics?.length && !activeRecallMode) {
@@ -110,33 +127,61 @@
 
             <!-- AR prompt 1: after overview -->
             @if (activeRecallMode && activeRecallStep === 1) {
-              <div class="ar-prompt-card">
+              <div class="ar-prompt-card" [class.recall-elevated]="recallFocused">
                 <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Overview</div>
                 <p class="ar-prompt-q">{{ AR_PROMPTS[0] }}</p>
                 <div class="ar-prompt-row">
                   <input class="ar-input" type="text" [(ngModel)]="arInputs[0]"
-                    placeholder="One sentence is enough…" (keydown.enter)="submitAR(1)">
-                  <button mat-flat-button color="primary" (click)="submitAR(1)">Continue →</button>
+                    placeholder="One sentence is enough…"
+                    (focus)="recallFocused=true" (blur)="recallFocused=false"
+                    (keydown.enter)="arInputMinMet(1) && submitAR(1)">
+                  <button mat-flat-button color="primary" [disabled]="!arInputMinMet(1)" (click)="submitAR(1)">Continue →</button>
                   <button mat-button (click)="submitAR(1)">Skip</button>
                 </div>
+                @if (!arInputMinMet(1) && arInputs[0].length > 0) {
+                  <p class="ar-hint">Use at least one keyword from the overview to continue</p>
+                }
               </div>
             }
 
             <!-- ── BLOCK 2: Detailed explanation (step 2+) ── -->
             @if (!activeRecallMode || activeRecallStep >= 2) {
               <mat-divider></mat-divider>
-              <div class="learn-body" [innerHTML]="explanation.detailedExplanation"></div>
+              @for (chunk of explanationChunks; track $index) {
+                <div class="learn-body" [innerHTML]="chunk"></div>
+                <!-- Mid-explanation recall between chunks (normal mode only) -->
+                @if (!activeRecallMode && $index < explanationChunks.length - 1) {
+                  <div class="recall-checkpoint" [class.rc-done]="explanationChunkDone[$index]"
+                    [class.recall-elevated]="recallFocused">
+                    @if (!explanationChunkDone[$index]) {
+                      <div class="rc-label"><mat-icon>edit_note</mat-icon>Quick check</div>
+                      <p class="rc-question">Cover the text — what was the main idea in that section?</p>
+                      <div class="rc-row">
+                        <input class="rc-input" type="text"
+                          (focus)="recallFocused=true" (blur)="recallFocused=false"
+                          placeholder="One sentence…" (keydown.enter)="explanationChunkDone[$index]=true">
+                        <button mat-flat-button color="primary" (click)="explanationChunkDone[$index]=true">Got it</button>
+                        <button mat-button (click)="explanationChunkDone[$index]=true">Skip</button>
+                      </div>
+                    } @else {
+                      <div class="rc-done-row"><mat-icon>check_circle</mat-icon><span>Checkpoint done</span></div>
+                    }
+                  </div>
+                }
+              }
             }
 
             <!-- Normal-mode recall checkpoint 1 (hidden in AR mode) -->
             @if (!activeRecallMode) {
-              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[0].done">
+              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[0].done"
+                [class.recall-elevated]="recallFocused">
                 @if (!chunkRecalls[0].done) {
                   <div class="rc-label"><mat-icon>edit_note</mat-icon>Quick check</div>
                   <p class="rc-question">Close your eyes for 3 seconds, then explain the core concept in your own words.</p>
                   <div class="rc-row">
                     <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[0].input"
-                      placeholder="One sentence is enough…" (keydown.enter)="submitChunkRecall(0)">
+                      placeholder="One sentence is enough…" (keydown.enter)="submitChunkRecall(0)"
+                      (focus)="recallFocused=true" (blur)="recallFocused=false">
                     <button mat-flat-button color="primary" (click)="submitChunkRecall(0)">Got it</button>
                     <button mat-button (click)="submitChunkRecall(0)">Skip</button>
                   </div>
@@ -151,15 +196,20 @@
 
             <!-- AR prompt 2: after explanation -->
             @if (activeRecallMode && activeRecallStep === 2) {
-              <div class="ar-prompt-card">
+              <div class="ar-prompt-card" [class.recall-elevated]="recallFocused">
                 <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Explanation</div>
                 <p class="ar-prompt-q">{{ AR_PROMPTS[1] }}</p>
                 <div class="ar-prompt-row">
                   <input class="ar-input" type="text" [(ngModel)]="arInputs[1]"
-                    placeholder="Type it out…" (keydown.enter)="submitAR(2)">
-                  <button mat-flat-button color="primary" (click)="submitAR(2)">Continue →</button>
+                    placeholder="Type it out…"
+                    (focus)="recallFocused=true" (blur)="recallFocused=false"
+                    (keydown.enter)="arInputMinMet(2) && submitAR(2)">
+                  <button mat-flat-button color="primary" [disabled]="!arInputMinMet(2)" (click)="submitAR(2)">Continue →</button>
                   <button mat-button (click)="submitAR(2)">Skip</button>
                 </div>
+                @if (!arInputMinMet(2) && arInputs[1].length > 0) {
+                  <p class="ar-hint">Use at least one keyword from the explanation to continue</p>
+                }
               </div>
             }
 
@@ -215,51 +265,68 @@
 
             <!-- AR prompts after each card block -->
             @if (activeRecallMode && activeRecallStep === 3) {
-              <div class="ar-prompt-card">
+              <div class="ar-prompt-card" [class.recall-elevated]="recallFocused">
                 <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Key Points</div>
                 <p class="ar-prompt-q">{{ AR_PROMPTS[2] }}</p>
                 <div class="ar-prompt-row">
                   <input class="ar-input" type="text" [(ngModel)]="arInputs[2]"
-                    placeholder="Name them…" (keydown.enter)="submitAR(3)">
-                  <button mat-flat-button color="primary" (click)="submitAR(3)">Continue →</button>
+                    placeholder="Name them…"
+                    (focus)="recallFocused=true" (blur)="recallFocused=false"
+                    (keydown.enter)="arInputMinMet(3) && submitAR(3)">
+                  <button mat-flat-button color="primary" [disabled]="!arInputMinMet(3)" (click)="submitAR(3)">Continue →</button>
                   <button mat-button (click)="submitAR(3)">Skip</button>
                 </div>
+                @if (!arInputMinMet(3) && arInputs[2].length > 0) {
+                  <p class="ar-hint">Use at least one keyword from the key points to continue</p>
+                }
               </div>
             }
             @if (activeRecallMode && activeRecallStep === 4) {
-              <div class="ar-prompt-card">
+              <div class="ar-prompt-card" [class.recall-elevated]="recallFocused">
                 <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Exam Tips</div>
                 <p class="ar-prompt-q">{{ AR_PROMPTS[3] }}</p>
                 <div class="ar-prompt-row">
                   <input class="ar-input" type="text" [(ngModel)]="arInputs[3]"
-                    placeholder="The tip you don't want to forget…" (keydown.enter)="submitAR(4)">
-                  <button mat-flat-button color="primary" (click)="submitAR(4)">Continue →</button>
+                    placeholder="The tip you don't want to forget…"
+                    (focus)="recallFocused=true" (blur)="recallFocused=false"
+                    (keydown.enter)="arInputMinMet(4) && submitAR(4)">
+                  <button mat-flat-button color="primary" [disabled]="!arInputMinMet(4)" (click)="submitAR(4)">Continue →</button>
                   <button mat-button (click)="submitAR(4)">Skip</button>
                 </div>
+                @if (!arInputMinMet(4) && arInputs[3].length > 0) {
+                  <p class="ar-hint">Use at least one keyword from the exam tips to continue</p>
+                }
               </div>
             }
             @if (activeRecallMode && activeRecallStep === 5) {
-              <div class="ar-prompt-card">
+              <div class="ar-prompt-card" [class.recall-elevated]="recallFocused">
                 <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Examples &amp; Mistakes</div>
                 <p class="ar-prompt-q">{{ AR_PROMPTS[4] }}</p>
                 <div class="ar-prompt-row">
                   <input class="ar-input" type="text" [(ngModel)]="arInputs[4]"
-                    placeholder="Scenario + mistake…" (keydown.enter)="submitAR(5)">
-                  <button mat-flat-button color="primary" (click)="submitAR(5)">Continue →</button>
+                    placeholder="Scenario + mistake…"
+                    (focus)="recallFocused=true" (blur)="recallFocused=false"
+                    (keydown.enter)="arInputMinMet(5) && submitAR(5)">
+                  <button mat-flat-button color="primary" [disabled]="!arInputMinMet(5)" (click)="submitAR(5)">Continue →</button>
                   <button mat-button (click)="submitAR(5)">Skip</button>
                 </div>
+                @if (!arInputMinMet(5) && arInputs[4].length > 0) {
+                  <p class="ar-hint">Use at least one keyword from the examples to continue</p>
+                }
               </div>
             }
 
             <!-- Normal-mode recall checkpoint 2 (hidden in AR mode) -->
             @if (!activeRecallMode) {
-              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[1].done">
+              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[1].done"
+                [class.recall-elevated]="recallFocused">
                 @if (!chunkRecalls[1].done) {
                   <div class="rc-label"><mat-icon>edit_note</mat-icon>Pause &amp; recall</div>
                   <p class="rc-question">Without looking — what are the 2–3 most important things from those cards?</p>
                   <div class="rc-row">
                     <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[1].input"
-                      placeholder="Key points, exam traps, anything…" (keydown.enter)="submitChunkRecall(1)">
+                      placeholder="Key points, exam traps, anything…" (keydown.enter)="submitChunkRecall(1)"
+                      (focus)="recallFocused=true" (blur)="recallFocused=false">
                     <button mat-flat-button color="primary" (click)="submitChunkRecall(1)">Got it</button>
                     <button mat-button (click)="submitChunkRecall(1)">Skip</button>
                   </div>
@@ -286,7 +353,7 @@
             }
 
             @if (!activeRecallMode || activeRecallStep >= 6) {
-            <div class="brain-dump-section">
+            <div class="brain-dump-section" [class.recall-elevated]="recallFocused">
               <div class="brain-dump-header">
                 <mat-icon>fitness_center</mat-icon>
                 <div class="brain-dump-header-text">
@@ -299,7 +366,8 @@
                   class="brain-dump-textarea"
                   [(ngModel)]="brainDumpText"
                   placeholder="Key terms, how it works, important numbers, why it matters, anything you remember..."
-                  rows="5">
+                  rows="5"
+                  (focus)="recallFocused=true" (blur)="recallFocused=false">
                 </textarea>
                 <div class="brain-dump-actions">
                   <button mat-raised-button color="primary" [disabled]="!brainDumpText.trim()" (click)="checkBrainDump()">

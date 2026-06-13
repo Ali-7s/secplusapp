@@ -1,3 +1,40 @@
+// ── Weak-spot banner ─────────────────────────────────────────
+.weak-spot-banner {
+  background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+  border: 1px solid #fed7aa; border-radius: 16px;
+  padding: 20px 24px; margin-bottom: 32px;
+}
+
+.wsb-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  mat-icon { color: #d97706; font-size: 20px; width: 20px; height: 20px; }
+  > span:first-of-type { font-size: 15px; font-weight: 700; color: #92400e; flex: 1; }
+  .wsb-sub { font-size: 12px; color: #b45309; }
+}
+
+.wsb-cards {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+
+.wsb-card {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid #fed7aa; border-radius: 12px;
+  padding: 12px 16px; text-decoration: none; flex: 1; min-width: 200px;
+  transition: box-shadow .15s, transform .15s;
+  &:hover { box-shadow: 0 4px 16px rgba(217,119,6,.2); transform: translateY(-1px); }
+}
+
+.wsb-score {
+  font-size: 18px; font-weight: 800; min-width: 44px; text-align: center;
+  padding: 6px 10px; border-radius: 8px;
+  &.wsb-poor  { background: #fee2e2; color: #dc2626; }
+  &.wsb-ok    { background: #fef3c7; color: #d97706; }
+  &.wsb-good  { background: #d1fae5; color: #059669; }
+}
+
+.wsb-name { flex: 1; font-size: 13px; font-weight: 600; color: #1e293b; line-height: 1.35; }
+.wsb-arrow { color: #d97706; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+
 // ── Hero ─────────────────────────────────────────────────────
 .hero {
   display: flex;
@@ -179,6 +216,12 @@
 }
 
 :host-context([data-theme="dark"]) {
+  .weak-spot-banner { background: rgba(180,83,9,.1); border-color: rgba(180,83,9,.3); }
+  .wsb-header { > span:first-of-type { color: #fcd34d; } .wsb-sub { color: #fbbf24; } mat-icon { color: #fbbf24; } }
+  .wsb-card { background: var(--c-surface); border-color: rgba(180,83,9,.3); }
+  .wsb-name { color: var(--c-text); }
+  .wsb-arrow { color: #fbbf24; }
+
   .domain-card        { border-color: var(--c-border); }
   .domain-weight      { background: var(--c-surface-2); color: var(--c-text-2); }
   .domain-desc        { color: var(--c-muted); }

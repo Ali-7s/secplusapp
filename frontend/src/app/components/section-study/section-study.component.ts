@@ -76,12 +76,29 @@ export class SectionStudyComponent implements OnInit {
   clozeCoveredCount = 0;
   clozeTotalWords = 0;
 
+  // Pre-test (quiz-first mode) — shown before content on each section visit
+  preTestDone = false;
+  preTestInput = '';
+
+  submitPreTest() {
+    if (this.preTestInput.trim()) {
+      localStorage.setItem(`preTest_${this.sectionId}`, JSON.stringify({ input: this.preTestInput, ts: Date.now() }));
+    }
+    this.preTestDone = true;
+  }
+
+  skipPreTest() { this.preTestDone = true; }
+
+  // Background blur when recall inputs are focused
+  recallFocused = false;
+
   // Reading guide + recall checkpoints (Learn tab)
   readingGuideOpen = true;
   chunkRecalls: { input: string; done: boolean }[] = [
     { input: '', done: false },
     { input: '', done: false },
   ];
+  explanationChunkDone: Record<number, boolean> = {};
 
   submitChunkRecall(i: number) { this.chunkRecalls[i].done = true; }
 
@@ -114,6 +131,40 @@ export class SectionStudyComponent implements OnInit {
   }
 
   submitAR(step: number) { this.activeRecallStep = step + 1; }
+
+  private stripHtml(html: string): string {
+    return html?.replace(/<[^>]+>/g, ' ') ?? '';
+  }
+
+  private blockKeywords(step: number): string[] {
+    if (!this.explanation) return [];
+    const sources: string[] = [
+      this.explanation.overview ?? '',
+      this.stripHtml(this.explanation.detailedExplanation ?? ''),
+      (this.explanation.keyPoints ?? []).join(' '),
+      (this.explanation.examTips ?? []).join(' '),
+      [...(this.explanation.realWorldExamples ?? []), ...(this.explanation.commonMistakes ?? [])].join(' '),
+    ];
+    const raw = sources[step - 1] ?? '';
+    return raw.toLowerCase()
+      .split(/\s+/)
+      .map(w => w.replace(/[^a-z0-9]/g, ''))
+      .filter(w => w.length >= 5 && !this.STOP_WORDS.has(w));
+  }
+
+  arInputMinMet(step: number): boolean {
+    const input = (this.arInputs[step - 1] ?? '').trim().toLowerCase();
+    if (!input || input.length < 3) return false;
+    const kws = this.blockKeywords(step);
+    return !kws.length || kws.some(w => input.includes(w));
+  }
+
+  get explanationChunks(): string[] {
+    const text = this.explanation?.detailedExplanation;
+    if (!text) return [];
+    const parts = text.split(/(?=<h[23][\s>])/i).filter(p => p.trim());
+    return parts.length >= 2 ? parts : [text];
+  }
 
   // Brain dump (Learn tab)
   brainDumpText = '';
@@ -194,7 +245,7 @@ export class SectionStudyComponent implements OnInit {
     this.loadingExplanation = true;
     this.explanationError = '';
     this.contentService.getExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.loadingExplanation = false; },
+      next: e => { this.explanation = e; this.loadingExplanation = false; this.explanationChunkDone = {}; },
       error: err => { this.explanationError = err.message; this.loadingExplanation = false; }
     });
   }
@@ -431,6 +482,11 @@ export class SectionStudyComponent implements OnInit {
     });
     this.brainDumpCoveredCount = this.brainDumpResults.filter(r => r.covered).length;
     this.brainDumpChecked = true;
+    const pct = this.brainDumpResults.length
+      ? Math.round(this.brainDumpCoveredCount / this.brainDumpResults.length * 100) : 0;
+    localStorage.setItem(`brainDump_${this.sectionId}`, JSON.stringify({
+      score: this.brainDumpCoveredCount, total: this.brainDumpResults.length, pct, ts: Date.now()
+    }));
   }
 
   resetBrainDump() {
@@ -716,7 +772,7 @@ export class SectionStudyComponent implements OnInit {
     this.explanation = null;
     this.explanationError = '';
     this.contentService.regenerateExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.regeneratingExplanation = false; },
+      next: e => { this.explanation = e; this.regeneratingExplanation = false; this.explanationChunkDone = {}; },
       error: err => { this.explanationError = err.message; this.regeneratingExplanation = false; }
     });
   }

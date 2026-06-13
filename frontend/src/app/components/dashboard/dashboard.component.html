@@ -67,6 +67,28 @@
       }
     </div>
 
+    <!-- Weak-spot review queue -->
+    @if (weakSpots.length) {
+      <div class="weak-spot-banner">
+        <div class="wsb-header">
+          <mat-icon>warning_amber</mat-icon>
+          <span>Review these weak spots first</span>
+          <span class="wsb-sub">Based on your recent brain dump scores</span>
+        </div>
+        <div class="wsb-cards">
+          @for (ws of weakSpots; track ws.sectionId) {
+            <a class="wsb-card" [routerLink]="['/section', ws.sectionId]">
+              <div class="wsb-score" [class.wsb-poor]="ws.pct < 40" [class.wsb-ok]="ws.pct >= 40 && ws.pct < 70" [class.wsb-good]="ws.pct >= 70">
+                {{ ws.pct }}%
+              </div>
+              <div class="wsb-name">{{ ws.sectionName }}</div>
+              <mat-icon class="wsb-arrow">arrow_forward</mat-icon>
+            </a>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Domains grid -->
     <h2 class="section-title">Study Domains</h2>
     <div class="domains-grid">
