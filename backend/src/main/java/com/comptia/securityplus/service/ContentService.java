@@ -4,11 +4,13 @@ import com.comptia.securityplus.data.CurriculumData;
 import com.comptia.securityplus.entity.GeneratedContentEntity;
 import com.comptia.securityplus.model.*;
 import com.comptia.securityplus.repository.GeneratedContentRepository;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
@@ -26,11 +28,22 @@ public class ContentService {
     private final ClaudeService claude;
     private final CurriculumData curriculum;
     private final GeneratedContentRepository contentRepo;
-    private final ObjectMapper mapper = new ObjectMapper()
+    // Lenient on purpose: the AI occasionally emits not-quite-valid JSON (unquoted keys,
+    // single quotes, trailing commas, comments, raw control chars). Tolerate it rather than
+    // throw away an otherwise-good 25-question exam.
+    private final ObjectMapper mapper = JsonMapper.builder()
+        .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
+        .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+        .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
+        .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
+        .enable(JsonReadFeature.ALLOW_YAML_COMMENTS)
+        .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+        .enable(JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
         .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
-        .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true);
+        .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+        .build();
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
@@ -120,11 +133,31 @@ public class ContentService {
             if (map.size() > 0) q.set("correctPairs", map); else q.remove("correctPairs");
         }
 
-        // 5. Fields that MUST be arrays — wrap a stray scalar, drop a stray object
+        // 5. String-array fields: coerce a stray scalar to an array, and flatten
+        //    array-of-objects (e.g. orderItems:[{"step":"..."}]) down to plain strings
         for (String f : new String[]{"options", "correctAnswers", "correctOrder", "orderItems", "tags"}) {
             JsonNode v = q.get(f);
-            if (v == null || v.isNull() || v.isArray()) continue;
-            if (v.isValueNode()) {
+            if (v == null || v.isNull()) continue;
+            if (v.isArray()) {
+                boolean allStrings = true;
+                for (JsonNode el : v) { if (!el.isTextual()) { allStrings = false; break; } }
+                if (allStrings) continue;                       // already clean
+                ArrayNode cleaned = mapper.createArrayNode();
+                for (JsonNode el : v) {
+                    if (el.isValueNode()) {
+                        cleaned.add(el.asText());
+                    } else if (el.isObject()) {
+                        String t = firstText(el, "text", "step", "item", "label", "value", "name", "option", "title");
+                        if (t == null && el.size() == 1) {      // single-field object {"1":"..."}
+                            String fn = el.fieldNames().next();
+                            if (el.get(fn).isValueNode()) t = el.get(fn).asText();
+                        }
+                        if (t != null) cleaned.add(t);
+                    }
+                    // nested arrays are dropped
+                }
+                q.set(f, cleaned);
+            } else if (v.isValueNode()) {
                 ArrayNode arr = mapper.createArrayNode();
                 arr.add(v.asText());
                 q.set(f, arr);
