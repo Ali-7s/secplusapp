@@ -915,7 +915,7 @@
         </ng-template>
 
         @if (regeneratingExam) {
-          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating exam questions...</p></div>
+          <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating exam questions...<br><small>This may take up to a minute</small></p></div>
         } @else if (examState === 'idle') {
           <div class="exam-intro">
             <div class="content-header-row" style="width:100%;justify-content:flex-end;margin-bottom:-8px;">
@@ -954,7 +954,7 @@
             </div>
 
             @if (loadingExam) {
-              <div style="margin-top:24px"><mat-spinner diameter="40"></mat-spinner></div>
+              <div style="margin-top:24px"><mat-spinner diameter="40"></mat-spinner><p style="color:#64748b;font-size:13px;margin-top:12px">Generating 25 exam-level questions…<br><small>This may take up to a minute</small></p></div>
             } @else {
               <button mat-raised-button color="primary" (click)="loadExam()" style="margin-top:20px">
                 <mat-icon>play_arrow</mat-icon> Start Exam

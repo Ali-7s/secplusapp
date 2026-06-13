@@ -57,13 +57,26 @@ public class ContentController {
     }
 
     @GetMapping("/exam/full")
-    public ResponseEntity<List<Question>> getFullExam() {
-        return ResponseEntity.ok(contentService.getFullPracticeExam());
+    public ResponseEntity<?> getFullExam() {
+        return examResponse(contentService.getFullExamAsync());
     }
 
     @GetMapping("/exam/{sectionId}")
-    public ResponseEntity<List<Question>> getSectionExam(@PathVariable String sectionId) {
-        return ResponseEntity.ok(contentService.getSectionExamQuestions(sectionId));
+    public ResponseEntity<?> getSectionExam(@PathVariable String sectionId) {
+        return examResponse(contentService.getSectionExamAsync(sectionId));
+    }
+
+    /**
+     * Map an async-generation result to HTTP: 200 with questions when ready,
+     * 202 while generating (client polls), 502 if the last attempt failed.
+     */
+    private ResponseEntity<?> examResponse(ContentService.AsyncContent<List<Question>> r) {
+        return switch (r.status()) {
+            case READY -> ResponseEntity.ok(r.data());
+            case GENERATING -> ResponseEntity.accepted().body(Map.of("status", "generating"));
+            case ERROR -> ResponseEntity.status(502)
+                    .body(Map.of("message", r.error() != null ? r.error() : "Generation failed"));
+        };
     }
 
     @GetMapping("/lab/{sectionId}")
@@ -142,15 +155,15 @@ public class ContentController {
     }
 
     @PostMapping("/exam/full/regenerate")
-    public ResponseEntity<List<Question>> regenerateFullExam() {
+    public ResponseEntity<?> regenerateFullExam() {
         contentService.evict("fullExam:all");
-        return ResponseEntity.ok(contentService.getFullPracticeExam());
+        return examResponse(contentService.getFullExamAsync());
     }
 
     @PostMapping("/exam/{sectionId}/regenerate")
-    public ResponseEntity<List<Question>> regenerateSectionExam(@PathVariable String sectionId) {
+    public ResponseEntity<?> regenerateSectionExam(@PathVariable String sectionId) {
         contentService.evict("sectionExam:" + sectionId);
-        return ResponseEntity.ok(contentService.getSectionExamQuestions(sectionId));
+        return examResponse(contentService.getSectionExamAsync(sectionId));
     }
 
     @PostMapping("/lab/{sectionId}/regenerate")

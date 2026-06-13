@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -44,6 +47,22 @@ public class ContentService {
         .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
         .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
         .build();
+
+    // ── Async generation ────────────────────────────────────────────────────────
+    // Exam generation can take minutes. Holding the HTTP request open that long
+    // trips client/proxy/platform timeouts (broken pipe). Instead we generate in a
+    // background thread and let the client poll: the first call kicks off work and
+    // returns GENERATING; later calls return READY (from cache) or ERROR.
+    public enum GenStatus { READY, GENERATING, ERROR }
+    public record AsyncContent<T>(GenStatus status, T data, String error) {}
+
+    private final ExecutorService genPool = Executors.newFixedThreadPool(3, r -> {
+        Thread t = new Thread(r, "content-gen");
+        t.setDaemon(true);   // don't block JVM shutdown
+        return t;
+    });
+    private final Set<String> genInProgress = ConcurrentHashMap.newKeySet();
+    private final Map<String, String> genErrors = new ConcurrentHashMap<>();
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
@@ -369,12 +388,81 @@ public class ContentService {
         }
     }
 
+    // ── Async generation plumbing ────────────────────────────────────────────────
+
+    /**
+     * Return cached questions if ready, otherwise kick off generation in the
+     * background and report progress. Never blocks on the Claude call, so the HTTP
+     * request returns immediately and the client polls instead of holding a
+     * minutes-long connection open.
+     */
+    private AsyncContent<List<Question>> asyncQuestions(String key, Runnable generator) {
+        Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
+        if (cached.isPresent()) {
+            try {
+                return new AsyncContent<>(GenStatus.READY, parseQuestions(cached.get().getJsonContent()), null);
+            } catch (Exception e) {
+                log.warning("Cached content for " + key + " unparseable, regenerating: " + e.getMessage());
+                evict(key);
+            }
+        }
+        // Surface (and clear) an error from a prior attempt so the next poll retries
+        String err = genErrors.remove(key);
+        if (err != null) return new AsyncContent<>(GenStatus.ERROR, null, err);
+
+        // Atomically claim the work — only the first caller submits the job
+        if (genInProgress.add(key)) {
+            genPool.submit(() -> {
+                try {
+                    generator.run();
+                } catch (Exception e) {
+                    log.severe("Background generation failed for " + key + ": " + e.getMessage());
+                    genErrors.put(key, e.getMessage());
+                } finally {
+                    genInProgress.remove(key);
+                }
+            });
+        }
+        return new AsyncContent<>(GenStatus.GENERATING, null, null);
+    }
+
     // ── Section exam ────────────────────────────────────────────────────────────
 
+    public AsyncContent<List<Question>> getSectionExamAsync(String sectionId) {
+        String key = "sectionExam:" + sectionId;
+        return asyncQuestions(key, () -> generateAndCacheSectionExam(sectionId));
+    }
+
+    /** Synchronous accessor used at grading time, when the exam is already cached. */
     public List<Question> getSectionExamQuestions(String sectionId) {
         Section section = findSection(sectionId);
         String key = "sectionExam:" + sectionId;
-        String prompt = String.format("""
+        String response = fetchOrGenerate(key, buildSectionExamPrompt(section), 16384);
+        try {
+            return parseQuestions(response);
+        } catch (Exception e) {
+            evict(key);
+            throw new RuntimeException("Failed to parse exam questions: " + e.getMessage());
+        }
+    }
+
+    private void generateAndCacheSectionExam(String sectionId) {
+        Section section = findSection(sectionId);
+        String key = "sectionExam:" + sectionId;
+        String prompt = buildSectionExamPrompt(section);
+        String response = fetchOrGenerate(key, prompt, 16384);
+        try {
+            parseQuestions(response);   // validate before leaving it cached
+        } catch (Exception e) {
+            log.severe("Failed to parse exam questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                + response.substring(0, Math.min(1000, response.length())));
+            evict(key);
+            throw new RuntimeException("Failed to parse exam questions: " + e.getMessage());
+        }
+    }
+
+    private String buildSectionExamPrompt(Section section) {
+        return String.format("""
             Generate 25 EXAM-LEVEL CompTIA Security+ SY0-701 section exam questions for objective %s: "%s"
             Topics: %s
 
@@ -401,16 +489,6 @@ public class ContentService {
             """,
             section.getObjectiveNumber(), section.getName(),
             String.join(", ", section.getKeyTopics()));
-
-        String response = fetchOrGenerate(key, prompt, 16384);
-        try {
-            return parseQuestions(response);
-        } catch (Exception e) {
-            log.severe("Failed to parse exam questions for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
-                + response.substring(0, Math.min(1000, response.length())));
-            evict(key);
-            throw new RuntimeException("Failed to parse exam questions: " + e.getMessage());
-        }
     }
 
     // ── Full practice exam ──────────────────────────────────────────────────────
@@ -468,6 +546,10 @@ public class ContentService {
             log.warning("Could not persist full exam: " + e.getMessage());
         }
         return all;
+    }
+
+    public AsyncContent<List<Question>> getFullExamAsync() {
+        return asyncQuestions("fullExam:all", this::getFullPracticeExam);
     }
 
     // ── Lab ─────────────────────────────────────────────────────────────────────
