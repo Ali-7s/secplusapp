@@ -56,8 +56,8 @@
         } @else if (explanation) {
           <div class="learn-content">
 
-            <!-- ── Reading guide: preview topics BEFORE reading ── -->
-            @if (section?.keyTopics?.length) {
+            <!-- ── Reading guide (hidden in AR mode — topics are revealed per-block) ── -->
+            @if (section?.keyTopics?.length && !activeRecallMode) {
               <div class="reading-guide" [class.rg-collapsed]="!readingGuideOpen">
                 <div class="rg-header" (click)="readingGuideOpen = !readingGuideOpen">
                   <mat-icon>travel_explore</mat-icon>
@@ -77,110 +77,215 @@
               </div>
             }
 
+            <!-- ── BLOCK 1: Overview ── -->
             <div class="learn-overview">
               <div class="content-header-row">
                 <h2>{{ explanation.title }}</h2>
-                <button mat-icon-button class="regen-btn" (click)="regenerateExplanation()" title="Regenerate with fresh AI content">
-                  <mat-icon>refresh</mat-icon>
-                </button>
+                <div class="learn-header-actions">
+                  <button mat-stroked-button class="ar-toggle-btn" [class.ar-active]="activeRecallMode"
+                    (click)="toggleActiveRecall()"
+                    [matTooltip]="activeRecallMode ? 'Exit active recall mode' : 'Study block-by-block with a recall prompt after each section'">
+                    <mat-icon>psychology</mat-icon>
+                    {{ activeRecallMode ? 'Exit Recall Mode' : 'Active Recall' }}
+                  </button>
+                  <button mat-icon-button class="regen-btn" (click)="regenerateExplanation()" title="Regenerate with fresh AI content">
+                    <mat-icon>refresh</mat-icon>
+                  </button>
+                </div>
               </div>
+
+              @if (activeRecallMode) {
+                <div class="ar-progress-row">
+                  <span class="ar-step-chip">
+                    {{ activeRecallStep <= 5 ? 'Block ' + activeRecallStep + ' / 5 — ' + AR_STEP_NAMES[activeRecallStep - 1] : 'All blocks complete' }}
+                  </span>
+                  <mat-progress-bar mode="determinate"
+                    [value]="Math.min((activeRecallStep - 1) / 5 * 100, 100)">
+                  </mat-progress-bar>
+                </div>
+              }
+
               <p class="overview-text" [innerHTML]="explanation.overview"></p>
             </div>
 
-            <mat-divider></mat-divider>
-
-            <div class="learn-body" [innerHTML]="explanation.detailedExplanation"></div>
-
-            <!-- ── Recall checkpoint 1: after main explanation ── -->
-            <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[0].done">
-              @if (!chunkRecalls[0].done) {
-                <div class="rc-label"><mat-icon>edit_note</mat-icon>Quick check</div>
-                <p class="rc-question">Close your eyes for 3 seconds, then explain the core concept in your own words.</p>
-                <div class="rc-row">
-                  <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[0].input"
-                    placeholder="One sentence is enough…" (keydown.enter)="submitChunkRecall(0)">
-                  <button mat-flat-button color="primary" (click)="submitChunkRecall(0)">Got it</button>
-                  <button mat-button (click)="submitChunkRecall(0)">Skip</button>
+            <!-- AR prompt 1: after overview -->
+            @if (activeRecallMode && activeRecallStep === 1) {
+              <div class="ar-prompt-card">
+                <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Overview</div>
+                <p class="ar-prompt-q">{{ AR_PROMPTS[0] }}</p>
+                <div class="ar-prompt-row">
+                  <input class="ar-input" type="text" [(ngModel)]="arInputs[0]"
+                    placeholder="One sentence is enough…" (keydown.enter)="submitAR(1)">
+                  <button mat-flat-button color="primary" (click)="submitAR(1)">Continue →</button>
+                  <button mat-button (click)="submitAR(1)">Skip</button>
                 </div>
-              } @else {
-                <div class="rc-done-row">
-                  <mat-icon>check_circle</mat-icon>
-                  <span>{{ chunkRecalls[0].input || 'Checkpoint skipped' }}</span>
-                </div>
-              }
-            </div>
-
-            <div class="learn-cards-grid">
-              <mat-card class="info-card key-points">
-                <mat-card-header>
-                  <mat-icon mat-card-avatar style="color:#1565c0">checklist</mat-icon>
-                  <mat-card-title>Key Points</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <ul>@for (p of explanation.keyPoints; track p) { <li [innerHTML]="linkTerms(p)"></li> }</ul>
-                </mat-card-content>
-              </mat-card>
-
-              <mat-card class="info-card exam-tips">
-                <mat-card-header>
-                  <mat-icon mat-card-avatar style="color:#e65100">lightbulb</mat-icon>
-                  <mat-card-title>Exam Tips</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <ul>@for (t of explanation.examTips; track t) { <li [innerHTML]="linkTerms(t)"></li> }</ul>
-                </mat-card-content>
-              </mat-card>
-
-              <mat-card class="info-card examples">
-                <mat-card-header>
-                  <mat-icon mat-card-avatar style="color:#2e7d32">work</mat-icon>
-                  <mat-card-title>Real-World Examples</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <ul>@for (e of explanation.realWorldExamples; track e) { <li [innerHTML]="linkTerms(e)"></li> }</ul>
-                </mat-card-content>
-              </mat-card>
-
-              <mat-card class="info-card mistakes">
-                <mat-card-header>
-                  <mat-icon mat-card-avatar style="color:#c62828">warning</mat-icon>
-                  <mat-card-title>Common Mistakes</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <ul>@for (m of explanation.commonMistakes; track m) { <li [innerHTML]="linkTerms(m)"></li> }</ul>
-                </mat-card-content>
-              </mat-card>
-            </div>
-
-            <!-- ── Recall checkpoint 2: after key-point cards ── -->
-            <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[1].done">
-              @if (!chunkRecalls[1].done) {
-                <div class="rc-label"><mat-icon>edit_note</mat-icon>Pause &amp; recall</div>
-                <p class="rc-question">Without looking — what are the 2–3 most important things from those cards?</p>
-                <div class="rc-row">
-                  <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[1].input"
-                    placeholder="Key points, exam traps, anything…" (keydown.enter)="submitChunkRecall(1)">
-                  <button mat-flat-button color="primary" (click)="submitChunkRecall(1)">Got it</button>
-                  <button mat-button (click)="submitChunkRecall(1)">Skip</button>
-                </div>
-              } @else {
-                <div class="rc-done-row">
-                  <mat-icon>check_circle</mat-icon>
-                  <span>{{ chunkRecalls[1].input || 'Checkpoint skipped' }}</span>
-                </div>
-              }
-            </div>
-
-            @if (explanation.analogyExplanation) {
-              <mat-card class="analogy-card">
-                <mat-card-header>
-                  <mat-icon mat-card-avatar style="color:#7b1fa2">psychology</mat-icon>
-                  <mat-card-title>Think of it this way...</mat-card-title>
-                </mat-card-header>
-                <mat-card-content><p [innerHTML]="linkTerms(explanation.analogyExplanation)"></p></mat-card-content>
-              </mat-card>
+              </div>
             }
 
+            <!-- ── BLOCK 2: Detailed explanation (step 2+) ── -->
+            @if (!activeRecallMode || activeRecallStep >= 2) {
+              <mat-divider></mat-divider>
+              <div class="learn-body" [innerHTML]="explanation.detailedExplanation"></div>
+            }
+
+            <!-- Normal-mode recall checkpoint 1 (hidden in AR mode) -->
+            @if (!activeRecallMode) {
+              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[0].done">
+                @if (!chunkRecalls[0].done) {
+                  <div class="rc-label"><mat-icon>edit_note</mat-icon>Quick check</div>
+                  <p class="rc-question">Close your eyes for 3 seconds, then explain the core concept in your own words.</p>
+                  <div class="rc-row">
+                    <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[0].input"
+                      placeholder="One sentence is enough…" (keydown.enter)="submitChunkRecall(0)">
+                    <button mat-flat-button color="primary" (click)="submitChunkRecall(0)">Got it</button>
+                    <button mat-button (click)="submitChunkRecall(0)">Skip</button>
+                  </div>
+                } @else {
+                  <div class="rc-done-row">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>{{ chunkRecalls[0].input || 'Checkpoint skipped' }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- AR prompt 2: after explanation -->
+            @if (activeRecallMode && activeRecallStep === 2) {
+              <div class="ar-prompt-card">
+                <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Explanation</div>
+                <p class="ar-prompt-q">{{ AR_PROMPTS[1] }}</p>
+                <div class="ar-prompt-row">
+                  <input class="ar-input" type="text" [(ngModel)]="arInputs[1]"
+                    placeholder="Type it out…" (keydown.enter)="submitAR(2)">
+                  <button mat-flat-button color="primary" (click)="submitAR(2)">Continue →</button>
+                  <button mat-button (click)="submitAR(2)">Skip</button>
+                </div>
+              </div>
+            }
+
+            <!-- ── BLOCKS 3–5: Info cards, one per step ── -->
+            <div class="learn-cards-grid" [class.ar-stack]="activeRecallMode">
+
+              @if (!activeRecallMode || activeRecallStep >= 3) {
+                <mat-card class="info-card key-points">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar style="color:#1565c0">checklist</mat-icon>
+                    <mat-card-title>Key Points</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <ul>@for (p of explanation.keyPoints; track p) { <li [innerHTML]="linkTerms(p)"></li> }</ul>
+                  </mat-card-content>
+                </mat-card>
+              }
+
+              @if (!activeRecallMode || activeRecallStep >= 4) {
+                <mat-card class="info-card exam-tips">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar style="color:#e65100">lightbulb</mat-icon>
+                    <mat-card-title>Exam Tips</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <ul>@for (t of explanation.examTips; track t) { <li [innerHTML]="linkTerms(t)"></li> }</ul>
+                  </mat-card-content>
+                </mat-card>
+              }
+
+              @if (!activeRecallMode || activeRecallStep >= 5) {
+                <mat-card class="info-card examples">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar style="color:#2e7d32">work</mat-icon>
+                    <mat-card-title>Real-World Examples</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <ul>@for (e of explanation.realWorldExamples; track e) { <li [innerHTML]="linkTerms(e)"></li> }</ul>
+                  </mat-card-content>
+                </mat-card>
+                <mat-card class="info-card mistakes">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar style="color:#c62828">warning</mat-icon>
+                    <mat-card-title>Common Mistakes</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <ul>@for (m of explanation.commonMistakes; track m) { <li [innerHTML]="linkTerms(m)"></li> }</ul>
+                  </mat-card-content>
+                </mat-card>
+              }
+
+            </div>
+
+            <!-- AR prompts after each card block -->
+            @if (activeRecallMode && activeRecallStep === 3) {
+              <div class="ar-prompt-card">
+                <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Key Points</div>
+                <p class="ar-prompt-q">{{ AR_PROMPTS[2] }}</p>
+                <div class="ar-prompt-row">
+                  <input class="ar-input" type="text" [(ngModel)]="arInputs[2]"
+                    placeholder="Name them…" (keydown.enter)="submitAR(3)">
+                  <button mat-flat-button color="primary" (click)="submitAR(3)">Continue →</button>
+                  <button mat-button (click)="submitAR(3)">Skip</button>
+                </div>
+              </div>
+            }
+            @if (activeRecallMode && activeRecallStep === 4) {
+              <div class="ar-prompt-card">
+                <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Exam Tips</div>
+                <p class="ar-prompt-q">{{ AR_PROMPTS[3] }}</p>
+                <div class="ar-prompt-row">
+                  <input class="ar-input" type="text" [(ngModel)]="arInputs[3]"
+                    placeholder="The tip you don't want to forget…" (keydown.enter)="submitAR(4)">
+                  <button mat-flat-button color="primary" (click)="submitAR(4)">Continue →</button>
+                  <button mat-button (click)="submitAR(4)">Skip</button>
+                </div>
+              </div>
+            }
+            @if (activeRecallMode && activeRecallStep === 5) {
+              <div class="ar-prompt-card">
+                <div class="ar-prompt-label"><mat-icon>psychology</mat-icon> Recall — Examples &amp; Mistakes</div>
+                <p class="ar-prompt-q">{{ AR_PROMPTS[4] }}</p>
+                <div class="ar-prompt-row">
+                  <input class="ar-input" type="text" [(ngModel)]="arInputs[4]"
+                    placeholder="Scenario + mistake…" (keydown.enter)="submitAR(5)">
+                  <button mat-flat-button color="primary" (click)="submitAR(5)">Continue →</button>
+                  <button mat-button (click)="submitAR(5)">Skip</button>
+                </div>
+              </div>
+            }
+
+            <!-- Normal-mode recall checkpoint 2 (hidden in AR mode) -->
+            @if (!activeRecallMode) {
+              <div class="recall-checkpoint" [class.rc-done]="chunkRecalls[1].done">
+                @if (!chunkRecalls[1].done) {
+                  <div class="rc-label"><mat-icon>edit_note</mat-icon>Pause &amp; recall</div>
+                  <p class="rc-question">Without looking — what are the 2–3 most important things from those cards?</p>
+                  <div class="rc-row">
+                    <input class="rc-input" type="text" [(ngModel)]="chunkRecalls[1].input"
+                      placeholder="Key points, exam traps, anything…" (keydown.enter)="submitChunkRecall(1)">
+                    <button mat-flat-button color="primary" (click)="submitChunkRecall(1)">Got it</button>
+                    <button mat-button (click)="submitChunkRecall(1)">Skip</button>
+                  </div>
+                } @else {
+                  <div class="rc-done-row">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>{{ chunkRecalls[1].input || 'Checkpoint skipped' }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- ── Analogy + Brain dump: unlocked at step 6 in AR mode ── -->
+            @if (!activeRecallMode || activeRecallStep >= 6) {
+              @if (explanation.analogyExplanation) {
+                <mat-card class="analogy-card">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar style="color:#7b1fa2">psychology</mat-icon>
+                    <mat-card-title>Think of it this way...</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content><p [innerHTML]="linkTerms(explanation.analogyExplanation)"></p></mat-card-content>
+                </mat-card>
+              }
+            }
+
+            @if (!activeRecallMode || activeRecallStep >= 6) {
             <div class="brain-dump-section">
               <div class="brain-dump-header">
                 <mat-icon>fitness_center</mat-icon>
@@ -226,6 +331,7 @@
                 </div>
               }
             </div>
+            }
           </div>
         }
       </mat-tab>

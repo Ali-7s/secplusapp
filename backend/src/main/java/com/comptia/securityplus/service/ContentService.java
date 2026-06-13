@@ -6,6 +6,7 @@ import com.comptia.securityplus.model.*;
 import com.comptia.securityplus.repository.GeneratedContentRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +26,8 @@ public class ContentService {
     private final ObjectMapper mapper = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
-        .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+        .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
+        .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true);
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.

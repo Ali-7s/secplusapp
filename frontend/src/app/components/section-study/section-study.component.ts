@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
@@ -27,7 +28,7 @@ import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard
   imports: [
     CommonModule, RouterLink, FormsModule, DragDropModule, MatTabsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatProgressBarModule, MatChipsModule, MatProgressSpinnerModule,
-    MatDividerModule, MatSnackBarModule, MatDialogModule, MatBadgeModule
+    MatDividerModule, MatSnackBarModule, MatDialogModule, MatBadgeModule, MatTooltipModule
   ],
   templateUrl: './section-study.component.html',
   styleUrl: './section-study.component.scss'
@@ -40,6 +41,7 @@ export class SectionStudyComponent implements OnInit {
   private sanitizer = inject(DomSanitizer);
 
   protected readonly Object = Object;
+  protected readonly Math = Math;
 
   terms: Term[] = [];
 
@@ -82,6 +84,36 @@ export class SectionStudyComponent implements OnInit {
   ];
 
   submitChunkRecall(i: number) { this.chunkRecalls[i].done = true; }
+
+  // Active Recall Mode — block-by-block progressive reveal
+  activeRecallMode = false;
+  activeRecallStep = 0; // 0 = off; 1-5 = active step; 6+ = complete
+  arInputs: string[] = ['', '', '', '', ''];
+
+  readonly AR_PROMPTS: string[] = [
+    'In your own words, what is this section fundamentally about?',
+    'What\'s the one concept from that explanation you absolutely must understand?',
+    'Cover the card — can you recall 3 key points without looking?',
+    'What\'s the exam tip most likely to trip you up under test pressure?',
+    'Describe a real-world scenario and name one common mistake to avoid.',
+  ];
+
+  readonly AR_STEP_NAMES: string[] = [
+    'Overview', 'Explanation', 'Key Points', 'Exam Tips', 'Examples & Mistakes',
+  ];
+
+  toggleActiveRecall() {
+    if (this.activeRecallMode) {
+      this.activeRecallMode = false;
+      this.activeRecallStep = 0;
+    } else {
+      this.activeRecallMode = true;
+      this.activeRecallStep = 1;
+      this.arInputs = ['', '', '', '', ''];
+    }
+  }
+
+  submitAR(step: number) { this.activeRecallStep = step + 1; }
 
   // Brain dump (Learn tab)
   brainDumpText = '';

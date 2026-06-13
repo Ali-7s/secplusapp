@@ -1,6 +1,10 @@
 package com.comptia.securityplus.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -54,11 +58,25 @@ public class Question {
     public String getScenario() { return scenario; }
     public void setScenario(String scenario) { this.scenario = scenario; }
     public String getStem() { return stem; }
+    @JsonAlias({"question", "q", "prompt", "text"})
     public void setStem(String stem) { this.stem = stem; }
     public List<String> getOptions() { return options; }
     public void setOptions(List<String> options) { this.options = options; }
     public String getCorrectAnswer() { return correctAnswer; }
-    public void setCorrectAnswer(String correctAnswer) { this.correctAnswer = correctAnswer; }
+    @JsonSetter
+    public void setCorrectAnswer(JsonNode node) {
+        if (node == null || node.isNull()) { this.correctAnswer = null; return; }
+        if (node.isArray()) {
+            this.correctAnswer = node.size() > 0 ? node.get(0).asText() : null;
+            if (node.size() > 1 && (this.correctAnswers == null || this.correctAnswers.isEmpty())) {
+                List<String> list = new ArrayList<>();
+                for (JsonNode n : node) list.add(n.asText());
+                this.correctAnswers = list;
+            }
+        } else {
+            this.correctAnswer = node.asText();
+        }
+    }
     public List<String> getCorrectAnswers() { return correctAnswers; }
     public void setCorrectAnswers(List<String> correctAnswers) { this.correctAnswers = correctAnswers; }
     public String getExplanation() { return explanation; }
