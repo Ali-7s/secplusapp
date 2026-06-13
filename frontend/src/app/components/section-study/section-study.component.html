@@ -391,6 +391,12 @@
                       </li>
                     }
                   </ul>
+                  @if (nextReviewLabel) {
+                    <div class="next-review-line">
+                      <mat-icon>event_repeat</mat-icon>
+                      <span>Scheduled for spaced review <strong>{{ nextReviewLabel }}</strong> — we'll surface it on your dashboard when it's due.</span>
+                    </div>
+                  }
                   <div class="brain-dump-actions">
                     <button mat-stroked-button (click)="resetBrainDump()">
                       <mat-icon>refresh</mat-icon> Try Again

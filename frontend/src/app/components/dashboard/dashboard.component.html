@@ -67,13 +67,51 @@
       }
     </div>
 
+    <!-- Spaced-repetition review queue -->
+    @if (dueCards.length) {
+      <div class="review-banner">
+        <div class="rb-header">
+          <mat-icon>event_repeat</mat-icon>
+          <span>{{ dueCards.length }} {{ dueCards.length === 1 ? 'section' : 'sections' }} due for review</span>
+          <span class="rb-sub">Recall first, then rate yourself — that's what builds long-term memory</span>
+        </div>
+        <div class="rb-cards">
+          @for (card of dueCards; track card.id) {
+            <div class="rb-card">
+              <a class="rb-card-title" [routerLink]="['/section', card.id]">
+                <mat-icon>menu_book</mat-icon>
+                <span>{{ card.name }}</span>
+              </a>
+              <div class="rb-grade">
+                <span class="rb-grade-label">How well did you recall it?</span>
+                <div class="rb-grade-btns">
+                  <button class="rb-btn rb-again" (click)="gradeDue(card, 1, $event)" matTooltip="Couldn't recall — review tomorrow">Again</button>
+                  <button class="rb-btn rb-hard"  (click)="gradeDue(card, 3, $event)" matTooltip="Recalled with effort">Hard</button>
+                  <button class="rb-btn rb-good"  (click)="gradeDue(card, 4, $event)" matTooltip="Recalled it">Good</button>
+                  <button class="rb-btn rb-easy"  (click)="gradeDue(card, 5, $event)" matTooltip="Knew it cold — space it out">Easy</button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @else if (reviewedThisVisit.size && forecastCount === 0 && !weakSpots.length) {
+      <div class="review-banner caught-up">
+        <div class="rb-header">
+          <mat-icon>task_alt</mat-icon>
+          <span>All caught up — nothing due for review</span>
+          <span class="rb-sub">Nice work. New reviews will appear here as they come due.</span>
+        </div>
+      </div>
+    }
+
     <!-- Weak-spot review queue -->
     @if (weakSpots.length) {
       <div class="weak-spot-banner">
         <div class="wsb-header">
           <mat-icon>warning_amber</mat-icon>
-          <span>Review these weak spots first</span>
-          <span class="wsb-sub">Based on your recent brain dump scores</span>
+          <span>Shore up your weak spots</span>
+          <span class="wsb-sub">Your lowest brain-dump scores — worth another pass</span>
         </div>
         <div class="wsb-cards">
           @for (ws of weakSpots; track ws.sectionId) {

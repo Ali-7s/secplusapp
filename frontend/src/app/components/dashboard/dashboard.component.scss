@@ -1,3 +1,58 @@
+// ── Spaced-repetition review banner ──────────────────────────
+.review-banner {
+  background: linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%);
+  border: 1px solid #c7d2fe; border-radius: 16px;
+  padding: 20px 24px; margin-bottom: 24px;
+
+  &.caught-up { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-color: #bbf7d0;
+    .rb-header mat-icon { color: #16a34a; }
+    .rb-header > span:first-of-type { color: #166534; }
+    .rb-sub { color: #15803d; }
+  }
+}
+
+.rb-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  mat-icon { color: #6366f1; font-size: 20px; width: 20px; height: 20px; }
+  > span:first-of-type { font-size: 15px; font-weight: 700; color: #3730a3; }
+  .rb-sub { font-size: 12px; color: #6366f1; flex: 1 1 100%; margin-left: 30px; }
+}
+
+.rb-cards { display: flex; flex-direction: column; gap: 10px; }
+
+.rb-card {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: white; border: 1px solid #e0e7ff; border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.rb-card-title {
+  display: flex; align-items: center; gap: 8px; text-decoration: none;
+  flex: 1; min-width: 180px;
+  mat-icon { color: #6366f1; font-size: 18px; width: 18px; height: 18px; }
+  span { font-size: 14px; font-weight: 600; color: #1e293b; }
+  &:hover span { color: #4f46e5; text-decoration: underline; }
+}
+
+.rb-grade {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+  .rb-grade-label { font-size: 11px; color: #94a3b8; }
+}
+
+.rb-grade-btns { display: flex; gap: 6px; }
+
+.rb-btn {
+  border: none; cursor: pointer; border-radius: 8px;
+  padding: 7px 14px; font-size: 13px; font-weight: 700; font-family: inherit;
+  transition: transform .1s, filter .15s;
+  &:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  &:active { transform: translateY(0); }
+  &.rb-again { background: #fee2e2; color: #dc2626; }
+  &.rb-hard  { background: #fef3c7; color: #d97706; }
+  &.rb-good  { background: #dbeafe; color: #2563eb; }
+  &.rb-easy  { background: #d1fae5; color: #059669; }
+}
+
 // ── Weak-spot banner ─────────────────────────────────────────
 .weak-spot-banner {
   background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
@@ -216,6 +271,21 @@
 }
 
 :host-context([data-theme="dark"]) {
+  .review-banner { background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.3);
+    &.caught-up { background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.3);
+      .rb-header > span:first-of-type { color: #86efac; } .rb-sub { color: #4ade80; } }
+  }
+  .rb-header { > span:first-of-type { color: #c7d2fe; } .rb-sub { color: #a5b4fc; } mat-icon { color: #a5b4fc; } }
+  .rb-card { background: var(--c-surface); border-color: rgba(99,102,241,.25); }
+  .rb-card-title span { color: var(--c-text); }
+  .rb-grade-label { color: var(--c-muted); }
+  .rb-btn {
+    &.rb-again { background: rgba(220,38,38,.2);  color: #fca5a5; }
+    &.rb-hard  { background: rgba(217,119,6,.2);  color: #fcd34d; }
+    &.rb-good  { background: rgba(37,99,235,.2);  color: #93c5fd; }
+    &.rb-easy  { background: rgba(5,150,105,.2);  color: #6ee7b7; }
+  }
+
   .weak-spot-banner { background: rgba(180,83,9,.1); border-color: rgba(180,83,9,.3); }
   .wsb-header { > span:first-of-type { color: #fcd34d; } .wsb-sub { color: #fbbf24; } mat-icon { color: #fbbf24; } }
   .wsb-card { background: var(--c-surface); border-color: rgba(180,83,9,.3); }

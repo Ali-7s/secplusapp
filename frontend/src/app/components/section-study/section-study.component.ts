@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
+import { SrsService } from '../../services/srs.service';
 import { Section } from '../../models/curriculum.model';
 import { Question, ExamResult, ExamSubmission } from '../../models/question.model';
 import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard.model';
@@ -37,6 +38,7 @@ export class SectionStudyComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
+  private srs = inject(SrsService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
 
@@ -171,6 +173,7 @@ export class SectionStudyComponent implements OnInit {
   brainDumpChecked = false;
   brainDumpResults: { point: string; covered: boolean }[] = [];
   brainDumpCoveredCount = 0;
+  nextReviewLabel = '';   // e.g. "tomorrow", "in 6 days" — set after scheduling
 
   // Practice tab
   practiceQuestions: Question[] = [];
@@ -487,6 +490,9 @@ export class SectionStudyComponent implements OnInit {
     localStorage.setItem(`brainDump_${this.sectionId}`, JSON.stringify({
       score: this.brainDumpCoveredCount, total: this.brainDumpResults.length, pct, ts: Date.now()
     }));
+    // Schedule this section for spaced review — quality derived from recall score
+    const card = this.srs.review(this.sectionId, this.section?.name ?? this.sectionId, this.srs.qualityFromScore(pct));
+    this.nextReviewLabel = this.srs.describeDue(card.due);
   }
 
   resetBrainDump() {
@@ -494,6 +500,7 @@ export class SectionStudyComponent implements OnInit {
     this.brainDumpChecked = false;
     this.brainDumpResults = [];
     this.brainDumpCoveredCount = 0;
+    this.nextReviewLabel = '';
   }
 
   // ── Practice ──────────────────────────────────────────────────────
