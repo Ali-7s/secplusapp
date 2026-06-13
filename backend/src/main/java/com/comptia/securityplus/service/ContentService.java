@@ -184,6 +184,59 @@ public class ContentService {
                 q.remove(f);
             }
         }
+
+        // 6. Options MUST carry an "A. " / "B. " letter prefix — the UI badge, the
+        //    answer the user submits, and grading all key off that leading letter.
+        //    The AI sometimes omits it (e.g. on the full exam), which both garbles
+        //    the display (first chars sliced off) and breaks grading. Add prefixes
+        //    by position when missing, and remap any full-text answers to letters.
+        JsonNode opts = q.get("options");
+        if (opts != null && opts.isArray() && opts.size() > 0) {
+            boolean anyMissing = false;
+            for (JsonNode o : opts) {
+                if (!o.isTextual() || !o.asText().strip().matches("^[A-Za-z][.)]\\s.*")) { anyMissing = true; break; }
+            }
+            if (anyMissing) {
+                ArrayNode newOpts = mapper.createArrayNode();
+                Map<String, String> textToLetter = new HashMap<>();
+                for (int i = 0; i < opts.size() && i < 26; i++) {
+                    String letter = String.valueOf((char) ('A' + i));
+                    String raw = opts.get(i).asText().strip();
+                    String text = raw.replaceFirst("^[A-Za-z][.)]\\s+", "");   // drop any partial prefix
+                    newOpts.add(letter + ". " + text);
+                    textToLetter.put(raw.toLowerCase(), letter);
+                    textToLetter.put(text.toLowerCase(), letter);
+                }
+                q.set("options", newOpts);
+                remapAnswerToLetter(q, "correctAnswer", textToLetter);
+                remapAnswersToLetters(q, "correctAnswers", textToLetter);
+            }
+        }
+    }
+
+    /** If a correctAnswer holds full option text (not a letter), convert it to the option's letter. */
+    private void remapAnswerToLetter(ObjectNode q, String field, Map<String, String> textToLetter) {
+        JsonNode node = q.get(field);
+        if (node == null || !node.isTextual()) return;
+        String val = node.asText().strip();
+        if (val.length() == 1 && Character.isLetter(val.charAt(0))) return;   // already a letter
+        String letter = textToLetter.get(val.toLowerCase());
+        if (letter == null) letter = textToLetter.get(val.replaceFirst("^[A-Za-z][.)]\\s+", "").toLowerCase());
+        if (letter != null) q.put(field, letter);
+    }
+
+    private void remapAnswersToLetters(ObjectNode q, String field, Map<String, String> textToLetter) {
+        JsonNode node = q.get(field);
+        if (node == null || !node.isArray()) return;
+        ArrayNode out = mapper.createArrayNode();
+        for (JsonNode el : node) {
+            String val = el.asText().strip();
+            if (val.length() == 1 && Character.isLetter(val.charAt(0))) { out.add(val); continue; }
+            String letter = textToLetter.get(val.toLowerCase());
+            if (letter == null) letter = textToLetter.get(val.replaceFirst("^[A-Za-z][.)]\\s+", "").toLowerCase());
+            out.add(letter != null ? letter : val);
+        }
+        q.set(field, out);
     }
 
     private String firstText(JsonNode obj, String... keys) {
@@ -502,7 +555,9 @@ public class ContentService {
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
         if (cached.isPresent()) {
             try {
-                return mapper.readValue(cached.get().getJsonContent(), new TypeReference<List<Question>>() {});
+                // parseQuestions (not raw readValue) so the same normalization the display
+                // path applies — e.g. lettered option prefixes — also drives grading.
+                return parseQuestions(cached.get().getJsonContent());
             } catch (Exception e) {
                 evict(key);
             }
@@ -529,6 +584,12 @@ public class ContentService {
                 - All wrong answers must be technically plausible
                 - Current exam objectives including cloud, IoT, zero trust, SASE
                 - Set domainId to "%s" in every question
+
+                FIELD RULES (must follow exactly):
+                - Each "options" entry MUST start with its letter, e.g. "A. ", "B. ", "C. ", "D. ".
+                - "correctAnswer" is the SINGLE letter of the right option (e.g. "A"), never the text, never an array.
+                - "correctAnswers" (MULTI_SELECT only) is an array of those letters, e.g. ["A","C"].
+                - "type" is UPPERCASE; the question text field is named "stem".
 
                 Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
                 Do NOT wrap in an object or add metadata fields.
