@@ -75,6 +75,10 @@ export class ContentService {
     return this.api.get<Lab>(`/content/lab/${sectionId}`);
   }
 
+  simplifyText(text: string): Observable<{ simplified: string }> {
+    return this.api.post<{ simplified: string }>('/content/simplify', { text });
+  }
+
   completeLab(sectionId: string): Observable<void> {
     return this.api.post<void>(`/content/lab/${sectionId}/complete`, {});
   }

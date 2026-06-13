@@ -196,11 +196,15 @@ public class ContentService {
     // ── DB helpers ─────────────────────────────────────────────────────────────
 
     private String fetchOrGenerate(String key, String prompt, int maxTokens) {
+        return fetchOrGenerate(key, SYSTEM_PROMPT, prompt, maxTokens);
+    }
+
+    private String fetchOrGenerate(String key, String systemPrompt, String prompt, int maxTokens) {
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
         if (cached.isPresent()) {
             return cached.get().getJsonContent();
         }
-        String response = claude.callClaude(SYSTEM_PROMPT, prompt, maxTokens);
+        String response = claude.callClaude(systemPrompt, prompt, maxTokens);
         persist(key, response);
         return response;
     }
@@ -550,6 +554,38 @@ public class ContentService {
 
     public AsyncContent<List<Question>> getFullExamAsync() {
         return asyncQuestions("fullExam:all", this::getFullPracticeExam);
+    }
+
+    // ── Explain-it-simpler ───────────────────────────────────────────────────────
+
+    private static final String TUTOR_SYSTEM_PROMPT = """
+        You are a patient tutor who explains technical security concepts in plain, simple
+        language for an absolute beginner who is struggling. Use short sentences, everyday
+        words, and concrete analogies. Respond with prose only — no markdown headings, no JSON.
+        """;
+
+    /**
+     * Re-explain a passage in plain language with a concrete analogy. User-initiated and
+     * cached by a hash of the input, so the same passage is never re-generated.
+     */
+    public String simplifyText(String text) {
+        if (text == null || text.isBlank()) return "";
+        String trimmed = text.strip();
+        String key = "simplify:" + Long.toHexString(((long) trimmed.hashCode() << 16) ^ trimmed.length());
+        String prompt = """
+            A student is struggling to understand this Security+ study passage. Rewrite it so a
+            complete beginner can grasp it:
+            - Use short sentences and plain, everyday words.
+            - Explain any jargon the first time it appears.
+            - Include ONE concrete everyday analogy or example that makes the idea click.
+            - Stay accurate; do not add facts that change the meaning.
+            - Return ONLY the rewritten explanation as plain prose. Start with the explanation,
+              no preamble like "Sure" or "Here is".
+
+            PASSAGE:
+            %s
+            """.formatted(trimmed);
+        return fetchOrGenerate(key, TUTOR_SYSTEM_PROMPT, prompt, 1536).strip();
     }
 
     // ── Lab ─────────────────────────────────────────────────────────────────────

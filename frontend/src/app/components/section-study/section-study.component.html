@@ -123,6 +123,18 @@
               }
 
               <p class="overview-text" [innerHTML]="explanation.overview"></p>
+
+              <button mat-button class="simplify-btn" [disabled]="simplifyLoading['overview']"
+                (click)="toggleSimplify('overview', explanation.overview)">
+                <mat-icon>{{ simplifyLoading['overview'] ? 'hourglass_top' : (showSimplified['overview'] ? 'undo' : 'auto_awesome') }}</mat-icon>
+                {{ simplifyLoading['overview'] ? 'Simplifying…' : (showSimplified['overview'] ? 'Show original' : 'Explain it simpler') }}
+              </button>
+              @if (showSimplified['overview'] && simplified['overview']) {
+                <div class="simplified-panel">
+                  <div class="simplified-tag"><mat-icon>auto_awesome</mat-icon> In plain language</div>
+                  <div class="simplified-body" [innerHTML]="formatMarkdown(simplified['overview'])"></div>
+                </div>
+              }
             </div>
 
             <!-- AR prompt 1: after overview -->
@@ -149,6 +161,19 @@
               <mat-divider></mat-divider>
               @for (chunk of explanationChunks; track $index) {
                 <div class="learn-body" [innerHTML]="chunk"></div>
+
+                <button mat-button class="simplify-btn" [disabled]="simplifyLoading['chunk-' + $index]"
+                  (click)="toggleSimplify('chunk-' + $index, chunk)">
+                  <mat-icon>{{ simplifyLoading['chunk-' + $index] ? 'hourglass_top' : (showSimplified['chunk-' + $index] ? 'undo' : 'auto_awesome') }}</mat-icon>
+                  {{ simplifyLoading['chunk-' + $index] ? 'Simplifying…' : (showSimplified['chunk-' + $index] ? 'Show original' : 'Explain it simpler') }}
+                </button>
+                @if (showSimplified['chunk-' + $index] && simplified['chunk-' + $index]) {
+                  <div class="simplified-panel">
+                    <div class="simplified-tag"><mat-icon>auto_awesome</mat-icon> In plain language</div>
+                    <div class="simplified-body" [innerHTML]="formatMarkdown(simplified['chunk-' + $index])"></div>
+                  </div>
+                }
+
                 <!-- Mid-explanation recall between chunks (normal mode only) -->
                 @if (!activeRecallMode && $index < explanationChunks.length - 1) {
                   <div class="recall-checkpoint" [class.rc-done]="explanationChunkDone[$index]"

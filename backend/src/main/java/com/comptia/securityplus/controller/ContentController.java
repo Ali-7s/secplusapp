@@ -79,6 +79,12 @@ public class ContentController {
         };
     }
 
+    @PostMapping("/simplify")
+    public ResponseEntity<Map<String, String>> simplify(@RequestBody Map<String, String> body) {
+        String simplified = contentService.simplifyText(body.getOrDefault("text", ""));
+        return ResponseEntity.ok(Map.of("simplified", simplified));
+    }
+
     @GetMapping("/lab/{sectionId}")
     public ResponseEntity<Lab> getLab(@PathVariable String sectionId) {
         return ResponseEntity.ok(contentService.getLab(sectionId));

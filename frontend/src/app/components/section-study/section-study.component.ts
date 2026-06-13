@@ -104,6 +104,39 @@ export class SectionStudyComponent implements OnInit {
 
   submitChunkRecall(i: number) { this.chunkRecalls[i].done = true; }
 
+  // "Explain it simpler" — on-demand plain-language rewrite of a block.
+  // Cached per block (and on the backend) so it only ever calls the AI once.
+  simplified: Record<string, string> = {};
+  simplifyLoading: Record<string, boolean> = {};
+  showSimplified: Record<string, boolean> = {};
+
+  toggleSimplify(blockId: string, rawHtml: string) {
+    if (this.simplified[blockId] != null) {           // already fetched — just toggle
+      this.showSimplified[blockId] = !this.showSimplified[blockId];
+      return;
+    }
+    const text = this.stripHtml(rawHtml).trim();
+    if (!text || this.simplifyLoading[blockId]) return;
+    this.simplifyLoading[blockId] = true;
+    this.contentService.simplifyText(text).subscribe({
+      next: r => {
+        this.simplified[blockId] = r.simplified;
+        this.showSimplified[blockId] = true;
+        this.simplifyLoading[blockId] = false;
+      },
+      error: err => {
+        this.simplifyLoading[blockId] = false;
+        this.snackBar.open(err?.message || 'Could not simplify right now. Try again.', 'OK', { duration: 4000 });
+      },
+    });
+  }
+
+  private resetSimplified() {
+    this.simplified = {};
+    this.simplifyLoading = {};
+    this.showSimplified = {};
+  }
+
   // Active Recall Mode — block-by-block progressive reveal
   activeRecallMode = false;
   activeRecallStep = 0; // 0 = off; 1-5 = active step; 6+ = complete
@@ -248,7 +281,7 @@ export class SectionStudyComponent implements OnInit {
     this.loadingExplanation = true;
     this.explanationError = '';
     this.contentService.getExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.loadingExplanation = false; this.explanationChunkDone = {}; },
+      next: e => { this.explanation = e; this.loadingExplanation = false; this.explanationChunkDone = {}; this.resetSimplified(); },
       error: err => { this.explanationError = err.message; this.loadingExplanation = false; }
     });
   }
@@ -779,7 +812,7 @@ export class SectionStudyComponent implements OnInit {
     this.explanation = null;
     this.explanationError = '';
     this.contentService.regenerateExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.regeneratingExplanation = false; this.explanationChunkDone = {}; },
+      next: e => { this.explanation = e; this.regeneratingExplanation = false; this.explanationChunkDone = {}; this.resetSimplified(); },
       error: err => { this.explanationError = err.message; this.regeneratingExplanation = false; }
     });
   }
