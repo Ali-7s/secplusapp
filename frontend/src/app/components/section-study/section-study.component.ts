@@ -777,12 +777,24 @@ export class SectionStudyComponent implements OnInit {
     this.examFlagged.has(questionId) ? this.examFlagged.delete(questionId) : this.examFlagged.add(questionId);
   }
 
+  fwToRows(q: Question): Record<string, string>[] {
+    const cols = q.firewallColumns ?? [];
+    return this.fwRowIndexes(q).map(r => {
+      const row: Record<string, string> = {};
+      cols.forEach((col, c) => row[col] = this.fwGet(q.id, r, c));
+      return row;
+    });
+  }
+
   submitExam() {
     clearInterval(this.examTimerInterval);
     const answers: ExamSubmission['answers'] = this.examQuestions.map(q => ({
       questionId: q.id,
       selectedAnswer: typeof this.examAnswers[q.id] === 'string' ? this.examAnswers[q.id] as string : undefined,
-      selectedAnswers: Array.isArray(this.examAnswers[q.id]) ? this.examAnswers[q.id] as string[] : undefined
+      selectedAnswers: Array.isArray(this.examAnswers[q.id]) ? this.examAnswers[q.id] as string[] : undefined,
+      pairAnswers: (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') ? (this.ddMatches[q.id] ?? {}) : undefined,
+      orderAnswer: q.type === 'ORDER_LIST' ? (this.olItems[q.id] ?? q.orderItems ?? []) : undefined,
+      firewallAnswer: q.type === 'FIREWALL_RULES' ? this.fwToRows(q) : undefined,
     }));
     const sub: ExamSubmission = {
       sectionId: this.sectionId,
@@ -803,6 +815,7 @@ export class SectionStudyComponent implements OnInit {
     this.ddMatches = {};
     this.ddSelected = {};
     this.olItems = {};
+    this.fwAnswers = {};
     this.loadExam();
   }
 
@@ -813,8 +826,9 @@ export class SectionStudyComponent implements OnInit {
   }
 
   isExamAnswered(q: Question): boolean {
-    if (q.type === 'DRAG_DROP') return this.ddAllMatched(q);
+    if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') return this.ddAllMatched(q);
     if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
+    if (q.type === 'FIREWALL_RULES') return this.fwAllFilled(q);
     const ans = this.examAnswers[q.id];
     return Array.isArray(ans) ? ans.length > 0 : !!ans;
   }

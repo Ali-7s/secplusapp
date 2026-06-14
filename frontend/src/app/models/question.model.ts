@@ -54,6 +54,10 @@ export interface QuestionAnswer {
   questionId: string;
   selectedAnswer?: string;
   selectedAnswers?: string[];
+  // PBQ answers
+  pairAnswers?: Record<string, string>;        // DRAG_DROP / NETWORK_PLACEMENT
+  orderAnswer?: string[];                       // ORDER_LIST
+  firewallAnswer?: Record<string, string>[];    // FIREWALL_RULES
 }
 
 export interface ExamResult {

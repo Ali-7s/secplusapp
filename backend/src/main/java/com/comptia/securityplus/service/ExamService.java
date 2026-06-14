@@ -43,8 +43,8 @@ public class ExamService {
             domainBreakdown.merge(domainId, isCorrect ? 1 : 0, Integer::sum);
             domainTotal.merge(domainId, 1, Integer::sum);
             results.add(new ExamResult.QuestionResult(
-                    q.getId(), q.getStem(), answer.getSelectedAnswer(),
-                    q.getCorrectAnswer(), isCorrect, q.getExplanation(), q.getDifficulty()));
+                    q.getId(), q.getStem(), describeYourAnswer(q, answer),
+                    describeCorrectAnswer(q), isCorrect, q.getExplanation(), q.getDifficulty()));
         }
 
         int total = submission.getAnswers().size();
@@ -70,12 +70,81 @@ public class ExamService {
     }
 
     private boolean checkAnswer(Question q, ExamSubmission.QuestionAnswer answer) {
-        if (q.getType() == Question.QuestionType.MULTI_SELECT) {
-            List<String> selected = answer.getSelectedAnswers() != null ? answer.getSelectedAnswers() : Collections.emptyList();
-            List<String> correct = q.getCorrectAnswers() != null ? q.getCorrectAnswers() : Collections.emptyList();
-            return new HashSet<>(selected).equals(new HashSet<>(correct));
+        if (q.getType() == null) {
+            return q.getCorrectAnswer() != null && q.getCorrectAnswer().equals(answer.getSelectedAnswer());
         }
-        return q.getCorrectAnswer() != null && q.getCorrectAnswer().equals(answer.getSelectedAnswer());
+        switch (q.getType()) {
+            case MULTI_SELECT: {
+                List<String> selected = answer.getSelectedAnswers() != null ? answer.getSelectedAnswers() : Collections.emptyList();
+                List<String> correct = q.getCorrectAnswers() != null ? q.getCorrectAnswers() : Collections.emptyList();
+                return !correct.isEmpty() && new HashSet<>(selected).equals(new HashSet<>(correct));
+            }
+            case DRAG_DROP:
+            case NETWORK_PLACEMENT: {
+                Map<String, String> correct = q.getCorrectPairs();
+                if (correct == null || correct.isEmpty()) return false;
+                Map<String, String> given = answer.getPairAnswers() != null ? answer.getPairAnswers() : Collections.emptyMap();
+                return correct.entrySet().stream().allMatch(e -> e.getValue().equals(given.get(e.getKey())));
+            }
+            case ORDER_LIST:
+                return q.getCorrectOrder() != null && !q.getCorrectOrder().isEmpty()
+                        && q.getCorrectOrder().equals(answer.getOrderAnswer());
+            case FIREWALL_RULES:
+                return firewallMatches(q, answer.getFirewallAnswer());
+            default: // MULTIPLE_CHOICE, SCENARIO, LOG_ANALYSIS
+                return q.getCorrectAnswer() != null && q.getCorrectAnswer().equals(answer.getSelectedAnswer());
+        }
+    }
+
+    private boolean firewallMatches(Question q, List<Map<String, String>> given) {
+        List<Map<String, String>> correct = q.getCorrectRules();
+        List<String> cols = q.getFirewallColumns();
+        if (correct == null || correct.isEmpty() || cols == null || cols.isEmpty()) return false;
+        if (given == null || given.size() != correct.size()) return false;
+        for (int i = 0; i < correct.size(); i++) {
+            Map<String, String> cr = correct.get(i);
+            Map<String, String> gr = given.get(i);
+            if (gr == null) return false;
+            for (String col : cols) {
+                String c = cr.getOrDefault(col, "").trim();
+                String g = gr.getOrDefault(col, "").trim();
+                if (!c.equalsIgnoreCase(g)) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Readable "your answer" string for the review screen, per question type. */
+    private String describeYourAnswer(Question q, ExamSubmission.QuestionAnswer a) {
+        Question.QuestionType t = q.getType();
+        if (t == Question.QuestionType.ORDER_LIST) {
+            return a.getOrderAnswer() != null ? String.join(" → ", a.getOrderAnswer()) : "Not answered";
+        }
+        if (t == Question.QuestionType.DRAG_DROP || t == Question.QuestionType.NETWORK_PLACEMENT) {
+            return a.getPairAnswers() != null && !a.getPairAnswers().isEmpty() ? "(your matches — see below)" : "Not answered";
+        }
+        if (t == Question.QuestionType.FIREWALL_RULES) {
+            return a.getFirewallAnswer() != null && !a.getFirewallAnswer().isEmpty() ? "(your ruleset — see below)" : "Not answered";
+        }
+        if (t == Question.QuestionType.MULTI_SELECT) {
+            return a.getSelectedAnswers() != null ? String.join(", ", a.getSelectedAnswers()) : "Not answered";
+        }
+        return a.getSelectedAnswer() != null ? a.getSelectedAnswer() : "Not answered";
+    }
+
+    private String describeCorrectAnswer(Question q) {
+        Question.QuestionType t = q.getType();
+        if (t == Question.QuestionType.ORDER_LIST && q.getCorrectOrder() != null) {
+            return String.join(" → ", q.getCorrectOrder());
+        }
+        if (t == Question.QuestionType.MULTI_SELECT && q.getCorrectAnswers() != null) {
+            return String.join(", ", q.getCorrectAnswers());
+        }
+        if (t == Question.QuestionType.DRAG_DROP || t == Question.QuestionType.NETWORK_PLACEMENT
+                || t == Question.QuestionType.FIREWALL_RULES) {
+            return "See explanation";
+        }
+        return q.getCorrectAnswer() != null ? q.getCorrectAnswer() : "";
     }
 
     private String buildFeedback(double score, boolean passed, Map<String, Integer> domains) {

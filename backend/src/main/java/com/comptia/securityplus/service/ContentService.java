@@ -585,16 +585,24 @@ public class ContentService {
             - 20%% multi-select questions (SELECT ALL THAT APPLY or SELECT TWO)
             - 2-3 DRAG_DROP matching questions (match protocols/concepts/terms to descriptions)
             - 2-3 ORDER_LIST sequencing questions (procedures, attack phases, response steps)
+            - When the objective involves networking, firewalls, ports, traffic, or logs, ALSO include
+              1-2 of: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS
             - All distractors must be technically plausible
             - Minimum 60%% Medium/Hard difficulty
             - Cover ALL key topics comprehensively
 
-            Use the same per-question JSON format as practice questions — DRAG_DROP uses dragPairs/dropTargets/correctPairs fields, ORDER_LIST uses orderItems/correctOrder fields, both with options:[].
+            Per-question JSON format (options:[] for the PBQ types that have no options):
+            - DRAG_DROP / NETWORK_PLACEMENT: dragPairs:[{id,label}], dropTargets:[{id,label}], correctPairs:{dragId:targetId}
+            - ORDER_LIST: orderItems:[...], correctOrder:[...]
+            - FIREWALL_RULES: firewallColumns:[...], firewallOptions:{column:[...]}, correctRules:[{column:value}]
+              (every correctRules value MUST be one of that column's firewallOptions; 3-6 rows; end with a deny-all)
+            - LOG_ANALYSIS: a multi-line "logText" plus standard options + correctAnswer (graded like MULTIPLE_CHOICE)
 
             FIELD RULES (must follow exactly):
             - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
             - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
             - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
+            - Each options entry MUST start with its letter ("A. ", "B. ", ...).
             - "type" is UPPERCASE; the question text field is named "stem", not "question".
 
             IMPORTANT: Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.

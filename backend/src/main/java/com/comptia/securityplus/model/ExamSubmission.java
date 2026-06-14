@@ -1,6 +1,7 @@
 package com.comptia.securityplus.model;
 
 import java.util.List;
+import java.util.Map;
 
 public class ExamSubmission {
     private String sectionId;
@@ -14,6 +15,10 @@ public class ExamSubmission {
         private String questionId;
         private String selectedAnswer;
         private List<String> selectedAnswers;
+        // PBQ answers
+        private Map<String, String> pairAnswers;          // DRAG_DROP / NETWORK_PLACEMENT: dragId -> targetId
+        private List<String> orderAnswer;                 // ORDER_LIST: the user's ordering
+        private List<Map<String, String>> firewallAnswer; // FIREWALL_RULES: rows of column -> value
 
         public QuestionAnswer() {}
         public String getQuestionId() { return questionId; }
@@ -22,6 +27,12 @@ public class ExamSubmission {
         public void setSelectedAnswer(String selectedAnswer) { this.selectedAnswer = selectedAnswer; }
         public List<String> getSelectedAnswers() { return selectedAnswers; }
         public void setSelectedAnswers(List<String> selectedAnswers) { this.selectedAnswers = selectedAnswers; }
+        public Map<String, String> getPairAnswers() { return pairAnswers; }
+        public void setPairAnswers(Map<String, String> pairAnswers) { this.pairAnswers = pairAnswers; }
+        public List<String> getOrderAnswer() { return orderAnswer; }
+        public void setOrderAnswer(List<String> orderAnswer) { this.orderAnswer = orderAnswer; }
+        public List<Map<String, String>> getFirewallAnswer() { return firewallAnswer; }
+        public void setFirewallAnswer(List<Map<String, String>> firewallAnswer) { this.firewallAnswer = firewallAnswer; }
     }
 
     public String getSectionId() { return sectionId; }
