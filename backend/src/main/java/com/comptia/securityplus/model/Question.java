@@ -33,7 +33,18 @@ public class Question {
     private List<String> orderItems;
     private List<String> correctOrder;
 
-    public enum QuestionType { MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST }
+    // PBQ: Log / attack identification (renders a log block above standard options)
+    private String logText;
+
+    // PBQ: Firewall ruleset — user fills a table of dropdowns
+    private List<String> firewallColumns;              // e.g. ["Source","Destination","Service","Action"]
+    private Map<String, List<String>> firewallOptions; // column -> allowed dropdown values
+    private List<Map<String, String>> correctRules;    // ordered correct rows (column -> value)
+
+    public enum QuestionType {
+        MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST,
+        FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PairItem {
@@ -98,4 +109,13 @@ public class Question {
     public void setOrderItems(List<String> orderItems) { this.orderItems = orderItems; }
     public List<String> getCorrectOrder() { return correctOrder; }
     public void setCorrectOrder(List<String> correctOrder) { this.correctOrder = correctOrder; }
+
+    public String getLogText() { return logText; }
+    public void setLogText(String logText) { this.logText = logText; }
+    public List<String> getFirewallColumns() { return firewallColumns; }
+    public void setFirewallColumns(List<String> firewallColumns) { this.firewallColumns = firewallColumns; }
+    public Map<String, List<String>> getFirewallOptions() { return firewallOptions; }
+    public void setFirewallOptions(Map<String, List<String>> firewallOptions) { this.firewallOptions = firewallOptions; }
+    public List<Map<String, String>> getCorrectRules() { return correctRules; }
+    public void setCorrectRules(List<Map<String, String>> correctRules) { this.correctRules = correctRules; }
 }

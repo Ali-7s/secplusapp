@@ -626,22 +626,28 @@
             </div>
 
             @for (q of practiceQuestions; track q.id; let i = $index) {
-              <mat-card class="question-card" [class.pbq-card]="q.type === 'DRAG_DROP' || q.type === 'ORDER_LIST'">
+              <mat-card class="question-card" [class.pbq-card]="isPbq(q)">
                 <mat-card-content>
                   <div class="q-header">
                     <span class="q-number">Q{{ i + 1 }}</span>
                     <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
-                    @if (q.type === 'MULTI_SELECT') { <span class="q-type">SELECT ALL THAT APPLY</span> }
-                    @if (q.type === 'DRAG_DROP')    { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
-                    @if (q.type === 'ORDER_LIST')   { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
+                    @if (q.type === 'MULTI_SELECT')      { <span class="q-type">SELECT ALL THAT APPLY</span> }
+                    @if (q.type === 'DRAG_DROP')         { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                    @if (q.type === 'ORDER_LIST')        { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
+                    @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
+                    @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
+                    @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
                   </div>
                   @if (q.scenario) {
                     <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div>
                   }
                   <p class="q-stem">{{ q.stem }}</p>
 
-                  <!-- ── DRAG-DROP matching ── -->
-                  @if (q.type === 'DRAG_DROP') {
+                  <!-- ── DRAG-DROP matching / NETWORK_PLACEMENT ── -->
+                  @if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') {
+                    @if (q.type === 'NETWORK_PLACEMENT') {
+                      <div class="np-hint"><mat-icon>lan</mat-icon> Place each device at the correct point in the network</div>
+                    }
                     <div class="dd-container">
                       <div class="dd-pairs-col">
                         @for (pair of q.dragPairs ?? []; track pair.id) {
@@ -706,8 +712,41 @@
                       }
                     </div>
 
-                  <!-- ── Standard MC / Scenario ── -->
+                  <!-- ── Firewall ruleset ── -->
+                  } @else if (q.type === 'FIREWALL_RULES') {
+                    <div class="fw-hint"><mat-icon>shield</mat-icon> Build the ruleset to meet the requirements (top rule matches first)</div>
+                    <div class="fw-table-wrap">
+                      <table class="fw-table">
+                        <thead>
+                          <tr>
+                            <th class="fw-rownum">#</th>
+                            @for (col of q.firewallColumns ?? []; track col) { <th>{{ col }}</th> }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (ri of fwRowIndexes(q); track ri) {
+                            <tr>
+                              <td class="fw-rownum">{{ ri + 1 }}</td>
+                              @for (col of q.firewallColumns ?? []; track col; let ci = $index) {
+                                <td>
+                                  <select class="fw-select" [value]="fwGet(q.id, ri, ci)"
+                                    (change)="fwSet(q.id, ri, ci, $any($event.target).value)">
+                                    <option value="" disabled>—</option>
+                                    @for (opt of q.firewallOptions?.[col] ?? []; track opt) {
+                                      <option [value]="opt">{{ opt }}</option>
+                                    }
+                                  </select>
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                  <!-- ── Standard MC / Scenario / Log analysis ── -->
                   } @else {
+                    @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
                     <div class="options">
                       @for (opt of q.options; track opt) {
                         <button class="option-btn"
@@ -751,14 +790,17 @@
                       {{ isPracticeCorrect(q) ? 'check_circle' : 'cancel' }}
                     </mat-icon>
                     <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
-                    @if (q.type === 'DRAG_DROP')  { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
-                    @if (q.type === 'ORDER_LIST') { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
+                    @if (q.type === 'DRAG_DROP')         { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                    @if (q.type === 'ORDER_LIST')        { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
+                    @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
+                    @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
+                    @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
                   </div>
                   @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
                   <p class="q-stem">{{ q.stem }}</p>
 
-                  <!-- ── Review: Drag-drop ── -->
-                  @if (q.type === 'DRAG_DROP') {
+                  <!-- ── Review: Drag-drop / Network placement ── -->
+                  @if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') {
                     <div class="dd-review">
                       @for (pair of q.dragPairs ?? []; track pair.id) {
                         @let userTarget = ddGetMatch(q.id, pair.id);
@@ -799,8 +841,41 @@
                       }
                     </div>
 
-                  <!-- ── Review: Standard MC ── -->
+                  <!-- ── Review: Firewall ruleset ── -->
+                  } @else if (q.type === 'FIREWALL_RULES') {
+                    <div class="fw-table-wrap">
+                      <table class="fw-table fw-review">
+                        <thead>
+                          <tr>
+                            <th class="fw-rownum">#</th>
+                            @for (col of q.firewallColumns ?? []; track col) { <th>{{ col }}</th> }
+                            <th class="fw-rownum"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (ri of fwRowIndexes(q); track ri) {
+                            <tr [class.fw-row-correct]="fwRowCorrect(q, ri)" [class.fw-row-wrong]="!fwRowCorrect(q, ri)">
+                              <td class="fw-rownum">{{ ri + 1 }}</td>
+                              @for (col of q.firewallColumns ?? []; track col; let ci = $index) {
+                                <td [class.fw-cell-wrong]="!fwCellCorrect(q, ri, ci)">
+                                  <div class="fw-your">{{ fwGet(q.id, ri, ci) || '—' }}</div>
+                                  @if (!fwCellCorrect(q, ri, ci)) {
+                                    <div class="fw-correct">✓ {{ q.correctRules?.[ri]?.[col] }}</div>
+                                  }
+                                </td>
+                              }
+                              <td class="fw-rownum">
+                                <mat-icon [style.color]="fwRowCorrect(q, ri) ? '#2e7d32' : '#c62828'">{{ fwRowCorrect(q, ri) ? 'check_circle' : 'cancel' }}</mat-icon>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                  <!-- ── Review: Standard MC / Log analysis ── -->
                   } @else {
+                    @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
                     <div class="options review-options">
                       @for (opt of q.options; track opt) {
                         <div class="option-result"

@@ -382,14 +382,23 @@ public class ContentService {
             - Include at least 2 scenario-based questions (SCENARIO type with detailed scenario field)
             - Include 1-2 DRAG_DROP matching questions (match terms to definitions or protocols to ports)
             - Include 1-2 ORDER_LIST sequencing questions (put steps or phases in correct order)
+            - When the objective involves networking, firewalls, ports, traffic, or logs, include 1-2
+              ADVANCED PBQs from: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS (otherwise skip them)
             - Test application, not just recall
 
             FIELD RULES (must follow exactly):
             - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
             - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
             - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
-            - "type" is UPPERCASE: MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, or ORDER_LIST.
+            - "type" is UPPERCASE: MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST,
+              FIREWALL_RULES, NETWORK_PLACEMENT, or LOG_ANALYSIS.
             - The question text field is named "stem", not "question".
+            - FIREWALL_RULES: "firewallColumns" names the columns; "firewallOptions" maps each column to its
+              dropdown values; "correctRules" is an ORDERED list of rows where EVERY value is one of that
+              column's firewallOptions. Use 3-6 rows and end with a deny-all catch-all.
+            - LOG_ANALYSIS: include a realistic multi-line "logText" plus standard options/correctAnswer
+              (it is graded exactly like MULTIPLE_CHOICE).
+            - NETWORK_PLACEMENT: uses the SAME fields as DRAG_DROP (dragPairs/dropTargets/correctPairs).
 
             Return JSON array. Each question uses ONE of these formats:
 
@@ -428,6 +437,53 @@ public class ContentService {
               "orderItems": ["Eradication","Identification","Recovery","Containment","Lessons Learned"],
               "correctOrder": ["Identification","Containment","Eradication","Recovery","Lessons Learned"],
               "explanation": "why this order follows NIST incident response guidelines",
+              "difficulty": "Medium", "tags": [], "points": 1
+            }
+
+            FIREWALL_RULES question (build an ACL to satisfy the stated requirements):
+            {
+              "id": "q-<uuid>", "domainId": "domain-id",
+              "type": "FIREWALL_RULES",
+              "stem": "Configure the firewall to: (1) allow HTTPS from any host to the Web Server, (2) allow SSH to the Web Server only from the admin subnet 10.0.0.0/24, (3) deny everything else.",
+              "options": [], "correctAnswer": null,
+              "firewallColumns": ["Source","Destination","Service","Action"],
+              "firewallOptions": {
+                "Source": ["Any","10.0.0.0/24","192.168.1.0/24","Web Server"],
+                "Destination": ["Any","Web Server","Database"],
+                "Service": ["HTTPS (443)","SSH (22)","MySQL (3306)","Any"],
+                "Action": ["Allow","Deny"]
+              },
+              "correctRules": [
+                {"Source":"Any","Destination":"Web Server","Service":"HTTPS (443)","Action":"Allow"},
+                {"Source":"10.0.0.0/24","Destination":"Web Server","Service":"SSH (22)","Action":"Allow"},
+                {"Source":"Any","Destination":"Any","Service":"Any","Action":"Deny"}
+              ],
+              "explanation": "Specific allow rules come first; an implicit deny-all closes the list.",
+              "difficulty": "Hard", "tags": [], "points": 1
+            }
+
+            LOG_ANALYSIS question (identify the attack from a log — graded like MULTIPLE_CHOICE):
+            {
+              "id": "q-<uuid>", "domainId": "domain-id",
+              "type": "LOG_ANALYSIS",
+              "stem": "Review the authentication log. Which attack is most likely in progress?",
+              "logText": "09:14:01 sshd: Failed password for root from 203.0.113.7\\n09:14:02 sshd: Failed password for admin from 203.0.113.7\\n09:14:02 sshd: Failed password for oracle from 203.0.113.7\\n09:14:03 sshd: Failed password for root from 203.0.113.7",
+              "options": ["A. Password spraying / brute force","B. SQL injection","C. Cross-site scripting","D. ARP poisoning"],
+              "correctAnswer": "A",
+              "explanation": "Many rapid failed logins from one IP across multiple accounts indicate brute forcing.",
+              "difficulty": "Medium", "tags": [], "points": 1
+            }
+
+            NETWORK_PLACEMENT question (place security devices in a topology — same fields as DRAG_DROP):
+            {
+              "id": "q-<uuid>", "domainId": "domain-id",
+              "type": "NETWORK_PLACEMENT",
+              "stem": "Place each security device at the correct point in the network.",
+              "options": [], "correctAnswer": null,
+              "dragPairs": [{"id":"fw","label":"Next-Gen Firewall"},{"id":"ids","label":"IDS Sensor"},{"id":"lb","label":"Load Balancer"}],
+              "dropTargets": [{"id":"edge","label":"Internet edge, before the DMZ"},{"id":"mon","label":"SPAN port monitoring internal traffic"},{"id":"web","label":"In front of the web server farm"}],
+              "correctPairs": {"fw":"edge","ids":"mon","lb":"web"},
+              "explanation": "Firewall at the edge, IDS on a monitoring port, load balancer ahead of the web farm.",
               "difficulty": "Medium", "tags": [], "points": 1
             }
             """,

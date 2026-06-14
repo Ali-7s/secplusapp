@@ -634,8 +634,9 @@ export class SectionStudyComponent implements OnInit {
 
   // ── Shared correctness / submit ────────────────────────────
   isPracticeAnswered(q: Question): boolean {
-    if (q.type === 'DRAG_DROP') return this.ddAllMatched(q);
+    if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') return this.ddAllMatched(q);
     if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
+    if (q.type === 'FIREWALL_RULES') return this.fwAllFilled(q);
     const ans = this.practiceAnswers[q.id];
     return Array.isArray(ans) ? ans.length > 0 : !!ans;
   }
@@ -657,7 +658,7 @@ export class SectionStudyComponent implements OnInit {
   }
 
   isPracticeCorrect(q: Question): boolean {
-    if (q.type === 'DRAG_DROP') {
+    if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') {
       if (!q.correctPairs || !q.dragPairs?.length) return false;
       const m = this.ddMatches[q.id] ?? {};
       return q.dragPairs.every(p => m[p.id] === q.correctPairs![p.id]);
@@ -665,6 +666,9 @@ export class SectionStudyComponent implements OnInit {
     if (q.type === 'ORDER_LIST') {
       if (!q.correctOrder?.length) return false;
       return JSON.stringify(this.olItems[q.id] ?? []) === JSON.stringify(q.correctOrder);
+    }
+    if (q.type === 'FIREWALL_RULES') {
+      return this.fwAllFilled(q) && this.fwRowIndexes(q).every(r => this.fwRowCorrect(q, r));
     }
     const given = this.practiceAnswers[q.id];
     if (q.type === 'MULTI_SELECT') {
@@ -684,9 +688,52 @@ export class SectionStudyComponent implements OnInit {
     this.ddMatches = {};
     this.ddSelected = {};
     this.olItems = {};
+    this.fwAnswers = {};
     this.practiceState = 'idle';
     this.practiceShowExplanation = {};
     this.loadPractice();
+  }
+
+  // ── PBQ: Firewall ruleset ──────────────────────────────────
+  // fwAnswers[questionId][rowIndex][colIndex] = selected dropdown value
+  fwAnswers: Record<string, string[][]> = {};
+
+  fwRowIndexes(q: Question): number[] {
+    return Array.from({ length: q.correctRules?.length ?? 0 }, (_, i) => i);
+  }
+
+  fwGet(qId: string, row: number, col: number): string {
+    return this.fwAnswers[qId]?.[row]?.[col] ?? '';
+  }
+
+  fwSet(qId: string, row: number, col: number, value: string) {
+    if (!this.fwAnswers[qId]) this.fwAnswers[qId] = [];
+    if (!this.fwAnswers[qId][row]) this.fwAnswers[qId][row] = [];
+    this.fwAnswers[qId][row][col] = value;
+  }
+
+  fwAllFilled(q: Question): boolean {
+    const cols = q.firewallColumns?.length ?? 0;
+    if (!cols || !q.correctRules?.length) return false;
+    return this.fwRowIndexes(q).every(r =>
+      Array.from({ length: cols }, (_, c) => c).every(c => !!this.fwGet(q.id, r, c)));
+  }
+
+  fwCellCorrect(q: Question, row: number, col: number): boolean {
+    const colName = q.firewallColumns?.[col];
+    if (!colName) return false;
+    const expected = q.correctRules?.[row]?.[colName] ?? '';
+    return this.fwGet(q.id, row, col).trim().toLowerCase() === expected.trim().toLowerCase();
+  }
+
+  fwRowCorrect(q: Question, row: number): boolean {
+    const cols = q.firewallColumns?.length ?? 0;
+    return Array.from({ length: cols }, (_, c) => c).every(c => this.fwCellCorrect(q, row, c));
+  }
+
+  isPbq(q: Question): boolean {
+    return q.type === 'DRAG_DROP' || q.type === 'ORDER_LIST' || q.type === 'FIREWALL_RULES'
+        || q.type === 'NETWORK_PLACEMENT' || q.type === 'LOG_ANALYSIS';
   }
 
   // ── Section Exam ───────────────────────────────────────────────────

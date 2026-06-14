@@ -1,4 +1,6 @@
-export type QuestionType = 'MULTIPLE_CHOICE' | 'MULTI_SELECT' | 'SCENARIO' | 'DRAG_DROP' | 'ORDER_LIST';
+export type QuestionType =
+  | 'MULTIPLE_CHOICE' | 'MULTI_SELECT' | 'SCENARIO' | 'DRAG_DROP' | 'ORDER_LIST'
+  | 'FIREWALL_RULES' | 'NETWORK_PLACEMENT' | 'LOG_ANALYSIS';
 
 export interface PairItem {
   id: string;
@@ -31,6 +33,14 @@ export interface Question {
   // PBQ: Sequencing (ORDER_LIST)
   orderItems?: string[];
   correctOrder?: string[];
+
+  // PBQ: Log / attack identification (LOG_ANALYSIS) — log block above standard options
+  logText?: string;
+
+  // PBQ: Firewall ruleset (FIREWALL_RULES)
+  firewallColumns?: string[];
+  firewallOptions?: Record<string, string[]>;
+  correctRules?: Record<string, string>[];
 }
 
 export interface ExamSubmission {
