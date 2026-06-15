@@ -15,7 +15,6 @@ export const routes: Routes = [
   { path: 'terms', loadComponent: () => import('./components/terms/terms.component').then(m => m.TermsComponent), canActivate: [authGuard] },
   { path: 'reference', loadComponent: () => import('./components/reference/reference.component').then(m => m.ReferenceComponent), canActivate: [authGuard] },
   { path: 'progress', loadComponent: () => import('./components/progress/progress.component').then(m => m.ProgressComponent), canActivate: [authGuard] },
-  { path: 'notes', loadComponent: () => import('./components/notes/notes.component').then(m => m.NotesComponent), canActivate: [authGuard] },
   { path: 'exam/full', loadComponent: () => import('./components/practice-exam/practice-exam.component').then(m => m.PracticeExamComponent), canActivate: [authGuard] },
   { path: 'setup', loadComponent: () => import('./components/setup/setup.component').then(m => m.SetupComponent), canActivate: [authGuard] },
   { path: '**', redirectTo: '' }

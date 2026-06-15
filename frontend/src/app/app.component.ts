@@ -45,7 +45,6 @@ export class AppComponent implements OnInit {
     { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
     { path: '/reference', icon: 'table_chart', label: 'Reference Sheet' },
     { path: '/progress', icon: 'insights', label: 'My Progress' },
-    { path: '/notes', icon: 'sticky_note_2', label: 'My Notes' },
   ];
 
   ngOnInit() {

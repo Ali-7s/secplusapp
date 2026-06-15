@@ -71,7 +71,7 @@
         } @else if (regeneratingExplanation) {
           <div class="loading-container"><mat-spinner></mat-spinner><p>Regenerating explanation...</p></div>
         } @else if (explanation) {
-          <div class="learn-content" [class.recall-blurred]="recallFocused" (mouseup)="onLearnTextSelect()">
+          <div class="learn-content" [class.recall-blurred]="recallFocused">
 
             <!-- ── Reading guide (hidden in AR mode — topics are revealed per-block) ── -->
             @if (section?.keyTopics?.length && !activeRecallMode) {
@@ -89,27 +89,6 @@
                         <div class="rg-topic"><mat-icon>radio_button_unchecked</mat-icon>{{ t }}</div>
                       }
                     </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- ── Tip: how to add a note (shown until the first note exists) ── -->
-            @if (!sectionNotes.length && !activeRecallMode) {
-              <div class="note-tip"><mat-icon>sticky_note_2</mat-icon> Tip: select any sentence below to highlight it and add your own note.</div>
-            }
-
-            <!-- ── This section's notes ── -->
-            @if (sectionNotes.length) {
-              <div class="section-notes">
-                <div class="sn-header"><mat-icon>sticky_note_2</mat-icon> Your notes for this section ({{ sectionNotes.length }})
-                  <a routerLink="/notes" class="sn-all">View all →</a>
-                </div>
-                @for (n of sectionNotes; track n.id) {
-                  <div class="sn-item">
-                    @if (n.quote) { <div class="sn-quote">“{{ n.quote }}”</div> }
-                    <div class="sn-note">{{ n.note }}</div>
-                    <button mat-icon-button class="sn-del" (click)="deleteSectionNote(n)" matTooltip="Delete note"><mat-icon>delete_outline</mat-icon></button>
                   </div>
                 }
               </div>
@@ -143,7 +122,7 @@
                 </div>
               }
 
-              <p class="overview-text" [innerHTML]="highlightNotes(explanation.overview)"></p>
+              <p class="overview-text" [innerHTML]="explanation.overview"></p>
 
               <button mat-button class="simplify-btn" [disabled]="simplifyLoading['overview']"
                 (click)="toggleSimplify('overview', explanation.overview)">
@@ -181,7 +160,7 @@
             @if (!activeRecallMode || activeRecallStep >= 2) {
               <mat-divider></mat-divider>
               @for (chunk of explanationChunks; track $index) {
-                <div class="learn-body" [innerHTML]="highlightNotes(chunk)"></div>
+                <div class="learn-body" [innerHTML]="chunk"></div>
 
                 <button mat-button class="simplify-btn" [disabled]="simplifyLoading['chunk-' + $index]"
                   (click)="toggleSimplify('chunk-' + $index, chunk)">
@@ -451,32 +430,6 @@
                 </div>
               }
             </div>
-            }
-
-            <!-- ── Floating "Add note" button on text selection ── -->
-            @if (noteSel && !noteComposerOpen) {
-              <button class="note-fab" [style.left.px]="noteSel.x" [style.top.px]="noteSel.y"
-                (click)="openNoteComposer()">
-                <mat-icon>sticky_note_2</mat-icon> Add note
-              </button>
-            }
-
-            <!-- ── Note composer ── -->
-            @if (noteComposerOpen && noteSel) {
-              <div class="note-overlay" (click)="cancelNote()"></div>
-              <div class="note-composer">
-                <div class="nc-label"><mat-icon>format_quote</mat-icon> Note on highlighted text</div>
-                <div class="nc-quote">“{{ noteSel.text }}”</div>
-                <textarea class="nc-input" [(ngModel)]="noteDraft" rows="4" autofocus
-                  placeholder="Your note — a reminder, a question, why this matters to you…"
-                  (keydown.meta.enter)="saveNote()" (keydown.control.enter)="saveNote()"></textarea>
-                <div class="nc-actions">
-                  <button mat-button (click)="cancelNote()">Cancel</button>
-                  <button mat-flat-button color="primary" [disabled]="!noteDraft.trim()" (click)="saveNote()">
-                    <mat-icon>save</mat-icon> Save note
-                  </button>
-                </div>
-              </div>
             }
           </div>
         }

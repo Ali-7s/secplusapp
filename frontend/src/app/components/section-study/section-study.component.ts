@@ -19,8 +19,6 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { SrsService } from '../../services/srs.service';
-import { NotesService } from '../../services/notes.service';
-import { Note } from '../../models/note.model';
 import { Section } from '../../models/curriculum.model';
 import { Question, ExamResult, ExamSubmission } from '../../models/question.model';
 import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard.model';
@@ -41,7 +39,6 @@ export class SectionStudyComponent implements OnInit {
   private contentService = inject(ContentService);
   private progressService = inject(ProgressService);
   private srs = inject(SrsService);
-  private notesService = inject(NotesService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
 
@@ -263,7 +260,6 @@ export class SectionStudyComponent implements OnInit {
     }
     this.contentService.getTerms().subscribe({ next: t => this.terms = t, error: () => {} });
     this.loadExplanation();
-    this.loadSectionNotes();
 
     this.contentService.getSection(this.sectionId).subscribe({
       next: s => this.section = s,
@@ -279,82 +275,6 @@ export class SectionStudyComponent implements OnInit {
     });
   }
 
-  // ── Notes: select text → annotate → store ──────────────────────────
-  sectionNotes: Note[] = [];
-  noteSel: { text: string; x: number; y: number } | null = null;
-  noteComposerOpen = false;
-  noteDraft = '';
-
-  loadSectionNotes() {
-    this.notesService.getForSection(this.sectionId).subscribe({
-      next: n => this.sectionNotes = n,
-      error: () => {},
-    });
-  }
-
-  /** Capture a text selection inside the Learn content and show the "Add note" button. */
-  onLearnTextSelect() {
-    if (this.noteComposerOpen) return;
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) { this.noteSel = null; return; }
-    const text = sel.toString().trim().replace(/\s+/g, ' ');
-    if (text.length < 4 || text.length > 600) { this.noteSel = null; return; }
-    try {
-      const rect = sel.getRangeAt(0).getBoundingClientRect();
-      this.noteSel = { text, x: rect.left + rect.width / 2, y: rect.top };
-    } catch { this.noteSel = null; }
-  }
-
-  openNoteComposer() {
-    if (!this.noteSel) return;
-    this.noteComposerOpen = true;
-    this.noteDraft = '';
-  }
-
-  saveNote() {
-    if (!this.noteSel || !this.noteDraft.trim()) return;
-    this.notesService.create({
-      sectionId: this.sectionId,
-      sectionName: this.section?.name,
-      quote: this.noteSel.text,
-      note: this.noteDraft.trim(),
-    }).subscribe({
-      next: n => {
-        this.sectionNotes = [n, ...this.sectionNotes];
-        this.cancelNote();
-        this.snackBar.open('Note saved — find all notes under "My Notes"', 'OK', { duration: 2500 });
-      },
-      error: () => this.snackBar.open('Could not save note', 'OK', { duration: 3000 }),
-    });
-  }
-
-  cancelNote() {
-    this.noteComposerOpen = false;
-    this.noteSel = null;
-    this.noteDraft = '';
-    window.getSelection()?.removeAllRanges();
-  }
-
-  deleteSectionNote(n: Note) {
-    this.notesService.delete(n.id).subscribe({
-      next: () => this.sectionNotes = this.sectionNotes.filter(x => x.id !== n.id),
-      error: () => this.snackBar.open('Could not delete note', 'OK', { duration: 3000 }),
-    });
-  }
-
-  /** Best-effort inline highlight: wrap saved quotes that still appear verbatim in the content. */
-  highlightNotes(html: string | undefined | null): SafeHtml {
-    let out = html ?? '';
-    if (this.sectionNotes.length) {
-      for (const n of this.sectionNotes) {
-        const qt = (n.quote ?? '').trim();
-        if (qt.length < 4 || qt.includes('<') || qt.includes('>')) continue;
-        if (!out.includes(qt)) continue;
-        out = out.replace(qt, () => `<mark class="note-mark">${qt}</mark>`);
-      }
-    }
-    return this.sanitizer.bypassSecurityTrustHtml(out);
-  }
 
   // ── Learn ──────────────────────────────────────────────────────────
   loadExplanation() {
