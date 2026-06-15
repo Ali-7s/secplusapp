@@ -253,7 +253,7 @@
   text-align: left; width: 100%; transition: all .15s;
 
   &:hover:not(:disabled) { border-color: var(--c-accent); background: var(--c-accent-light); }
-  &:disabled { cursor: default; }
+  &:disabled { cursor: default; opacity: 1; }   // we colour the states ourselves — don't let the browser dim them
 
   &.correct { border-color: var(--c-success) !important; background: var(--c-success-light) !important; }
   &.wrong   { border-color: var(--c-error) !important; background: #fef2f2 !important; }
@@ -313,7 +313,11 @@
   }
 
   .quiz-btn {
-    &.wrong { background: rgba(239,68,68,.12) !important; border-color: var(--c-error) !important; }
+    color: var(--c-text);
+    &.correct { background: rgba(52,211,153,.15) !important; border-color: var(--c-success) !important; }
+    &.wrong   { background: rgba(239,68,68,.12) !important; border-color: var(--c-error) !important; }
+    &:disabled { opacity: 1; }
+    .quiz-text { color: var(--c-text); }
   }
   .quiz-result {
     background: rgba(239,68,68,.12); color: #f87171;
