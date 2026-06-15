@@ -255,3 +255,39 @@
   gap: 12px;
   color: #c62828;
 }
+
+// ── Dark mode ──────────────────────────────────────────────
+:host-context([data-theme="dark"]) {
+  .users-card mat-card-title mat-icon,
+  .progress-card mat-card-title mat-icon { color: var(--c-primary); }
+
+  .user-email      { color: var(--c-text); }
+  .user-avatar     { color: var(--c-muted) !important; }
+  .date-cell       { color: var(--c-text-2); }
+  .progress-pct    { color: var(--c-primary); }
+  .progress-sub    { color: var(--c-muted); }
+  .no-data         { color: var(--c-muted); }
+  .loading-container { color: var(--c-text-2); }
+  .section-id      { color: var(--c-primary); }
+  .passed-score    { color: var(--c-success); }
+
+  .role-chip            { background: rgba(96,165,250,.16); color: #93c5fd; }
+  .role-chip.admin      { background: rgba(251,146,60,.16); color: #fdba74; }
+
+  .status-badge.passed    { background: rgba(52,211,153,.16); color: #6ee7b7; }
+  .status-badge.attempted { background: rgba(251,146,60,.16); color: #fdba74; }
+  .status-badge.unlocked  { background: rgba(96,165,250,.16); color: #93c5fd; }
+  .status-badge.locked    { background: var(--c-surface-3); color: var(--c-muted); }
+
+  .mini-chip            { background: var(--c-surface-3); color: var(--c-muted); }
+  .mini-chip.done       { background: rgba(52,211,153,.16); color: #34d399; }
+
+  .selected-row { background: rgba(96,165,250,.10) !important; }
+  .editing-row  { background: rgba(251,191,36,.10) !important; }
+
+  .edit-panel {
+    background: rgba(251,191,36,.07);
+    border-color: rgba(251,191,36,.35);
+    h3 { color: var(--c-primary); }
+  }
+}

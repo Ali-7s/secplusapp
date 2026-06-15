@@ -186,6 +186,29 @@ html {
   .mat-mdc-dialog-surface   { background: var(--c-surface) !important; color: var(--c-text) !important; }
   .mat-mdc-dialog-title      { color: var(--c-text) !important; }
   .mat-mdc-dialog-content    { color: var(--c-text-2) !important; }
+
+  // Tables
+  .mat-mdc-table        { background: transparent !important; }
+  .mat-mdc-header-row   { background: var(--c-surface-2) !important; }
+  .mat-mdc-row          { background: transparent !important; }
+  .mat-mdc-header-cell  { color: var(--c-text-2) !important; border-bottom-color: var(--c-border) !important; }
+  .mat-mdc-cell         { color: var(--c-text) !important; border-bottom-color: var(--c-border) !important; }
+  .mat-mdc-row:hover    { background: var(--c-surface-2) !important; }
+  .mat-mdc-paginator    { background: var(--c-surface) !important; color: var(--c-text) !important;
+    --mat-paginator-container-text-color: var(--c-text-2); }
+
+  // Slide toggle
+  .mat-mdc-slide-toggle {
+    --mdc-switch-unselected-track-color:        var(--c-border-dark);
+    --mdc-switch-unselected-hover-track-color:  var(--c-border-dark);
+    --mdc-switch-unselected-handle-color:       var(--c-muted);
+    --mdc-switch-selected-track-color:          var(--c-accent);
+    --mdc-switch-selected-handle-color:         #fff;
+    --mdc-switch-unselected-icon-color:         var(--c-surface);
+  }
+
+  // Sort header arrow
+  .mat-sort-header-arrow { color: var(--c-muted) !important; }
 }
 
 // ── Reset & base ──────────────────────────────────────────────

@@ -25,3 +25,20 @@
 }
 .spin { animation:spin 1s linear infinite; }
 @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+// ── Dark mode ──────────────────────────────────────────────
+:host-context([data-theme="dark"]) {
+  .setup-header mat-icon { color: var(--c-primary); }
+  .setup-header p { color: var(--c-text-2); }
+  .step-content h3 { color: var(--c-text); }
+  .step-content p  { color: var(--c-text-2); }
+  .step-num { background: var(--c-accent); }
+  .step-note { background: rgba(251,191,36,.10); color: #fcd34d;
+    code { background: rgba(255,255,255,.08); } }
+  .result-success { background: rgba(52,211,153,.12); color: #6ee7b7;
+    mat-icon { color: var(--c-success); } a { color: var(--c-primary); } }
+  .result-error { background: rgba(248,113,113,.12); color: #fca5a5;
+    mat-icon { color: var(--c-error); } }
+  .pricing-note { background: rgba(52,211,153,.10);
+    mat-icon { color: var(--c-success); } div { color: #6ee7b7; } }
+}

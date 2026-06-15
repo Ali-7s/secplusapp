@@ -392,4 +392,6 @@
     &.correct { background: var(--c-success-light); color: var(--c-success); }
     &.wrong   { background: var(--c-error-light);   color: var(--c-error); }
   }
+  .cloze-category { color: #5eead4; }
+  .cloze-active   { color: #5eead4 !important; }
 }
