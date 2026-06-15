@@ -13,7 +13,8 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins:*}")
+    // Default to localhost dev origins — never silently fall back to "*".
+    @Value("${cors.allowed-origins:http://localhost:4200,http://localhost}")
     private String allowedOrigins;
 
     @Bean
@@ -22,17 +23,21 @@ public class CorsConfig {
 
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
+                .filter(s -> !s.isEmpty())
                 .toList();
 
         if (origins.contains("*")) {
+            // Reflecting any origin AND allowing credentials is an OWASP misconfiguration.
+            // Auth here is a Bearer token (not cookies), so disable credentials when wildcard.
             config.addAllowedOriginPattern("*");
+            config.setAllowCredentials(false);
         } else {
             origins.forEach(config::addAllowedOrigin);
+            config.setAllowCredentials(true);
         }
 
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
-        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
