@@ -69,7 +69,8 @@ public class ExamService {
                 buildNextSteps(scorePercent, passed, submission.getSectionId()));
     }
 
-    private boolean checkAnswer(Question q, ExamSubmission.QuestionAnswer answer) {
+    // package-private for unit testing
+    boolean checkAnswer(Question q, ExamSubmission.QuestionAnswer answer) {
         if (q.getType() == null) {
             return q.getCorrectAnswer() != null && q.getCorrectAnswer().equals(answer.getSelectedAnswer());
         }

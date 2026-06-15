@@ -83,7 +83,8 @@ public class ContentService {
 
     // ── Question parse helper ───────────────────────────────────────────────────
 
-    private List<Question> parseQuestions(String response) throws Exception {
+    // package-private for unit testing
+    List<Question> parseQuestions(String response) throws Exception {
         JsonNode root = mapper.readTree(response);
 
         // Locate the questions array — bare array, or wrapped inside a metadata object
