@@ -71,6 +71,18 @@ export class ContentService {
     return this.pollExam('/content/exam/full');
   }
 
+  getDomainExam(domainId: string): Observable<Question[]> {
+    return this.pollExam(`/content/exam/domain/${domainId}`);
+  }
+
+  regenerateDomainExam(domainId: string): Observable<Question[]> {
+    return this.http.post(`/api/content/exam/domain/${domainId}/regenerate`, {}, { observe: 'response' }).pipe(
+      switchMap(() => this.pollExam(`/content/exam/domain/${domainId}`)),
+      catchError(err => throwError(() =>
+        err instanceof HttpErrorResponse ? new Error(err.error?.message || 'Failed to regenerate exam.') : err)),
+    );
+  }
+
   getLab(sectionId: string): Observable<Lab> {
     return this.api.get<Lab>(`/content/lab/${sectionId}`);
   }

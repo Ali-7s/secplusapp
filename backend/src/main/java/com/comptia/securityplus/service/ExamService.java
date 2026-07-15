@@ -22,6 +22,8 @@ public class ExamService {
         List<Question> questions;
         if ("FULL".equals(submission.getExamType())) {
             questions = contentService.getFullPracticeExam();
+        } else if ("DOMAIN".equals(submission.getExamType())) {
+            questions = contentService.getDomainExamQuestions(submission.getDomainId());
         } else {
             questions = contentService.getSectionExamQuestions(submission.getSectionId());
         }

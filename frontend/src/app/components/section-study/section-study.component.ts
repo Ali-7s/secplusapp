@@ -78,31 +78,11 @@ export class SectionStudyComponent implements OnInit {
   clozeCoveredCount = 0;
   clozeTotalWords = 0;
 
-  // Pre-test (quiz-first mode) — shown before content on each section visit
-  preTestDone = false;
-  preTestInput = '';
-
-  submitPreTest() {
-    if (this.preTestInput.trim()) {
-      localStorage.setItem(`preTest_${this.sectionId}`, JSON.stringify({ input: this.preTestInput, ts: Date.now() }));
-    }
-    this.preTestDone = true;
-  }
-
-  skipPreTest() { this.preTestDone = true; }
-
-  // Background blur when recall inputs are focused
+  // Background blur when recall inputs are focused (Active Recall mode)
   recallFocused = false;
 
-  // Reading guide + recall checkpoints (Learn tab)
+  // Reading guide (Learn tab)
   readingGuideOpen = true;
-  chunkRecalls: { input: string; done: boolean }[] = [
-    { input: '', done: false },
-    { input: '', done: false },
-  ];
-  explanationChunkDone: Record<number, boolean> = {};
-
-  submitChunkRecall(i: number) { this.chunkRecalls[i].done = true; }
 
   // "Explain it simpler" — on-demand plain-language rewrite of a block.
   // Cached per block (and on the backend) so it only ever calls the AI once.
@@ -282,7 +262,7 @@ export class SectionStudyComponent implements OnInit {
     this.loadingExplanation = true;
     this.explanationError = '';
     this.contentService.getExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.loadingExplanation = false; this.explanationChunkDone = {}; this.resetSimplified(); },
+      next: e => { this.explanation = e; this.loadingExplanation = false; this.resetSimplified(); },
       error: err => { this.explanationError = err.message; this.loadingExplanation = false; }
     });
   }
@@ -874,7 +854,7 @@ export class SectionStudyComponent implements OnInit {
     this.explanation = null;
     this.explanationError = '';
     this.contentService.regenerateExplanation(this.sectionId).subscribe({
-      next: e => { this.explanation = e; this.regeneratingExplanation = false; this.explanationChunkDone = {}; this.resetSimplified(); },
+      next: e => { this.explanation = e; this.regeneratingExplanation = false; this.resetSimplified(); },
       error: err => { this.explanationError = err.message; this.regeneratingExplanation = false; }
     });
   }

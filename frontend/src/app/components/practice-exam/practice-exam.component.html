@@ -5,23 +5,25 @@
     <div class="intro-page">
       <div class="intro-hero">
         <mat-icon>assignment</mat-icon>
-        <h1>Full Practice Exam</h1>
-        <p>Simulate the real CompTIA Security+ SY0-701 exam experience</p>
+        <h1>{{ examTitle }}</h1>
+        <p>{{ examSubtitle }}</p>
       </div>
       <div class="exam-specs">
-        <div class="spec"><mat-icon>quiz</mat-icon><span>90 Questions</span></div>
-        <div class="spec"><mat-icon>timer</mat-icon><span>90 Minutes</span></div>
-        <div class="spec"><mat-icon>bar_chart</mat-icon><span>750/900 to Pass</span></div>
+        <div class="spec"><mat-icon>quiz</mat-icon><span>{{ questionCountLabel }}</span></div>
+        <div class="spec"><mat-icon>timer</mat-icon><span>{{ examMinutes }} Minutes</span></div>
+        <div class="spec"><mat-icon>bar_chart</mat-icon><span>{{ isDomain ? '75% to Pass' : '750/900 to Pass' }}</span></div>
         <div class="spec"><mat-icon>psychology</mat-icon><span>Exam-Level Difficulty</span></div>
       </div>
-      <div class="domain-weights">
-        @for (d of ['domain1','domain2','domain3','domain4','domain5']; track d) {
-          <div class="weight-row">
-            <div class="weight-dot" [style.background]="getDomainColor(d)"></div>
-            <span>{{ getDomainLabel(d) }}</span>
-          </div>
-        }
-      </div>
+      @if (!isDomain) {
+        <div class="domain-weights">
+          @for (d of ['domain1','domain2','domain3','domain4','domain5']; track d) {
+            <div class="weight-row">
+              <div class="weight-dot" [style.background]="getDomainColor(d)"></div>
+              <span>{{ getDomainLabel(d) }}</span>
+            </div>
+          }
+        </div>
+      }
       <div class="intro-tips">
         <mat-icon>lightbulb</mat-icon>
         <ul>
@@ -41,7 +43,7 @@
   @if (state === 'loading') {
     <div class="loading-container">
       <mat-spinner></mat-spinner>
-      <p>Generating 90 exam-level questions...<br><small>This may take 30–60 seconds</small></p>
+      <p>Generating {{ isDomain ? 'your domain' : '90' }} exam-level questions...<br><small>This may take 30–60 seconds</small></p>
     </div>
   }
 

@@ -5,7 +5,8 @@ import java.util.Map;
 
 public class ExamSubmission {
     private String sectionId;
-    private String examType;
+    private String domainId;
+    private String examType;   // SECTION | DOMAIN | FULL
     private List<QuestionAnswer> answers;
     private long timeTakenSeconds;
 
@@ -37,6 +38,8 @@ public class ExamSubmission {
 
     public String getSectionId() { return sectionId; }
     public void setSectionId(String sectionId) { this.sectionId = sectionId; }
+    public String getDomainId() { return domainId; }
+    public void setDomainId(String domainId) { this.domainId = domainId; }
     public String getExamType() { return examType; }
     public void setExamType(String examType) { this.examType = examType; }
     public List<QuestionAnswer> getAnswers() { return answers; }

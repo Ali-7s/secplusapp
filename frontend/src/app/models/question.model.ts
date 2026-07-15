@@ -45,7 +45,8 @@ export interface Question {
 
 export interface ExamSubmission {
   sectionId?: string;
-  examType: 'SECTION' | 'FULL';
+  domainId?: string;
+  examType: 'SECTION' | 'DOMAIN' | 'FULL';
   answers: QuestionAnswer[];
   timeTakenSeconds: number;
 }

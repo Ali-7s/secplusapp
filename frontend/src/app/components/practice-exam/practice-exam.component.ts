@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,6 +24,17 @@ const EXAM_MINUTES = 90;
 export class PracticeExamComponent implements OnInit, OnDestroy {
   private contentService = inject(ContentService);
   private snackBar = inject(MatSnackBar);
+  private route = inject(ActivatedRoute);
+
+  // Domain-exam mode when a :id route param is present; otherwise the full 90-question exam.
+  domainId: string | null = null;
+  examMinutes = EXAM_MINUTES;
+  get isDomain(): boolean { return !!this.domainId; }
+  get examTitle(): string { return this.isDomain ? 'Domain Exam' : 'Full Practice Exam'; }
+  get examSubtitle(): string {
+    return this.isDomain ? this.getDomainLabel(this.domainId!) : 'Simulate the real CompTIA Security+ SY0-701 exam experience';
+  }
+  get questionCountLabel(): string { return this.isDomain ? '~24 Questions' : '90 Questions'; }
 
   state: 'intro' | 'loading' | 'answering' | 'submitting' | 'result' = 'intro';
   questions: Question[] = [];
@@ -49,18 +60,24 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     domain4: '#10b981', domain5: '#8b5cf6'
   };
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.domainId = this.route.snapshot.paramMap.get('id');
+    if (this.domainId) this.examMinutes = 35;   // domain exam is shorter than the full 90-min exam
+  }
   ngOnDestroy() { clearInterval(this.timerInterval); }
 
   startExam() {
     this.state = 'loading';
-    this.contentService.getFullExam().subscribe({
+    const load = this.isDomain
+      ? this.contentService.getDomainExam(this.domainId!)
+      : this.contentService.getFullExam();
+    load.subscribe({
       next: q => {
         this.questions = q;
         this.answers = {};
         this.flagged.clear();
         this.currentIndex = 0;
-        this.secondsRemaining = EXAM_MINUTES * 60;
+        this.secondsRemaining = this.examMinutes * 60;
         this.examStartTime = Date.now();
         this.state = 'answering';
         this.timerInterval = setInterval(() => {
@@ -96,7 +113,8 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.state = 'submitting';
     const elapsed = Math.round((Date.now() - this.examStartTime) / 1000);
     const sub: ExamSubmission = {
-      examType: 'FULL',
+      examType: this.isDomain ? 'DOMAIN' : 'FULL',
+      domainId: this.domainId ?? undefined,
       answers: this.questions.map(q => ({
         questionId: q.id,
         selectedAnswer: typeof this.answers[q.id] === 'string' ? this.answers[q.id] as string : undefined,
@@ -118,7 +136,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     return `${m}:${s}`;
   }
 
-  get timerPercent(): number { return (this.secondsRemaining / (EXAM_MINUTES * 60)) * 100; }
+  get timerPercent(): number { return (this.secondsRemaining / (this.examMinutes * 60)) * 100; }
   get timerWarning(): boolean { return this.secondsRemaining < 600; }
 
   get answeredCount(): number {

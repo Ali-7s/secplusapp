@@ -613,6 +613,89 @@ public class ContentService {
             String.join(", ", section.getKeyTopics()));
     }
 
+    // ── Domain exam ─────────────────────────────────────────────────────────────
+
+    private static final String PBQ_EXAM_FORMAT = """
+
+        Per-question JSON format (options:[] for the PBQ types that have no options):
+        - DRAG_DROP / NETWORK_PLACEMENT: dragPairs:[{id,label}], dropTargets:[{id,label}], correctPairs:{dragId:targetId}
+        - ORDER_LIST: orderItems:[...], correctOrder:[...]
+        - FIREWALL_RULES: firewallColumns:[...], firewallOptions:{column:[...]}, correctRules:[{column:value}]
+          (every correctRules value MUST be one of that column's firewallOptions; 3-6 rows; end with a deny-all)
+        - LOG_ANALYSIS: a multi-line "logText" plus standard options + correctAnswer (graded like MULTIPLE_CHOICE)
+
+        FIELD RULES (must follow exactly):
+        - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
+        - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
+        - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
+        - Each options entry MUST start with its letter ("A. ", "B. ", ...).
+        - "type" is UPPERCASE; the question text field is named "stem", not "question".
+
+        IMPORTANT: Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
+        Do NOT wrap in an object or add any metadata fields (examTitle, objective, totalQuestions, etc.).
+        """;
+
+    private Domain findDomain(String domainId) {
+        return curriculum.getAllDomains().stream()
+            .filter(d -> d.getId().equals(domainId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown domain: " + domainId));
+    }
+
+    public AsyncContent<List<Question>> getDomainExamAsync(String domainId) {
+        return asyncQuestions("domainExam:" + domainId, () -> generateAndCacheDomainExam(domainId));
+    }
+
+    /** Synchronous accessor used at grading time, when the exam is already cached. */
+    public List<Question> getDomainExamQuestions(String domainId) {
+        String key = "domainExam:" + domainId;
+        String response = fetchOrGenerate(key, buildDomainExamPrompt(findDomain(domainId)), 20480);
+        try {
+            return parseQuestions(response);
+        } catch (Exception e) {
+            evict(key);
+            throw new RuntimeException("Failed to parse domain exam: " + e.getMessage());
+        }
+    }
+
+    private void generateAndCacheDomainExam(String domainId) {
+        String key = "domainExam:" + domainId;
+        String response = fetchOrGenerate(key, buildDomainExamPrompt(findDomain(domainId)), 20480);
+        try {
+            parseQuestions(response);
+        } catch (Exception e) {
+            log.severe("Failed to parse domain exam for " + domainId + ": " + e.getMessage());
+            evict(key);
+            throw new RuntimeException("Failed to parse domain exam: " + e.getMessage());
+        }
+    }
+
+    private String buildDomainExamPrompt(Domain domain) {
+        String objectives = domain.getSections().stream()
+            .map(s -> s.getObjectiveNumber() + " " + s.getName())
+            .collect(Collectors.joining("; "));
+        String topics = domain.getSections().stream()
+            .flatMap(s -> s.getKeyTopics().stream())
+            .distinct().limit(40)
+            .collect(Collectors.joining(", "));
+        return String.format("""
+            Generate 24 EXAM-LEVEL CompTIA Security+ SY0-701 questions covering ALL of Domain %s: "%s".
+            Objectives: %s
+            Key topics: %s
+
+            This is a DOMAIN EXAM spanning every objective above — distribute the questions across
+            them, not just one objective.
+            Requirements:
+            - 40%% scenario-based (detailed, 2-4 paragraphs each)
+            - 20%% multi-select (SELECT ALL THAT APPLY / SELECT TWO)
+            - 3-4 PBQs total across DRAG_DROP / ORDER_LIST, plus FIREWALL_RULES / NETWORK_PLACEMENT /
+              LOG_ANALYSIS where networking, firewall, or log topics apply
+            - Minimum 60%% Medium/Hard difficulty; all distractors technically plausible
+            - Cover EVERY objective in the domain
+            """,
+            domain.getNumber(), domain.getName(), objectives, topics) + PBQ_EXAM_FORMAT;
+    }
+
     // ── Full practice exam ──────────────────────────────────────────────────────
 
     public List<Question> getFullPracticeExam() {

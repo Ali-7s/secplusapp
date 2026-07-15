@@ -66,6 +66,17 @@ public class ContentController {
         return examResponse(contentService.getSectionExamAsync(sectionId));
     }
 
+    @GetMapping("/exam/domain/{domainId}")
+    public ResponseEntity<?> getDomainExam(@PathVariable String domainId) {
+        return examResponse(contentService.getDomainExamAsync(domainId));
+    }
+
+    @PostMapping("/exam/domain/{domainId}/regenerate")
+    public ResponseEntity<?> regenerateDomainExam(@PathVariable String domainId) {
+        contentService.evict("domainExam:" + domainId);
+        return examResponse(contentService.getDomainExamAsync(domainId));
+    }
+
     /**
      * Map an async-generation result to HTTP: 200 with questions when ready,
      * 202 while generating (client polls), 502 if the last attempt failed.
