@@ -76,7 +76,7 @@
           <div class="nav-grid">
             @for (q of questions; track q.id; let i = $index) {
               <button class="nav-btn"
-                [class.answered]="answers[q.id]"
+                [class.answered]="isAnswered(q)"
                 [class.flagged]="flagged.has(q.id)"
                 [class.current]="i === currentIndex"
                 (click)="currentIndex = i">{{ i + 1 }}</button>
@@ -102,9 +102,12 @@
                 <div class="domain-tag" [style.background]="getDomainColor(q.domainId) + '22'" [style.color]="getDomainColor(q.domainId)">
                   {{ q.domainId }}
                 </div>
-                @if (q.type === 'MULTI_SELECT') {
-                  <span class="q-type">SELECT ALL THAT APPLY</span>
-                }
+                @if (q.type === 'MULTI_SELECT')      { <span class="q-type">SELECT ALL THAT APPLY</span> }
+                @if (q.type === 'DRAG_DROP')         { <span class="q-type pbq-badge">PBQ · MATCHING</span> }
+                @if (q.type === 'ORDER_LIST')        { <span class="q-type pbq-badge">PBQ · SEQUENCE</span> }
+                @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
+                @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
+                @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
                 <button mat-icon-button (click)="toggleFlag(q.id)" [class.flagged-btn]="flagged.has(q.id)"
                   [title]="flagged.has(q.id) ? 'Remove flag' : 'Flag for review'">
                   <mat-icon>{{ flagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
@@ -120,15 +123,98 @@
 
               <p class="q-stem">{{ q.stem }}</p>
 
-              <div class="options">
-                @for (opt of q.options; track opt) {
-                  <button class="option-btn" [class.selected]="isSelected(q.id, opt.charAt(0))"
-                    (click)="selectAnswer(q.id, opt.charAt(0))">
-                    <span class="opt-letter">{{ opt.charAt(0) }}</span>
-                    <span class="opt-text">{{ opt.slice(3) }}</span>
-                  </button>
+              <!-- ── DRAG-DROP / NETWORK_PLACEMENT ── -->
+              @if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') {
+                @if (q.type === 'NETWORK_PLACEMENT') {
+                  <div class="np-hint"><mat-icon>lan</mat-icon> Place each device at the correct point in the network</div>
                 }
-              </div>
+                <div class="dd-container">
+                  <div class="dd-pairs-col">
+                    @for (pair of q.dragPairs ?? []; track pair.id) {
+                      @let matched = ddGetMatch(q.id, pair.id);
+                      <div class="dd-row">
+                        <div class="dd-term">{{ pair.label }}</div>
+                        <div class="dd-slot" [class.dd-slot-ready]="!matched && !!ddSelected[q.id]"
+                          [class.dd-slot-filled]="!!matched" (click)="ddAssignPair(q.id, pair.id)">
+                          @if (matched) {
+                            <span class="dd-slot-text">{{ ddGetTargetLabel(q, matched) }}</span>
+                            <button mat-icon-button class="dd-clear-btn" (click)="ddUnassign(q.id, pair.id, $event)"><mat-icon>close</mat-icon></button>
+                          } @else {
+                            <span class="dd-slot-hint">{{ ddSelected[q.id] ? '↑ click to place' : 'no match yet' }}</span>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  <div class="dd-pool">
+                    <div class="dd-pool-label"><mat-icon>touch_app</mat-icon> Select a match below, then click a slot above</div>
+                    <div class="dd-pool-chips">
+                      @for (target of q.dropTargets ?? []; track target.id) {
+                        @if (!ddIsAssigned(q.id, target.id)) {
+                          <div class="dd-chip" [class.dd-chip-active]="ddSelected[q.id] === target.id" (click)="ddSelectTarget(q.id, target.id)">{{ target.label }}</div>
+                        }
+                      }
+                      @if (ddAllMatched(q)) { <div class="dd-pool-done"><mat-icon>check_circle</mat-icon> All matched</div> }
+                    </div>
+                  </div>
+                </div>
+
+              <!-- ── Order list ── -->
+              } @else if (q.type === 'ORDER_LIST') {
+                <div class="ol-hint"><mat-icon>drag_indicator</mat-icon> Drag items into the correct sequence</div>
+                <div class="ol-list" cdkDropList (cdkDropListDropped)="dropOl($event, q.id, q)">
+                  @for (item of getOlItems(q.id, q); track item; let oi = $index) {
+                    <div class="ol-item" cdkDrag>
+                      <mat-icon class="ol-handle" cdkDragHandle>drag_indicator</mat-icon>
+                      <span class="ol-rank">{{ oi + 1 }}</span>
+                      <span class="ol-text">{{ item }}</span>
+                      <div class="ol-preview" *cdkDragPreview><mat-icon>drag_indicator</mat-icon> {{ item }}</div>
+                    </div>
+                  }
+                </div>
+
+              <!-- ── Firewall ruleset ── -->
+              } @else if (q.type === 'FIREWALL_RULES') {
+                <div class="fw-hint"><mat-icon>shield</mat-icon> Build the ruleset to meet the requirements (top rule matches first)</div>
+                <div class="fw-table-wrap">
+                  <table class="fw-table">
+                    <thead>
+                      <tr>
+                        <th class="fw-rownum">#</th>
+                        @for (col of q.firewallColumns ?? []; track col) { <th>{{ col }}</th> }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (ri of fwRowIndexes(q); track ri) {
+                        <tr>
+                          <td class="fw-rownum">{{ ri + 1 }}</td>
+                          @for (col of q.firewallColumns ?? []; track col; let ci = $index) {
+                            <td>
+                              <select class="fw-select" [value]="fwGet(q.id, ri, ci)" (change)="fwSet(q.id, ri, ci, $any($event.target).value)">
+                                <option value="" disabled>—</option>
+                                @for (opt of q.firewallOptions?.[col] ?? []; track opt) { <option [value]="opt">{{ opt }}</option> }
+                              </select>
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+              <!-- ── Standard MC / Scenario / Log analysis ── -->
+              } @else {
+                @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
+                <div class="options">
+                  @for (opt of q.options; track opt) {
+                    <button class="option-btn" [class.selected]="isSelected(q.id, opt.charAt(0))"
+                      (click)="selectAnswer(q.id, opt.charAt(0))">
+                      <span class="opt-letter">{{ opt.charAt(0) }}</span>
+                      <span class="opt-text">{{ opt.slice(3) }}</span>
+                    </button>
+                  }
+                </div>
+              }
 
               <div class="q-nav-btns">
                 <button mat-stroked-button [disabled]="currentIndex === 0" (click)="currentIndex = currentIndex - 1">

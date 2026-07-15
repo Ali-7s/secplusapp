@@ -173,7 +173,7 @@ public class ContentController {
 
     @PostMapping("/exam/full/regenerate")
     public ResponseEntity<?> regenerateFullExam() {
-        contentService.evict("fullExam:all");
+        contentService.evict("fullExam:v2");
         return examResponse(contentService.getFullExamAsync());
     }
 

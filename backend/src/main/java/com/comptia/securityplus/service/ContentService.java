@@ -706,7 +706,7 @@ public class ContentService {
     // ── Full practice exam ──────────────────────────────────────────────────────
 
     public List<Question> getFullPracticeExam() {
-        String key = "fullExam:all";
+        String key = "fullExam:v2";
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
         if (cached.isPresent()) {
             try {
@@ -736,19 +736,13 @@ public class ContentService {
                 Match official CompTIA Security+ exam difficulty:
                 - At least 35%% scenario-based questions with detailed context
                 - At least 15%% multi-select (SELECT ALL THAT APPLY / SELECT TWO)
+                - Include 1-2 PBQs in this batch: DRAG_DROP or ORDER_LIST, and where networking, firewall,
+                  ports, or log/traffic topics apply, FIREWALL_RULES / NETWORK_PLACEMENT / LOG_ANALYSIS
                 - All wrong answers must be technically plausible
                 - Current exam objectives including cloud, IoT, zero trust, SASE
                 - Set domainId to "%s" in every question
-
-                FIELD RULES (must follow exactly):
-                - Each "options" entry MUST start with its letter, e.g. "A. ", "B. ", "C. ", "D. ".
-                - "correctAnswer" is the SINGLE letter of the right option (e.g. "A"), never the text, never an array.
-                - "correctAnswers" (MULTI_SELECT only) is an array of those letters, e.g. ["A","C"].
-                - "type" is UPPERCASE; the question text field is named "stem".
-
-                Return ONLY a raw JSON array. Your response MUST start with `[` and end with `]`.
-                Do NOT wrap in an object or add metadata fields.
-                """, spec.count(), spec.name(), spec.id(), spec.id());
+                """, spec.count(), spec.name(), spec.id(), spec.id())
+                + PBQ_EXAM_FORMAT;
 
             String response = claude.callClaude(SYSTEM_PROMPT, prompt, 16384);
             try {
@@ -769,7 +763,7 @@ public class ContentService {
     }
 
     public AsyncContent<List<Question>> getFullExamAsync() {
-        return asyncQuestions("fullExam:all", this::getFullPracticeExam);
+        return asyncQuestions("fullExam:v2", this::getFullPracticeExam);
     }
 
     // ── Explain-it-simpler ───────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
 import { Question, ExamSubmission, ExamResult } from '../../models/question.model';
 
@@ -17,7 +18,7 @@ const EXAM_MINUTES = 90;
   selector: 'app-practice-exam',
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule],
+    MatProgressBarModule, MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule, DragDropModule],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss'
 })
@@ -56,9 +57,68 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   };
 
   domainColors: Record<string, string> = {
+    foundations: '#0ea5e9',
     domain1: '#6366f1', domain2: '#ef4444', domain3: '#f59e0b',
     domain4: '#10b981', domain5: '#8b5cf6'
   };
+
+  // ── PBQ state (keyed by question id so it survives navigation) ──
+  ddMatches: Record<string, Record<string, string>> = {};  // qId → {pairId: targetId}
+  ddSelected: Record<string, string> = {};
+  olItems: Record<string, string[]> = {};
+  fwAnswers: Record<string, string[][]> = {};
+
+  isInteractivePbq(q: Question): boolean {
+    return q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT' || q.type === 'ORDER_LIST' || q.type === 'FIREWALL_RULES';
+  }
+
+  // Drag-drop / network placement
+  ddSelectTarget(qId: string, targetId: string) { this.ddSelected[qId] = this.ddSelected[qId] === targetId ? '' : targetId; }
+  ddAssignPair(qId: string, pairId: string) {
+    const sel = this.ddSelected[qId];
+    if (!sel) return;
+    if (!this.ddMatches[qId]) this.ddMatches[qId] = {};
+    for (const key of Object.keys(this.ddMatches[qId])) { if (this.ddMatches[qId][key] === sel) delete this.ddMatches[qId][key]; }
+    this.ddMatches[qId][pairId] = sel;
+    this.ddSelected[qId] = '';
+  }
+  ddUnassign(qId: string, pairId: string, e: Event) { e.stopPropagation(); if (this.ddMatches[qId]) delete this.ddMatches[qId][pairId]; }
+  ddGetMatch(qId: string, pairId: string): string { return this.ddMatches[qId]?.[pairId] ?? ''; }
+  ddIsAssigned(qId: string, targetId: string): boolean { return Object.values(this.ddMatches[qId] ?? {}).includes(targetId); }
+  ddGetTargetLabel(q: Question, targetId: string): string { return q.dropTargets?.find(t => t.id === targetId)?.label ?? ''; }
+  ddAllMatched(q: Question): boolean { const m = this.ddMatches[q.id] ?? {}; return (q.dragPairs?.length ?? 0) > 0 && Object.keys(m).length === q.dragPairs!.length; }
+
+  // Order list
+  getOlItems(qId: string, q: Question): string[] { if (!this.olItems[qId]) this.olItems[qId] = [...(q.orderItems ?? [])]; return this.olItems[qId]; }
+  dropOl(event: CdkDragDrop<string[]>, qId: string, q: Question) { moveItemInArray(this.getOlItems(qId, q), event.previousIndex, event.currentIndex); }
+  olAllOrdered(q: Question): boolean { return (this.olItems[q.id]?.length ?? 0) === (q.orderItems?.length ?? 0); }
+
+  // Firewall
+  fwRowIndexes(q: Question): number[] { return Array.from({ length: q.correctRules?.length ?? 0 }, (_, i) => i); }
+  fwGet(qId: string, row: number, col: number): string { return this.fwAnswers[qId]?.[row]?.[col] ?? ''; }
+  fwSet(qId: string, row: number, col: number, value: string) {
+    if (!this.fwAnswers[qId]) this.fwAnswers[qId] = [];
+    if (!this.fwAnswers[qId][row]) this.fwAnswers[qId][row] = [];
+    this.fwAnswers[qId][row][col] = value;
+  }
+  fwAllFilled(q: Question): boolean {
+    const cols = q.firewallColumns?.length ?? 0;
+    if (!cols || !q.correctRules?.length) return false;
+    return this.fwRowIndexes(q).every(r => Array.from({ length: cols }, (_, c) => c).every(c => !!this.fwGet(q.id, r, c)));
+  }
+  fwToRows(q: Question): Record<string, string>[] {
+    const cols = q.firewallColumns ?? [];
+    return this.fwRowIndexes(q).map(r => { const row: Record<string, string> = {}; cols.forEach((col, c) => row[col] = this.fwGet(q.id, r, c)); return row; });
+  }
+
+  /** Whether a question (MC or PBQ) has been answered — drives the count + navigator. */
+  isAnswered(q: Question): boolean {
+    if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') return this.ddAllMatched(q);
+    if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
+    if (q.type === 'FIREWALL_RULES') return this.fwAllFilled(q);
+    const v = this.answers[q.id];
+    return Array.isArray(v) ? v.length > 0 : !!v;
+  }
 
   ngOnInit() {
     this.domainId = this.route.snapshot.paramMap.get('id');
@@ -75,6 +135,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
       next: q => {
         this.questions = q;
         this.answers = {};
+        this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {};
         this.flagged.clear();
         this.currentIndex = 0;
         this.secondsRemaining = this.examMinutes * 60;
@@ -118,7 +179,10 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
       answers: this.questions.map(q => ({
         questionId: q.id,
         selectedAnswer: typeof this.answers[q.id] === 'string' ? this.answers[q.id] as string : undefined,
-        selectedAnswers: Array.isArray(this.answers[q.id]) ? this.answers[q.id] as string[] : undefined
+        selectedAnswers: Array.isArray(this.answers[q.id]) ? this.answers[q.id] as string[] : undefined,
+        pairAnswers: (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') ? (this.ddMatches[q.id] ?? {}) : undefined,
+        orderAnswer: q.type === 'ORDER_LIST' ? (this.olItems[q.id] ?? q.orderItems ?? []) : undefined,
+        firewallAnswer: q.type === 'FIREWALL_RULES' ? this.fwToRows(q) : undefined,
       })),
       timeTakenSeconds: elapsed
     };
@@ -128,7 +192,10 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     });
   }
 
-  retake() { this.state = 'intro'; this.result = null; this.questions = []; }
+  retake() {
+    this.state = 'intro'; this.result = null; this.questions = [];
+    this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {};
+  }
 
   get timerDisplay(): string {
     const m = Math.floor(this.secondsRemaining / 60).toString().padStart(2, '0');
@@ -140,9 +207,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   get timerWarning(): boolean { return this.secondsRemaining < 600; }
 
   get answeredCount(): number {
-    return Object.keys(this.answers).filter(k => {
-      const v = this.answers[k]; return Array.isArray(v) ? v.length > 0 : !!v;
-    }).length;
+    return this.questions.filter(q => this.isAnswered(q)).length;
   }
 
   get currentQ(): Question { return this.questions[this.currentIndex]; }

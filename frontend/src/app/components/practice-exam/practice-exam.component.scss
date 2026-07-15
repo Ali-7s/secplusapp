@@ -240,3 +240,76 @@
     .domain-breakdown .db-row .db-name { min-width: 120px; font-size: 12px; }
   }
 }
+
+// ── PBQ (interactive) ───────────────────────────────────────
+.pbq-badge { background: var(--c-accent-light); color: var(--c-accent); border-radius: 6px;
+  font-size: 10px; font-weight: 700; padding: 2px 8px; letter-spacing: .5px; text-transform: uppercase; }
+
+.log-block {
+  background: #0f172a; color: #93c5fd; border-radius: 10px; padding: 14px 16px; margin: 4px 0 14px;
+  overflow-x: auto; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 12.5px;
+  line-height: 1.65; white-space: pre-wrap; word-break: break-word; border: 1px solid var(--c-border);
+}
+
+.np-hint, .fw-hint, .ol-hint {
+  display: flex; align-items: center; gap: 7px; margin: 4px 0 10px;
+  font-size: 13px; font-weight: 600; color: var(--c-accent);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.fw-table-wrap { overflow-x: auto; margin: 4px 0 8px; border-radius: 10px; border: 1px solid var(--c-border); }
+.fw-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; background: var(--c-surface);
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--c-border); }
+  thead th { background: var(--c-surface-2); font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; color: var(--c-text-2); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .fw-rownum { width: 28px; text-align: center; color: var(--c-muted); font-weight: 700; }
+}
+.fw-select {
+  width: 100%; min-width: 120px; padding: 7px 9px; border: 1px solid var(--c-border-dark);
+  border-radius: 7px; background: var(--c-surface); font-size: 13px; font-family: inherit;
+  color: var(--c-text); outline: none; cursor: pointer;
+  &:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-light); }
+}
+
+.dd-container { border: 1px solid var(--c-border); border-radius: 12px; overflow: hidden; margin-top: 8px; }
+.dd-pairs-col { padding: 0; }
+.dd-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--c-border); &:last-child { border-bottom: none; } }
+.dd-term { flex: 1; padding: 12px 14px; font-size: 13px; font-weight: 600; color: var(--c-text);
+  background: var(--c-surface-2); display: flex; align-items: center; }
+.dd-slot {
+  flex: 1; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  cursor: pointer; border-left: 2px dashed var(--c-border); min-height: 44px;
+  &.dd-slot-ready  { background: var(--c-accent-light); border-left-color: var(--c-accent); }
+  &.dd-slot-filled { background: var(--c-accent-light); }
+}
+.dd-slot-text { font-size: 13px; font-weight: 600; color: var(--c-accent); }
+.dd-slot-hint { font-size: 12px; color: var(--c-muted); font-style: italic; }
+.dd-clear-btn { width: 26px; height: 26px; line-height: 26px; flex-shrink: 0; mat-icon { font-size: 16px; } }
+.dd-pool { padding: 12px 14px; background: var(--c-surface-2); border-top: 1px solid var(--c-border); }
+.dd-pool-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-muted);
+  margin-bottom: 8px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+.dd-pool-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dd-chip {
+  padding: 8px 14px; border-radius: 8px; background: var(--c-surface); border: 1.5px solid var(--c-border);
+  font-size: 13px; font-weight: 600; color: var(--c-text); cursor: pointer; transition: all .12s;
+  &:hover { border-color: var(--c-accent); }
+  &.dd-chip-active { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
+}
+.dd-pool-done { display: flex; align-items: center; gap: 6px; color: var(--c-success); font-size: 13px;
+  font-weight: 600; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+
+.ol-list { display: flex; flex-direction: column; gap: 8px; }
+.ol-item {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--c-surface);
+  border: 1.5px solid var(--c-border); border-radius: 10px; cursor: grab;
+  .ol-handle { color: var(--c-muted); cursor: grab; }
+  .ol-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--c-accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+  .ol-text { font-size: 13.5px; color: var(--c-text); flex: 1; }
+}
+.ol-preview { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c-surface);
+  border: 1.5px solid var(--c-accent); border-radius: 10px; box-shadow: var(--shadow-lg); color: var(--c-text); }
+.cdk-drag-placeholder { opacity: .4; }
+.cdk-drag-animating { transition: transform .2s cubic-bezier(0,0,.2,1); }
