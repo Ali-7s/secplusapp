@@ -22,18 +22,30 @@
       </div>
     </div>
 
-    <div class="domain-exam-cta">
-      <div class="dec-text">
-        <mat-icon>assignment_turned_in</mat-icon>
-        <div>
-          <strong>Domain Exam</strong>
-          <span>~24 exam-level questions across all {{ domain.sections.length }} objectives · 75% to pass</span>
+    @if (domain.id !== 'foundations') {
+      <div class="domain-exam-cta">
+        <div class="dec-text">
+          <mat-icon>assignment_turned_in</mat-icon>
+          <div>
+            <strong>Domain Exam</strong>
+            <span>~24 exam-level questions across all {{ domain.sections.length }} objectives · 75% to pass</span>
+          </div>
+        </div>
+        <button mat-raised-button color="primary" [routerLink]="['/exam/domain', domain.id]">
+          <mat-icon>play_arrow</mat-icon> Take Domain Exam
+        </button>
+      </div>
+    } @else {
+      <div class="domain-exam-cta foundations-note">
+        <div class="dec-text">
+          <mat-icon>school</mat-icon>
+          <div>
+            <strong>Start here if networking is new to you</strong>
+            <span>Work through these 5 topics, then the exam domains below will make much more sense.</span>
+          </div>
         </div>
       </div>
-      <button mat-raised-button color="primary" [routerLink]="['/exam/domain', domain.id]">
-        <mat-icon>play_arrow</mat-icon> Take Domain Exam
-      </button>
-    </div>
+    }
 
     <h2 class="section-title">Objectives</h2>
     <div class="sections-list" id="objectives-list">

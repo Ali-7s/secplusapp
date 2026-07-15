@@ -60,6 +60,7 @@ public class ProgressService {
     public Map<String, Object> getSummary(Long userId) {
         List<ProgressEntity> all = repo.findByUserId(userId);
         long totalSections = curriculum.getAllDomains().stream()
+                .filter(d -> !"foundations".equals(d.getId()))   // primer, not exam material
                 .mapToLong(d -> d.getSections().size()).sum();
         long passed = all.stream().filter(ProgressEntity::isExamPassed).count();
         long unlocked = all.stream().filter(ProgressEntity::isUnlocked).count();
@@ -82,7 +83,9 @@ public class ProgressService {
     }
 
     private List<Map<String, Object>> getDomainProgress(Long userId) {
-        return curriculum.getAllDomains().stream().map(domain -> {
+        return curriculum.getAllDomains().stream()
+            .filter(d -> !"foundations".equals(d.getId()))   // primer, not exam material
+            .map(domain -> {
             List<ProgressEntity> dp = repo.findByUserIdAndDomainId(userId, domain.getId());
             long passed = dp.stream().filter(ProgressEntity::isExamPassed).count();
             int total = domain.getSections().size();

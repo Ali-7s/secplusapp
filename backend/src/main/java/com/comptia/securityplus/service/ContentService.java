@@ -294,8 +294,16 @@ public class ContentService {
     public ConceptExplanation getExplanation(String sectionId) {
         Section section = findSection(sectionId);
         String key = "explanation:" + sectionId;
+        boolean beginner = "foundations".equals(section.getDomainId());
+        String intro = beginner
+            ? "You are teaching networking BASICS to a complete beginner with NO networking background — this is a "
+              + "primer to read BEFORE studying for Security+. Use plain language and everyday analogies, define every "
+              + "term the first time it appears, and assume zero prior knowledge. Keep it friendly and concrete. "
+              + "Write a clear beginner explanation of \"" + section.getName() + "\""
+            : "Generate a comprehensive Security+ SY0-701 concept explanation for objective "
+              + section.getObjectiveNumber() + ": \"" + section.getName() + "\"";
         String prompt = String.format("""
-            Generate a comprehensive Security+ SY0-701 concept explanation for objective %s: "%s"
+            %s
             Key topics to cover: %s
 
             Return JSON matching this exact structure:
@@ -306,14 +314,13 @@ public class ContentService {
               "detailedExplanation": "comprehensive multi-paragraph explanation (HTML allowed)",
               "keyPoints": ["bullet point 1", "bullet point 2", ...],
               "realWorldExamples": ["example 1", "example 2", ...],
-              "examTips": ["tip for the exam 1", "tip 2", ...],
-              "commonMistakes": ["mistake students make 1", ...],
+              "examTips": ["tip 1", "tip 2", ...],
+              "commonMistakes": ["mistake beginners make 1", ...],
               "analogyExplanation": "simple analogy to understand this concept",
               "relatedTopics": ["related section/topic 1", ...]
             }
             """,
-            section.getObjectiveNumber(), section.getName(),
-            String.join(", ", section.getKeyTopics()), sectionId);
+            intro, String.join(", ", section.getKeyTopics()), sectionId);
 
         String response = fetchOrGenerate(key, prompt, 4096);
         try {

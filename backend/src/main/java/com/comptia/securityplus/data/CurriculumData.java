@@ -12,12 +12,62 @@ public class CurriculumData {
 
     public List<Domain> getAllDomains() {
         return Arrays.asList(
+            buildFoundations(),
             buildDomain1(),
             buildDomain2(),
             buildDomain3(),
             buildDomain4(),
             buildDomain5()
         );
+    }
+
+    /** Optional pre-domain primer for people new to networking. Not on the exam (weight 0). */
+    private Domain buildFoundations() {
+        List<Section> sections = Arrays.asList(
+            new Section("net.1", "foundations", "0.1",
+                "How Networks Communicate",
+                "The OSI and TCP/IP models — how data actually moves across a network",
+                Arrays.asList("What a network is","The OSI 7-layer model","The TCP/IP model","Encapsulation",
+                    "Frames, packets, and segments","How data travels layer to layer","MAC vs IP addresses",
+                    "Why the models matter for security"),
+                Arrays.asList("OSI","TCP/IP","MAC","ARP","PDU","MTU"),
+                -5, 75),
+            new Section("net.2", "foundations", "0.2",
+                "IP Addressing, Subnets & DHCP",
+                "How devices get addresses and find each other",
+                Arrays.asList("IPv4 vs IPv6","Public vs private IP addresses","Subnet masks and CIDR",
+                    "Default gateway","NAT (Network Address Translation)","DHCP (automatic addressing)",
+                    "Loopback and APIPA","Reading an IP address and subnet"),
+                Arrays.asList("IPv4","IPv6","CIDR","NAT","DHCP","APIPA"),
+                -4, 75),
+            new Section("net.3", "foundations", "0.3",
+                "Core Network Devices",
+                "Switches, routers, firewalls and friends — what each one does and where it sits",
+                Arrays.asList("Hubs vs switches","Routers and routing","Firewalls (what they filter)",
+                    "Load balancers","Proxy servers","Wireless access points","Network interface cards (NICs)",
+                    "Where each device sits in a network"),
+                Arrays.asList("switch","router","firewall","VLAN","proxy","AP","NIC"),
+                -3, 75),
+            new Section("net.4", "foundations", "0.4",
+                "Protocols & Ports You Must Know",
+                "TCP vs UDP and the essential ports and protocols",
+                Arrays.asList("TCP vs UDP","The TCP three-way handshake","Well-known ports","DNS name resolution",
+                    "HTTP and HTTPS","SSH, RDP, FTP, SMTP","Secure vs insecure protocol pairs",
+                    "How ports identify services"),
+                Arrays.asList("TCP","UDP","DNS","HTTP","HTTPS","SSH","RDP","TLS"),
+                -2, 75),
+            new Section("net.5", "foundations", "0.5",
+                "Network Layouts & Segmentation",
+                "How networks are arranged and split up for safety",
+                Arrays.asList("LAN, WAN, and the internet","VLANs and why we segment","The screened subnet (DMZ)",
+                    "Trusted vs untrusted zones","How segmentation limits attacks","Reading a simple network diagram"),
+                Arrays.asList("LAN","WAN","VLAN","DMZ","subnet","segmentation"),
+                -1, 75)
+        );
+        return new Domain("foundations","0.0","Networking Foundations",
+            "New to networking? Start here. The basics the exam quietly assumes — models, IP addressing, "
+            + "devices, ports, and how networks are laid out.",
+            0, sections, "lan", "#0ea5e9");
     }
 
     private Domain buildDomain1() {
