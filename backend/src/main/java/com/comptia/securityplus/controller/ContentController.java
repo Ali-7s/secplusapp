@@ -26,12 +26,14 @@ public class ContentController {
     // ── Read ──────────────────────────────────────────────────────────────────
 
     @GetMapping("/explain/{sectionId}")
-    public ResponseEntity<ConceptExplanation> getExplanation(
+    public ResponseEntity<?> getExplanation(
             @PathVariable String sectionId,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        ConceptExplanation explanation = contentService.getExplanation(sectionId);
-        progressService.markConceptRead(user.getUserId(), sectionId);
-        return ResponseEntity.ok(explanation);
+        ContentService.AsyncContent<ConceptExplanation> r = contentService.getExplanationAsync(sectionId);
+        if (r.status() == ContentService.GenStatus.READY) {
+            progressService.markConceptRead(user.getUserId(), sectionId);
+        }
+        return asyncResponse(r);
     }
 
     @GetMapping("/flashcards/{sectionId}")
@@ -78,16 +80,20 @@ public class ContentController {
     }
 
     /**
-     * Map an async-generation result to HTTP: 200 with questions when ready,
+     * Map an async-generation result to HTTP: 200 with the content when ready,
      * 202 while generating (client polls), 502 if the last attempt failed.
      */
-    private ResponseEntity<?> examResponse(ContentService.AsyncContent<List<Question>> r) {
+    private ResponseEntity<?> asyncResponse(ContentService.AsyncContent<?> r) {
         return switch (r.status()) {
             case READY -> ResponseEntity.ok(r.data());
             case GENERATING -> ResponseEntity.accepted().body(Map.of("status", "generating"));
             case ERROR -> ResponseEntity.status(502)
                     .body(Map.of("message", r.error() != null ? r.error() : "Generation failed"));
         };
+    }
+
+    private ResponseEntity<?> examResponse(ContentService.AsyncContent<List<Question>> r) {
+        return asyncResponse(r);
     }
 
     @PostMapping("/simplify")
@@ -147,13 +153,9 @@ public class ContentController {
     // ── Regenerate (evict DB entry then re-generate) ──────────────────────────
 
     @PostMapping("/explain/{sectionId}/regenerate")
-    public ResponseEntity<ConceptExplanation> regenerateExplanation(
-            @PathVariable String sectionId,
-            @AuthenticationPrincipal AuthenticatedUser user) {
+    public ResponseEntity<?> regenerateExplanation(@PathVariable String sectionId) {
         contentService.evict("explanation2:" + sectionId);
-        ConceptExplanation result = contentService.getExplanation(sectionId);
-        progressService.markConceptRead(user.getUserId(), sectionId);
-        return ResponseEntity.ok(result);
+        return asyncResponse(contentService.getExplanationAsync(sectionId));
     }
 
     @PostMapping("/flashcards/{sectionId}/regenerate")

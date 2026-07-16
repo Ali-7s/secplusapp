@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, timer, throwError } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { switchMap, catchError, map } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { Domain, Section } from '../models/curriculum.model';
 import { Question, ExamSubmission, ExamResult } from '../models/question.model';
@@ -12,27 +12,31 @@ export class ContentService {
   private api = inject(ApiService);
   private http = inject(HttpClient);
 
-  // Exam generation is async on the server: a 202 means "still generating, poll again".
-  // We retry the GET every few seconds until it returns 200 with the questions.
-  private readonly EXAM_POLL_MS = 3000;
-  private readonly EXAM_POLL_MAX = 120;   // ~6 min ceiling before giving up
+  // AI generation is async on the server: a 202 means "still generating, poll again".
+  // We retry the GET every few seconds until it returns 200 with the content.
+  private readonly POLL_MS = 3000;
+  private readonly POLL_MAX = 120;   // ~6 min ceiling before giving up
 
-  private pollExam(path: string, attempt = 0): Observable<Question[]> {
-    return this.http.get<Question[]>(`/api${path}`, { observe: 'response' }).pipe(
+  private pollJson<T>(path: string, attempt = 0): Observable<T> {
+    return this.http.get<T>(`/api${path}`, { observe: 'response' }).pipe(
       switchMap(resp => {
         if (resp.status === 202) {
-          if (attempt >= this.EXAM_POLL_MAX) {
-            return throwError(() => new Error('Exam is taking too long to generate. Please try again.'));
+          if (attempt >= this.POLL_MAX) {
+            return throwError(() => new Error('Content is taking too long to generate. Please try again.'));
           }
-          return timer(this.EXAM_POLL_MS).pipe(switchMap(() => this.pollExam(path, attempt + 1)));
+          return timer(this.POLL_MS).pipe(switchMap(() => this.pollJson<T>(path, attempt + 1)));
         }
-        return of(resp.body ?? []);
+        return of(resp.body as T);
       }),
       catchError(err => throwError(() =>
         err instanceof HttpErrorResponse
-          ? new Error(err.error?.message || 'Exam generation failed. Please try again.')
+          ? new Error(err.error?.message || 'Content generation failed. Please try again.')
           : err)),
     );
+  }
+
+  private pollExam(path: string): Observable<Question[]> {
+    return this.pollJson<Question[] | null>(path).pipe(map(q => q ?? []));
   }
 
   getCurriculum(): Observable<Domain[]> {
@@ -48,7 +52,7 @@ export class ContentService {
   }
 
   getExplanation(sectionId: string): Observable<ConceptExplanation> {
-    return this.api.get<ConceptExplanation>(`/content/explain/${sectionId}`);
+    return this.pollJson<ConceptExplanation>(`/content/explain/${sectionId}`);
   }
 
   getFlashcards(sectionId: string): Observable<Flashcard[]> {
@@ -120,7 +124,12 @@ export class ContentService {
   }
 
   regenerateExplanation(sectionId: string): Observable<ConceptExplanation> {
-    return this.api.post<ConceptExplanation>(`/content/explain/${sectionId}/regenerate`, {});
+    // POST evicts + kicks off generation (202), then poll the GET until ready
+    return this.http.post(`/api/content/explain/${sectionId}/regenerate`, {}, { observe: 'response' }).pipe(
+      switchMap(() => this.pollJson<ConceptExplanation>(`/content/explain/${sectionId}`)),
+      catchError(err => throwError(() =>
+        err instanceof HttpErrorResponse ? new Error(err.error?.message || 'Failed to regenerate.') : err)),
+    );
   }
 
   regenerateFlashcards(sectionId: string): Observable<Flashcard[]> {

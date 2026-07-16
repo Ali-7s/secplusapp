@@ -557,11 +557,11 @@ public class ContentService {
      * request returns immediately and the client polls instead of holding a
      * minutes-long connection open.
      */
-    private AsyncContent<List<Question>> asyncQuestions(String key, Runnable generator) {
+    private <T> AsyncContent<T> asyncGen(String key, java.util.function.Function<String, T> parse, Runnable generator) {
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
         if (cached.isPresent()) {
             try {
-                return new AsyncContent<>(GenStatus.READY, parseQuestions(cached.get().getJsonContent()), null);
+                return new AsyncContent<>(GenStatus.READY, parse.apply(cached.get().getJsonContent()), null);
             } catch (Exception e) {
                 log.warning("Cached content for " + key + " unparseable, regenerating: " + e.getMessage());
                 evict(key);
@@ -585,6 +585,22 @@ public class ContentService {
             });
         }
         return new AsyncContent<>(GenStatus.GENERATING, null, null);
+    }
+
+    private AsyncContent<List<Question>> asyncQuestions(String key, Runnable generator) {
+        return asyncGen(key, json -> {
+            try { return parseQuestions(json); }
+            catch (Exception e) { throw new RuntimeException(e); }
+        }, generator);
+    }
+
+    /** Async wrapper for the Learn explanation — deep generation exceeds edge timeouts. */
+    public AsyncContent<ConceptExplanation> getExplanationAsync(String sectionId) {
+        String key = "explanation2:" + sectionId;
+        return asyncGen(key, json -> {
+            try { return mapper.readValue(json, ConceptExplanation.class); }
+            catch (Exception e) { throw new RuntimeException(e); }
+        }, () -> getExplanation(sectionId));
     }
 
     // ── Section exam ────────────────────────────────────────────────────────────
