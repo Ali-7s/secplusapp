@@ -67,9 +67,11 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   ddSelected: Record<string, string> = {};
   olItems: Record<string, string[]> = {};
   fwAnswers: Record<string, string[][]> = {};
+  cfAnswers: Record<string, string[]> = {};                 // qId → value per config field
 
   isInteractivePbq(q: Question): boolean {
-    return q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT' || q.type === 'ORDER_LIST' || q.type === 'FIREWALL_RULES';
+    return q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT' || q.type === 'ORDER_LIST'
+        || q.type === 'FIREWALL_RULES' || q.type === 'CONFIG_FORM';
   }
 
   // Drag-drop / network placement
@@ -111,11 +113,29 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     return this.fwRowIndexes(q).map(r => { const row: Record<string, string> = {}; cols.forEach((col, c) => row[col] = this.fwGet(q.id, r, c)); return row; });
   }
 
+  // Configuration form
+  cfGet(qId: string, i: number): string { return this.cfAnswers[qId]?.[i] ?? ''; }
+  cfSet(qId: string, i: number, value: string) {
+    if (!this.cfAnswers[qId]) this.cfAnswers[qId] = [];
+    this.cfAnswers[qId][i] = value;
+  }
+  cfAllFilled(q: Question): boolean {
+    const fields = q.configFields ?? [];
+    return fields.length > 0 && fields.every((_, i) => !!this.cfGet(q.id, i));
+  }
+  cfNewGroup(q: Question, i: number): boolean {
+    const fields = q.configFields ?? [];
+    const g = fields[i]?.group;
+    return !!g && (i === 0 || fields[i - 1]?.group !== g);
+  }
+  cfToAnswer(q: Question): string[] { return (q.configFields ?? []).map((_, i) => this.cfGet(q.id, i)); }
+
   /** Whether a question (MC or PBQ) has been answered — drives the count + navigator. */
   isAnswered(q: Question): boolean {
     if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') return this.ddAllMatched(q);
     if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
     if (q.type === 'FIREWALL_RULES') return this.fwAllFilled(q);
+    if (q.type === 'CONFIG_FORM') return this.cfAllFilled(q);
     const v = this.answers[q.id];
     return Array.isArray(v) ? v.length > 0 : !!v;
   }
@@ -135,7 +155,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
       next: q => {
         this.questions = q;
         this.answers = {};
-        this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {};
+        this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {}; this.cfAnswers = {};
         this.flagged.clear();
         this.currentIndex = 0;
         this.secondsRemaining = this.examMinutes * 60;
@@ -183,6 +203,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
         pairAnswers: (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') ? (this.ddMatches[q.id] ?? {}) : undefined,
         orderAnswer: q.type === 'ORDER_LIST' ? (this.olItems[q.id] ?? q.orderItems ?? []) : undefined,
         firewallAnswer: q.type === 'FIREWALL_RULES' ? this.fwToRows(q) : undefined,
+        configAnswer: q.type === 'CONFIG_FORM' ? this.cfToAnswer(q) : undefined,
       })),
       timeTakenSeconds: elapsed
     };
@@ -194,7 +215,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   retake() {
     this.state = 'intro'; this.result = null; this.questions = [];
-    this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {};
+    this.ddMatches = {}; this.ddSelected = {}; this.olItems = {}; this.fwAnswers = {}; this.cfAnswers = {};
   }
 
   get timerDisplay(): string {

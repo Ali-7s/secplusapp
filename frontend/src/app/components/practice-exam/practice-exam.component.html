@@ -108,6 +108,7 @@
                 @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
                 @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
                 @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
+                @if (q.type === 'CONFIG_FORM')       { <span class="q-type pbq-badge">PBQ · CONFIG</span> }
                 <button mat-icon-button (click)="toggleFlag(q.id)" [class.flagged-btn]="flagged.has(q.id)"
                   [title]="flagged.has(q.id) ? 'Remove flag' : 'Flag for review'">
                   <mat-icon>{{ flagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
@@ -200,6 +201,24 @@
                       }
                     </tbody>
                   </table>
+                </div>
+
+              <!-- ── Configuration form ── -->
+              } @else if (q.type === 'CONFIG_FORM') {
+                <div class="cf-hint"><mat-icon>tune</mat-icon> Set every field to complete the configuration</div>
+                @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
+                <div class="cf-form">
+                  @for (field of q.configFields ?? []; track $index) {
+                    @if (cfNewGroup(q, $index)) { <div class="cf-group">{{ field.group }}</div> }
+                    <div class="cf-row">
+                      <label class="cf-label">{{ field.label }}</label>
+                      <select class="fw-select cf-select" [value]="cfGet(q.id, $index)"
+                        (change)="cfSet(q.id, $index, $any($event.target).value)">
+                        <option value="" disabled>—</option>
+                        @for (opt of field.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+                      </select>
+                    </div>
+                  }
                 </div>
 
               <!-- ── Standard MC / Scenario / Log analysis ── -->

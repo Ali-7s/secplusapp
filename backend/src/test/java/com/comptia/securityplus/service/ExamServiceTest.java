@@ -107,6 +107,27 @@ class ExamServiceTest {
     }
 
     @Test
+    void gradesConfigForm() {
+        Question q = q(Question.QuestionType.CONFIG_FORM);
+        Question.ConfigField f1 = new Question.ConfigField();
+        f1.setGroup("Gateway A — Phase 1"); f1.setLabel("Encryption");
+        f1.setOptions(List.of("DES", "3DES", "AES-256")); f1.setCorrect("AES-256");
+        Question.ConfigField f2 = new Question.ConfigField();
+        f2.setGroup("Gateway A — Phase 1"); f2.setLabel("Authentication");
+        f2.setOptions(List.of("Pre-shared key", "Certificates")); f2.setCorrect("Certificates");
+        q.setConfigFields(List.of(f1, f2));
+
+        QuestionAnswer right = ans(); right.setConfigAnswer(List.of("aes-256", "Certificates")); // case-insensitive
+        QuestionAnswer wrong = ans(); wrong.setConfigAnswer(List.of("AES-256", "Pre-shared key"));
+        QuestionAnswer tooFew = ans(); tooFew.setConfigAnswer(List.of("AES-256"));
+
+        assertThat(exam.checkAnswer(q, right)).isTrue();
+        assertThat(exam.checkAnswer(q, wrong)).isFalse();
+        assertThat(exam.checkAnswer(q, tooFew)).isFalse();
+        assertThat(exam.checkAnswer(q, ans())).isFalse();   // no answer at all
+    }
+
+    @Test
     void gradesLogAnalysisLikeMultipleChoice() throws Exception {
         Question q = q(Question.QuestionType.LOG_ANALYSIS);
         setCorrect(q, "A");

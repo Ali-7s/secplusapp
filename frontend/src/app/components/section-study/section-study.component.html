@@ -547,6 +547,7 @@
                     @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
                     @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
                     @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
+                    @if (q.type === 'CONFIG_FORM')       { <span class="q-type pbq-badge">PBQ · CONFIG</span> }
                   </div>
                   @if (q.scenario) {
                     <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div>
@@ -654,6 +655,24 @@
                       </table>
                     </div>
 
+                  <!-- ── Configuration form ── -->
+                  } @else if (q.type === 'CONFIG_FORM') {
+                    <div class="cf-hint"><mat-icon>tune</mat-icon> Set every field to complete the configuration</div>
+                    @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
+                    <div class="cf-form">
+                      @for (field of q.configFields ?? []; track $index) {
+                        @if (cfNewGroup(q, $index)) { <div class="cf-group">{{ field.group }}</div> }
+                        <div class="cf-row">
+                          <label class="cf-label">{{ field.label }}</label>
+                          <select class="fw-select cf-select" [value]="cfGet(q.id, $index)"
+                            (change)="cfSet(q.id, $index, $any($event.target).value)">
+                            <option value="" disabled>—</option>
+                            @for (opt of field.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+                          </select>
+                        </div>
+                      }
+                    </div>
+
                   <!-- ── Standard MC / Scenario / Log analysis ── -->
                   } @else {
                     @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
@@ -705,6 +724,7 @@
                     @if (q.type === 'FIREWALL_RULES')    { <span class="q-type pbq-badge">PBQ · FIREWALL</span> }
                     @if (q.type === 'NETWORK_PLACEMENT') { <span class="q-type pbq-badge">PBQ · NETWORK</span> }
                     @if (q.type === 'LOG_ANALYSIS')      { <span class="q-type pbq-badge">PBQ · LOG</span> }
+                    @if (q.type === 'CONFIG_FORM')       { <span class="q-type pbq-badge">PBQ · CONFIG</span> }
                   </div>
                   @if (q.scenario) { <div class="scenario-box"><strong>Scenario:</strong> {{ q.scenario }}</div> }
                   <p class="q-stem">{{ q.stem }}</p>
@@ -781,6 +801,23 @@
                           }
                         </tbody>
                       </table>
+                    </div>
+
+                  <!-- ── Review: Configuration form ── -->
+                  } @else if (q.type === 'CONFIG_FORM') {
+                    @if (q.logText) { <pre class="log-block">{{ q.logText }}</pre> }
+                    <div class="cf-form cf-review">
+                      @for (field of q.configFields ?? []; track $index) {
+                        @if (cfNewGroup(q, $index)) { <div class="cf-group">{{ field.group }}</div> }
+                        <div class="cf-row" [class.cf-row-correct]="cfFieldCorrect(q, $index)" [class.cf-row-wrong]="!cfFieldCorrect(q, $index)">
+                          <mat-icon [style.color]="cfFieldCorrect(q, $index) ? '#2e7d32' : '#c62828'">{{ cfFieldCorrect(q, $index) ? 'check_circle' : 'cancel' }}</mat-icon>
+                          <label class="cf-label">{{ field.label }}</label>
+                          <div class="cf-rev-answers">
+                            <span class="cf-your" [class.cf-wrong-text]="!cfFieldCorrect(q, $index)">{{ cfGet(q.id, $index) || '(no answer)' }}</span>
+                            @if (!cfFieldCorrect(q, $index)) { <span class="cf-correct">✓ {{ field.correct }}</span> }
+                          </div>
+                        </div>
+                      }
                     </div>
 
                   <!-- ── Review: Standard MC / Log analysis ── -->

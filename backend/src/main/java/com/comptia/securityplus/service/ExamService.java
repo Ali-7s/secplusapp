@@ -94,6 +94,8 @@ public class ExamService {
                         && q.getCorrectOrder().equals(answer.getOrderAnswer());
             case FIREWALL_RULES:
                 return firewallMatches(q, answer.getFirewallAnswer());
+            case CONFIG_FORM:
+                return configMatches(q, answer.getConfigAnswer());
             default: // MULTIPLE_CHOICE, SCENARIO, LOG_ANALYSIS
                 return q.getCorrectAnswer() != null && q.getCorrectAnswer().equals(answer.getSelectedAnswer());
         }
@@ -117,6 +119,18 @@ public class ExamService {
         return true;
     }
 
+    private boolean configMatches(Question q, List<String> given) {
+        List<Question.ConfigField> fields = q.getConfigFields();
+        if (fields == null || fields.isEmpty()) return false;
+        if (given == null || given.size() != fields.size()) return false;
+        for (int i = 0; i < fields.size(); i++) {
+            String correct = fields.get(i).getCorrect();
+            String g = given.get(i);
+            if (correct == null || g == null || !correct.trim().equalsIgnoreCase(g.trim())) return false;
+        }
+        return true;
+    }
+
     /** Readable "your answer" string for the review screen, per question type. */
     private String describeYourAnswer(Question q, ExamSubmission.QuestionAnswer a) {
         Question.QuestionType t = q.getType();
@@ -128,6 +142,9 @@ public class ExamService {
         }
         if (t == Question.QuestionType.FIREWALL_RULES) {
             return a.getFirewallAnswer() != null && !a.getFirewallAnswer().isEmpty() ? "(your ruleset — see below)" : "Not answered";
+        }
+        if (t == Question.QuestionType.CONFIG_FORM) {
+            return a.getConfigAnswer() != null && !a.getConfigAnswer().isEmpty() ? "(your configuration — see explanation)" : "Not answered";
         }
         if (t == Question.QuestionType.MULTI_SELECT) {
             return a.getSelectedAnswers() != null ? String.join(", ", a.getSelectedAnswers()) : "Not answered";
@@ -144,7 +161,7 @@ public class ExamService {
             return String.join(", ", q.getCorrectAnswers());
         }
         if (t == Question.QuestionType.DRAG_DROP || t == Question.QuestionType.NETWORK_PLACEMENT
-                || t == Question.QuestionType.FIREWALL_RULES) {
+                || t == Question.QuestionType.FIREWALL_RULES || t == Question.QuestionType.CONFIG_FORM) {
             return "See explanation";
         }
         return q.getCorrectAnswer() != null ? q.getCorrectAnswer() : "";

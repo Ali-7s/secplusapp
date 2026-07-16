@@ -616,6 +616,7 @@ export class SectionStudyComponent implements OnInit {
     if (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') return this.ddAllMatched(q);
     if (q.type === 'ORDER_LIST') return this.olAllOrdered(q);
     if (q.type === 'FIREWALL_RULES') return this.fwAllFilled(q);
+    if (q.type === 'CONFIG_FORM') return this.cfAllFilled(q);
     const ans = this.practiceAnswers[q.id];
     return Array.isArray(ans) ? ans.length > 0 : !!ans;
   }
@@ -649,6 +650,9 @@ export class SectionStudyComponent implements OnInit {
     if (q.type === 'FIREWALL_RULES') {
       return this.fwAllFilled(q) && this.fwRowIndexes(q).every(r => this.fwRowCorrect(q, r));
     }
+    if (q.type === 'CONFIG_FORM') {
+      return this.cfAllFilled(q) && (q.configFields ?? []).every((_, i) => this.cfFieldCorrect(q, i));
+    }
     const given = this.practiceAnswers[q.id];
     if (q.type === 'MULTI_SELECT') {
       return JSON.stringify([...(given as string[] || [])].sort()) === JSON.stringify([...(q.correctAnswers || [])].sort());
@@ -668,6 +672,7 @@ export class SectionStudyComponent implements OnInit {
     this.ddSelected = {};
     this.olItems = {};
     this.fwAnswers = {};
+    this.cfAnswers = {};
     this.practiceState = 'idle';
     this.practiceShowExplanation = {};
     this.loadPractice();
@@ -712,7 +717,39 @@ export class SectionStudyComponent implements OnInit {
 
   isPbq(q: Question): boolean {
     return q.type === 'DRAG_DROP' || q.type === 'ORDER_LIST' || q.type === 'FIREWALL_RULES'
-        || q.type === 'NETWORK_PLACEMENT' || q.type === 'LOG_ANALYSIS';
+        || q.type === 'NETWORK_PLACEMENT' || q.type === 'LOG_ANALYSIS' || q.type === 'CONFIG_FORM';
+  }
+
+  // ── PBQ: Configuration form ────────────────────────────────
+  // cfAnswers[questionId][fieldIndex] = selected value
+  cfAnswers: Record<string, string[]> = {};
+
+  cfGet(qId: string, i: number): string { return this.cfAnswers[qId]?.[i] ?? ''; }
+
+  cfSet(qId: string, i: number, value: string) {
+    if (!this.cfAnswers[qId]) this.cfAnswers[qId] = [];
+    this.cfAnswers[qId][i] = value;
+  }
+
+  cfAllFilled(q: Question): boolean {
+    const fields = q.configFields ?? [];
+    return fields.length > 0 && fields.every((_, i) => !!this.cfGet(q.id, i));
+  }
+
+  cfFieldCorrect(q: Question, i: number): boolean {
+    const expected = q.configFields?.[i]?.correct ?? '';
+    return this.cfGet(q.id, i).trim().toLowerCase() === expected.trim().toLowerCase();
+  }
+
+  /** True when this field starts a new group (renders a group header above it). */
+  cfNewGroup(q: Question, i: number): boolean {
+    const fields = q.configFields ?? [];
+    const g = fields[i]?.group;
+    return !!g && (i === 0 || fields[i - 1]?.group !== g);
+  }
+
+  cfToAnswer(q: Question): string[] {
+    return (q.configFields ?? []).map((_, i) => this.cfGet(q.id, i));
   }
 
   // ── Section Exam ───────────────────────────────────────────────────

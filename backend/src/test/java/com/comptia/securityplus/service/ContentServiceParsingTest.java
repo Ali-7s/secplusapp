@@ -109,6 +109,23 @@ class ContentServiceParsingTest {
     }
 
     @Test
+    void parsesConfigFormShape() throws Exception {
+        Question q = one("""
+            [{"id":"q1","type":"config_form","stem":"Configure the VPN","options":[],
+              "logText":"10:01 GW-A: tunnel down",
+              "configFields":[
+                {"group":"Gateway A — Phase 1","label":"Encryption","options":["DES","AES-256"],"answer":"AES-256"},
+                {"label":"SRV-01","options":["Infection source","Infected","Clean"],"correct":"Clean"}]}]""");
+        assertThat(q.getType()).isEqualTo(Question.QuestionType.CONFIG_FORM);
+        assertThat(q.getLogText()).contains("tunnel down");
+        assertThat(q.getConfigFields()).hasSize(2);
+        assertThat(q.getConfigFields().get(0).getCorrect()).isEqualTo("AES-256");   // "answer" alias
+        assertThat(q.getConfigFields().get(0).getGroup()).isEqualTo("Gateway A — Phase 1");
+        assertThat(q.getConfigFields().get(1).getOptions()).contains("Infection source");
+        assertThat(q.getConfigFields().get(1).getCorrect()).isEqualTo("Clean");
+    }
+
+    @Test
     void parsesFirewallRulesShape() throws Exception {
         Question q = one("""
             [{"id":"q1","type":"firewall_rules","stem":"Build ACL","options":[],

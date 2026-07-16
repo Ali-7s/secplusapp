@@ -87,8 +87,36 @@ describe('SectionStudyComponent — PBQ grading', () => {
   });
 
   it('isPbq recognizes every PBQ type', () => {
-    const types: Question['type'][] = ['DRAG_DROP', 'ORDER_LIST', 'FIREWALL_RULES', 'NETWORK_PLACEMENT', 'LOG_ANALYSIS'];
+    const types: Question['type'][] = ['DRAG_DROP', 'ORDER_LIST', 'FIREWALL_RULES', 'NETWORK_PLACEMENT', 'LOG_ANALYSIS', 'CONFIG_FORM'];
     types.forEach(t => expect(comp.isPbq({ type: t } as Question)).withContext(t).toBeTrue());
     expect(comp.isPbq({ type: 'MULTIPLE_CHOICE' } as Question)).toBeFalse();
+  });
+
+  it('grades CONFIG_FORM per field (case-insensitive, all-filled gate)', () => {
+    const q = {
+      id: 'cf1', sectionId: '1.1', domainId: 'd1', type: 'CONFIG_FORM', stem: '',
+      options: [], correctAnswer: '', explanation: '', difficulty: 'Hard', tags: [], points: 1,
+      configFields: [
+        { group: 'Gateway A — Phase 1', label: 'Encryption', options: ['DES', 'AES-256'], correct: 'AES-256' },
+        { label: 'SRV-01', options: ['Infection source', 'Infected', 'Clean'], correct: 'Clean' },
+      ],
+    } as Question;
+
+    expect(comp.cfAllFilled(q)).toBeFalse();
+    expect(comp.isPracticeCorrect(q)).toBeFalse();
+
+    comp.cfSet(q.id, 0, 'aes-256');            // case-insensitive
+    comp.cfSet(q.id, 1, 'Clean');
+    expect(comp.cfAllFilled(q)).toBeTrue();
+    expect(comp.isPracticeCorrect(q)).toBeTrue();
+
+    comp.cfSet(q.id, 1, 'Infected');           // one wrong field fails the question
+    expect(comp.cfFieldCorrect(q, 0)).toBeTrue();
+    expect(comp.cfFieldCorrect(q, 1)).toBeFalse();
+    expect(comp.isPracticeCorrect(q)).toBeFalse();
+
+    // group header renders once at the first field of a group
+    expect(comp.cfNewGroup(q, 0)).toBeTrue();
+    expect(comp.cfNewGroup(q, 1)).toBeFalse();
   });
 });

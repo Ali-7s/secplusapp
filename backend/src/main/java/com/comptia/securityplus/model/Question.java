@@ -41,9 +41,30 @@ public class Question {
     private Map<String, List<String>> firewallOptions; // column -> allowed dropdown values
     private List<Map<String, String>> correctRules;    // ordered correct rows (column -> value)
 
+    // PBQ: Configuration form — grouped per-field dropdowns (VPN config, host
+    // compromise classification, subnet-zone placement, ...)
+    private List<ConfigField> configFields;
+
     public enum QuestionType {
         MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST,
-        FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS
+        FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS, CONFIG_FORM
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ConfigField {
+        private String group;           // optional section header, e.g. "Gateway A — Phase 1"
+        private String label;           // e.g. "Encryption algorithm" or "SRV-02"
+        private List<String> options;   // dropdown values for this field
+        private String correct;         // must be one of options
+        public String getGroup() { return group; }
+        public void setGroup(String group) { this.group = group; }
+        public String getLabel() { return label; }
+        public void setLabel(String label) { this.label = label; }
+        public List<String> getOptions() { return options; }
+        public void setOptions(List<String> options) { this.options = options; }
+        public String getCorrect() { return correct; }
+        @JsonAlias({"answer", "correctOption", "correctValue", "correctAnswer"})
+        public void setCorrect(String correct) { this.correct = correct; }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -118,4 +139,6 @@ public class Question {
     public void setFirewallOptions(Map<String, List<String>> firewallOptions) { this.firewallOptions = firewallOptions; }
     public List<Map<String, String>> getCorrectRules() { return correctRules; }
     public void setCorrectRules(List<Map<String, String>> correctRules) { this.correctRules = correctRules; }
+    public List<ConfigField> getConfigFields() { return configFields; }
+    public void setConfigFields(List<ConfigField> configFields) { this.configFields = configFields; }
 }

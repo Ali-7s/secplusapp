@@ -391,7 +391,7 @@ public class ContentService {
             - Include 1-2 DRAG_DROP matching questions (match terms to definitions or protocols to ports)
             - Include 1-2 ORDER_LIST sequencing questions (put steps or phases in correct order)
             - When the objective involves networking, firewalls, ports, traffic, or logs, include 1-2
-              ADVANCED PBQs from: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS (otherwise skip them)
+              ADVANCED PBQs from: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS, CONFIG_FORM (otherwise skip them)
             - Test application, not just recall
 
             FIELD RULES (must follow exactly):
@@ -399,7 +399,7 @@ public class ContentService {
             - "correctAnswers" is an array of strings, used ONLY for MULTI_SELECT.
             - "correctPairs" is a JSON object map {"dragId":"targetId"}, never an array.
             - "type" is UPPERCASE: MULTIPLE_CHOICE, MULTI_SELECT, SCENARIO, DRAG_DROP, ORDER_LIST,
-              FIREWALL_RULES, NETWORK_PLACEMENT, or LOG_ANALYSIS.
+              FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS, or CONFIG_FORM.
             - The question text field is named "stem", not "question".
             - FIREWALL_RULES: "firewallColumns" names the columns; "firewallOptions" maps each column to its
               dropdown values; "correctRules" is an ORDERED list of rows where EVERY value is one of that
@@ -407,6 +407,10 @@ public class ContentService {
             - LOG_ANALYSIS: include a realistic multi-line "logText" plus standard options/correctAnswer
               (it is graded exactly like MULTIPLE_CHOICE).
             - NETWORK_PLACEMENT: uses the SAME fields as DRAG_DROP (dragPairs/dropTargets/correctPairs).
+            - CONFIG_FORM: "configFields" is a list of {group,label,options,correct} dropdown fields; every
+              "correct" MUST be one of that field's options. Use it for device configuration (e.g. VPN Phase 1/2
+              settings per gateway), classifying hosts from logs (include "logText"; options like
+              ["Infection source","Infected","Clean"]), or placing components into subnet zones.
 
             Return JSON array. Each question uses ONE of these formats:
 
@@ -493,6 +497,21 @@ public class ContentService {
               "correctPairs": {"fw":"edge","ids":"mon","lb":"web"},
               "explanation": "Firewall at the edge, IDS on a monitoring port, load balancer ahead of the web farm.",
               "difficulty": "Medium", "tags": [], "points": 1
+            }
+
+            CONFIG_FORM question (configure a device / classify hosts / assign zones via dropdowns):
+            {
+              "id": "q-<uuid>", "domainId": "domain-id",
+              "type": "CONFIG_FORM",
+              "stem": "Configure both ends of the site-to-site VPN tunnel using current best practices.",
+              "options": [], "correctAnswer": null,
+              "configFields": [
+                {"group":"Gateway A — Phase 1","label":"Authentication method","options":["Pre-shared key","Certificates","Kerberos"],"correct":"Certificates"},
+                {"group":"Gateway A — Phase 1","label":"Encryption algorithm","options":["DES","3DES","AES-256"],"correct":"AES-256"},
+                {"group":"Gateway A — Phase 2","label":"Remote subnet","options":["10.1.0.0/24","10.2.0.0/24","192.168.1.0/24"],"correct":"10.2.0.0/24"}
+              ],
+              "explanation": "Why each selection is correct.",
+              "difficulty": "Hard", "tags": [], "points": 1
             }
             """,
             count, section.getObjectiveNumber(), section.getName(),
@@ -594,7 +613,7 @@ public class ContentService {
             - 2-3 DRAG_DROP matching questions (match protocols/concepts/terms to descriptions)
             - 2-3 ORDER_LIST sequencing questions (procedures, attack phases, response steps)
             - When the objective involves networking, firewalls, ports, traffic, or logs, ALSO include
-              1-2 of: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS
+              1-2 of: FIREWALL_RULES, NETWORK_PLACEMENT, LOG_ANALYSIS, CONFIG_FORM
             - All distractors must be technically plausible
             - Minimum 60%% Medium/Hard difficulty
             - Cover ALL key topics comprehensively
@@ -630,6 +649,16 @@ public class ContentService {
         - FIREWALL_RULES: firewallColumns:[...], firewallOptions:{column:[...]}, correctRules:[{column:value}]
           (every correctRules value MUST be one of that column's firewallOptions; 3-6 rows; end with a deny-all)
         - LOG_ANALYSIS: a multi-line "logText" plus standard options + correctAnswer (graded like MULTIPLE_CHOICE)
+        - CONFIG_FORM: configFields:[{group,label,options:[...],correct}] — grouped dropdown fields; every
+          "correct" MUST be one of that field's options. Use it for the classic exam simulations:
+          * device configuration, e.g. a site-to-site VPN: groups "Gateway A — Phase 1", "Gateway A — Phase 2",
+            "Gateway B — Phase 1"... with fields like Authentication method / Encryption algorithm / DH group /
+            Local subnet / Remote subnet
+          * multi-host compromise assessment: include a multi-line "logText" with logs from several hosts plus a
+            firewall; one field per host (label "SRV-01", "WS-02", ...) with options like
+            ["Infection source","Infected","Clean"]
+          * zone placement: one field per component (Web server, Database, WAF, Load balancer...) with options
+            like ["Public subnet","Private subnet"]
 
         FIELD RULES (must follow exactly):
         - "correctAnswer" is a SINGLE string (e.g. "A"), never an array.
@@ -650,12 +679,12 @@ public class ContentService {
     }
 
     public AsyncContent<List<Question>> getDomainExamAsync(String domainId) {
-        return asyncQuestions("domainExam:" + domainId, () -> generateAndCacheDomainExam(domainId));
+        return asyncQuestions("domainExam2:" + domainId, () -> generateAndCacheDomainExam(domainId));
     }
 
     /** Synchronous accessor used at grading time, when the exam is already cached. */
     public List<Question> getDomainExamQuestions(String domainId) {
-        String key = "domainExam:" + domainId;
+        String key = "domainExam2:" + domainId;
         String response = fetchOrGenerate(key, buildDomainExamPrompt(findDomain(domainId)), 20480);
         try {
             return parseQuestions(response);
@@ -666,7 +695,7 @@ public class ContentService {
     }
 
     private void generateAndCacheDomainExam(String domainId) {
-        String key = "domainExam:" + domainId;
+        String key = "domainExam2:" + domainId;
         String response = fetchOrGenerate(key, buildDomainExamPrompt(findDomain(domainId)), 20480);
         try {
             parseQuestions(response);
@@ -706,7 +735,7 @@ public class ContentService {
     // ── Full practice exam ──────────────────────────────────────────────────────
 
     public List<Question> getFullPracticeExam() {
-        String key = "fullExam:v2";
+        String key = "fullExam:v3";
         Optional<GeneratedContentEntity> cached = contentRepo.findByContentKey(key);
         if (cached.isPresent()) {
             try {
@@ -737,7 +766,7 @@ public class ContentService {
                 - At least 35%% scenario-based questions with detailed context
                 - At least 15%% multi-select (SELECT ALL THAT APPLY / SELECT TWO)
                 - Include 1-2 PBQs in this batch: DRAG_DROP or ORDER_LIST, and where networking, firewall,
-                  ports, or log/traffic topics apply, FIREWALL_RULES / NETWORK_PLACEMENT / LOG_ANALYSIS
+                  ports, or log/traffic topics apply, FIREWALL_RULES / NETWORK_PLACEMENT / LOG_ANALYSIS / CONFIG_FORM
                 - All wrong answers must be technically plausible
                 - Current exam objectives including cloud, IoT, zero trust, SASE
                 - Set domainId to "%s" in every question
@@ -763,7 +792,7 @@ public class ContentService {
     }
 
     public AsyncContent<List<Question>> getFullExamAsync() {
-        return asyncQuestions("fullExam:v2", this::getFullPracticeExam);
+        return asyncQuestions("fullExam:v3", this::getFullPracticeExam);
     }
 
     // ── Explain-it-simpler ───────────────────────────────────────────────────────

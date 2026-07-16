@@ -73,7 +73,7 @@ public class ContentController {
 
     @PostMapping("/exam/domain/{domainId}/regenerate")
     public ResponseEntity<?> regenerateDomainExam(@PathVariable String domainId) {
-        contentService.evict("domainExam:" + domainId);
+        contentService.evict("domainExam2:" + domainId);
         return examResponse(contentService.getDomainExamAsync(domainId));
     }
 
@@ -173,7 +173,7 @@ public class ContentController {
 
     @PostMapping("/exam/full/regenerate")
     public ResponseEntity<?> regenerateFullExam() {
-        contentService.evict("fullExam:v2");
+        contentService.evict("fullExam:v3");
         return examResponse(contentService.getFullExamAsync());
     }
 

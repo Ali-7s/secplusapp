@@ -20,6 +20,7 @@ public class ExamSubmission {
         private Map<String, String> pairAnswers;          // DRAG_DROP / NETWORK_PLACEMENT: dragId -> targetId
         private List<String> orderAnswer;                 // ORDER_LIST: the user's ordering
         private List<Map<String, String>> firewallAnswer; // FIREWALL_RULES: rows of column -> value
+        private List<String> configAnswer;                // CONFIG_FORM: selected value per field, by index
 
         public QuestionAnswer() {}
         public String getQuestionId() { return questionId; }
@@ -34,6 +35,8 @@ public class ExamSubmission {
         public void setOrderAnswer(List<String> orderAnswer) { this.orderAnswer = orderAnswer; }
         public List<Map<String, String>> getFirewallAnswer() { return firewallAnswer; }
         public void setFirewallAnswer(List<Map<String, String>> firewallAnswer) { this.firewallAnswer = firewallAnswer; }
+        public List<String> getConfigAnswer() { return configAnswer; }
+        public void setConfigAnswer(List<String> configAnswer) { this.configAnswer = configAnswer; }
     }
 
     public String getSectionId() { return sectionId; }
