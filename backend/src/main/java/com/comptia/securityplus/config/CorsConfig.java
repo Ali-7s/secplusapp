@@ -13,8 +13,10 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    // Default to localhost dev origins — never silently fall back to "*".
-    @Value("${cors.allowed-origins:http://localhost:4200,http://localhost}")
+    // Default: any localhost port (dev servers move between 4200/4201/...). Same-origin
+    // POSTs still carry an Origin header, so an exact-port default breaks local dev.
+    // Production sets CORS_ORIGINS to the real frontend origin(s) — never "*".
+    @Value("${cors.allowed-origins:http://localhost:[*],http://127.0.0.1:[*]}")
     private String allowedOrigins;
 
     @Bean
@@ -26,14 +28,18 @@ public class CorsConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        if (origins.contains("*")) {
-            // Reflecting any origin AND allowing credentials is an OWASP misconfiguration.
-            // Auth here is a Bearer token (not cookies), so disable credentials when wildcard.
-            config.addAllowedOriginPattern("*");
-            config.setAllowCredentials(false);
-        } else {
-            origins.forEach(config::addAllowedOrigin);
-            config.setAllowCredentials(true);
+        config.setAllowCredentials(true);
+        for (String origin : origins) {
+            if (origin.equals("*")) {
+                // Reflecting any origin AND allowing credentials is an OWASP misconfiguration.
+                // Auth here is a Bearer token (not cookies), so drop credentials for a true wildcard.
+                config.addAllowedOriginPattern("*");
+                config.setAllowCredentials(false);
+            } else if (origin.contains("*")) {
+                config.addAllowedOriginPattern(origin);   // e.g. http://localhost:[*]
+            } else {
+                config.addAllowedOrigin(origin);
+            }
         }
 
         config.addAllowedHeader("*");

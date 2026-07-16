@@ -14,7 +14,7 @@ let mermaidSeq = 0;
 @Component({
   selector: 'app-mermaid-diagram',
   standalone: true,
-  template: `<div #host class="mermaid-host" [style.display]="failed ? 'none' : 'block'"></div>`,
+  template: `<div #host class="mermaid-host" [style.display]="failed ? 'none' : ''"></div>`,
   styles: [`
     .mermaid-host { display: flex; justify-content: center; overflow-x: auto; }
     .mermaid-host ::ng-deep svg { max-width: 100%; height: auto; }
