@@ -162,7 +162,6 @@
                 <div class="section-pill"
                   [class.passed]="getSectionStatus(section.id) === 'passed'"
                   [class.unlocked]="getSectionStatus(section.id) === 'unlocked'"
-                  [class.locked]="getSectionStatus(section.id) === 'locked'"
                   [matTooltip]="section.name">
                   {{ section.objectiveNumber }}
                 </div>

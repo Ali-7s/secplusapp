@@ -5,14 +5,6 @@
   &:hover { color: #059669; text-decoration-style: solid; }
 }
 
-// ── Locked page ────────────────────────────────────────────
-.locked-page {
-  text-align: center; padding: 80px 24px;
-  mat-icon { font-size: 56px; width: 56px; height: 56px; color: #94a3b8; }
-  h2 { color: #1e293b; margin: 12px 0 8px; }
-  p  { color: #64748b; margin: 0 0 24px; max-width: 360px; margin-left: auto; margin-right: auto; }
-}
-
 // ── Section header ─────────────────────────────────────────
 .section-header {
   display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px;

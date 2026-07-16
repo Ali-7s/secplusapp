@@ -64,10 +64,10 @@
           <span class="domain-weight">{{ domain.examWeight }}%</span>
         </div>
         @for (sp of getDomainSections(domain.id); track sp.sectionId) {
-          <div class="section-row" [class.passed-row]="sp.examPassed" [class.locked-row]="!sp.unlocked">
+          <div class="section-row" [class.passed-row]="sp.examPassed">
             <div class="sr-status">
-              <mat-icon [style.color]="sp.examPassed ? '#2e7d32' : sp.unlocked ? '#1565c0' : '#bbb'">
-                {{ sp.examPassed ? 'check_circle' : sp.unlocked ? 'lock_open' : 'lock' }}
+              <mat-icon [style.color]="sp.examPassed ? '#2e7d32' : '#1565c0'">
+                {{ sp.examPassed ? 'check_circle' : 'radio_button_unchecked' }}
               </mat-icon>
             </div>
             <div class="sr-name">{{ getSectionName(sp.sectionId) }}</div>
@@ -81,11 +81,9 @@
               <span class="sr-info"><mat-icon>quiz</mat-icon>{{ sp.practiceQuestionsAnswered }}</span>
               @if (sp.labCompleted) { <span class="sr-badge lab">Lab ✓</span> }
             </div>
-            @if (sp.unlocked) {
-              <a mat-icon-button [routerLink]="['/section', sp.sectionId]">
-                <mat-icon>arrow_forward</mat-icon>
-              </a>
-            }
+            <a mat-icon-button [routerLink]="['/section', sp.sectionId]">
+              <mat-icon>arrow_forward</mat-icon>
+            </a>
           </div>
         }
       </div>

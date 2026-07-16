@@ -106,10 +106,7 @@ public class ProgressService {
         p.setExamAttempts(p.getExamAttempts() + 1);
         p.setLastExamAt(LocalDateTime.now());
         if (score > p.getBestExamScore()) p.setBestExamScore(score);
-        if (passed && !p.isExamPassed()) {
-            p.setExamPassed(true);
-            unlockNextSection(userId, sectionId);
-        }
+        if (passed) p.setExamPassed(true);
         repo.save(p);
     }
 
@@ -169,23 +166,5 @@ public class ProgressService {
         if (req.getConceptRead() != null) p.setConceptRead(req.getConceptRead());
         if (req.getUnlocked() != null) p.setUnlocked(req.getUnlocked());
         return repo.save(p);
-    }
-
-    private void unlockNextSection(Long userId, String currentSectionId) {
-        List<Section> allSections = curriculum.getAllDomains().stream()
-                .flatMap(d -> d.getSections().stream())
-                .sorted(Comparator.comparingInt(Section::getOrder))
-                .collect(Collectors.toList());
-
-        for (int i = 0; i < allSections.size() - 1; i++) {
-            if (allSections.get(i).getId().equals(currentSectionId)) {
-                String nextId = allSections.get(i + 1).getId();
-                repo.findByUserIdAndSectionId(userId, nextId).ifPresent(next -> {
-                    next.setUnlocked(true);
-                    repo.save(next);
-                });
-                break;
-            }
-        }
     }
 }

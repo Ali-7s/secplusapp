@@ -53,20 +53,17 @@ export class RoadmapComponent implements OnInit {
     return Math.round(sections.filter(p => p.examPassed).length / sections.length * 100);
   }
 
-  getStatus(sectionId: string): 'locked' | 'unlocked' | 'passed' {
+  // Everything is always accessible — status is purely informational (passed or not).
+  getStatus(sectionId: string): 'unlocked' | 'passed' {
     const p = this.allProgress.find(x => x.sectionId === sectionId);
-    if (!p) return 'locked';
-    if (p.examPassed) return 'passed';
-    if (p.unlocked) return 'unlocked';
-    return 'locked';
+    return p?.examPassed ? 'passed' : 'unlocked';
   }
 
   isCurrentSection(sectionId: string): boolean {
-    const p = this.allProgress.find(x => x.sectionId === sectionId);
-    return !!(p?.unlocked && !p.examPassed);
+    return this.currentSection?.sectionId === sectionId;
   }
 
   get currentSection() {
-    return this.allProgress.find(p => p.unlocked && !p.examPassed);
+    return this.allProgress.find(p => !p.examPassed);
   }
 }

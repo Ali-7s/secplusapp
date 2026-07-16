@@ -50,7 +50,6 @@ export class SectionStudyComponent implements OnInit {
   sectionId = '';
   section: Section | null = null;
   sectionProgress: any = null;
-  isUnlocked = false;
   initialTabIndex = 0;
 
   // Learn tab
@@ -248,10 +247,9 @@ export class SectionStudyComponent implements OnInit {
     this.progressService.getSectionProgress(this.sectionId).subscribe({
       next: p => {
         this.sectionProgress = p;
-        this.isUnlocked = true;
         this.labCompleted = p.labCompleted;
       },
-      error: () => { this.isUnlocked = true; }
+      error: () => {}
     });
   }
 

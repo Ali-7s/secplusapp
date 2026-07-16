@@ -1,13 +1,6 @@
 <div class="page-container">
 
-  @if (!isUnlocked) {
-    <div class="locked-page">
-      <mat-icon>lock</mat-icon>
-      <h2>Section Locked</h2>
-      <p>You must pass the previous section exam to unlock this section.</p>
-      <button mat-raised-button color="primary" routerLink="/">Back to Dashboard</button>
-    </div>
-  } @else if (section) {
+  @if (section) {
 
     <!-- Section Header -->
     <div class="section-header">

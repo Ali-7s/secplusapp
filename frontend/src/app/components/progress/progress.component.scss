@@ -60,7 +60,6 @@
   transition: background .15s; flex-wrap: wrap;
   &:hover { background: #f8faff; }
   &.passed-row { background: #f0fdf4; }
-  &.locked-row { opacity: .6; }
   .sr-status mat-icon { font-size: 18px; width: 18px; height: 18px; }
   .sr-name { flex: 1; font-size: 13px; font-weight: 600; color: #1e293b; min-width: 120px; }
   .sr-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

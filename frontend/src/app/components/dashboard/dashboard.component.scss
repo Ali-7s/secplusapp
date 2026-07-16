@@ -237,7 +237,6 @@
   cursor: default; transition: transform .15s;
   &.passed  { background: #dcfce7; color: #15803d; }
   &.unlocked{ background: #eff6ff; color: #1d4ed8; }
-  &.locked  { background: #f1f5f9; color: #94a3b8; }
   &:hover { transform: scale(1.1); }
 }
 
@@ -299,7 +298,6 @@
   .section-pill {
     &.passed   { background: var(--c-success-light); color: var(--c-success); }
     &.unlocked { background: var(--c-accent-light);  color: var(--c-accent); }
-    &.locked   { background: var(--c-surface-2);     color: var(--c-muted); }
   }
   .quick-card {
     border-color: var(--c-border);

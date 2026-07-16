@@ -90,20 +90,18 @@
             @for (section of domain.sections; track section.id) {
               @let status = getStatus(section.id);
               <div class="rd-section" [class.current]="isCurrentSection(section.id)"
-                [class.passed]="status === 'passed'" [class.locked]="status === 'locked'">
-                <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : status === 'unlocked' ? domain.color : '#bbb'">
-                  <mat-icon>{{ status === 'passed' ? 'check_circle' : status === 'unlocked' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                [class.passed]="status === 'passed'">
+                <div class="rds-icon" [style.color]="status === 'passed' ? '#2e7d32' : domain.color">
+                  <mat-icon>{{ status === 'passed' ? 'check_circle' : 'radio_button_checked' }}</mat-icon>
                 </div>
                 <div class="rds-content">
                   <div class="rds-num">{{ section.objectiveNumber }}</div>
                   <div class="rds-name">{{ section.name }}</div>
                   <div class="rds-desc">{{ section.description }}</div>
                 </div>
-                @if (status !== 'locked') {
-                  <a mat-icon-button [routerLink]="['/section', section.id]" [style.color]="domain.color">
-                    <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
-                  </a>
-                }
+                <a mat-icon-button [routerLink]="['/section', section.id]" [style.color]="domain.color">
+                  <mat-icon>{{ status === 'passed' ? 'refresh' : 'play_arrow' }}</mat-icon>
+                </a>
                 @if (isCurrentSection(section.id)) {
                   <div class="current-badge">CURRENT</div>
                 }

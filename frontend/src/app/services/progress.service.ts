@@ -34,11 +34,6 @@ export class ProgressService {
     return this.api.post<void>(`/progress/${sectionId}/reset`, {});
   }
 
-  isUnlocked(sectionId: string): boolean {
-    const p = this.allProgress().find(x => x.sectionId === sectionId);
-    return p?.unlocked ?? sectionId === '1.1';
-  }
-
   isPassed(sectionId: string): boolean {
     return this.allProgress().find(x => x.sectionId === sectionId)?.examPassed ?? false;
   }
