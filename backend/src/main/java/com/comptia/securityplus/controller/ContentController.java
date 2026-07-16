@@ -150,7 +150,7 @@ public class ContentController {
     public ResponseEntity<ConceptExplanation> regenerateExplanation(
             @PathVariable String sectionId,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        contentService.evict("explanation:" + sectionId);
+        contentService.evict("explanation2:" + sectionId);
         ConceptExplanation result = contentService.getExplanation(sectionId);
         progressService.markConceptRead(user.getUserId(), sectionId);
         return ResponseEntity.ok(result);

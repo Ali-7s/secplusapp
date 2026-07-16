@@ -9,6 +9,12 @@ export interface Flashcard {
   examTip: string;
 }
 
+export interface ExplanationDiagram {
+  title: string;
+  description?: string;
+  mermaid: string;
+}
+
 export interface ConceptExplanation {
   sectionId: string;
   title: string;
@@ -20,6 +26,7 @@ export interface ConceptExplanation {
   commonMistakes: string[];
   analogyExplanation: string;
   relatedTopics: string[];
+  diagrams?: ExplanationDiagram[];
 }
 
 export interface Lab {

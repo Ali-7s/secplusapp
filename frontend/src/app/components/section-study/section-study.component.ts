@@ -19,6 +19,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { SrsService } from '../../services/srs.service';
+import { MermaidDiagramComponent } from '../shared/mermaid-diagram.component';
 import { Section } from '../../models/curriculum.model';
 import { Question, ExamResult, ExamSubmission } from '../../models/question.model';
 import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard.model';
@@ -29,7 +30,8 @@ import { Flashcard, ConceptExplanation, Lab, Term } from '../../models/flashcard
   imports: [
     CommonModule, RouterLink, FormsModule, DragDropModule, MatTabsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatProgressBarModule, MatChipsModule, MatProgressSpinnerModule,
-    MatDividerModule, MatSnackBarModule, MatDialogModule, MatBadgeModule, MatTooltipModule
+    MatDividerModule, MatSnackBarModule, MatDialogModule, MatBadgeModule, MatTooltipModule,
+    MermaidDiagramComponent
   ],
   templateUrl: './section-study.component.html',
   styleUrl: './section-study.component.scss'

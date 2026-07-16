@@ -293,7 +293,7 @@ public class ContentService {
 
     public ConceptExplanation getExplanation(String sectionId) {
         Section section = findSection(sectionId);
-        String key = "explanation:" + sectionId;
+        String key = "explanation2:" + sectionId;   // v2: deeper content + diagrams
         boolean beginner = "foundations".equals(section.getDomainId());
         String intro = beginner
             ? "You are teaching networking BASICS to a complete beginner with NO networking background — this is a "
@@ -306,12 +306,33 @@ public class ContentService {
             %s
             Key topics to cover: %s
 
+            DEPTH REQUIREMENTS for "detailedExplanation" (this is the core study text — make it genuinely deep):
+            - 900-1400 words of HTML.
+            - Give EVERY key topic listed above its own <h3> subsection.
+            - Inside each subsection: what it is, how it actually works (mechanics, not just definitions),
+              why it matters / how the exam tests it, and one concrete mini-example woven into the prose.
+            - Compare and contrast sibling concepts in a subsection where learners confuse them
+              (e.g. a short "X vs Y" paragraph), and include specific numbers/ports/algorithms where relevant.
+            - Use <p>, <ul>/<li>, <strong>, <code> — no inline styles.
+
+            DIAGRAMS: include 1-2 diagrams that genuinely help visualize the content (a process flow,
+            layered architecture, decision path, or component relationship). Rules:
+            - Mermaid "flowchart TD" or "flowchart LR" syntax ONLY. Max 12 nodes.
+            - Plain node labels in square brackets; edge labels with |text| where helpful.
+            - NO styling, classDef, click, subgraph titles with special chars, or HTML in labels.
+            - Example of the expected syntax:
+              flowchart LR
+                A[Client] -->|TLS handshake| B[Load Balancer]
+                B --> C[Web Server]
+                C --> D[(Database)]
+
             Return JSON matching this exact structure:
             {
               "sectionId": "%s",
               "title": "string",
               "overview": "2-3 sentence overview",
-              "detailedExplanation": "comprehensive multi-paragraph explanation (HTML allowed)",
+              "detailedExplanation": "the deep HTML explanation described above",
+              "diagrams": [{"title": "short title", "description": "one-line caption of what to notice", "mermaid": "flowchart TD\\n  A[...] --> B[...]"}],
               "keyPoints": ["bullet point 1", "bullet point 2", ...],
               "realWorldExamples": ["example 1", "example 2", ...],
               "examTips": ["tip 1", "tip 2", ...],
@@ -322,7 +343,7 @@ public class ContentService {
             """,
             intro, String.join(", ", section.getKeyTopics()), sectionId);
 
-        String response = fetchOrGenerate(key, prompt, 4096);
+        String response = fetchOrGenerate(key, prompt, 10240);
         try {
             return mapper.readValue(response, ConceptExplanation.class);
         } catch (Exception e) {

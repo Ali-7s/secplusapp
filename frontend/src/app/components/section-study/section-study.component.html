@@ -150,6 +150,15 @@
                   </div>
                 }
               }
+
+              <!-- ── Visualizations ── -->
+              @for (dg of explanation.diagrams ?? []; track $index) {
+                <div class="diagram-card" [style.display]="mmd.failed ? 'none' : ''">
+                  <div class="diagram-title"><mat-icon>schema</mat-icon> {{ dg.title }}</div>
+                  <app-mermaid-diagram [code]="dg.mermaid" #mmd></app-mermaid-diagram>
+                  @if (dg.description) { <div class="diagram-caption">{{ dg.description }}</div> }
+                </div>
+              }
             }
 
             <!-- AR prompt 2: after explanation -->
