@@ -81,11 +81,53 @@ public class ContentService {
         this.contentRepo = contentRepo;
     }
 
+    // ── JSON repair ─────────────────────────────────────────────────────────────
+
+    /**
+     * Fix the most common AI JSON corruption in long prose fields: an unescaped
+     * double quote inside a string value (e.g. HTML with "quoted" words). Walks the
+     * document; a quote inside a string only ends it when the next non-whitespace
+     * character is a structural delimiter — otherwise it is escaped as content.
+     * Only used as a fallback after a normal parse fails.
+     */
+    static String repairJson(String s) {
+        StringBuilder out = new StringBuilder(s.length() + 32);
+        boolean inString = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (!inString) {
+                if (c == '"') inString = true;
+                out.append(c);
+            } else if (c == '\\') {
+                out.append(c);
+                if (i + 1 < s.length()) out.append(s.charAt(++i));   // keep escape pairs intact
+            } else if (c == '"') {
+                int j = i + 1;
+                while (j < s.length() && Character.isWhitespace(s.charAt(j))) j++;
+                char next = j < s.length() ? s.charAt(j) : '\0';
+                if (next == ',' || next == '}' || next == ']' || next == ':' || next == '\0') {
+                    inString = false;
+                    out.append(c);                                    // legit end of string
+                } else {
+                    out.append("\\\"");                               // interior quote — escape it
+                }
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
     // ── Question parse helper ───────────────────────────────────────────────────
 
     // package-private for unit testing
     List<Question> parseQuestions(String response) throws Exception {
-        JsonNode root = mapper.readTree(response);
+        JsonNode root;
+        try {
+            root = mapper.readTree(response);
+        } catch (Exception first) {
+            root = mapper.readTree(repairJson(response));             // repair fallback
+        }
 
         // Locate the questions array — bare array, or wrapped inside a metadata object
         JsonNode arrayNode = null;
@@ -315,6 +357,10 @@ public class ContentService {
               (e.g. a short "X vs Y" paragraph), and include specific numbers/ports/algorithms where relevant.
             - Use <p>, <ul>/<li>, <strong>, <code> — no inline styles.
 
+            CRITICAL JSON RULES: every double quote inside a string value MUST be escaped as \\".
+            Inside the HTML prose, prefer single quotes for quoted words and HTML attributes so
+            escaping is rarely needed.
+
             DIAGRAMS: include 1-2 diagrams that genuinely help visualize the content (a process flow,
             layered architecture, decision path, or component relationship). Rules:
             - Mermaid "flowchart TD" or "flowchart LR" syntax ONLY. Max 12 nodes.
@@ -346,11 +392,22 @@ public class ContentService {
         String response = fetchOrGenerate(key, prompt, 10240);
         try {
             return mapper.readValue(response, ConceptExplanation.class);
-        } catch (Exception e) {
-            log.severe("Failed to parse explanation for " + sectionId + ". " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
-                + response.substring(0, Math.min(1000, response.length())));
-            evict(key);
-            throw new RuntimeException("Failed to parse explanation response: " + e.getMessage());
+        } catch (Exception first) {
+            try {
+                // Long HTML prose invites unescaped quotes — repair instead of discarding
+                // a 1-2 minute generation.
+                String repaired = repairJson(response);
+                ConceptExplanation fixed = mapper.readValue(repaired, ConceptExplanation.class);
+                evict(key);
+                persist(key, repaired);
+                log.warning("Repaired malformed explanation JSON for " + sectionId);
+                return fixed;
+            } catch (Exception e) {
+                log.severe("Failed to parse explanation for " + sectionId + " (repair also failed). " + e.getClass().getSimpleName() + ": " + e.getMessage() + ". Response (first 1000 chars): "
+                    + response.substring(0, Math.min(1000, response.length())));
+                evict(key);
+                throw new RuntimeException("Failed to parse explanation response: " + e.getMessage());
+            }
         }
     }
 
@@ -599,7 +656,10 @@ public class ContentService {
         String key = "explanation2:" + sectionId;
         return asyncGen(key, json -> {
             try { return mapper.readValue(json, ConceptExplanation.class); }
-            catch (Exception e) { throw new RuntimeException(e); }
+            catch (Exception first) {
+                try { return mapper.readValue(repairJson(json), ConceptExplanation.class); }
+                catch (Exception e) { throw new RuntimeException(e); }
+            }
         }, () -> getExplanation(sectionId));
     }
 

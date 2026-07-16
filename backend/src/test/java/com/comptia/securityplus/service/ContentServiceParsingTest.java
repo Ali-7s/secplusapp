@@ -109,6 +109,29 @@ class ContentServiceParsingTest {
     }
 
     @Test
+    void repairJsonEscapesInteriorQuotes() {
+        // the screenshot failure: an unescaped quote inside a long prose value
+        String bad = "{\"title\": \"Security Controls\", \"body\": \"the \"deny all\" wins here\"}";
+        String fixed = ContentService.repairJson(bad);
+        assertThat(fixed).isEqualTo("{\"title\": \"Security Controls\", \"body\": \"the \\\"deny all\\\" wins here\"}");
+    }
+
+    @Test
+    void repairJsonLeavesValidJsonAlone() {
+        String ok = "{\"a\": \"already \\\"escaped\\\" fine\", \"b\": [1, 2], \"c\": {\"d\": \"x\"}}";
+        assertThat(ContentService.repairJson(ok)).isEqualTo(ok);
+    }
+
+    @Test
+    void parseQuestionsRecoversFromUnescapedQuoteViaRepair() throws Exception {
+        String bad = "[{\"id\":\"q1\",\"type\":\"MULTIPLE_CHOICE\",\"stem\":\"Which \"control\" applies?\","
+                + "\"options\":[\"A. a\",\"B. b\"],\"correctAnswer\":\"A\"}]";
+        Question q = one(bad);
+        assertThat(q.getStem()).isEqualTo("Which \"control\" applies?");
+        assertThat(q.getCorrectAnswer()).isEqualTo("A");
+    }
+
+    @Test
     void parsesConfigFormShape() throws Exception {
         Question q = one("""
             [{"id":"q1","type":"config_form","stem":"Configure the VPN","options":[],
