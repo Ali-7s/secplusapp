@@ -15,6 +15,21 @@ class ContentServiceParsingTest {
 
     private final ContentService svc = new ContentService(null, null, null);
 
+    @Test
+    void warmupPlanCoversAllContentInLearnerOrder() {
+        ContentService withCurriculum = new ContentService(null, new com.comptia.securityplus.data.CurriculumData(), null);
+        var plan = withCurriculum.buildWarmupPlan();
+        var keys = List.copyOf(plan.keySet());
+
+        // 33 sections × (explanation + flashcards + practice + lab) + 5 domain exams + full + 2 glossaries
+        assertThat(keys).hasSize(33 * 4 + 5 + 1 + 2);
+        assertThat(keys.get(0)).isEqualTo("explanation2:net.1");            // reading comes first
+        assertThat(keys.indexOf("flashcards:net.1")).isGreaterThan(keys.indexOf("explanation2:5.6"));
+        assertThat(keys).contains("questions:1.1", "lab:2.3", "domainExam2:domain1", "fullExam:v3", "acronyms:all", "terms:all");
+        assertThat(keys).doesNotContain("domainExam2:foundations");        // primer has no exam
+        assertThat(keys.stream().filter(k -> k.startsWith("sectionExam"))).isEmpty(); // retired
+    }
+
     private Question one(String json) throws Exception {
         List<Question> qs = svc.parseQuestions(json);
         assertThat(qs).hasSize(1);

@@ -6,6 +6,7 @@ import com.comptia.securityplus.model.admin.ProgressUpdateRequest;
 import com.comptia.securityplus.model.admin.UserSummary;
 import com.comptia.securityplus.repository.UserRepository;
 import com.comptia.securityplus.security.AuthenticatedUser;
+import com.comptia.securityplus.service.ContentService;
 import com.comptia.securityplus.service.ProgressService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,10 +24,26 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final ProgressService progressService;
+    private final ContentService contentService;
 
-    public AdminController(UserRepository userRepository, ProgressService progressService) {
+    public AdminController(UserRepository userRepository, ProgressService progressService,
+                           ContentService contentService) {
         this.userRepository = userRepository;
         this.progressService = progressService;
+        this.contentService = contentService;
+    }
+
+    /** How much of the content library is generated (total/cached/missing/generating). */
+    @GetMapping("/warmup")
+    public ResponseEntity<Map<String, Object>> warmupStatus() {
+        return ResponseEntity.ok(contentService.warmupStatus());
+    }
+
+    /** Enqueue background generation for everything missing. Safe to call repeatedly. */
+    @PostMapping("/warmup")
+    public ResponseEntity<Map<String, Object>> startWarmup() {
+        int enqueued = contentService.startWarmup();
+        return ResponseEntity.ok(Map.of("enqueued", enqueued));
     }
 
     @GetMapping("/users")

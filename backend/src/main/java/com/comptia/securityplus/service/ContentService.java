@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -63,6 +66,21 @@ public class ContentService {
     });
     private final Set<String> genInProgress = ConcurrentHashMap.newKeySet();
     private final Map<String, String> genErrors = new ConcurrentHashMap<>();
+
+    // ── Background warmup ───────────────────────────────────────────────────────
+    // Pre-generates every piece of study content so the learner never waits on a
+    // first-visit generation. Runs on its own single-thread pool so interactive
+    // requests (genPool) are never starved; shares the genInProgress claim set so
+    // a key is never generated twice. Everything is cached in the DB, so once the
+    // library is built this is a no-op on every subsequent boot.
+    private final ExecutorService warmupPool = Executors.newFixedThreadPool(1, r -> {
+        Thread t = new Thread(r, "content-warmup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    @Value("${content.warmup-on-start:true}")
+    private boolean warmupOnStart;
 
     private static final String SYSTEM_PROMPT = """
         You are an expert CompTIA Security+ SY0-701 instructor and exam preparation specialist.
@@ -649,6 +667,80 @@ public class ContentService {
             try { return parseQuestions(json); }
             catch (Exception e) { throw new RuntimeException(e); }
         }, generator);
+    }
+
+    /**
+     * Every generatable cache key mapped to its generator, in the order a learner
+     * needs them: all explanations first (curriculum order), then flashcards,
+     * practice, labs, then exams and the glossaries.
+     */
+    Map<String, Runnable> buildWarmupPlan() {
+        Map<String, Runnable> plan = new LinkedHashMap<>();
+        List<Section> sections = curriculum.getAllDomains().stream()
+            .flatMap(d -> d.getSections().stream())
+            .collect(Collectors.toList());
+
+        for (Section s : sections) plan.put("explanation2:" + s.getId(), () -> getExplanation(s.getId()));
+        for (Section s : sections) plan.put("flashcards:" + s.getId(),   () -> getFlashcards(s.getId()));
+        for (Section s : sections) plan.put("questions:" + s.getId(),    () -> getPracticeQuestions(s.getId(), 15));
+        for (Section s : sections) plan.put("lab:" + s.getId(),          () -> getLab(s.getId()));
+
+        curriculum.getAllDomains().stream()
+            .filter(d -> !"foundations".equals(d.getId()))   // the primer has no domain exam
+            .forEach(d -> plan.put("domainExam2:" + d.getId(), () -> getDomainExamQuestions(d.getId())));
+        plan.put("fullExam:v3", this::getFullPracticeExam);
+        plan.put("acronyms:all", this::getAcronyms);
+        plan.put("terms:all", this::getTerms);
+        return plan;
+    }
+
+    /** Enqueue every missing piece of content for background generation. Returns the count enqueued. */
+    public int startWarmup() {
+        if (!claude.isConfigured()) {
+            log.info("Warmup skipped — ANTHROPIC_API_KEY not configured");
+            return 0;
+        }
+        int enqueued = 0;
+        for (Map.Entry<String, Runnable> e : buildWarmupPlan().entrySet()) {
+            String key = e.getKey();
+            Runnable gen = e.getValue();
+            if (isCached(key)) continue;
+            enqueued++;
+            warmupPool.submit(() -> {
+                if (isCached(key)) return;                    // generated interactively meanwhile
+                if (!genInProgress.add(key)) return;          // someone else is on it right now
+                try {
+                    gen.run();
+                    log.info("Warmup generated " + key);
+                } catch (Exception ex) {
+                    log.warning("Warmup failed for " + key + ": " + ex.getMessage());
+                } finally {
+                    genInProgress.remove(key);
+                }
+            });
+        }
+        log.info("Warmup enqueued " + enqueued + " missing content item(s)");
+        return enqueued;
+    }
+
+    public Map<String, Object> warmupStatus() {
+        Set<String> keys = buildWarmupPlan().keySet();
+        long cached = keys.stream().filter(this::isCached).count();
+        long generating = keys.stream().filter(genInProgress::contains).count();
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("configured", claude.isConfigured());
+        status.put("total", keys.size());
+        status.put("cached", cached);
+        status.put("missing", keys.size() - cached);
+        status.put("generating", generating);
+        return status;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void warmupOnStartup() {
+        if (!warmupOnStart) { log.info("Content warmup on startup disabled"); return; }
+        if (!claude.isConfigured()) { log.info("Skipping content warmup — ANTHROPIC_API_KEY not configured"); return; }
+        startWarmup();
     }
 
     /** Async wrapper for the Learn explanation — deep generation exceeds edge timeouts. */
