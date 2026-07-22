@@ -187,6 +187,16 @@ public class ContentService {
             q.put("type", q.get("type").asText().trim().toUpperCase().replace('-', '_').replace(' ', '_'));
         }
 
+        // 2b. difficulty: the AI occasionally omits this. A null here serializes as a literal
+        // JSON null (not absent), and every question card does `q.difficulty.toLowerCase()`
+        // with no null-guard — one question missing it throws on every change-detection cycle
+        // and blanks the ENTIRE exam view (nav grid included), not just that field. Default it
+        // so bad data can never leave this method, on fresh generations AND on re-reads of
+        // already-cached rows.
+        if (!q.hasNonNull("difficulty") || q.get("difficulty").asText().isBlank()) {
+            q.put("difficulty", "Medium");
+        }
+
         // 3. correctAnswer: AI sometimes sends ["B"] — take the first element; preserve the rest
         JsonNode ca = q.get("correctAnswer");
         if (ca != null && ca.isArray()) {

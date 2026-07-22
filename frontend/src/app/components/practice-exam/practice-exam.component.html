@@ -98,7 +98,7 @@
             <mat-card-content>
               <div class="q-header">
                 <span class="q-number">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
-                <span class="badge {{ q.difficulty.toLowerCase() }}">{{ q.difficulty }}</span>
+                <span class="badge {{ (q.difficulty || 'Medium').toLowerCase() }}">{{ q.difficulty || 'Medium' }}</span>
                 <div class="domain-tag" [style.background]="getDomainColor(q.domainId) + '22'" [style.color]="getDomainColor(q.domainId)">
                   {{ q.domainId }}
                 </div>
@@ -313,7 +313,7 @@
             <div class="rr-header">
               <mat-icon [style.color]="r.correct ? '#2e7d32' : '#c62828'">{{ r.correct ? 'check_circle' : 'cancel' }}</mat-icon>
               <span class="q-number">Q{{ i + 1 }}</span>
-              <span class="badge {{ r.difficulty.toLowerCase() }}">{{ r.difficulty }}</span>
+              <span class="badge {{ (r.difficulty || 'Medium').toLowerCase() }}">{{ r.difficulty || 'Medium' }}</span>
             </div>
             <p class="rr-stem">{{ r.stem }}</p>
             <div class="rr-ans">
