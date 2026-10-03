@@ -763,6 +763,156 @@
       </div>
     </mat-tab>
 
+    <!-- ── MFA Factors ────────────────────────────────────────── -->
+    <mat-tab label="MFA Factors">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredMfaFactors.length }} factors · true MFA combines factors from DIFFERENT categories, not two of the same type</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('mfa-factors', 'MFA Factors')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Factor</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredMfaFactors; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredMfaFactors.length === 0) {
+                <tr><td colspan="4" class="no-results">No factors match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Threat Actors ──────────────────────────────────────── -->
+    <mat-tab label="Threat Actors">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredThreatActors.length }} actor types · know the motivation and sophistication level that distinguishes each one</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('threat-actors', 'Threat Actors')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Actor</th>
+                <th>Sophistication</th>
+                <th>Resources</th>
+                <th>Motivation</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredThreatActors; track row.name) {
+                <tr>
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td>{{ row.sophistication }}</td>
+                  <td>{{ row.resources }}</td>
+                  <td>{{ row.motivation }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredThreatActors.length === 0) {
+                <tr><td colspan="5" class="no-results">No actor types match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── DR Site Types ──────────────────────────────────────── -->
+    <mat-tab label="Site Types">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredSiteTypes.length }} site types · recovery speed and cost move in opposite directions — hot is fastest and priciest, cold is slowest and cheapest</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('site-types', 'DR Site Types')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Site Type</th>
+                <th>Recovery Time</th>
+                <th>Cost</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredSiteTypes; track row.type) {
+                <tr>
+                  <td class="mono bold">{{ row.type }}</td>
+                  <td>{{ row.recoveryTime }}</td>
+                  <td>{{ row.cost }}</td>
+                  <td class="notes-cell">{{ row.description }}</td>
+                </tr>
+              }
+              @if (filteredSiteTypes.length === 0) {
+                <tr><td colspan="4" class="no-results">No site types match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Data Classifications ───────────────────────────────── -->
+    <mat-tab label="Data Classification">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredDataClassifications.length }} levels · ordered from least to most sensitive</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('data-classifications', 'Data Classification')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredDataClassifications; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredDataClassifications.length === 0) {
+                <tr><td colspan="4" class="no-results">No levels match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
   </mat-tab-group>
 
   } <!-- end @else (drill inactive) -->

@@ -81,6 +81,21 @@ export interface ProcessStepEntry {
   keyActivities: string;
 }
 
+export interface SiteEntry {
+  type: string;
+  recoveryTime: string;
+  cost: string;
+  description: string;
+}
+
+export interface ThreatActorEntry {
+  name: string;
+  sophistication: string;
+  resources: string;
+  motivation: string;
+  notes: string;
+}
+
 @Component({
   selector: 'app-reference',
   standalone: true,
@@ -299,6 +314,37 @@ export class ReferenceComponent {
     { name: 'Chain of Trust', summary: 'The linked path from a root CA down to an end-entity certificate', detail: 'A certificate is only trusted if every link up to a trusted root is valid and unexpired', status: 'secure' },
   ];
 
+  readonly MFA_FACTORS: RefEntry[] = [
+    { name: 'Something You Know', summary: 'A memorized secret — password, PIN, or security question answer', detail: 'The weakest factor alone since it can be guessed, phished, or shared; always pair with another factor for true MFA', status: 'neutral' },
+    { name: 'Something You Have', summary: "A physical item in the user's possession — hardware token, smart card, or authenticator app", detail: 'Can be lost or stolen, but defeats remote-only attacks since the attacker needs physical access to the item', status: 'secure' },
+    { name: 'Something You Are', summary: 'A biometric trait — fingerprint, face, iris, or voice', detail: 'Cannot be changed if compromised (unlike a password); false acceptance/rejection rates (FRR) matter for accuracy', status: 'secure' },
+    { name: 'Somewhere You Are', summary: 'Location-based verification — GPS coordinates, IP geolocation, or a specific network', detail: 'Often used as a risk signal (e.g. impossible travel detection) rather than a primary standalone factor', status: 'neutral' },
+  ];
+
+  readonly SITE_TYPES: SiteEntry[] = [
+    { type: 'Hot Site', recoveryTime: 'Minutes to hours', cost: 'Highest', description: 'A fully equipped, continuously running duplicate of the production environment, kept in sync in near real-time' },
+    { type: 'Warm Site', recoveryTime: 'Hours to a day', cost: 'Moderate', description: 'Has hardware and connectivity ready, but data/systems need to be restored or synced before go-live' },
+    { type: 'Cold Site', recoveryTime: 'Days to weeks', cost: 'Lowest', description: 'Just a physical space with power and connectivity — all equipment and data must be brought in and configured from scratch' },
+  ];
+
+  readonly THREAT_ACTORS: ThreatActorEntry[] = [
+    { name: 'Nation-state', sophistication: 'Very High', resources: 'Extensive — government funding, dedicated teams', motivation: 'Espionage, geopolitical advantage, warfare', notes: 'Associated with APTs; patient, well-funded, and the hardest to detect and attribute' },
+    { name: 'Organized crime', sophistication: 'High', resources: 'Well-funded, often run like a business', motivation: 'Financial gain', notes: 'Runs ransomware-as-a-service, sells stolen data — highly profit-driven' },
+    { name: 'Hacktivist', sophistication: 'Varies (typically Low–Medium)', resources: 'Limited, volunteer-based', motivation: 'Philosophical or political beliefs', notes: 'Favors defacement, DDoS, and leaks to make a public statement rather than steal money' },
+    { name: 'Insider threat', sophistication: 'Varies', resources: 'Already has legitimate access', motivation: 'Revenge, financial gain, ideology, or unintentional negligence', notes: 'Hardest to catch with perimeter defenses since they start with authorized access; can be malicious or accidental' },
+    { name: 'Unskilled attacker', sophistication: 'Low', resources: 'Minimal — uses pre-built tools/scripts', motivation: 'Thrill, reputation, curiosity', notes: "Also called a 'script kiddie'; relies entirely on tools written by others" },
+    { name: 'Shadow IT', sophistication: 'N/A — not malicious', resources: "Whatever a department can access on its own", motivation: 'Convenience — bypassing slow official IT processes', notes: 'Not an attacker, but a risk source: unauthorized apps/hardware deployed outside IT\'s visibility and control' },
+  ];
+
+  readonly DATA_CLASSIFICATIONS: RefEntry[] = [
+    { name: 'Public', summary: 'Information approved for public release with no restrictions', detail: 'e.g. marketing materials, press releases — the lowest classification level', status: 'neutral' },
+    { name: 'Private', summary: 'Internal information not meant for public release but with limited sensitivity', detail: 'e.g. internal org charts, routine internal memos', status: 'neutral' },
+    { name: 'Sensitive', summary: 'Information that could cause some harm to the organization if disclosed', detail: 'A broad middle tier — often used as a catch-all above Private and below Confidential', status: 'neutral' },
+    { name: 'Confidential', summary: 'Information that would cause significant damage if disclosed — requires access controls', detail: 'e.g. financial records, trade secrets, PII; needs explicit authorization to access', status: 'neutral' },
+    { name: 'Restricted', summary: 'Highly sensitive information limited to a specific, named group of people', detail: 'e.g. M&A plans, executive compensation; access is tightly audited and logged', status: 'neutral' },
+    { name: 'Critical', summary: 'Information whose loss or disclosure would cause severe or existential harm to the organization', detail: 'e.g. encryption keys, core intellectual property — the highest classification tier', status: 'neutral' },
+  ];
+
   get filteredPorts(): PortEntry[] {
     const q = this.searchText.toLowerCase();
     if (!q) return this.PORTS;
@@ -441,6 +487,40 @@ export class ReferenceComponent {
     const q = this.searchText.toLowerCase();
     if (!q) return this.PKI_REFERENCE;
     return this.PKI_REFERENCE.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredMfaFactors(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.MFA_FACTORS;
+    return this.MFA_FACTORS.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredSiteTypes(): SiteEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.SITE_TYPES;
+    return this.SITE_TYPES.filter(s =>
+      s.type.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) ||
+      s.recoveryTime.toLowerCase().includes(q) || s.cost.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredThreatActors(): ThreatActorEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.THREAT_ACTORS;
+    return this.THREAT_ACTORS.filter(t =>
+      t.name.toLowerCase().includes(q) || t.motivation.toLowerCase().includes(q) ||
+      t.sophistication.toLowerCase().includes(q) || t.notes.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredDataClassifications(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.DATA_CLASSIFICATIONS;
+    return this.DATA_CLASSIFICATIONS.filter(r =>
       r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
     );
   }
@@ -770,6 +850,38 @@ export class ReferenceComponent {
           answer: this.statusLabel(r.status),
           explanation: r.detail,
           status: r.status
+        }));
+      case 'mfa-factors':
+        return this.MFA_FACTORS.map(r => ({
+          question: r.summary,
+          hint: r.detail,
+          answer: r.name,
+          explanation: r.detail,
+          status: 'neutral'
+        }));
+      case 'site-types':
+        return this.SITE_TYPES.map(s => ({
+          question: s.type,
+          hint: `Cost: ${s.cost}`,
+          answer: s.recoveryTime,
+          explanation: s.description,
+          status: 'neutral'
+        }));
+      case 'threat-actors':
+        return this.THREAT_ACTORS.map(t => ({
+          question: t.motivation,
+          hint: `Sophistication: ${t.sophistication}`,
+          answer: t.name,
+          explanation: t.notes,
+          status: 'neutral'
+        }));
+      case 'data-classifications':
+        return this.DATA_CLASSIFICATIONS.map(r => ({
+          question: r.summary,
+          hint: r.detail,
+          answer: r.name,
+          explanation: r.detail,
+          status: 'neutral'
         }));
       default:
         return [];
