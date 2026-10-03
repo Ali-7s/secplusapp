@@ -332,6 +332,7 @@
 
   .quiz-btn {
     color: var(--c-text);
+    &:hover:not(:disabled) { background: rgba(5,150,105,.15); }
     &.correct { background: rgba(52,211,153,.15) !important; border-color: var(--c-success) !important; }
     &.wrong   { background: rgba(239,68,68,.12) !important; border-color: var(--c-error) !important; }
     &:disabled { opacity: 1; }
