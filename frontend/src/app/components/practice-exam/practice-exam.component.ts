@@ -1,6 +1,5 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,32 +9,28 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
-import { Question, ExamSubmission, ExamResult } from '../../models/question.model';
+import { ExamGradingService } from '../../services/exam-grading.service';
+import { Question, QuestionAnswer, ExamResult } from '../../models/question.model';
 
 const EXAM_MINUTES = 90;
 
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressBarModule, MatProgressSpinnerModule, MatSnackBarModule, MatDividerModule, DragDropModule],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss'
 })
-export class PracticeExamComponent implements OnInit, OnDestroy {
+export class PracticeExamComponent implements OnDestroy {
   private contentService = inject(ContentService);
+  private examGrading = inject(ExamGradingService);
   private snackBar = inject(MatSnackBar);
-  private route = inject(ActivatedRoute);
 
-  // Domain-exam mode when a :id route param is present; otherwise the full 90-question exam.
-  domainId: string | null = null;
   examMinutes = EXAM_MINUTES;
-  get isDomain(): boolean { return !!this.domainId; }
-  get examTitle(): string { return this.isDomain ? 'Domain Exam' : 'Full Practice Exam'; }
-  get examSubtitle(): string {
-    return this.isDomain ? this.getDomainLabel(this.domainId!) : 'Simulate the real CompTIA Security+ SY0-701 exam experience';
-  }
-  get questionCountLabel(): string { return this.isDomain ? '~24 Questions' : '90 Questions'; }
+  readonly examTitle = 'Full Practice Exam';
+  readonly examSubtitle = 'Simulate the real CompTIA Security+ SY0-701 exam experience';
+  readonly questionCountLabel = '90 Questions';
 
   state: 'intro' | 'loading' | 'answering' | 'submitting' | 'result' = 'intro';
   questions: Question[] = [];
@@ -140,18 +135,11 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     return Array.isArray(v) ? v.length > 0 : !!v;
   }
 
-  ngOnInit() {
-    this.domainId = this.route.snapshot.paramMap.get('id');
-    if (this.domainId) this.examMinutes = 35;   // domain exam is shorter than the full 90-min exam
-  }
   ngOnDestroy() { clearInterval(this.timerInterval); }
 
   startExam() {
     this.state = 'loading';
-    const load = this.isDomain
-      ? this.contentService.getDomainExam(this.domainId!)
-      : this.contentService.getFullExam();
-    load.subscribe({
+    this.contentService.getFullExam().subscribe({
       next: q => {
         this.questions = q;
         this.answers = {};
@@ -193,24 +181,17 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     clearInterval(this.timerInterval);
     this.state = 'submitting';
     const elapsed = Math.round((Date.now() - this.examStartTime) / 1000);
-    const sub: ExamSubmission = {
-      examType: this.isDomain ? 'DOMAIN' : 'FULL',
-      domainId: this.domainId ?? undefined,
-      answers: this.questions.map(q => ({
-        questionId: q.id,
-        selectedAnswer: typeof this.answers[q.id] === 'string' ? this.answers[q.id] as string : undefined,
-        selectedAnswers: Array.isArray(this.answers[q.id]) ? this.answers[q.id] as string[] : undefined,
-        pairAnswers: (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') ? (this.ddMatches[q.id] ?? {}) : undefined,
-        orderAnswer: q.type === 'ORDER_LIST' ? (this.olItems[q.id] ?? q.orderItems ?? []) : undefined,
-        firewallAnswer: q.type === 'FIREWALL_RULES' ? this.fwToRows(q) : undefined,
-        configAnswer: q.type === 'CONFIG_FORM' ? this.cfToAnswer(q) : undefined,
-      })),
-      timeTakenSeconds: elapsed
-    };
-    this.contentService.submitExam(sub).subscribe({
-      next: r => { this.result = r; this.state = 'result'; },
-      error: e => { this.snackBar.open(e.message, 'OK', { duration: 5000 }); this.state = 'answering'; }
-    });
+    const answers: QuestionAnswer[] = this.questions.map(q => ({
+      questionId: q.id,
+      selectedAnswer: typeof this.answers[q.id] === 'string' ? this.answers[q.id] as string : undefined,
+      selectedAnswers: Array.isArray(this.answers[q.id]) ? this.answers[q.id] as string[] : undefined,
+      pairAnswers: (q.type === 'DRAG_DROP' || q.type === 'NETWORK_PLACEMENT') ? (this.ddMatches[q.id] ?? {}) : undefined,
+      orderAnswer: q.type === 'ORDER_LIST' ? (this.olItems[q.id] ?? q.orderItems ?? []) : undefined,
+      firewallAnswer: q.type === 'FIREWALL_RULES' ? this.fwToRows(q) : undefined,
+      configAnswer: q.type === 'CONFIG_FORM' ? this.cfToAnswer(q) : undefined,
+    }));
+    this.result = this.examGrading.gradeExam(this.questions, answers, elapsed);
+    this.state = 'result';
   }
 
   retake() {
@@ -232,19 +213,6 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   }
 
   get currentQ(): Question { return this.questions[this.currentIndex]; }
-
-  isCorrect(q: Question): boolean {
-    const given = this.answers[q.id];
-    if (q.type === 'MULTI_SELECT') {
-      return JSON.stringify([...(given as string[] || [])].sort()) === JSON.stringify([...(q.correctAnswers || [])].sort());
-    }
-    return given === q.correctAnswer;
-  }
-
-  isCorrectOption(q: Question, opt: string): boolean {
-    if (q.type === 'MULTI_SELECT') return (q.correctAnswers || []).includes(opt.charAt(0));
-    return opt.startsWith(q.correctAnswer ?? '##');
-  }
 
   formatTime(s: number): string {
     const m = Math.floor(s / 60); const sec = s % 60;

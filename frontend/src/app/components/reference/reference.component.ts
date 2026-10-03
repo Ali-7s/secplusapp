@@ -44,6 +44,43 @@ export interface AuthEntry {
   notes: string;
 }
 
+export interface RefEntry {
+  name: string;
+  category?: string;
+  summary: string;
+  detail: string;
+  status: 'secure' | 'insecure' | 'deprecated' | 'neutral';
+}
+
+export interface FormulaEntry {
+  name: string;
+  formula: string;
+  variables: string;
+  example: string;
+}
+
+export interface MetricEntry {
+  abbr: string;
+  name: string;
+  definition: string;
+  example: string;
+}
+
+export interface RaidEntry {
+  level: string;
+  minDisks: string;
+  faultTolerance: string;
+  performance: string;
+  notes: string;
+}
+
+export interface ProcessStepEntry {
+  order: number;
+  phase: string;
+  description: string;
+  keyActivities: string;
+}
+
 @Component({
   selector: 'app-reference',
   standalone: true,
@@ -179,6 +216,89 @@ export class ReferenceComponent {
     { name: '802.1X / NAC', port: 'RADIUS', type: 'Network Access Control', status: 'secure', notes: 'Port-based auth; blocks unauthorized devices at switch level' },
   ];
 
+  readonly RISK_FORMULAS: FormulaEntry[] = [
+    { name: 'SLE (Single Loss Expectancy)', formula: 'SLE = AV × EF', variables: 'AV = Asset Value · EF = Exposure Factor (% of asset lost in one incident)', example: 'A $50,000 server with a 40% EF → SLE = $20,000' },
+    { name: 'ALE (Annualized Loss Expectancy)', formula: 'ALE = SLE × ARO', variables: 'SLE = Single Loss Expectancy · ARO = Annualized Rate of Occurrence', example: 'SLE of $20,000 with ARO 0.5 (once every 2 years) → ALE = $10,000' },
+    { name: 'ARO (Annualized Rate of Occurrence)', formula: 'Expected number of occurrences per year', variables: 'Often a decimal for rare events (0.2 = once every 5 years)', example: 'A flood expected once every 10 years → ARO = 0.1' },
+    { name: 'EF (Exposure Factor)', formula: 'EF = asset value lost ÷ total asset value', variables: 'Expressed as a percentage, 0–100%', example: 'A fire destroys 60% of a warehouse\'s value → EF = 0.6' },
+    { name: 'Qualitative vs Quantitative Assessment', formula: 'Ranking method, not a formula', variables: 'Qualitative: High/Medium/Low judgment ratings · Quantitative: dollar figures via SLE/ALE/ARO', example: 'Qualitative: "this vendor risk is High." Quantitative: "this risk costs $10,000/year (ALE)."' },
+  ];
+
+  readonly BCDR_METRICS: MetricEntry[] = [
+    { abbr: 'RTO', name: 'Recovery Time Objective', definition: 'The maximum acceptable TIME to restore a system or process after a disruption', example: 'RTO = 4 hours → the system must be back online within 4 hours of an outage' },
+    { abbr: 'RPO', name: 'Recovery Point Objective', definition: 'The maximum acceptable DATA LOSS, measured as time since the last good backup', example: 'RPO = 1 hour → backups must run at least hourly so no more than 1 hour of data is ever lost' },
+    { abbr: 'MTBF', name: 'Mean Time Between Failures', definition: 'Average operating time between one failure and the next, for a repairable system — a reliability measure', example: 'A server with MTBF 20,000 hours is expected to fail roughly once every 20,000 operating hours' },
+    { abbr: 'MTTR', name: 'Mean Time To Repair', definition: 'The average time needed to repair a failed system and return it to service', example: 'MTTR of 2 hours means technicians typically restore service within 2 hours of a failure' },
+    { abbr: 'MTTF', name: 'Mean Time To Failure', definition: 'Like MTBF but for NON-repairable components — average lifespan before a one-time failure', example: 'A drive rated for 1,000,000-hour MTTF is replaced, not repaired, when it fails' },
+  ];
+
+  readonly BACKUP_TYPES: RefEntry[] = [
+    { name: 'Full Backup', summary: 'Copies ALL selected data every time', detail: 'Fastest restore (single backup set) but slowest and most storage-heavy to create; typically the weekly/baseline backup', status: 'neutral' },
+    { name: 'Incremental Backup', summary: 'Copies only data changed since the LAST backup (full or incremental)', detail: 'Fastest and smallest backup to create, but restore needs the last full backup PLUS every incremental since — slowest restore chain', status: 'neutral' },
+    { name: 'Differential Backup', summary: 'Copies all data changed since the LAST FULL backup', detail: 'Grows larger each day until the next full; restore only needs the last full + latest differential — a middle ground on speed and storage', status: 'neutral' },
+    { name: 'Snapshot', summary: 'A point-in-time image of an entire system or virtual disk', detail: 'Near-instant to create (copy-on-write on VMs/storage arrays) but typically not a substitute for true off-site backups', status: 'neutral' },
+    { name: '3-2-1 Backup Rule', summary: '3 copies of data, on 2 different media types, with 1 copy off-site', detail: 'The standard industry guideline for backup resilience — protects against media failure, site disaster, and ransomware that targets connected backups', status: 'secure' },
+  ];
+
+  readonly RAID_LEVELS: RaidEntry[] = [
+    { level: 'RAID 0', minDisks: '2', faultTolerance: 'None — any disk failure loses all data', performance: 'Best (striping, no redundancy overhead)', notes: 'Speed only (e.g. scratch/cache volumes); never for data you can\'t lose' },
+    { level: 'RAID 1', minDisks: '2', faultTolerance: 'Survives 1 disk failure (mirroring)', performance: 'Good read, write = single-disk speed', notes: 'Simple mirror — 50% storage efficiency' },
+    { level: 'RAID 5', minDisks: '3', faultTolerance: 'Survives 1 disk failure (distributed parity)', performance: 'Good read, write penalty from parity calc', notes: 'Most common balance of cost/redundancy; rebuild-time risk on large drives' },
+    { level: 'RAID 6', minDisks: '4', faultTolerance: 'Survives 2 disk failures (double distributed parity)', performance: 'Similar to RAID 5, slightly more write overhead', notes: 'Preferred over RAID 5 for large drives where rebuild time is longer' },
+    { level: 'RAID 10 (1+0)', minDisks: '4', faultTolerance: 'Survives multiple failures as long as not both disks in the same mirrored pair', performance: 'Best redundancy + performance combination', notes: 'Mirroring + striping; 50% efficiency but fast and resilient — common for databases' },
+  ];
+
+  readonly ACCESS_MODELS: RefEntry[] = [
+    { name: 'DAC (Discretionary Access Control)', summary: 'The data OWNER decides who gets access', detail: 'Flexible but weak central control — common in Windows NTFS permissions; vulnerable to owners granting excessive access', status: 'neutral' },
+    { name: 'MAC (Mandatory Access Control)', summary: 'A central authority assigns access based on classification LABELS (e.g. Confidential, Secret)', detail: 'Users and data both get labels/clearances; the system enforces access, not the owner — used in military/government systems (e.g. SELinux)', status: 'secure' },
+    { name: 'RBAC (Role-Based Access Control)', summary: 'Access is granted based on a user\'s ROLE/job function', detail: 'Most common enterprise model — simplifies onboarding/offboarding since permissions attach to a role, not an individual', status: 'secure' },
+    { name: 'ABAC (Attribute-Based Access Control)', summary: 'Access decisions use multiple ATTRIBUTES (user, resource, environment, time)', detail: 'Most granular/flexible model — e.g. allow if department=Finance AND time=business-hours AND device=managed; basis of Zero Trust policy engines', status: 'secure' },
+    { name: 'Rule-Based Access Control', summary: 'Access follows explicit IF-THEN rules configured by an administrator', detail: 'Often layered on another model — e.g. firewall ACLs are rule-based; not tied to identity at all', status: 'neutral' },
+  ];
+
+  readonly IR_PHASES: ProcessStepEntry[] = [
+    { order: 1, phase: 'Preparation', description: 'Build the capability to respond BEFORE an incident happens', keyActivities: 'IR policy & plan, playbooks/runbooks, training, tooling, contact lists, tabletop exercises' },
+    { order: 2, phase: 'Detection', description: 'Identify that a security incident may be occurring', keyActivities: 'SIEM alerts, IDS/IPS, user reports, anomaly detection, log review' },
+    { order: 3, phase: 'Analysis', description: 'Confirm and scope the incident — what happened, what\'s affected', keyActivities: 'Triage, correlate indicators of compromise (IOCs), determine severity, find root cause' },
+    { order: 4, phase: 'Containment', description: 'Stop the incident from spreading further', keyActivities: 'Short-term: isolate affected hosts/segments. Long-term: patch, rebuild, rotate credentials' },
+    { order: 5, phase: 'Eradication', description: 'Remove the threat completely from the environment', keyActivities: 'Remove malware, disable breached accounts, close the exploited vulnerability' },
+    { order: 6, phase: 'Recovery', description: 'Restore affected systems to normal operation', keyActivities: 'Restore from clean backups, monitor closely for reinfection, phased return to production' },
+    { order: 7, phase: 'Post-Incident Activity (Lessons Learned)', description: 'Review the response and improve for next time', keyActivities: 'Root cause analysis, lessons-learned report, update playbooks, evidence retention' },
+  ];
+
+  readonly CLOUD_MODELS: RefEntry[] = [
+    { name: 'IaaS', category: 'Service Model', summary: 'Infrastructure as a Service — rent raw compute, storage, networking', detail: 'You manage OS, runtime, and apps; provider manages hardware/virtualization. e.g. AWS EC2, Azure VMs', status: 'neutral' },
+    { name: 'PaaS', category: 'Service Model', summary: 'Platform as a Service — rent a platform to deploy your own code', detail: 'Provider manages OS/runtime; you manage your application and data. e.g. Heroku, Azure App Service', status: 'neutral' },
+    { name: 'SaaS', category: 'Service Model', summary: 'Software as a Service — rent a complete, ready-to-use application', detail: 'Provider manages everything except your data and user access config. e.g. Gmail, Salesforce, Office 365', status: 'neutral' },
+    { name: 'Public Cloud', category: 'Deployment Model', summary: 'Shared infrastructure, owned/operated by a third party, open to any customer', detail: 'Lowest cost, fastest to scale; least control over underlying infrastructure', status: 'neutral' },
+    { name: 'Private Cloud', category: 'Deployment Model', summary: 'Dedicated infrastructure used by a single organization', detail: 'Highest control and customization; higher cost — can be on-prem or hosted exclusively for one tenant', status: 'secure' },
+    { name: 'Hybrid Cloud', category: 'Deployment Model', summary: 'A mix of private and public cloud, with data/apps able to move between them', detail: 'Common pattern: sensitive workloads stay private, burst capacity uses public cloud', status: 'neutral' },
+    { name: 'Community Cloud', category: 'Deployment Model', summary: 'Shared infrastructure for a specific group of organizations with common concerns', detail: 'e.g. several government agencies sharing a cloud built to a common compliance standard', status: 'neutral' },
+  ];
+
+  readonly COMPLIANCE_FRAMEWORKS: RefEntry[] = [
+    { name: 'GDPR', summary: 'General Data Protection Regulation — EU personal data privacy law', detail: 'Applies to any org handling EU residents\' data regardless of where the org is based; includes the "right to be forgotten"', status: 'neutral' },
+    { name: 'HIPAA', summary: 'Health Insurance Portability and Accountability Act (US)', detail: 'Protects patient health information (PHI); applies to healthcare providers, insurers, and their business associates', status: 'neutral' },
+    { name: 'PCI DSS', summary: 'Payment Card Industry Data Security Standard', detail: 'Required for any organization that stores, processes, or transmits credit card data — a contractual/industry requirement, not a law', status: 'neutral' },
+    { name: 'SOX', summary: 'Sarbanes-Oxley Act (US)', detail: 'Financial reporting integrity for public companies, passed after accounting scandals; includes IT controls over financial systems', status: 'neutral' },
+    { name: 'ISO 27001', summary: 'International standard for an Information Security Management System (ISMS)', detail: 'Certifiable standard — an organization can be formally audited and certified as ISO 27001 compliant', status: 'neutral' },
+    { name: 'NIST CSF', summary: 'NIST Cybersecurity Framework — Identify, Protect, Detect, Respond, Recover', detail: 'Voluntary US framework; widely used as a common language for describing an organization\'s security maturity', status: 'neutral' },
+  ];
+
+  readonly ATTACK_FRAMEWORKS: RefEntry[] = [
+    { name: 'MITRE ATT&CK', summary: 'A knowledge base of real-world adversary Tactics, Techniques, and Procedures (TTPs)', detail: 'Organized as a matrix (tactics = columns, techniques = cells); used for threat hunting, red/blue team exercises, and detection engineering', status: 'neutral' },
+    { name: 'Cyber Kill Chain', summary: 'Lockheed Martin\'s 7-stage attack model: Recon, Weaponization, Delivery, Exploitation, Installation, C2, Actions on Objectives', detail: 'Defenders aim to break the chain at the EARLIEST possible stage — the further right an attack gets, the more damage is done', status: 'neutral' },
+    { name: 'Diamond Model', summary: 'Models an intrusion as 4 connected points: Adversary, Infrastructure, Capability, Victim', detail: 'Used to pivot between known facts about an attack to uncover related infrastructure/campaigns — complements the Kill Chain and ATT&CK', status: 'neutral' },
+  ];
+
+  readonly PKI_REFERENCE: RefEntry[] = [
+    { name: 'CA (Certificate Authority)', summary: 'The trusted entity that issues and signs digital certificates', detail: 'Root CAs sign intermediate CAs, which sign end-entity certificates — forming the chain of trust', status: 'secure' },
+    { name: 'CSR (Certificate Signing Request)', summary: 'A request sent TO a CA containing a public key and identity info, asking for a signed certificate', detail: 'Generated by the applicant using their private key; the CA verifies identity before issuing the certificate', status: 'neutral' },
+    { name: 'CRL (Certificate Revocation List)', summary: 'A published list of certificates the CA has revoked before their expiration date', detail: 'Clients must download/check the whole list — slower than OCSP; certificates are revoked for reasons like key compromise', status: 'neutral' },
+    { name: 'OCSP (Online Certificate Status Protocol)', summary: 'A real-time protocol to check if a SINGLE certificate has been revoked', detail: 'Faster than CRL since it checks one certificate instead of a whole list; OCSP stapling lets the server provide this proof itself', status: 'secure' },
+    { name: 'Chain of Trust', summary: 'The linked path from a root CA down to an end-entity certificate', detail: 'A certificate is only trusted if every link up to a trusted root is valid and unexpired', status: 'secure' },
+  ];
+
   get filteredPorts(): PortEntry[] {
     const q = this.searchText.toLowerCase();
     if (!q) return this.PORTS;
@@ -231,6 +351,97 @@ export class ReferenceComponent {
     return this.WIRELESS.filter(a =>
       a.name.toLowerCase().includes(q) || a.port.toLowerCase().includes(q) ||
       a.type.toLowerCase().includes(q) || a.notes.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredRiskFormulas(): FormulaEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.RISK_FORMULAS;
+    return this.RISK_FORMULAS.filter(f =>
+      f.name.toLowerCase().includes(q) || f.formula.toLowerCase().includes(q) ||
+      f.variables.toLowerCase().includes(q) || f.example.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredBcdrMetrics(): MetricEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.BCDR_METRICS;
+    return this.BCDR_METRICS.filter(m =>
+      m.abbr.toLowerCase().includes(q) || m.name.toLowerCase().includes(q) ||
+      m.definition.toLowerCase().includes(q) || m.example.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredBackupTypes(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.BACKUP_TYPES;
+    return this.BACKUP_TYPES.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredRaidLevels(): RaidEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.RAID_LEVELS;
+    return this.RAID_LEVELS.filter(r =>
+      r.level.toLowerCase().includes(q) || r.faultTolerance.toLowerCase().includes(q) ||
+      r.performance.toLowerCase().includes(q) || r.notes.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredAccessModels(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.ACCESS_MODELS;
+    return this.ACCESS_MODELS.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredIrPhases(): ProcessStepEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.IR_PHASES;
+    return this.IR_PHASES.filter(p =>
+      p.phase.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.keyActivities.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredCloudModels(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.CLOUD_MODELS;
+    return this.CLOUD_MODELS.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get cloudModelCategories(): string[] {
+    return [...new Set(this.CLOUD_MODELS.map(r => r.category!))];
+  }
+
+  getCloudModelsForCategory(cat: string): RefEntry[] {
+    return this.filteredCloudModels.filter(r => r.category === cat);
+  }
+
+  get filteredComplianceFrameworks(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.COMPLIANCE_FRAMEWORKS;
+    return this.COMPLIANCE_FRAMEWORKS.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredAttackFrameworks(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.ATTACK_FRAMEWORKS;
+    return this.ATTACK_FRAMEWORKS.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredPkiReference(): RefEntry[] {
+    const q = this.searchText.toLowerCase();
+    if (!q) return this.PKI_REFERENCE;
+    return this.PKI_REFERENCE.filter(r =>
+      r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) || r.detail.toLowerCase().includes(q)
     );
   }
 
@@ -479,6 +690,86 @@ export class ReferenceComponent {
           answer: r.to.name,
           explanation: `${r.to.name} (${r.to.port}): ${r.to.why}`,
           status: 'neutral'
+        }));
+      case 'risk-formulas':
+        return this.RISK_FORMULAS.map(f => ({
+          question: f.name,
+          hint: f.variables,
+          answer: f.formula,
+          explanation: f.example,
+          status: 'neutral'
+        }));
+      case 'bcdr-metrics':
+        return this.BCDR_METRICS.map(m => ({
+          question: m.abbr,
+          hint: m.definition,
+          answer: m.name,
+          explanation: m.example,
+          status: 'neutral'
+        }));
+      case 'raid':
+        return this.RAID_LEVELS.map(r => ({
+          question: r.level,
+          hint: `Min disks: ${r.minDisks} · ${r.performance}`,
+          answer: r.faultTolerance,
+          explanation: r.notes,
+          status: 'neutral'
+        }));
+      case 'ir-phases':
+        return this.IR_PHASES.map(p => ({
+          question: p.description,
+          hint: p.keyActivities,
+          answer: p.phase,
+          explanation: `Step ${p.order} of 7: ${p.keyActivities}`,
+          status: 'neutral'
+        }));
+      case 'backup-types':
+        return this.BACKUP_TYPES.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
+        }));
+      case 'access-models':
+        return this.ACCESS_MODELS.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
+        }));
+      case 'cloud-models':
+        return this.CLOUD_MODELS.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: r.category ?? this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
+        }));
+      case 'compliance':
+        return this.COMPLIANCE_FRAMEWORKS.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
+        }));
+      case 'attack-frameworks':
+        return this.ATTACK_FRAMEWORKS.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
+        }));
+      case 'pki':
+        return this.PKI_REFERENCE.map(r => ({
+          question: r.name,
+          hint: r.summary,
+          answer: this.statusLabel(r.status),
+          explanation: r.detail,
+          status: r.status
         }));
       default:
         return [];

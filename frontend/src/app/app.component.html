@@ -1,152 +1,59 @@
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
 <mat-sidenav-container class="app-container">
-
-  <!-- Sidenav -->
   <mat-sidenav #sidenav mode="over" class="app-sidenav" role="navigation" aria-label="Main navigation">
-    @if (isLoggedIn) {
-      <div class="sidenav-header">
-        <mat-icon class="logo-icon" aria-hidden="true">shield</mat-icon>
-        <div>
-          <div class="logo-title">Security+</div>
-          <div class="logo-sub">SY0-701 Study Platform</div>
-        </div>
+    <div class="sidenav-header">
+      <mat-icon class="logo-icon" aria-hidden="true">shield</mat-icon>
+      <div>
+        <div class="logo-title">Security+</div>
+        <div class="logo-sub">SY0-701 Study Platform</div>
       </div>
+    </div>
 
-      <div class="sidenav-user">
-        <div class="user-avatar-sm" aria-hidden="true">{{ userInitial }}</div>
-        <div class="user-info-sm">
-          <div class="user-email-sm">{{ userEmail }}</div>
-          <div class="user-role-sm">{{ isAdmin ? 'Administrator' : 'Student' }}</div>
-        </div>
-      </div>
+    <mat-nav-list>
+      @for (item of navItems; track item.path) {
+        <a mat-list-item [routerLink]="item.path" routerLinkActive="active-link" (click)="sidenav.close()">
+          <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
 
-      <div class="progress-section">
-        <div class="progress-label">
-          <span>Overall Progress</span>
-          <span>{{ overallProgress | number:'1.0-0' }}%</span>
-        </div>
-        <mat-progress-bar mode="determinate" [value]="overallProgress" color="accent"
-          [attr.aria-valuenow]="overallProgress" aria-valuemin="0" aria-valuemax="100"
-          aria-label="Overall study progress"></mat-progress-bar>
-      </div>
-
-      <mat-nav-list>
-        @for (item of navItems; track item.path) {
-          <a mat-list-item [routerLink]="item.path" routerLinkActive="active-link"
-             [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-             (click)="sidenav.close()">
-            <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
-            <span matListItemTitle>{{ item.label }}</span>
-          </a>
-        }
-        @if (isAdmin) {
-          <mat-divider></mat-divider>
-          <a mat-list-item routerLink="/admin" routerLinkActive="active-link" (click)="sidenav.close()">
-            <mat-icon matListItemIcon aria-hidden="true">admin_panel_settings</mat-icon>
-            <span matListItemTitle>Admin Panel</span>
-          </a>
-        }
-      </mat-nav-list>
-
-      <div class="sidenav-bottom">
-        <!-- Theme toggle in sidenav -->
-        <button mat-button class="theme-toggle-side" (click)="theme.toggle()"
-          [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
-          <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
-          <span>{{ theme.dark() ? 'Light Mode' : 'Dark Mode' }}</span>
-        </button>
-
-        @if (!isConfigured) {
-          <div class="config-warning">
-            <mat-icon aria-hidden="true">warning</mat-icon>
-            <span>API key not configured</span>
-            <a mat-button [routerLink]="'/setup'" (click)="sidenav.close()">Setup</a>
-          </div>
-        }
-        <button mat-button class="logout-btn" (click)="logout(); sidenav.close()">
-          <mat-icon aria-hidden="true">logout</mat-icon> Sign Out
-        </button>
-      </div>
-    }
+    <div class="sidenav-bottom">
+      <button mat-button class="theme-toggle-side" (click)="theme.toggle()"
+        [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
+        <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        <span>{{ theme.dark() ? 'Light Mode' : 'Dark Mode' }}</span>
+      </button>
+    </div>
   </mat-sidenav>
 
   <mat-sidenav-content>
     <mat-toolbar class="app-toolbar" color="primary" role="banner">
-      @if (isLoggedIn) {
-        <button mat-icon-button (click)="sidenav.toggle()" class="menu-btn"
-          aria-label="Open navigation menu" aria-haspopup="dialog">
-          <mat-icon aria-hidden="true">menu</mat-icon>
-        </button>
-      }
-      <a class="toolbar-brand" routerLink="/" aria-label="Security+ SY0-701 — go to dashboard">
+      <button mat-icon-button (click)="sidenav.toggle()" class="menu-btn" aria-label="Open navigation menu" aria-haspopup="dialog">
+        <mat-icon aria-hidden="true">menu</mat-icon>
+      </button>
+      <a class="toolbar-brand" routerLink="/" aria-label="Security+ SY0-701 — go to full practice exam">
         <mat-icon aria-hidden="true">shield</mat-icon>
         <span class="brand-text">Security+ SY0-701</span>
       </a>
       <span class="toolbar-spacer"></span>
 
-      @if (isLoggedIn) {
-        <nav class="desktop-nav" aria-label="Primary">
-          @for (item of navItems; track item.path) {
-            <a mat-button [routerLink]="item.path" routerLinkActive="active-nav"
-               [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
-              <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
-              {{ item.label }}
-            </a>
-          }
-        </nav>
+      <nav class="desktop-nav" aria-label="Primary">
+        @for (item of navItems; track item.path) {
+          <a mat-button [routerLink]="item.path" routerLinkActive="active-nav">
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon> {{ item.label }}
+          </a>
+        }
+      </nav>
 
-        <!-- Theme toggle -->
-        <button mat-icon-button class="theme-btn" (click)="theme.toggle()"
-          [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
-          <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
-        </button>
-
-        <!-- User avatar menu -->
-        <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-btn"
-          [attr.aria-label]="'Account menu for ' + userEmail">
-          <div class="user-avatar" aria-hidden="true">{{ userInitial }}</div>
-          <mat-icon class="chevron-icon" aria-hidden="true">expand_more</mat-icon>
-        </button>
-        <mat-menu #userMenu="matMenu">
-          <div class="menu-user-info" role="menuitem" aria-disabled="true">
-            <div class="menu-email">{{ userEmail }}</div>
-            <div class="menu-role">{{ isAdmin ? 'Administrator' : 'Student' }}</div>
-          </div>
-          <mat-divider></mat-divider>
-          @if (isAdmin) {
-            <button mat-menu-item routerLink="/admin">
-              <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
-              Admin Panel
-            </button>
-          }
-          <button mat-menu-item routerLink="/progress">
-            <mat-icon aria-hidden="true">insights</mat-icon>
-            My Progress
-          </button>
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="logout()">
-            <mat-icon aria-hidden="true">logout</mat-icon>
-            Sign Out
-          </button>
-        </mat-menu>
-      } @else {
-        <button mat-icon-button class="theme-btn" (click)="theme.toggle()"
-          [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
-          <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
-        </button>
-        <a mat-button routerLink="/login">Sign In</a>
-        <a mat-raised-button routerLink="/register" class="register-btn">Get Started</a>
-      }
+      <button mat-icon-button class="theme-btn" (click)="theme.toggle()"
+        [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
+        <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
     </mat-toolbar>
 
     <main class="app-content" id="main-content" tabindex="-1">
-      @if (isLoggedIn && !isConfigured) {
-        <div class="api-banner" role="alert">
-          <mat-icon aria-hidden="true">info</mat-icon>
-          <span>Claude API not configured. <a routerLink="/setup">Set your API key</a> to enable AI content.</span>
-        </div>
-      }
       <router-outlet></router-outlet>
     </main>
   </mat-sidenav-content>

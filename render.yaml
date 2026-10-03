@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: comptia-security-plus-study
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist/frontend/browser
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

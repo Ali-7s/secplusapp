@@ -8,17 +8,6 @@
     @if (!loading && allTerms.length) {
       <div class="count-badge">{{ filteredTerms.length }} / {{ allTerms.length }}</div>
     }
-    @if (generatingTerms.size > 0) {
-      <div class="gap-fill-badge">
-        <mat-spinner diameter="14"></mat-spinner>
-        Generating {{ generatingTerms.size }} term{{ generatingTerms.size !== 1 ? 's' : '' }}...
-      </div>
-    } @else if (gapsAdded > 0) {
-      <div class="gap-fill-badge done">
-        <mat-icon>check_circle</mat-icon>
-        {{ gapsAdded }} terms added
-      </div>
-    }
   </div>
 
   <div class="toolbar">
@@ -241,10 +230,6 @@
                     @if (hasCard(rel)) {
                       <span class="rel-chip" (click)="navigateToTerm(rel, $event)"
                         [matTooltip]="'Jump to ' + rel">{{ rel }}</span>
-                    } @else if (generatingTerms.has(rel)) {
-                      <span class="rel-chip generating" [matTooltip]="'Generating card for ' + rel + '...'">
-                        <mat-spinner diameter="10"></mat-spinner>{{ rel }}
-                      </span>
                     } @else {
                       <span class="rel-chip no-card" [matTooltip]="rel">{{ rel }}</span>
                     }

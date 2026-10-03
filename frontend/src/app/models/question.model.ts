@@ -16,7 +16,7 @@ export interface ConfigField {
 
 export interface Question {
   id: string;
-  sectionId: string;
+  sectionId?: string;
   domainId: string;
   type: QuestionType;
   scenario?: string;
@@ -51,14 +51,6 @@ export interface Question {
 
   // PBQ: Configuration form (CONFIG_FORM) — VPN config, host classification, zone placement
   configFields?: ConfigField[];
-}
-
-export interface ExamSubmission {
-  sectionId?: string;
-  domainId?: string;
-  examType: 'SECTION' | 'DOMAIN' | 'FULL';
-  answers: QuestionAnswer[];
-  timeTakenSeconds: number;
 }
 
 export interface QuestionAnswer {
