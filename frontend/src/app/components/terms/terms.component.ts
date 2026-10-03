@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
-import { Term, TermDetail } from '../../models/flashcard.model';
+import { Term, TermDetail } from '../../models/glossary.model';
 
 @Component({
   selector: 'app-terms',
@@ -45,10 +45,6 @@ export class TermsComponent implements OnInit {
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
-
-  // Gap-fill state: tracks which specific term names are being generated
-  generatingTerms = new Set<string>();
-  gapsAdded = 0;
 
   // Carousel state
   fcIndex = 0;
@@ -89,30 +85,6 @@ export class TermsComponent implements OnInit {
     this.categories = ['All', ...cats];
   }
 
-  private fillMissingForTerm(term: Term) {
-    const existingNames = new Set(this.allTerms.map(t => t.term.toLowerCase()));
-    const missing = this.getRelatedList(term.relatedTerms).filter(
-      rel => !existingNames.has(rel.toLowerCase()) && !this.generatingTerms.has(rel)
-    );
-    if (!missing.length) return;
-
-    missing.forEach(m => this.generatingTerms.add(m));
-
-    this.contentService.generateMissingTerms(missing).subscribe({
-      next: newTerms => {
-        missing.forEach(m => this.generatingTerms.delete(m));
-        if (newTerms.length) {
-          this.gapsAdded += newTerms.length;
-          this.allTerms = [...this.allTerms, ...newTerms].sort((a, b) => a.term.localeCompare(b.term));
-          this.rebuildCategories();
-          this.filter();
-          this.cdr.markForCheck();
-        }
-      },
-      error: () => { missing.forEach(m => this.generatingTerms.delete(m)); }
-    });
-  }
-
   filter() {
     const q = this.searchText.toLowerCase();
     this.filteredTerms = this.allTerms.filter(t => {
@@ -142,14 +114,13 @@ export class TermsComponent implements OnInit {
     if (!this.cardDetails.has(key) && !this.loadingDetails.has(key)) {
       this.loadDetail(term);
     }
-    this.fillMissingForTerm(term);
   }
 
   loadDetail(term: Term) {
     const key = term.term;
     this.loadingDetails.add(key);
     this.detailErrors.delete(key);
-    this.contentService.getTermDetail(key, term.definition).subscribe({
+    this.contentService.getTermDetail(term).subscribe({
       next: d => {
         this.cardDetails.set(key, d);
         this.loadingDetails.delete(key);

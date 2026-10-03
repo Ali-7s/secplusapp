@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
-import { Acronym, AcronymDetail } from '../../models/flashcard.model';
+import { Acronym, AcronymDetail } from '../../models/glossary.model';
 
 @Component({
   selector: 'app-acronyms',
@@ -163,7 +163,7 @@ export class AcronymsComponent implements OnInit {
     const key = acronym.acronym;
     this.loadingDetails.add(key);
     this.detailErrors.delete(key);
-    this.contentService.getAcronymDetail(key, acronym.expansion).subscribe({
+    this.contentService.getAcronymDetail(acronym).subscribe({
       next: d => {
         this.cardDetails.set(key, d);
         this.loadingDetails.delete(key);

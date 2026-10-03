@@ -26,7 +26,7 @@ describe('AppComponent', () => {
   it('exposes the expected nav items', () => {
     const app = TestBed.createComponent(AppComponent).componentInstance;
     const paths = app.navItems.map(i => i.path);
-    expect(paths).toContain('/progress');
-    expect(paths).not.toContain('/notes'); // Notes feature was removed
+    expect(paths).toContain('/exam/full');
+    expect(paths).not.toContain('/progress'); // Progress page was removed
   });
 });
