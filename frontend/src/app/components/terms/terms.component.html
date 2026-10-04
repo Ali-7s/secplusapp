@@ -187,6 +187,9 @@
           <div class="term-header">
             <span class="term-name">{{ t.term }}</span>
             <span class="term-category">{{ t.category }}</span>
+            @if (t.variants?.length) {
+              <span class="variants-badge"><mat-icon>compare_arrows</mat-icon> Compare</span>
+            }
             <mat-icon class="expand-chevron">
               {{ expandedTerm === t.term ? 'expand_less' : 'expand_more' }}
             </mat-icon>
@@ -220,6 +223,20 @@
                 <div class="term-exam">
                   <mat-icon>school</mat-icon>
                   <span>{{ t.examContext }}</span>
+                </div>
+              }
+
+              @for (group of t.variants ?? []; track group.title) {
+                <div class="variants-section" (click)="$event.stopPropagation()">
+                  <div class="detail-label"><mat-icon>compare_arrows</mat-icon> {{ group.title }}</div>
+                  <div class="variant-list">
+                    @for (item of group.items; track item.name) {
+                      <div class="variant-row">
+                        <div class="variant-name">{{ item.name }}</div>
+                        <div class="variant-detail">{{ item.detail }}</div>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
 

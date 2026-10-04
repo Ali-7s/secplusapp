@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
-import { Acronym, AcronymDetail } from '../../models/glossary.model';
+import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
 
 @Component({
   selector: 'app-acronyms',
@@ -77,7 +77,8 @@ export class AcronymsComponent implements OnInit {
     const q = this.searchText.toLowerCase();
     this.filteredAcronyms = this.allAcronyms.filter(a => {
       const matchSearch = !q || a.acronym.toLowerCase().includes(q) ||
-        a.expansion.toLowerCase().includes(q) || a.definition?.toLowerCase().includes(q);
+        a.expansion.toLowerCase().includes(q) || a.definition?.toLowerCase().includes(q) ||
+        variantsSearchText(a).includes(q);
       const matchCat = this.selectedCategory === 'All' || a.category === this.selectedCategory;
       return matchSearch && matchCat;
     });

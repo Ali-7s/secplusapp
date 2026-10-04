@@ -184,6 +184,9 @@
           <div class="acr-header">
             <span class="acr-letters">{{ a.acronym }}</span>
             <span class="acr-category">{{ a.category }}</span>
+            @if (a.variants?.length) {
+              <span class="variants-badge"><mat-icon>compare_arrows</mat-icon> Compare</span>
+            }
             <mat-icon class="expand-chevron">
               {{ expandedAcronym === a.acronym ? 'expand_less' : 'expand_more' }}
             </mat-icon>
@@ -210,6 +213,20 @@
                 <div class="acr-exam">
                   <mat-icon>school</mat-icon>
                   <span [innerHTML]="linkify(a.examContext, a.acronym)"></span>
+                </div>
+              }
+
+              @for (group of a.variants ?? []; track group.title) {
+                <div class="variants-section" (click)="$event.stopPropagation()">
+                  <div class="detail-label"><mat-icon>compare_arrows</mat-icon> {{ group.title }}</div>
+                  <div class="variant-list">
+                    @for (item of group.items; track item.name) {
+                      <div class="variant-row">
+                        <div class="variant-name">{{ item.name }}</div>
+                        <div class="variant-detail">{{ item.detail }}</div>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
 

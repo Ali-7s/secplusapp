@@ -5,6 +5,17 @@ export interface AcronymDetail {
   quizAnswer: string;
 }
 
+export interface VariantItem {
+  name: string;
+  detail: string;
+}
+
+/** A "types & key differences" breakdown shown on cards that cover a family of sub-types (e.g. RAID levels). */
+export interface VariantGroup {
+  title: string;
+  items: VariantItem[];
+}
+
 export interface Acronym {
   acronym: string;
   expansion: string;
@@ -13,6 +24,7 @@ export interface Acronym {
   examContext: string;
   relatedAcronyms: string;
   detail: AcronymDetail;
+  variants?: VariantGroup[];
 }
 
 export type TermDetail = AcronymDetail;
@@ -25,4 +37,13 @@ export interface Term {
   analogy: string;
   relatedTerms: string;
   detail: TermDetail;
+  variants?: VariantGroup[];
+}
+
+/** Flattens a card's variant groups into one lowercase string so search can match sub-type names and descriptions. */
+export function variantsSearchText(item: { variants?: VariantGroup[] }): string {
+  return (item.variants ?? [])
+    .map(g => g.title + ' ' + g.items.map(i => i.name + ' ' + i.detail).join(' '))
+    .join(' ')
+    .toLowerCase();
 }

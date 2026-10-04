@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
-import { Term, TermDetail } from '../../models/glossary.model';
+import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
 
 @Component({
   selector: 'app-terms',
@@ -89,7 +89,8 @@ export class TermsComponent implements OnInit {
     const q = this.searchText.toLowerCase();
     this.filteredTerms = this.allTerms.filter(t => {
       const matchSearch = !q || t.term.toLowerCase().includes(q) ||
-        t.definition?.toLowerCase().includes(q) || t.analogy?.toLowerCase().includes(q);
+        t.definition?.toLowerCase().includes(q) || t.analogy?.toLowerCase().includes(q) ||
+        variantsSearchText(t).includes(q);
       const matchCat = this.selectedCategory === 'All' || t.category === this.selectedCategory;
       return matchSearch && matchCat;
     });
