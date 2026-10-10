@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,11 +15,13 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
 import { maskAnswer } from '../../utils/cloze';
+import { LessonMeta } from '../networking/networking.model';
+import { lessonsForCard } from '../networking/lessons/lesson-index';
 
 @Component({
   selector: 'app-terms',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
     MatSelectModule, MatTooltipModule, MatSlideToggleModule],
   templateUrl: './terms.component.html',
@@ -160,6 +162,11 @@ export class TermsComponent implements OnInit {
   /** Returns true if this related-term name has a card to link to. */
   hasCard(name: string): boolean {
     return this.allTerms.some(t => t.term.toLowerCase() === name.toLowerCase());
+  }
+
+  /** Networking lessons that explain this term, so a card can say "new to this? start here". */
+  lessonsFor(term: string): LessonMeta[] {
+    return lessonsForCard('term', term).slice(0, 2);
   }
 
   navigateToTerm(name: string, event?: MouseEvent) {

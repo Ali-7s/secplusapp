@@ -18,6 +18,8 @@ html {
   --c-primary-mid:    #2d52b0;
   --c-accent:         #3b82f6;
   --c-accent-light:   #eff6ff;
+  --c-accent-solid:   #1d4ed8;   // solid fills (buttons, number badges) ...
+  --c-on-accent:      #ffffff;   // ... and the text on them (7:1)
   --c-success:        #059669;
   --c-success-light:  #d1fae5;
   --c-warning:        #d97706;
@@ -54,6 +56,8 @@ html {
   --c-primary-mid:    #60a5fa;
   --c-accent:         #60a5fa;
   --c-accent-light:   rgba(96,165,250,.14);
+  --c-accent-solid:   #60a5fa;
+  --c-on-accent:      #0f172a;   // dark text on the light blue fill (7:1)
   --c-success:        #34d399;
   --c-success-light:  rgba(52,211,153,.14);
   --c-warning:        #fbbf24;
@@ -377,6 +381,45 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--c-border-dark); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--c-muted); }
+
+// ── Inline code in lesson text (class comes from the md pipe) ─
+code.md-code {
+  font-family: 'Courier New', monospace;
+  font-size: .88em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--c-surface-3);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  word-break: break-word;
+}
+
+// ── "New to this? Start with lesson N" link on glossary cards ─
+a.lesson-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--c-text);
+  background: var(--c-accent-light);
+  border: 1px solid var(--c-accent);
+  cursor: pointer;
+
+  mat-icon { flex: none; color: var(--c-accent); }
+  span { font-size: 13.5px; font-weight: 700; line-height: 1.35; }
+  small {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--c-text-2);
+  }
+  &:hover { background: var(--c-surface-3); }
+}
 
 // ── Utilities ─────────────────────────────────────────────────
 .text-muted    { color: var(--c-muted); }

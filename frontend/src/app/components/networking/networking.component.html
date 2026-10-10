@@ -1,0 +1,61 @@
+<div class="page-container">
+  <div class="page-header">
+    <mat-icon aria-hidden="true">lan</mat-icon>
+    <div>
+      <h1>Networking Basics</h1>
+      <p>Ports, protocols, switches, routers and how to secure them. Start here if networking feels fuzzy.</p>
+    </div>
+    <div class="count-badge">{{ lessons.length }} lessons · about {{ totalMinutes }} min</div>
+  </div>
+
+  <section class="intro">
+    <h2>Why this section exists</h2>
+    <p>
+      Security+ assumes you already know how networks work (CompTIA recommends Network+ first). Many exam topics, such as
+      VLANs, screened subnets, ARP poisoning, firewall rules and secure ports, only make sense once the basics click.
+      This path teaches just the parts the exam leans on, in the order that makes them stick.
+    </p>
+    <ul>
+      <li><strong>Do them in order</strong> the first time. Each lesson builds on the one before.</li>
+      <li><strong>Each lesson ends with a short check</strong> so you know whether it landed.</li>
+      <li><strong>Every device and protocol lesson ends with how to secure it.</strong> That practice has a name: <em>hardening</em>.</li>
+      <li><strong>Come back to one lesson</strong> whenever a flashcard does not make sense. Cards link to their lesson.</li>
+    </ul>
+  </section>
+
+  <ol class="lesson-grid">
+    @for (l of lessons; track l.slug) {
+      <li>
+        <a class="lesson-card" [routerLink]="['/networking', l.slug]">
+          <span class="num" aria-hidden="true">{{ l.number }}</span>
+          <span class="body">
+            <span class="title">{{ l.title }}</span>
+            <span class="summary">{{ l.summary }}</span>
+            <span class="meta">
+              <span><mat-icon aria-hidden="true">{{ l.icon }}</mat-icon> {{ l.minutes }} min</span>
+            </span>
+          </span>
+          <mat-icon class="go" aria-hidden="true">chevron_right</mat-icon>
+        </a>
+      </li>
+    }
+  </ol>
+
+  <section class="after">
+    <h2>Then practice</h2>
+    <div class="after-grid">
+      <a class="after-card" routerLink="/reference">
+        <mat-icon aria-hidden="true">fitness_center</mat-icon>
+        <span><strong>Ports recall drill</strong><small>The Reference Sheet's first tab quizzes you on port numbers.</small></span>
+      </a>
+      <a class="after-card" routerLink="/acronyms">
+        <mat-icon aria-hidden="true">abc</mat-icon>
+        <span><strong>Acronym flashcards</strong><small>Use cloze mode to type the acronym from its description.</small></span>
+      </a>
+      <a class="after-card" routerLink="/terms">
+        <mat-icon aria-hidden="true">menu_book</mat-icon>
+        <span><strong>Key Terms</strong><small>Concepts like segmentation and hardening, with comparison tables.</small></span>
+      </a>
+    </div>
+  </section>
+</div>

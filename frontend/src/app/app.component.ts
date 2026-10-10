@@ -20,6 +20,7 @@ export class AppComponent {
   theme = inject(ThemeService);
 
   navItems = [
+    { path: '/networking', icon: 'lan', label: 'Networking Basics' },
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary' },
     { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
     { path: '/reference', icon: 'table_chart', label: 'Reference Sheet' },

@@ -1,0 +1,157 @@
+@if (lesson; as l) {
+  <div class="page-container">
+    <article class="lesson">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a routerLink="/networking"><mat-icon aria-hidden="true">chevron_left</mat-icon> All lessons</a>
+      </nav>
+
+      <header class="lesson-head">
+        <div class="kicker">Lesson {{ l.number }} of {{ total }}</div>
+        <h1>{{ l.title }}</h1>
+        <div class="meta">
+          <span><mat-icon aria-hidden="true">schedule</mat-icon> About {{ l.minutes }} minutes</span>
+          @if (coversSecurity) {
+            <span class="sec"><mat-icon aria-hidden="true">shield</mat-icon> Includes how to secure it</span>
+          }
+        </div>
+        <div class="goals">
+          <h2>After this lesson you can</h2>
+          <ul>
+            @for (g of l.goals; track $index) { <li>{{ g }}</li> }
+          </ul>
+        </div>
+      </header>
+
+      @for (b of l.blocks; track $index) {
+        @switch (b.type) {
+          @case ('h') {
+            <h2 class="blk-h" [class.secure]="b.tone === 'secure'">
+              @if (b.tone === 'secure') { <mat-icon aria-hidden="true">shield</mat-icon> }
+              {{ b.text }}
+            </h2>
+          }
+          @case ('p') {
+            <p class="blk-p" [innerHTML]="b.md | md"></p>
+          }
+          @case ('list') {
+            @if (b.ordered) {
+              <ol class="blk-list">
+                @for (item of b.items; track $index) { <li [innerHTML]="item | md"></li> }
+              </ol>
+            } @else {
+              <ul class="blk-list">
+                @for (item of b.items; track $index) { <li [innerHTML]="item | md"></li> }
+              </ul>
+            }
+          }
+          @case ('callout') {
+            <aside [class]="'callout ' + b.kind">
+              <mat-icon aria-hidden="true">{{ calloutIcons[b.kind] }}</mat-icon>
+              <div class="callout-body">
+                @if (b.title) { <div class="callout-title">{{ b.title }}</div> }
+                <div [innerHTML]="b.md | md"></div>
+              </div>
+            </aside>
+          }
+          @case ('table') {
+            <div class="table-block">
+              @if (b.caption) { <div class="table-caption">{{ b.caption }}</div> }
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      @for (c of b.columns; track $index) { <th scope="col">{{ c }}</th> }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of b.rows; track $index) {
+                      <tr>
+                        @for (cell of row; track $index; let ci = $index) {
+                          <td [class.mono]="b.mono?.includes(ci)" [class.first]="ci === 0" [innerHTML]="cell | md"></td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+          @case ('flow') {
+            <app-flow [nodes]="b.nodes" [direction]="b.direction ?? 'down'" [caption]="b.caption ?? ''" />
+          }
+          @case ('ports') {
+            <app-port-strip [cells]="b.cells" [legend]="b.legend" [caption]="b.caption ?? ''" />
+          }
+          @case ('nested') {
+            <app-nested-boxes [layers]="b.layers" [caption]="b.caption ?? ''" />
+          }
+          @case ('sequence') {
+            <app-sequence [title]="b.title" [intro]="b.intro ?? ''" [steps]="b.steps" />
+          }
+          @case ('layers') {
+            <app-layer-explorer />
+          }
+          @case ('cidr') {
+            <app-cidr-reader />
+          }
+          @case ('cta') {
+            <a class="cta" [routerLink]="b.to">
+              <mat-icon aria-hidden="true">{{ b.icon }}</mat-icon>
+              <span class="cta-text"><strong>{{ b.label }}</strong>@if (b.note) { <small>{{ b.note }}</small> }</span>
+              <mat-icon class="go" aria-hidden="true">chevron_right</mat-icon>
+            </a>
+          }
+          @case ('harden') {
+            <app-harden-list [title]="b.title" [intro]="b.intro ?? ''" [items]="b.items" />
+          }
+          @case ('spot') {
+            <app-spot-issues [title]="b.title" [intro]="b.intro" [lines]="b.lines" />
+          }
+        }
+      }
+
+      <app-lesson-quiz [questions]="l.check" />
+
+      <section class="related" aria-labelledby="related-title">
+        <h2 id="related-title"><mat-icon aria-hidden="true">style</mat-icon> Flashcards for this lesson</h2>
+        <p>Open a card to see its definition, an exam tip and a quick quiz.</p>
+        <div class="chips">
+          @for (r of l.related; track r.kind + r.name) {
+            <a class="chip" [routerLink]="linkFor(r.kind)" [queryParams]="{ q: r.name }">{{ r.name }}</a>
+          }
+        </div>
+      </section>
+
+      <nav class="pager" aria-label="Lesson navigation">
+        @if (previous; as prev) {
+          <a class="pager-link prev" [routerLink]="['/networking', prev.slug]">
+            <mat-icon aria-hidden="true">chevron_left</mat-icon>
+            <span><small>Previous</small>{{ prev.title }}</span>
+          </a>
+        } @else {
+          <span></span>
+        }
+        @if (next; as nxt) {
+          <a class="pager-link next" [routerLink]="['/networking', nxt.slug]">
+            <span><small>Next lesson</small>{{ nxt.title }}</span>
+            <mat-icon aria-hidden="true">chevron_right</mat-icon>
+          </a>
+        } @else {
+          <a class="pager-link next" routerLink="/networking">
+            <span><small>All done</small>Back to the lesson list</span>
+            <mat-icon aria-hidden="true">checklist</mat-icon>
+          </a>
+        }
+      </nav>
+    </article>
+  </div>
+} @else {
+  <div class="page-container">
+    <div class="not-found">
+      <mat-icon aria-hidden="true">search_off</mat-icon>
+      <h1>Lesson not found</h1>
+      <p>That lesson does not exist (yet).</p>
+      <a class="back" routerLink="/networking">Back to all lessons</a>
+    </div>
+  </div>
+}

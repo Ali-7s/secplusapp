@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,11 +16,13 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
 import { isAcronymClozeCorrect, maskAnswer } from '../../utils/cloze';
+import { LessonMeta } from '../networking/networking.model';
+import { lessonsForCard } from '../networking/lessons/lesson-index';
 
 @Component({
   selector: 'app-acronyms',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
     MatSelectModule, MatTooltipModule, MatSlideToggleModule],
   templateUrl: './acronyms.component.html',
@@ -29,6 +32,9 @@ export class AcronymsComponent implements OnInit {
   private contentService = inject(ContentService);
   private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
+  private route = inject(ActivatedRoute);
+
+  private pendingAcronym = '';
 
   allAcronyms: Acronym[] = [];
   filteredAcronyms: Acronym[] = [];
@@ -58,6 +64,8 @@ export class AcronymsComponent implements OnInit {
   private clozeMasks = new Map<string, string>();
 
   ngOnInit() {
+    const q = this.route.snapshot.queryParamMap.get('q');
+    if (q) this.pendingAcronym = q;
     this.load();
   }
 
@@ -70,6 +78,10 @@ export class AcronymsComponent implements OnInit {
         this.categories = ['All', ...cats];
         this.filter();
         this.loading = false;
+        if (this.pendingAcronym) {
+          this.navigateToAcronym(this.pendingAcronym);
+          this.pendingAcronym = '';
+        }
       },
       error: e => { this.error = e.message; this.loading = false; }
     });
@@ -206,10 +218,13 @@ export class AcronymsComponent implements OnInit {
     return !!selected && !!detail && selected === detail.quizAnswer;
   }
 
-  navigateToAcronym(acr: string, event: MouseEvent) {
-    event.stopPropagation();
-    const target = this.allAcronyms.find(a => a.acronym === acr);
+  /** Opens one card. Takes an exact name from a related chip, or any capitalization from a link (?q=vlan). */
+  navigateToAcronym(name: string, event?: MouseEvent) {
+    event?.stopPropagation();
+    const target = this.allAcronyms.find(a => a.acronym === name)
+      ?? this.allAcronyms.find(a => a.acronym.toLowerCase() === name.toLowerCase());
     if (!target) return;
+    const acr = target.acronym;
     this.searchText = '';
     this.selectedCategory = 'All';
     this.filter();
@@ -220,6 +235,11 @@ export class AcronymsComponent implements OnInit {
     setTimeout(() => {
       document.getElementById('acr-' + acr)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
+  }
+
+  /** Networking lessons that explain this acronym, so a card can say "new to this? start here". */
+  lessonsFor(acronym: string): LessonMeta[] {
+    return lessonsForCard('acr', acronym).slice(0, 2);
   }
 
   onDetailClick(event: MouseEvent) {

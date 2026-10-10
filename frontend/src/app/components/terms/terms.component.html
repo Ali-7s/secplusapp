@@ -226,6 +226,13 @@
                 </div>
               }
 
+              @for (l of lessonsFor(t.term); track l.slug) {
+                <a class="lesson-link" [routerLink]="['/networking', l.slug]" (click)="$event.stopPropagation()">
+                  <mat-icon aria-hidden="true">{{ l.icon }}</mat-icon>
+                  <span><small>New to this? Start with lesson {{ l.number }}</small>{{ l.title }}</span>
+                </a>
+              }
+
               @for (group of t.variants ?? []; track group.title) {
                 <div class="variants-section" (click)="$event.stopPropagation()">
                   <div class="detail-label"><mat-icon>compare_arrows</mat-icon> {{ group.title }}</div>
