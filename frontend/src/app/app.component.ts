@@ -7,11 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { ThemeService } from './services/theme.service';
+import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, BackToTopComponent,
     MatToolbarModule, MatButtonModule, MatIconModule, MatSidenavModule, MatListModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

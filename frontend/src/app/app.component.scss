@@ -152,6 +152,8 @@
 // ── Main content ───────────────────────────────────────────
 .app-content {
   min-height: calc(100vh - 60px);
+  // Room at the very bottom so the back-to-top button never covers the last of the page.
+  padding-bottom: 64px;
   background: var(--c-bg);
   transition: background .25s ease;
   &:focus { outline: none; }
