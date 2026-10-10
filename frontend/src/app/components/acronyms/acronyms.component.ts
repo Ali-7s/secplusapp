@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
+import { isAcronymClozeCorrect, maskAnswer } from '../../utils/cloze';
 
 @Component({
   selector: 'app-acronyms',
@@ -54,6 +55,7 @@ export class AcronymsComponent implements OnInit {
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
+  private clozeMasks = new Map<string, string>();
 
   ngOnInit() {
     this.load();
@@ -106,12 +108,25 @@ export class AcronymsComponent implements OnInit {
     this.fcClozeReset();
   }
 
+  /**
+   * The description shown on a cloze card. Descriptions usually repeat the acronym ("CCMP is the encryption
+   * protocol..."), so the acronym and its expansion are blanked out until the answer has been checked.
+   */
+  clozeText(a: Acronym): string {
+    if (this.fcClozeChecked) return a.definition;
+    let masked = this.clozeMasks.get(a.acronym);
+    if (masked === undefined) {
+      masked = maskAnswer(a.definition, [a.acronym, a.expansion]);
+      this.clozeMasks.set(a.acronym, masked);
+    }
+    return masked;
+  }
+
   checkAcronymCloze() {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
-    const u = this.fcClozeInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const a = this.filteredAcronyms[this.fcIndex].acronym.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    this.fcClozeCorrect = u === a || a.startsWith(u) || u.startsWith(a);
+    this.fcClozeCorrect = isAcronymClozeCorrect(
+      this.fcClozeInput, this.filteredAcronyms[this.fcIndex], this.allAcronyms);
   }
 
   fcClozeNext(known: boolean) {

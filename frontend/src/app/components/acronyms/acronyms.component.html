@@ -77,7 +77,7 @@
         <div class="cloze-card">
           <div class="cloze-category">{{ filteredAcronyms[fcIndex].category }}</div>
           <div class="cloze-prompt">What acronym matches this description?</div>
-          <div class="cloze-expansion">{{ filteredAcronyms[fcIndex].definition }}</div>
+          <div class="cloze-expansion">{{ clozeText(filteredAcronyms[fcIndex]) }}</div>
         </div>
         @if (!fcClozeChecked) {
           <div class="cloze-input-row">

@@ -78,9 +78,9 @@
         <div class="cloze-card">
           <div class="cloze-category">{{ filteredTerms[fcIndex].category }}</div>
           <div class="cloze-prompt">Name this concept:</div>
-          <div class="cloze-expansion">{{ filteredTerms[fcIndex].definition }}</div>
+          <div class="cloze-expansion">{{ clozeText(filteredTerms[fcIndex], 'definition') }}</div>
           @if (filteredTerms[fcIndex].analogy) {
-            <div class="cloze-def-hint">💡 {{ filteredTerms[fcIndex].analogy }}</div>
+            <div class="cloze-def-hint">💡 {{ clozeText(filteredTerms[fcIndex], 'analogy') }}</div>
           }
         </div>
         @if (!fcClozeChecked) {

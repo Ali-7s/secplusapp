@@ -1,0 +1,100 @@
+/**
+ * Helpers for the cloze ("type the answer") flashcard modes.
+ *
+ * A cloze card shows a description and asks for the name it describes, but descriptions very often
+ * repeat that name ("CCMP is the encryption protocol used in WPA2..."), which gives the answer away.
+ * maskAnswer() blanks those mentions out before the description is shown.
+ */
+
+export const CLOZE_BLANK = '_____';
+
+/** Characters that separate the parts of a name: "SD-WAN", "TCP/IP", "ATT&CK", "PCI DSS", "SE Linux". */
+const SEPARATOR = String.raw`[\s\-/&]`;
+
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Regex source matching `phrase` however its parts are separated, so "SE Linux" also matches
+ * "SELinux" and "SE-Linux", and "Time-of-check" also matches "time of check".
+ */
+function phraseSource(phrase: string): string {
+  return phrase
+    .split(new RegExp(`${SEPARATOR}+`))
+    .filter(Boolean)
+    .map(escapeRegExp)
+    .join(`${SEPARATOR}*`);
+}
+
+/** Other written forms of an answer that give it away just as much ("TTPs" -> "TTP", "Policy" -> "Policies"). */
+function inflections(answer: string): string[] {
+  const forms: string[] = [];
+  if (/[A-Z]s$/.test(answer)) forms.push(answer.slice(0, -1));
+  else if (/(?:s|x|z|ch|sh)$/.test(answer)) forms.push(answer + 'es');
+  if (/[^aeiou]y$/.test(answer)) forms.push(answer.slice(0, -1) + 'ies');
+  return forms;
+}
+
+/**
+ * Replaces every mention of any of `answers` in `text` with a blank.
+ *
+ * - Matches whole names only, ignoring case: blanking "IP" leaves "IPv4" and "description" alone.
+ * - A trailing plural or possessive is blanked with the name ("ACLs", "ACL's", "Checksums").
+ * - Parts may be separated by a space, hyphen, slash or ampersand, or not at all.
+ * - When a name and its expansion sit side by side, they collapse into one blank:
+ *   "Address Resolution Protocol (ARP)" becomes "_____".
+ */
+export function maskAnswer(text: string | null | undefined, answers: ReadonlyArray<string | null | undefined>): string {
+  if (!text) return '';
+
+  const names = new Set<string>();
+  for (const answer of answers) {
+    const trimmed = answer?.trim();
+    if (!trimmed) continue;
+    names.add(trimmed);
+    inflections(trimmed).forEach(form => names.add(form));
+  }
+
+  // Longest first, so a full phrase is blanked before any shorter name that appears inside it.
+  const ordered = [...names].sort((a, b) => b.length - a.length);
+
+  let masked = text;
+  for (const name of ordered) {
+    const source = `(^|[^A-Za-z0-9])(${phraseSource(name)})(s|'s|’s)?(?![A-Za-z0-9])`;
+    masked = masked.replace(new RegExp(source, 'gi'), (match, before: string, _name: string, suffix?: string) =>
+      // "ACLS" is a different word from "ACL" plus a plural "s", so only a lower-case suffix is treated as one.
+      suffix === 'S' ? match : before + CLOZE_BLANK,
+    );
+  }
+
+  const blank = escapeRegExp(CLOZE_BLANK);
+  return masked
+    .replace(new RegExp(`${blank}\\s*\\(\\s*${blank}\\s*\\)`, 'g'), CLOZE_BLANK)
+    .replace(new RegExp(`${blank}(?:\\s+${blank})+`, 'g'), CLOZE_BLANK);
+}
+
+interface AcronymLike {
+  acronym: string;
+  expansion?: string;
+}
+
+const normalise = (s: string): string => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * Checks a typed answer on an acronym cloze card.
+ *
+ * The typed text has to be the card's acronym, ignoring case, spaces and punctuation ("smime" = "S/MIME",
+ * "aes 256" = "AES-256"). Part of an acronym does not count ("A" for "AES"), and neither does a different
+ * card's acronym ("AES" for "AES-256"), unless that card is a synonym for the same expansion (TTP / TTPs,
+ * CSRF / XSRF).
+ */
+export function isAcronymClozeCorrect(input: string, card: AcronymLike, deck: ReadonlyArray<AcronymLike>): boolean {
+  const typed = normalise(input);
+  if (!typed) return false;
+  if (typed === normalise(card.acronym)) return true;
+
+  const expansion = card.expansion?.trim().toLowerCase();
+  if (!expansion) return false;
+  return deck.some(
+    other => other !== card && other.expansion?.trim().toLowerCase() === expansion && normalise(other.acronym) === typed,
+  );
+}

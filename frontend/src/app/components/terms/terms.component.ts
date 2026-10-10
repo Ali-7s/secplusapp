@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
+import { maskAnswer } from '../../utils/cloze';
 
 @Component({
   selector: 'app-terms',
@@ -56,6 +57,7 @@ export class TermsComponent implements OnInit {
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
+  private clozeMasks = new Map<string, string>();
 
   ngOnInit() {
     const q = this.route.snapshot.queryParamMap.get('q');
@@ -185,6 +187,21 @@ export class TermsComponent implements OnInit {
   toggleFcCloze() {
     this.fcClozeMode = !this.fcClozeMode;
     this.fcClozeReset();
+  }
+
+  /**
+   * The description or hint shown on a cloze card, with the term blanked out wherever the text repeats it,
+   * until the answer has been checked.
+   */
+  clozeText(t: Term, field: 'definition' | 'analogy'): string {
+    if (this.fcClozeChecked) return t[field];
+    const key = `${t.term}|${field}`;
+    let masked = this.clozeMasks.get(key);
+    if (masked === undefined) {
+      masked = maskAnswer(t[field], [t.term]);
+      this.clozeMasks.set(key, masked);
+    }
+    return masked;
   }
 
   checkTermCloze() {
