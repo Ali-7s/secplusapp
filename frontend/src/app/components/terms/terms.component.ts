@@ -15,15 +15,18 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
 import { maskAnswer } from '../../utils/cloze';
+import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
+import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
+import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 
 @Component({
   selector: 'app-terms',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, FcModeSwitchComponent],
   templateUrl: './terms.component.html',
   styleUrl: './terms.component.scss'
 })
@@ -54,8 +57,12 @@ export class TermsComponent implements OnInit {
   fcFlipped = false;
   fcDone = new Set<number>();
 
+  // Flip, cloze and brain dump are three ways through the same filtered cards.
+  fcMode: FcMode = 'flip';
+  /** The filtered cards in the shape brain dump mode works with. */
+  dumpCards: DumpCard[] = [];
+
   // Cloze mode
-  fcClozeMode = false;
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
@@ -101,6 +108,7 @@ export class TermsComponent implements OnInit {
     if (this.expandedTerm && !this.filteredTerms.some(t => t.term === this.expandedTerm)) {
       this.expandedTerm = null;
     }
+    this.dumpCards = this.filteredTerms.map(termToDumpCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
   }
@@ -191,8 +199,11 @@ export class TermsComponent implements OnInit {
     this.fcClozeCorrect = false;
   }
 
-  toggleFcCloze() {
-    this.fcClozeMode = !this.fcClozeMode;
+  get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
+
+  setFcMode(mode: FcMode) {
+    this.fcMode = mode;
+    this.fcFlipped = false;
     this.fcClozeReset();
   }
 

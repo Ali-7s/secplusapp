@@ -57,118 +57,121 @@
     <!-- ── Flashcard Carousel ─────────────────────────────────────── -->
     <div class="flashcard-container">
 
-      <div class="fc-progress-row">
-        <span>Card {{ fcIndex + 1 }} / {{ filteredAcronyms.length }}</span>
-        <span class="fc-known">{{ fcDone.size }} known</span>
-        <mat-progress-bar mode="determinate"
-          [value]="(fcIndex / filteredAcronyms.length) * 100">
-        </mat-progress-bar>
-        <button mat-icon-button (click)="toggleFcCloze()"
-          [class.cloze-active]="fcClozeMode"
-          matTooltip="{{ fcClozeMode ? 'Standard flip mode' : 'Cloze: type the acronym' }}">
-          <mat-icon>edit_note</mat-icon>
-        </button>
-        <button mat-icon-button (click)="fcReset()" matTooltip="Restart deck">
-          <mat-icon>refresh</mat-icon>
-        </button>
-      </div>
+      <app-fc-mode-switch [mode]="fcMode" (modeChange)="setFcMode($event)" />
 
-      @if (fcClozeMode) {
-        <div class="cloze-card">
-          <div class="cloze-category">{{ filteredAcronyms[fcIndex].category }}</div>
-          <div class="cloze-prompt">What acronym matches this description?</div>
-          <div class="cloze-expansion">{{ clozeText(filteredAcronyms[fcIndex]) }}</div>
+      @if (fcMode === 'dump') {
+        <app-brain-dump [cards]="dumpCards" deckId="acronyms" />
+      } @else {
+
+        <div class="fc-progress-row">
+          <span>Card {{ fcIndex + 1 }} / {{ filteredAcronyms.length }}</span>
+          <span class="fc-known">{{ fcDone.size }} known</span>
+          <mat-progress-bar mode="determinate"
+            [value]="(fcIndex / filteredAcronyms.length) * 100">
+          </mat-progress-bar>
+          <button mat-icon-button (click)="fcReset()" matTooltip="Restart deck">
+            <mat-icon>refresh</mat-icon>
+          </button>
         </div>
-        @if (!fcClozeChecked) {
-          <div class="cloze-input-row">
-            <input class="cloze-input" type="text" [(ngModel)]="fcClozeInput"
-              placeholder="Enter the acronym…" (keydown.enter)="checkAcronymCloze()">
-            <button mat-raised-button color="primary" [disabled]="!fcClozeInput.trim()"
-              (click)="checkAcronymCloze()">
-              <mat-icon>check</mat-icon> Check
-            </button>
+
+        @if (fcClozeMode) {
+          <div class="cloze-card">
+            <div class="cloze-category">{{ filteredAcronyms[fcIndex].category }}</div>
+            <div class="cloze-prompt">What acronym matches this description?</div>
+            <div class="cloze-expansion">{{ clozeText(filteredAcronyms[fcIndex]) }}</div>
           </div>
+          @if (!fcClozeChecked) {
+            <div class="cloze-input-row">
+              <input class="cloze-input" type="text" [(ngModel)]="fcClozeInput"
+                placeholder="Enter the acronym…" (keydown.enter)="checkAcronymCloze()">
+              <button mat-raised-button color="primary" [disabled]="!fcClozeInput.trim()"
+                (click)="checkAcronymCloze()">
+                <mat-icon>check</mat-icon> Check
+              </button>
+            </div>
+          } @else {
+            <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
+              <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
+              <span>{{ fcClozeCorrect ? 'Correct! ' : 'Answer: ' }}
+                <strong>{{ filteredAcronyms[fcIndex].acronym }}</strong>
+                — {{ filteredAcronyms[fcIndex].expansion }}
+              </span>
+              @if (!fcClozeCorrect) {
+                <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
+              }
+            </div>
+            <div class="fc-controls">
+              <button mat-stroked-button (click)="fcPrev()" [disabled]="fcIndex === 0">
+                <mat-icon>chevron_left</mat-icon> Prev
+              </button>
+              <button mat-raised-button color="warn" (click)="fcClozeNext(false)">
+                <mat-icon>close</mat-icon> Still Learning
+              </button>
+              <button mat-raised-button color="primary" (click)="fcClozeNext(true)">
+                <mat-icon>check</mat-icon> Got It
+              </button>
+            </div>
+          }
         } @else {
-          <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
-            <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-            <span>{{ fcClozeCorrect ? 'Correct! ' : 'Answer: ' }}
-              <strong>{{ filteredAcronyms[fcIndex].acronym }}</strong>
-              — {{ filteredAcronyms[fcIndex].expansion }}
-            </span>
-            @if (!fcClozeCorrect) {
-              <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
-            }
+
+          <div class="flashcard" [class.flipped]="fcFlipped" (click)="fcFlip()">
+            <div class="fc-front">
+              <div class="fc-category">{{ filteredAcronyms[fcIndex].category }}</div>
+              <div class="fc-question">{{ filteredAcronyms[fcIndex].acronym }}</div>
+              <div class="fc-hint">Click to reveal answer</div>
+            </div>
+            <div class="fc-back">
+              <div class="fc-expansion">{{ filteredAcronyms[fcIndex].expansion }}</div>
+              <div class="fc-answer">{{ filteredAcronyms[fcIndex].definition }}</div>
+              @if (filteredAcronyms[fcIndex].examContext) {
+                <div class="fc-tip">📋 {{ filteredAcronyms[fcIndex].examContext }}</div>
+              }
+            </div>
           </div>
+
           <div class="fc-controls">
             <button mat-stroked-button (click)="fcPrev()" [disabled]="fcIndex === 0">
               <mat-icon>chevron_left</mat-icon> Prev
             </button>
-            <button mat-raised-button color="warn" (click)="fcClozeNext(false)">
-              <mat-icon>close</mat-icon> Still Learning
-            </button>
-            <button mat-raised-button color="primary" (click)="fcClozeNext(true)">
-              <mat-icon>check</mat-icon> Got It
-            </button>
-          </div>
-        }
-      } @else {
-
-        <div class="flashcard" [class.flipped]="fcFlipped" (click)="fcFlip()">
-          <div class="fc-front">
-            <div class="fc-category">{{ filteredAcronyms[fcIndex].category }}</div>
-            <div class="fc-question">{{ filteredAcronyms[fcIndex].acronym }}</div>
-            <div class="fc-hint">Click to reveal answer</div>
-          </div>
-          <div class="fc-back">
-            <div class="fc-expansion">{{ filteredAcronyms[fcIndex].expansion }}</div>
-            <div class="fc-answer">{{ filteredAcronyms[fcIndex].definition }}</div>
-            @if (filteredAcronyms[fcIndex].examContext) {
-              <div class="fc-tip">📋 {{ filteredAcronyms[fcIndex].examContext }}</div>
+            @if (fcFlipped) {
+              <button mat-raised-button color="warn" (click)="fcNext(false)">
+                <mat-icon>close</mat-icon> Still Learning
+              </button>
+              <button mat-raised-button color="primary" (click)="fcNext(true)">
+                <mat-icon>check</mat-icon> Got It
+              </button>
+            } @else {
+              <button mat-raised-button (click)="fcFlip()">
+                <mat-icon>flip</mat-icon> Flip Card
+              </button>
             }
+            <button mat-stroked-button [disabled]="fcIndex === filteredAcronyms.length - 1"
+              (click)="fcNext(false)">
+              Next <mat-icon>chevron_right</mat-icon>
+            </button>
           </div>
-        </div>
 
-        <div class="fc-controls">
-          <button mat-stroked-button (click)="fcPrev()" [disabled]="fcIndex === 0">
-            <mat-icon>chevron_left</mat-icon> Prev
-          </button>
-          @if (fcFlipped) {
-            <button mat-raised-button color="warn" (click)="fcNext(false)">
-              <mat-icon>close</mat-icon> Still Learning
-            </button>
-            <button mat-raised-button color="primary" (click)="fcNext(true)">
-              <mat-icon>check</mat-icon> Got It
-            </button>
-          } @else {
-            <button mat-raised-button (click)="fcFlip()">
-              <mat-icon>flip</mat-icon> Flip Card
-            </button>
-          }
-          <button mat-stroked-button [disabled]="fcIndex === filteredAcronyms.length - 1"
-            (click)="fcNext(false)">
-            Next <mat-icon>chevron_right</mat-icon>
-          </button>
-        </div>
+        }
 
-      }
-
-      @if (fcIndex === filteredAcronyms.length - 1 && (fcFlipped || (fcClozeMode && fcClozeChecked))) {
-        <div class="fc-complete">
-          <mat-icon>emoji_events</mat-icon>
-          Deck complete! {{ fcDone.size }} / {{ filteredAcronyms.length }} marked as known.
-          <button mat-button color="primary" (click)="fcReset()">Restart</button>
-        </div>
-      }
-
-      <div class="fc-dots">
-        @for (a of filteredAcronyms; track $index) {
-          <div class="fc-dot"
-            [class.active]="$index === fcIndex"
-            [class.known]="fcDone.has($index)"
-            (click)="fcGoTo($index)">
+        @if (fcIndex === filteredAcronyms.length - 1 && (fcFlipped || (fcClozeMode && fcClozeChecked))) {
+          <div class="fc-complete">
+            <mat-icon>emoji_events</mat-icon>
+            Deck complete! {{ fcDone.size }} / {{ filteredAcronyms.length }} marked as known.
+            <button mat-button color="primary" (click)="fcReset()">Restart</button>
           </div>
         }
-      </div>
+
+        <div class="fc-dots">
+          @for (a of filteredAcronyms; track $index) {
+            <div class="fc-dot"
+              [class.active]="$index === fcIndex"
+              [class.known]="fcDone.has($index)"
+              (click)="fcGoTo($index)">
+            </div>
+          }
+        </div>
+
+      }
 
     </div>
 

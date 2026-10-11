@@ -388,8 +388,6 @@
 }
 
 // ── Cloze mode ─────────────────────────────────────────────
-.cloze-active { color: #0f766e !important; background: rgba(20,184,166,.12) !important; }
-
 .cloze-card {
   background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 18px;
   padding: 28px 24px; margin: 8px 0 0; text-align: center;
@@ -432,5 +430,4 @@
     &.wrong   { background: var(--c-error-light);   color: var(--c-error); }
   }
   .cloze-category { color: #5eead4; }
-  .cloze-active   { color: #5eead4 !important; }
 }

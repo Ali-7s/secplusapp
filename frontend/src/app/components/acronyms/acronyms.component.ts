@@ -16,15 +16,18 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
 import { isAcronymClozeCorrect, maskAnswer } from '../../utils/cloze';
+import { DumpCard, acronymToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
+import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
+import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 
 @Component({
   selector: 'app-acronyms',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, FcModeSwitchComponent],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
@@ -56,8 +59,12 @@ export class AcronymsComponent implements OnInit {
   fcFlipped = false;
   fcDone = new Set<number>();
 
+  // Flip, cloze and brain dump are three ways through the same filtered cards.
+  fcMode: FcMode = 'flip';
+  /** The filtered cards in the shape brain dump mode works with. */
+  dumpCards: DumpCard[] = [];
+
   // Cloze mode
-  fcClozeMode = false;
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
@@ -99,6 +106,7 @@ export class AcronymsComponent implements OnInit {
     if (this.expandedAcronym && !this.filteredAcronyms.some(a => a.acronym === this.expandedAcronym)) {
       this.expandedAcronym = null;
     }
+    this.dumpCards = this.filteredAcronyms.map(acronymToDumpCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
   }
@@ -115,8 +123,11 @@ export class AcronymsComponent implements OnInit {
     this.fcClozeCorrect = false;
   }
 
-  toggleFcCloze() {
-    this.fcClozeMode = !this.fcClozeMode;
+  get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
+
+  setFcMode(mode: FcMode) {
+    this.fcMode = mode;
+    this.fcFlipped = false;
     this.fcClozeReset();
   }
 

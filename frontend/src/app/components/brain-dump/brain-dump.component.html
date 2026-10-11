@@ -1,0 +1,199 @@
+<!-- Words the learner also used are marked. Segments carry their own spaces, so none are added between them. -->
+<ng-template #hl let-segments>@for (s of segments; track $index) {@if (s.hit) {<mark>{{ s.text }}</mark>} @else {<span>{{ s.text }}</span>}}</ng-template>
+
+<section class="bd" aria-label="Brain dump flashcards">
+
+  <div class="bd-bar">
+    <label class="bd-scope">
+      <span>Cards</span>
+      <select (change)="onScope($event)" aria-label="Which cards to go through">
+        <option value="todo" [selected]="scope() === 'todo'">Not nailed yet ({{ sizes().todo }})</option>
+        <option value="review" [selected]="scope() === 'review'">To review ({{ sizes().review }})</option>
+        <option value="all" [selected]="scope() === 'all'">All ({{ sizes().all }})</option>
+      </select>
+    </label>
+
+    <ul class="bd-tally" aria-label="How these cards have gone so far">
+      <li><span class="dot nailed" aria-hidden="true"></span>{{ counts().nailed }} nailed</li>
+      <li><span class="dot partly" aria-hidden="true"></span>{{ counts().partly }} partly</li>
+      <li><span class="dot missed" aria-hidden="true"></span>{{ counts().missed }} missed</li>
+    </ul>
+
+    <button type="button" class="bd-icon" [class.on]="shuffle()" [attr.aria-pressed]="shuffle()"
+      aria-label="Shuffle the cards" title="Shuffle the cards" (click)="toggleShuffle()">
+      <mat-icon aria-hidden="true">shuffle</mat-icon>
+    </button>
+  </div>
+
+  @if (card(); as c) {
+
+    <div class="bd-progress">
+      <span>Card {{ index() + 1 }} / {{ deck().length }}</span>
+      <mat-progress-bar mode="determinate" [value]="progress()"></mat-progress-bar>
+    </div>
+
+    <article class="bd-card">
+      <header class="bd-banner">
+        <span class="bd-cat">{{ c.category }}</span>
+        <h2 class="bd-name">{{ c.name }}</h2>
+      </header>
+
+      @if (phase() === 'write') {
+
+        <div class="bd-body">
+          <p class="bd-prompt"><strong>Explain it from memory.</strong> {{ prompt() }}</p>
+
+          <textarea #box class="bd-input" rows="6" maxlength="4000" [value]="draft()" (input)="onInput($event)"
+            (keydown.control.enter)="reveal()" (keydown.meta.enter)="reveal()"
+            [attr.aria-label]="'Your explanation of ' + c.name"
+            placeholder="Write everything you know. Or say it out loud, then press Show answer."></textarea>
+
+          <div class="bd-actions">
+            <span class="bd-keys">Ctrl or ⌘ + Enter to check</span>
+            <button mat-button type="button" (click)="skip()">Skip</button>
+            <button mat-raised-button color="primary" type="button" (click)="reveal()">
+              <mat-icon>visibility</mat-icon> Show answer
+            </button>
+          </div>
+        </div>
+
+      } @else {
+
+        <div class="bd-body">
+          <section aria-label="What you wrote">
+            <h3 class="bd-label">What you wrote</h3>
+            @if (attempt()) {
+              <p class="bd-quote">{{ attempt() }}</p>
+            } @else {
+              <p class="bd-quote bd-quote--empty">Nothing typed. That is fine if you said it out loud, but be honest when you tick below.</p>
+            }
+          </section>
+
+          <section aria-labelledby="bd-cover">
+            <h3 class="bd-label" id="bd-cover" #answer tabindex="-1">A complete answer covers <small>Tick what you said</small></h3>
+            @if (attempt()) {
+              <p class="bd-legend"><mark>Marked</mark> words are ones you also used. It only compares words, so judge by meaning.</p>
+            }
+            <ul class="bd-points">
+              @for (item of checklist(); track $index; let i = $index) {
+                <li>
+                  <label class="bd-point" [class.on]="covered().has(i)">
+                    <input type="checkbox" [checked]="covered().has(i)" (change)="toggle(i)">
+                    <span class="bd-box" aria-hidden="true"><mat-icon>check</mat-icon></span>
+                    <span class="bd-text">
+                      @if (item.tag) { <em class="bd-tag">{{ item.tag }}</em>&ngsp; }
+                      <ng-container *ngTemplateOutlet="hl; context: { $implicit: item.segments }"></ng-container>
+                    </span>
+                  </label>
+                </li>
+              }
+            </ul>
+          </section>
+
+          <div class="bd-verdict" [attr.data-rating]="rating()">
+            <mat-icon aria-hidden="true">{{ verdict().icon }}</mat-icon>
+            <p role="status">
+              <strong>{{ verdict().title }}</strong>
+              {{ covered().size }} of {{ rubric().length }} covered. {{ verdict().hint }}
+            </p>
+            <button mat-raised-button color="primary" type="button" (click)="next()">
+              {{ isLast() ? 'Finish' : 'Next card' }} <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+
+          <details class="bd-full" open>
+            <summary>The full card</summary>
+
+            <p class="bd-def"><ng-container *ngTemplateOutlet="hl; context: { $implicit: definition() }"></ng-container></p>
+
+            @if (c.examContext) {
+              <p class="bd-note bd-exam">
+                <mat-icon aria-hidden="true">school</mat-icon>
+                <span><ng-container *ngTemplateOutlet="hl; context: { $implicit: exam() }"></ng-container></span>
+              </p>
+            }
+            @if (c.analogy) {
+              <p class="bd-note bd-analogy">
+                <mat-icon aria-hidden="true">lightbulb</mat-icon>
+                <span>{{ c.analogy }}</span>
+              </p>
+            }
+
+            @for (group of c.variants ?? []; track group.title) {
+              <section class="bd-variants">
+                <h4>{{ group.title }}</h4>
+                @for (v of group.items; track v.name) {
+                  <div class="bd-variant"><strong>{{ v.name }}</strong><span>{{ v.detail }}</span></div>
+                }
+              </section>
+            }
+
+            @if (c.related.length) {
+              <div class="bd-related">
+                <span>Related:</span>
+                @for (r of c.related; track r) { <span class="chip">{{ r }}</span> }
+              </div>
+            }
+          </details>
+        </div>
+
+      }
+    </article>
+
+  } @else {
+
+    <div class="bd-done">
+      <mat-icon aria-hidden="true">{{ deck().length ? 'emoji_events' : 'task_alt' }}</mat-icon>
+
+      @if (!deck().length) {
+        @if (scope() === 'review') {
+          <h3>Nothing to review</h3>
+          <p>No {{ noun() }} is marked missed or partly known.</p>
+        } @else {
+          <h3>Every card here is nailed</h3>
+          <p>You explained {{ everyCard() }} from memory. Go through them again to check it stuck.</p>
+        }
+      } @else {
+        <h3>Round complete</h3>
+        <p>
+          <strong>{{ session().nailed }}</strong> nailed,
+          <strong>{{ session().partly }}</strong> partly,
+          <strong>{{ session().missed }}</strong> missed.
+        </p>
+      }
+
+      <div class="bd-done-actions">
+        @if (sizes().review > 0) {
+          <button mat-raised-button color="primary" type="button" (click)="setScope('review')">
+            <mat-icon>replay</mat-icon> Redo the {{ sizes().review }} to review
+          </button>
+        } @else if (sizes().todo > 0) {
+          <button mat-raised-button color="primary" type="button" (click)="setScope('todo')">
+            <mat-icon>arrow_forward</mat-icon> Continue with the {{ sizes().todo }} not nailed yet
+          </button>
+        } @else {
+          <button mat-raised-button color="primary" type="button" (click)="setScope('all')">
+            <mat-icon>replay</mat-icon> Go through them again
+          </button>
+        }
+        @if (deck().length) {
+          <button mat-stroked-button type="button" (click)="restart(true)">Start this round over</button>
+        }
+      </div>
+    </div>
+
+  }
+
+  @if (hasProgress()) {
+    <div class="bd-foot">
+      @if (!confirmReset()) {
+        <button type="button" class="bd-link" (click)="confirmReset.set(true)">Reset brain dump progress</button>
+      } @else {
+        <span>Forget how you rated every {{ noun() }}?</span>
+        <button type="button" class="bd-link danger" (click)="resetProgress()">Yes, reset it</button>
+        <button type="button" class="bd-link" (click)="confirmReset.set(false)">Cancel</button>
+      }
+    </div>
+  }
+
+</section>
