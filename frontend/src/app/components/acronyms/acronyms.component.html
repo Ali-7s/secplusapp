@@ -291,6 +291,9 @@
                         <mat-icon>{{ isQuizCorrect(a.acronym) ? 'check_circle' : 'info' }}</mat-icon>
                         {{ isQuizCorrect(a.acronym) ? 'Correct!' : 'Correct answer: ' + detail.quizAnswer }}
                       </div>
+                      @if (detail.explanation) {
+                        <p class="quiz-why"><strong>Why:</strong> {{ detail.explanation }}</p>
+                      }
                     }
                   </div>
 

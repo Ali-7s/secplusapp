@@ -3,6 +3,8 @@ export interface AcronymDetail {
   quizQuestion: string;
   quizOptions: string[];
   quizAnswer: string;
+  /** Why the best answer is best and what makes the closest wrong answers wrong. Shown after the learner answers. */
+  explanation?: string;
 }
 
 export interface VariantItem {

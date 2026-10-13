@@ -314,6 +314,13 @@
   &.pass { background: var(--c-success-light); color: var(--c-success); }
 }
 
+.quiz-why {
+  margin: 8px 0 0; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--c-border); background: var(--c-surface);
+  font-size: 12.5px; line-height: 1.6; color: var(--c-text-2);
+  strong { color: var(--c-text); }
+}
+
 // ── Dark mode ──────────────────────────────────────────────
 :host-context([data-theme="dark"]) {
   .page-header mat-icon { background: rgba(167,139,250,.15); color: #c084fc; }

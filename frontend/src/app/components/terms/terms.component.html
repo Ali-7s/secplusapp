@@ -305,6 +305,9 @@
                         <mat-icon>{{ isQuizCorrect(t.term) ? 'check_circle' : 'info' }}</mat-icon>
                         {{ isQuizCorrect(t.term) ? 'Correct!' : 'Correct answer: ' + detail.quizAnswer }}
                       </div>
+                      @if (detail.explanation) {
+                        <p class="quiz-why"><strong>Why:</strong> {{ detail.explanation }}</p>
+                      }
                     }
                   </div>
 
