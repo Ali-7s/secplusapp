@@ -45,6 +45,16 @@ describe('practice exam pool', () => {
     expect(pool.some(q => q.kind === 'match')).toBeTrue();
   });
 
+  it('is large enough that back to back exams are mostly new questions', () => {
+    // At least four full exams' worth per domain before the rotation has to repeat anything.
+    for (const d of [1, 2, 3, 4, 5] as ExamDomain[]) {
+      const n = pool.filter(q => !isPbq(q) && q.domain === d).length;
+      expect(n).withContext(`domain ${d}`).toBeGreaterThanOrEqual(EXAM_SPECS.full.perDomain[d] * 4);
+    }
+    expect(pool.filter(isPbq).length).toBeGreaterThanOrEqual(40);
+    expect(pool.filter(q => q.kind === 'firewall').length).toBeGreaterThanOrEqual(8);
+  });
+
   it('has enough networking questions for the drill, each linked to a real lesson', () => {
     const slugs = new Set(LESSON_META.map(l => l.slug));
     const linked = pool.filter(q => q.lesson);
