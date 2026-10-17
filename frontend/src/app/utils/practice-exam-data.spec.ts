@@ -6,6 +6,7 @@
  * refer to a letter or to another option, and the correct option must not be a giveaway by being the longest.
  */
 import { EXAM_SPECS } from './exam-engine';
+import { LESSON_META } from '../components/networking/lessons/lesson-index';
 import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
 
 describe('practice exam pool', () => {
@@ -42,6 +43,15 @@ describe('practice exam pool', () => {
     expect(pool.some(q => q.kind === 'firewall')).toBeTrue();
     expect(pool.some(q => q.kind === 'order')).toBeTrue();
     expect(pool.some(q => q.kind === 'match')).toBeTrue();
+  });
+
+  it('has enough networking questions for the drill, each linked to a real lesson', () => {
+    const slugs = new Set(LESSON_META.map(l => l.slug));
+    const linked = pool.filter(q => q.lesson);
+    expect(linked.filter(q => !slugs.has(q.lesson!)).map(q => q.id)).toEqual([]);
+    expect(linked.filter(q => !isPbq(q)).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.choices);
+    expect(linked.filter(isPbq).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.pbqs);
+    expect(linked.some(q => q.kind === 'firewall')).toBeTrue();
   });
 
   it('gives single answer questions four options with one correct, and multi select the count its stem asks for', () => {

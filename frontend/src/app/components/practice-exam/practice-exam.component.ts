@@ -1,15 +1,17 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
+import { lessonBySlug } from '../networking/lessons/lesson-index';
 import {
   ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion, isPbq,
 } from '../../models/exam.model';
 import {
   EXAM_SPECS, ExamAnswer, ExamGrade, ExamItem, ExamLength, GradedQuestion, PASSING_SCALED,
-  buildExam, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted,
+  buildExam, examSize, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted,
 } from '../../utils/exam-engine';
 
 export type ExamMode = 'exam' | 'study';
@@ -32,15 +34,17 @@ const STORAGE_KEY = 'sp-exam';
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [DecimalPipe, NgTemplateOutlet, MatButtonModule, MatIconModule, DragDropModule],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss',
 })
 export class PracticeExamComponent implements OnInit, OnDestroy {
   private content = inject(ContentService);
+  private document = inject(DOCUMENT);
+  private route = inject(ActivatedRoute);
 
   readonly specs = EXAM_SPECS;
-  readonly lengths: ExamLength[] = ['full', 'quick'];
+  readonly lengths: ExamLength[] = ['full', 'quick', 'network'];
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
   readonly domainNames = DOMAIN_NAMES;
   readonly passingScaled = PASSING_SCALED;
@@ -71,6 +75,8 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   private timer?: ReturnType<typeof setInterval>;
 
   ngOnInit() {
+    const asked = this.route.snapshot.queryParamMap.get('length');
+    if (asked && asked in this.specs) this.length = asked as ExamLength;
     this.content.getPracticeExam().subscribe({
       next: pool => {
         this.pool = pool;
@@ -90,10 +96,10 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   get pbqCount(): number { return this.pool.filter(isPbq).length; }
   get choiceCount(): number { return this.pool.length - this.pbqCount; }
-  totalFor(length: ExamLength): number {
-    const spec = this.specs[length];
-    return spec.pbqs + Object.values(spec.perDomain).reduce((s, n) => s + n, 0);
-  }
+  totalFor(length: ExamLength): number { return examSize(length); }
+
+  /** The Networking Basics lesson behind a question, for the "review the lesson" link in feedback. */
+  lessonFor(q: ExamQuestion) { return lessonBySlug(q.lesson); }
 
   start() {
     this.begin({
@@ -165,7 +171,9 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   question(item: ExamItem): ExamQuestion { return this.byId.get(item.id)!; }
 
   go(i: number) {
-    this.index = Math.max(0, Math.min(this.items.length - 1, i));
+    const next = Math.max(0, Math.min(this.items.length - 1, i));
+    if (next !== this.index) this.document.querySelector('mat-sidenav-content')?.scrollTo({ top: 0 });
+    this.index = next;
     this.showNavigator = false;
     this.save();
   }

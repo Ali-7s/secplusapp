@@ -1,11 +1,29 @@
 import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
 
+export interface ExamSpec {
+  label: string;
+  minutes: number;
+  pbqs: number;
+  /** Multiple choice per domain, following the SY0-701 weights. */
+  perDomain?: Record<ExamDomain, number>;
+  /** Or a flat count drawn from the whole (filtered) pool. */
+  choices?: number;
+  /** Only questions linked to a Networking Basics lesson. */
+  networking?: boolean;
+}
+
 /** How each exam is assembled. PBQs come first, as on the real exam; the rest follows the SY0-701 domain weights. */
 export const EXAM_SPECS = {
-  full: { label: 'Full exam', minutes: 90, pbqs: 5, perDomain: { 1: 10, 2: 19, 3: 15, 4: 24, 5: 17 } as Record<ExamDomain, number> },
-  quick: { label: 'Quick set', minutes: 35, pbqs: 2, perDomain: { 1: 3, 2: 6, 3: 5, 4: 8, 5: 6 } as Record<ExamDomain, number> },
-} as const;
+  full: { label: 'Full exam', minutes: 90, pbqs: 5, perDomain: { 1: 10, 2: 19, 3: 15, 4: 24, 5: 17 } },
+  quick: { label: 'Quick set', minutes: 35, pbqs: 2, perDomain: { 1: 3, 2: 6, 3: 5, 4: 8, 5: 6 } },
+  network: { label: 'Networking drill', minutes: 30, pbqs: 2, choices: 23, networking: true },
+} satisfies Record<string, ExamSpec>;
 export type ExamLength = keyof typeof EXAM_SPECS;
+
+export function examSize(length: ExamLength): number {
+  const spec: ExamSpec = EXAM_SPECS[length];
+  return spec.pbqs + (spec.choices ?? Object.values(spec.perDomain ?? {}).reduce((s, n) => s + n, 0));
+}
 
 /** PBQs are worth more than a multiple choice question and earn partial credit; multiple choice is all or nothing. */
 export const PBQ_POINTS = 3;
@@ -86,17 +104,22 @@ const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 /** Draws an exam from the pool: PBQs first, then multiple choice spread by domain weight in random order. */
 export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, seed: number): ExamItem[] {
-  const spec = EXAM_SPECS[length];
+  const spec: ExamSpec = EXAM_SPECS[length];
   const rand = seededRandom(seed);
+  if (spec.networking) pool = pool.filter(q => !!q.lesson);
   // Every exam gets at least one firewall rule table, the PBQ type learners most need practice on.
   const allPbqs = shuffled(pool.filter(isPbq), rand);
   const firewall = allPbqs.find(q => q.kind === 'firewall');
   const picked = firewall ? [firewall, ...allPbqs.filter(q => q !== firewall)] : allPbqs;
   const pbqs = shuffled(picked.slice(0, spec.pbqs), rand);
   const choices: ExamQuestion[] = [];
-  for (const domain of [1, 2, 3, 4, 5] as ExamDomain[]) {
-    const inDomain = pool.filter(q => !isPbq(q) && q.domain === domain);
-    choices.push(...shuffled(inDomain, rand).slice(0, spec.perDomain[domain]));
+  if (spec.perDomain) {
+    for (const domain of [1, 2, 3, 4, 5] as ExamDomain[]) {
+      const inDomain = pool.filter(q => !isPbq(q) && q.domain === domain);
+      choices.push(...shuffled(inDomain, rand).slice(0, spec.perDomain[domain]));
+    }
+  } else {
+    choices.push(...shuffled(pool.filter(q => !isPbq(q)), rand).slice(0, spec.choices));
   }
   return [...pbqs, ...shuffled(choices, rand)].map(q => {
     const item: ExamItem = { id: q.id };

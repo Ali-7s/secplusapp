@@ -23,6 +23,8 @@ interface ExamQuestionBase {
   exhibit?: string;
   /** The one-line lesson, shown after the per-option reasons. */
   takeaway: string;
+  /** Slug of the Networking Basics lesson that teaches the background; such questions make up the networking drill. */
+  lesson?: string;
 }
 
 export interface ChoiceQuestion extends ExamQuestionBase {
@@ -58,6 +60,8 @@ export interface MatchPrompt {
 export interface MatchQuestion extends ExamQuestionBase {
   kind: 'match';
   choices?: string[];
+  /** Prompts are log lines or requests: shown in monospace on their own line, with the choice underneath. */
+  codeLabels?: boolean;
   prompts: MatchPrompt[];
 }
 

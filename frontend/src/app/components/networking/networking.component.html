@@ -44,6 +44,10 @@
   <section class="after">
     <h2>Then practice</h2>
     <div class="after-grid">
+      <a class="after-card" routerLink="/exam" [queryParams]="{ length: 'network' }">
+        <mat-icon aria-hidden="true">assignment</mat-icon>
+        <span><strong>Networking drill</strong><small>25 exam-style questions and PBQs on these lessons, each linked back to its lesson.</small></span>
+      </a>
       <a class="after-card" routerLink="/reference">
         <mat-icon aria-hidden="true">fitness_center</mat-icon>
         <span><strong>Ports recall drill</strong><small>The Reference Sheet's first tab quizzes you on port numbers.</small></span>

@@ -1,5 +1,5 @@
 import { ChoiceQuestion, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion } from '../models/exam.model';
-import { EXAM_SPECS, PASSING_SCALED, buildExam, gradeExam, gradeQuestion, isAnswered, scaledScore } from './exam-engine';
+import { EXAM_SPECS, PASSING_SCALED, buildExam, examSize, gradeExam, gradeQuestion, isAnswered, scaledScore } from './exam-engine';
 
 const why = 'because this explanation is long enough';
 
@@ -61,6 +61,16 @@ describe('exam engine', () => {
     const p = pool();
     expect(buildExam(p, 'quick', 7)).toEqual(buildExam(p, 'quick', 7));
     expect(buildExam(p, 'quick', 7)).not.toEqual(buildExam(p, 'quick', 8));
+  });
+
+  it('builds the networking drill only from questions linked to a lesson', () => {
+    const p = pool();
+    for (let i = 0; i < 30; i++) p.push({ ...single(`net-${i}`, 3), lesson: 'vlans' });
+    p.push({ ...firewall, id: 'net-fw', lesson: 'security-devices' }, { ...match, id: 'net-match', lesson: 'helpers' });
+    const items = buildExam(p, 'network', 3);
+    expect(items.length).toBe(examSize('network'));
+    expect(items.every(i => i.id.startsWith('net-'))).toBeTrue();
+    expect(items.slice(0, EXAM_SPECS.network.pbqs).map(i => i.id).sort()).toEqual(['net-fw', 'net-match']);
   });
 
   it('always includes a firewall rule PBQ', () => {

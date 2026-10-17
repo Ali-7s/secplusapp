@@ -37,6 +37,7 @@
           <button class="choice-card" role="radio" [attr.aria-checked]="length === l" [class.on]="length === l" (click)="length = l">
             <span class="cc-title">{{ spec.label }}</span>
             <span class="cc-sub">{{ totalFor(l) }} questions, {{ spec.pbqs }} PBQs, {{ spec.minutes }} minutes</span>
+            @if (l === 'network') { <span class="cc-sub">Only the networking groundwork: subnets, ports, DHCP, DNS, ARP, VLANs, firewalls. Each question links to its lesson.</span> }
           </button>
         }
       </div>
@@ -157,7 +158,7 @@
           }
           @case ('match') {
             @let m = asMatch(q);
-            <div class="match">
+            <div class="match" [class.code]="m.codeLabels">
               @for (p of m.prompts; track $index; let i = $index) {
                 @if (p.group && (i === 0 || m.prompts[i - 1].group !== p.group)) { <h3 class="mgroup">{{ p.group }}</h3> }
                 <label class="mrow">
@@ -316,7 +317,7 @@
           <li [class.correct]="p.ok" [class.picked-wrong]="!p.ok">
             <div class="part-head">
               <mat-icon aria-hidden="true">{{ p.ok ? 'check' : 'close' }}</mat-icon>
-              <strong>{{ p.label }}</strong>
+              <strong [class.code]="q.codeLabels">{{ p.label }}</strong>
             </div>
             @if (p.ok) {
               <p class="part-ans">{{ p.expected }}</p>
@@ -330,5 +331,12 @@
       </ul>
     }
     <p class="takeaway"><mat-icon aria-hidden="true">lightbulb</mat-icon> <span>{{ q.takeaway }}</span></p>
+    @if (lessonFor(q); as lesson) {
+      <a class="lesson-link" [routerLink]="['/networking', lesson.slug]">
+        <mat-icon aria-hidden="true">school</mat-icon>
+        <span>Review the background: Networking Basics lesson {{ lesson.number }}, {{ lesson.title }}</span>
+        <mat-icon aria-hidden="true">chevron_right</mat-icon>
+      </a>
+    }
   </div>
 </ng-template>

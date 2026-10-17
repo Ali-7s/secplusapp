@@ -24,7 +24,7 @@
     span { font-size: 13px; color: var(--c-text-2); } }
 }
 .pick-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--c-muted); margin: 20px 0 8px; }
-.choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .choice-card {
   display: flex; flex-direction: column; gap: 4px; text-align: left; cursor: pointer;
   padding: 14px 16px; border-radius: var(--r-md); border: 2px solid var(--c-border);
@@ -76,7 +76,8 @@
   &.answered { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-text); }
   &.partial { border-style: dashed; border-color: var(--c-accent); }
   &.flag { box-shadow: inset 0 -3px 0 var(--c-warning); }
-  &.current { outline: 2px solid var(--c-accent-solid); outline-offset: 1px; }
+  // Not an outline: the global focus rule removes outlines from a clicked button, which hid the current question.
+  &.current { background: var(--c-accent-solid); border-color: var(--c-accent-solid); color: var(--c-on-accent); }
 }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; font-size: 12px; color: var(--c-muted);
   span { display: flex; align-items: center; gap: 4px; }
@@ -147,7 +148,11 @@ select {
 .mgroup { margin: 10px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--c-accent-solid); }
 .mrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center;
   padding: 10px 12px; border-radius: var(--r-sm); background: var(--c-surface-2); border: 1px solid var(--c-border);
-  .mlabel { color: var(--c-text); line-height: 1.5; white-space: pre-line; } }
+  .mlabel { color: var(--c-text); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; } }
+.match.code .mrow { grid-template-columns: 1fr; gap: 8px;
+  .mlabel { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px;
+    padding: 8px 10px; border-radius: 6px; background: var(--c-surface-3); }
+  select { max-width: 320px; } }
 
 .order { display: flex; flex-direction: column; gap: 6px; }
 .oitem {
@@ -179,12 +184,18 @@ select {
   &.mine { background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border-dark); }
   &.ok { background: var(--c-success); color: var(--c-surface); } }
 .why { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--c-text-2); }
-.part-head { display: flex; align-items: center; gap: 6px; color: var(--c-text);
+.part-head { display: flex; align-items: center; gap: 6px; color: var(--c-text); overflow-wrap: anywhere;
+  strong { min-width: 0; }
+  strong.code { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px; font-weight: 600; }
   mat-icon { font-size: 18px; width: 18px; height: 18px; } }
 li.correct .part-head mat-icon { color: var(--c-success); }
 li.picked-wrong .part-head mat-icon { color: var(--c-error); }
 .part-ans { margin: 4px 0 0; font-size: 14px; color: var(--c-text); line-height: 1.5; word-break: break-word;
   .lbl { font-weight: 700; color: var(--c-text-2); } }
+.lesson-link { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--c-accent); color: var(--c-accent-solid); font-size: 14px; font-weight: 600; text-decoration: none;
+  span { flex: 1; } mat-icon { flex-shrink: 0; }
+  &:hover { background: var(--c-accent-light); } }
 .takeaway { display: flex; gap: 8px; margin: 12px 0 0; padding: 10px 12px; border-radius: var(--r-sm);
   background: var(--c-warning-light); color: var(--c-text); line-height: 1.5; font-size: 14px;
   mat-icon { color: var(--c-warning); flex-shrink: 0; } }
