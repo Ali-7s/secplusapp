@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, shareReplay } from 'rxjs';
 import { Acronym, AcronymDetail, Term, TermDetail } from '../models/glossary.model';
 import { DeckId } from '../utils/brain-dump';
+import { ExamQuestion } from '../models/exam.model';
 
 @Injectable({ providedIn: 'root' })
 export class ContentService {
   private http = inject(HttpClient);
   private keyPoints = new Map<DeckId, Observable<Record<string, string[]>>>();
+  private examPool?: Observable<ExamQuestion[]>;
 
   getAcronyms(): Observable<Acronym[]> {
     return this.http.get<Acronym[]>('/data/acronyms.json');
@@ -40,5 +42,11 @@ export class ContentService {
       this.keyPoints.set(deck, points);
     }
     return points;
+  }
+
+  /** The practice exam question pool, loaded once when the exam page first needs it. */
+  getPracticeExam(): Observable<ExamQuestion[]> {
+    this.examPool ??= this.http.get<ExamQuestion[]>('/data/practice-exam.json').pipe(shareReplay(1));
+    return this.examPool;
   }
 }

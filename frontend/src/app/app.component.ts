@@ -25,5 +25,6 @@ export class AppComponent {
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary' },
     { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
     { path: '/reference', icon: 'table_chart', label: 'Reference Sheet' },
+    { path: '/exam', icon: 'assignment', label: 'Practice Exam' },
   ];
 }

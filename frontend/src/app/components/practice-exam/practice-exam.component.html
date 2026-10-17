@@ -1,0 +1,334 @@
+<div class="exam-wrap">
+
+  @if (state === 'loading') {
+    <p class="status">Loading the question pool…</p>
+  }
+  @if (state === 'error') {
+    <p class="status error">The question pool could not be loaded. Refresh the page to try again.</p>
+  }
+
+  <!-- ── Intro ─────────────────────────────────────────────────────────── -->
+  @if (state === 'intro') {
+    <section class="intro">
+      <header class="intro-head">
+        <div class="intro-icon"><mat-icon aria-hidden="true">assignment</mat-icon></div>
+        <div>
+          <h1>Practice Exam</h1>
+          <p>Hard, exam-style questions with PBQs first, the way CompTIA does it. Every answer you give is explained, right or wrong.</p>
+        </div>
+      </header>
+
+      @if (saved) {
+        <div class="resume">
+          <mat-icon aria-hidden="true">history</mat-icon>
+          <div class="resume-text">
+            <strong>Unfinished {{ specs[saved.length].label.toLowerCase() }}</strong>
+            <span>{{ saved.mode === 'exam' ? 'Exam mode' : 'Study mode' }}, {{ saved.flagged.length }} flagged</span>
+          </div>
+          <button mat-flat-button color="primary" (click)="resume()">Resume</button>
+          <button mat-button (click)="discardSaved()">Discard</button>
+        </div>
+      }
+
+      <h2 class="pick-title">Length</h2>
+      <div class="choice-grid" role="radiogroup" aria-label="Exam length">
+        @for (l of lengths; track l) {
+          @let spec = specs[l];
+          <button class="choice-card" role="radio" [attr.aria-checked]="length === l" [class.on]="length === l" (click)="length = l">
+            <span class="cc-title">{{ spec.label }}</span>
+            <span class="cc-sub">{{ totalFor(l) }} questions, {{ spec.pbqs }} PBQs, {{ spec.minutes }} minutes</span>
+          </button>
+        }
+      </div>
+
+      <h2 class="pick-title">Mode</h2>
+      <div class="choice-grid" role="radiogroup" aria-label="Exam mode">
+        <button class="choice-card" role="radio" [attr.aria-checked]="mode === 'exam'" [class.on]="mode === 'exam'" (click)="mode = 'exam'">
+          <span class="cc-title"><mat-icon aria-hidden="true">timer</mat-icon> Exam mode</span>
+          <span class="cc-sub">Timed. No feedback until you submit, then a full review of every question.</span>
+        </button>
+        <button class="choice-card" role="radio" [attr.aria-checked]="mode === 'study'" [class.on]="mode === 'study'" (click)="mode = 'study'">
+          <span class="cc-title"><mat-icon aria-hidden="true">school</mat-icon> Study mode</span>
+          <span class="cc-sub">Untimed. Check each answer as you go and read why each option is right or wrong.</span>
+        </button>
+      </div>
+
+      <ul class="tips">
+        <li>Read the last sentence first: BEST, FIRST and MOST likely decide between two answers that are both true.</li>
+        <li>PBQs give partial credit; multiple choice and select-all questions are all or nothing.</li>
+        <li>Skip a PBQ that is eating your time, flag it, and come back after the multiple choice.</li>
+        <li>The score is an estimate on CompTIA's 100 to 900 scale (750 passes). Their real scaling is not public.</li>
+      </ul>
+
+      <button mat-flat-button color="primary" class="start-btn" (click)="start()">
+        <mat-icon aria-hidden="true">play_arrow</mat-icon> Start {{ specs[length].label.toLowerCase() }}
+      </button>
+      <p class="pool-note">Drawn at random from {{ pbqCount }} PBQs and {{ choiceCount }} multiple choice questions, so each attempt is different.</p>
+    </section>
+  }
+
+  <!-- ── Running ───────────────────────────────────────────────────────── -->
+  @if (state === 'running') {
+    @let q = current;
+    <div class="topbar" [class.low]="deadline && secondsLeft < 600">
+      <button class="nav-toggle" mat-stroked-button (click)="showNavigator = !showNavigator" [attr.aria-expanded]="showNavigator">
+        <mat-icon aria-hidden="true">apps</mat-icon> {{ index + 1 }} / {{ items.length }}
+      </button>
+      <span class="progress">{{ answeredCount }} answered</span>
+      @if (deadline) {
+        <span class="timer" [attr.aria-label]="'Time left ' + timerText"><mat-icon aria-hidden="true">timer</mat-icon> {{ timerText }}</span>
+      } @else {
+        <span class="timer study"><mat-icon aria-hidden="true">school</mat-icon> Study</span>
+      }
+      <button mat-flat-button color="primary" class="submit-btn" (click)="confirmSubmit = true">Finish</button>
+    </div>
+
+    @if (confirmSubmit) {
+      <div class="confirm" role="alertdialog" aria-label="Finish the exam">
+        <p>
+          <strong>Finish and grade now?</strong>
+          @if (answeredCount < items.length) { {{ items.length - answeredCount }} questions are not fully answered. }
+          @if (flagged.size) { {{ flagged.size }} are flagged. }
+        </p>
+        <div class="confirm-actions">
+          <button mat-button (click)="confirmSubmit = false">Keep going</button>
+          <button mat-flat-button color="primary" (click)="submit()">Grade it</button>
+        </div>
+      </div>
+    }
+
+    <div class="run-body">
+      <nav class="navigator" [class.open]="showNavigator" aria-label="Questions">
+        <div class="nav-grid">
+          @for (it of items; track it.id; let i = $index) {
+            <button class="nav-btn {{ navState(it) }}" [class.current]="i === index" [class.flag]="flagged.has(it.id)"
+              [attr.aria-label]="'Question ' + (i + 1) + (flagged.has(it.id) ? ', flagged' : '')" (click)="go(i)">{{ i + 1 }}</button>
+          }
+        </div>
+        <div class="legend">
+          <span><i class="dot answered"></i> Answered</span>
+          <span><i class="dot partial"></i> Started</span>
+          <span><i class="dot flag"></i> Flagged</span>
+        </div>
+      </nav>
+
+      <article class="qcard">
+        <div class="qhead">
+          <span class="qnum">Question {{ index + 1 }}</span>
+          <span class="chip kind" [class.pbq]="q.kind !== 'single' && q.kind !== 'multi'">{{ kindLabel(q) }}</span>
+          <span class="chip">Domain {{ q.domain }} · {{ q.objective }}</span>
+          <button mat-icon-button class="flag-btn" [class.on]="flagged.has(q.id)" (click)="toggleFlag(q.id)"
+            [attr.aria-label]="flagged.has(q.id) ? 'Remove flag' : 'Flag for review'" [attr.aria-pressed]="flagged.has(q.id)">
+            <mat-icon aria-hidden="true">{{ flagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
+          </button>
+        </div>
+
+        <ng-container [ngTemplateOutlet]="prompt" [ngTemplateOutletContext]="{ q: q }"></ng-container>
+
+        <!-- Answer area -->
+        @switch (q.kind) {
+          @case ('firewall') {
+            @let f = asFirewall(q);
+            <ol class="reqs">
+              @for (r of f.requirements; track $index) { <li>{{ r }}</li> }
+            </ol>
+            <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are processed top to bottom and the first match wins. Rule N implements requirement N.</p>
+            <div class="fw-wrap">
+              <table class="fw">
+                <thead><tr><th>#</th>@for (c of f.columns; track c) { <th>{{ c }}</th> }</tr></thead>
+                <tbody>
+                  @for (row of f.rows; track $index; let r = $index) {
+                    <tr>
+                      <td class="rn">{{ r + 1 }}</td>
+                      @for (c of f.columns; track c) {
+                        <td>
+                          <select [value]="cell(q.id, r, c)" [disabled]="locked(q.id)" [attr.aria-label]="'Rule ' + (r + 1) + ' ' + c"
+                            (change)="setCell(q.id, r, c, $any($event.target).value)">
+                            <option value="" disabled [selected]="!cell(q.id, r, c)">Select</option>
+                            @for (o of f.choices[c]; track o) { <option [value]="o" [selected]="cell(q.id, r, c) === o">{{ o }}</option> }
+                          </select>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          @case ('match') {
+            @let m = asMatch(q);
+            <div class="match">
+              @for (p of m.prompts; track $index; let i = $index) {
+                @if (p.group && (i === 0 || m.prompts[i - 1].group !== p.group)) { <h3 class="mgroup">{{ p.group }}</h3> }
+                <label class="mrow">
+                  <span class="mlabel">{{ p.label }}</span>
+                  <select [value]="pick(q.id, i)" [disabled]="locked(q.id)" (change)="setPick(q.id, i, $any($event.target).value)">
+                    <option value="" disabled [selected]="!pick(q.id, i)">Select</option>
+                    @for (o of p.choices ?? m.choices ?? []; track o) { <option [value]="o" [selected]="pick(q.id, i) === o">{{ o }}</option> }
+                  </select>
+                </label>
+              }
+            </div>
+          }
+          @case ('order') {
+            @let o = asOrder(q);
+            <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Drag the items, or use the arrows, into the correct order. First at the top.</p>
+            <div class="order" cdkDropList [cdkDropListDisabled]="locked(q.id)" (cdkDropListDropped)="dropOrder(o, $event)">
+              @for (idx of orderOf(o); track idx; let pos = $index) {
+                <div class="oitem" cdkDrag>
+                  <mat-icon class="grip" cdkDragHandle aria-hidden="true">drag_indicator</mat-icon>
+                  <span class="opos">{{ pos + 1 }}</span>
+                  <span class="otext">{{ o.items[idx].text }}</span>
+                  <span class="oarrows">
+                    <button mat-icon-button [disabled]="locked(q.id) || pos === 0" (click)="move(o, pos, -1)" [attr.aria-label]="'Move up: ' + o.items[idx].text"><mat-icon>arrow_upward</mat-icon></button>
+                    <button mat-icon-button [disabled]="locked(q.id) || pos === o.items.length - 1" (click)="move(o, pos, 1)" [attr.aria-label]="'Move down: ' + o.items[idx].text"><mat-icon>arrow_downward</mat-icon></button>
+                  </span>
+                </div>
+              }
+            </div>
+            @if (!hasOrder(q.id) && !locked(q.id)) {
+              <button mat-button class="keep" (click)="keepOrder(o)">This order is my answer</button>
+            }
+          }
+          @default {
+            @let c = asChoice(q);
+            <div class="options" [attr.role]="c.kind === 'single' ? 'radiogroup' : 'group'">
+              @for (oi of item.optionOrder; track oi; let n = $index) {
+                <button class="opt" [class.on]="chosen(q.id, oi)" [disabled]="locked(q.id)"
+                  [attr.role]="c.kind === 'single' ? 'radio' : 'checkbox'" [attr.aria-checked]="chosen(q.id, oi)" (click)="choose(c, oi)">
+                  <span class="oletter" [class.square]="c.kind === 'multi'">{{ letters[n] }}</span>
+                  <span class="otxt">{{ c.options[oi].text }}</span>
+                </button>
+              }
+            </div>
+          }
+        }
+
+        @if (mode === 'study') {
+          @if (locked(q.id)) {
+            <ng-container [ngTemplateOutlet]="feedback" [ngTemplateOutletContext]="{ q: q, item: item, g: graded(q, item) }"></ng-container>
+          } @else {
+            <button mat-flat-button color="primary" class="check-btn" [disabled]="!answered(q) && q.kind !== 'order'" (click)="check(q)">Check answer</button>
+          }
+        }
+
+        <div class="qnav">
+          <button mat-stroked-button [disabled]="index === 0" (click)="go(index - 1)"><mat-icon>chevron_left</mat-icon> Previous</button>
+          @if (index < items.length - 1) {
+            <button mat-flat-button color="primary" (click)="go(index + 1)">Next <mat-icon iconPositionEnd>chevron_right</mat-icon></button>
+          } @else {
+            <button mat-flat-button color="primary" (click)="confirmSubmit = true">Finish</button>
+          }
+        </div>
+      </article>
+    </div>
+  }
+
+  <!-- ── Result ────────────────────────────────────────────────────────── -->
+  @if (state === 'result' && grade) {
+    <section class="result">
+      <div class="score" [class.pass]="grade.passed">
+        <div class="scaled">{{ grade.scaled }}<small>/900</small></div>
+        <div class="verdict">{{ grade.passed ? 'Passing estimate' : 'Below the passing mark' }} (750)</div>
+        <div class="stats">
+          <span>{{ grade.percent | number: '1.0-0' }}% of points</span>
+          <span>{{ grade.correctCount }} of {{ items.length }} fully correct</span>
+        </div>
+      </div>
+
+      <h2>By domain</h2>
+      <div class="domains">
+        @for (d of domains; track d) {
+          @let pct = domainPercent(d);
+          @if (pct !== null) {
+            <div class="drow">
+              <span class="dname">{{ d }}. {{ domainNames[d] }}</span>
+              <span class="dbar"><span [style.width.%]="pct" [class.weak]="pct < 75"></span></span>
+              <span class="dpct">{{ pct }}%</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="result-actions">
+        <button mat-flat-button color="primary" (click)="backToIntro()"><mat-icon>refresh</mat-icon> New attempt</button>
+      </div>
+
+      <h2>Review</h2>
+      <div class="filters" role="tablist">
+        <button role="tab" [attr.aria-selected]="reviewFilter === 'wrong'" [class.on]="reviewFilter === 'wrong'" (click)="reviewFilter = 'wrong'">Missed ({{ wrongCount }})</button>
+        <button role="tab" [attr.aria-selected]="reviewFilter === 'flagged'" [class.on]="reviewFilter === 'flagged'" (click)="reviewFilter = 'flagged'">Flagged ({{ flagged.size }})</button>
+        <button role="tab" [attr.aria-selected]="reviewFilter === 'all'" [class.on]="reviewFilter === 'all'" (click)="reviewFilter = 'all'">All ({{ items.length }})</button>
+      </div>
+
+      @for (r of reviewList; track r.q.id) {
+        <article class="qcard review" [class.right]="r.g.correct" [class.wrong]="!r.g.correct">
+          <div class="qhead">
+            <mat-icon class="mark" aria-hidden="true">{{ r.g.correct ? 'check_circle' : r.g.earned > 0 ? 'timelapse' : 'cancel' }}</mat-icon>
+            <span class="qnum">Question {{ r.n }}</span>
+            <span class="chip kind" [class.pbq]="r.q.kind !== 'single' && r.q.kind !== 'multi'">{{ kindLabel(r.q) }}</span>
+            <span class="chip">Domain {{ r.q.domain }} · {{ r.q.objective }}</span>
+            @if (r.g.max > 1) { <span class="chip pts">{{ r.g.earned }} / {{ r.g.max }} points</span> }
+            @if (flagged.has(r.q.id)) { <mat-icon class="flagged" aria-label="Flagged">flag</mat-icon> }
+          </div>
+          <ng-container [ngTemplateOutlet]="prompt" [ngTemplateOutletContext]="{ q: r.q }"></ng-container>
+          <ng-container [ngTemplateOutlet]="feedback" [ngTemplateOutletContext]="{ q: r.q, item: r.item, g: r.g }"></ng-container>
+        </article>
+      } @empty {
+        <p class="status">Nothing in this list.</p>
+      }
+    </section>
+  }
+</div>
+
+<!-- Scenario, stem and exhibit, shared by the question and the review -->
+<ng-template #prompt let-q="q">
+  @if (q.scenario) { <p class="scenario">{{ q.scenario }}</p> }
+  @if (q.exhibit) { <pre class="exhibit">{{ q.exhibit }}</pre> }
+  <p class="stem">{{ q.stem }}</p>
+</ng-template>
+
+<!-- Why each option or row is right or wrong -->
+<ng-template #feedback let-q="q" let-item="item" let-g="g">
+  <div class="feedback">
+    @if (q.kind === 'single' || q.kind === 'multi') {
+      @if (!g.answered) { <p class="unanswered">You did not answer this one.</p> }
+      <ul class="why-list">
+        @for (oi of item.optionOrder; track oi; let n = $index) {
+          @let opt = q.options[oi];
+          @let mine = chosen(q.id, oi);
+          <li [class.correct]="opt.correct" [class.picked-wrong]="mine && !opt.correct">
+            <div class="why-head">
+              <span class="oletter">{{ letters[n] }}</span>
+              <span class="why-text">{{ opt.text }}</span>
+              <span class="tags">
+                @if (mine) { <span class="tag mine">Your answer</span> }
+                @if (opt.correct) { <span class="tag ok">Correct</span> }
+              </span>
+            </div>
+            <p class="why">{{ opt.why }}</p>
+          </li>
+        }
+      </ul>
+    } @else {
+      <ul class="parts">
+        @for (p of g.parts; track $index) {
+          <li [class.correct]="p.ok" [class.picked-wrong]="!p.ok">
+            <div class="part-head">
+              <mat-icon aria-hidden="true">{{ p.ok ? 'check' : 'close' }}</mat-icon>
+              <strong>{{ p.label }}</strong>
+            </div>
+            @if (p.ok) {
+              <p class="part-ans">{{ p.expected }}</p>
+            } @else {
+              <p class="part-ans"><span class="lbl">You:</span> {{ p.given }}</p>
+              <p class="part-ans"><span class="lbl">Correct:</span> {{ p.expected }}</p>
+            }
+            <p class="why">{{ p.why }}</p>
+          </li>
+        }
+      </ul>
+    }
+    <p class="takeaway"><mat-icon aria-hidden="true">lightbulb</mat-icon> <span>{{ q.takeaway }}</span></p>
+  </div>
+</ng-template>

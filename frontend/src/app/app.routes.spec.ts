@@ -6,7 +6,7 @@ describe('routes', () => {
     expect(routes.find(r => r.path === '**')?.redirectTo).toBe('/acronyms');
   });
 
-  it('has the study pages and the networking lessons, and no practice exam route', () => {
-    expect(routes.map(r => r.path)).toEqual(['', 'networking', 'networking/:slug', 'acronyms', 'terms', 'reference', '**']);
+  it('has the study pages, the networking lessons and the practice exam', () => {
+    expect(routes.map(r => r.path)).toEqual(['', 'networking', 'networking/:slug', 'acronyms', 'terms', 'exam', 'reference', '**']);
   });
 });
