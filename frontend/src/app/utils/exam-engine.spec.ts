@@ -73,6 +73,16 @@ describe('exam engine', () => {
     expect(items.slice(0, EXAM_SPECS.network.pbqs).map(i => i.id).sort()).toEqual(['net-fw', 'net-match']);
   });
 
+  it('draws questions seen in fewer past attempts first', () => {
+    const p = pool();
+    const first = buildExam(p, 'quick', 11);
+    const seen = Object.fromEntries(first.map(i => [i.id, 1]));
+    const second = buildExam(p, 'quick', 12, seen);
+    // The pool has 30 per domain, so a second quick set can be made entirely of unseen questions.
+    expect(second.slice(EXAM_SPECS.quick.pbqs).some(i => seen[i.id])).toBeFalse();
+    expect(second.length).toBe(examSize('quick'));
+  });
+
   it('always includes a firewall rule PBQ', () => {
     const p = pool().filter(q => !q.id.startsWith('fw'));
     p.push({ ...firewall, id: 'fw-only' }, { ...match, id: 'm2' }, { ...match, id: 'm3' }, { ...order, id: 'o2' });

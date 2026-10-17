@@ -11,17 +11,19 @@ import {
 } from '../../models/exam.model';
 import {
   EXAM_SPECS, ExamAnswer, ExamGrade, ExamItem, ExamLength, GradedQuestion, PASSING_SCALED,
-  buildExam, examSize, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted,
+  SeenCounts, buildExam, examSize, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted,
 } from '../../utils/exam-engine';
 
 export type ExamMode = 'exam' | 'study';
 type ReviewFilter = 'all' | 'wrong' | 'flagged';
 
-/** What is saved so a refresh mid-exam does not lose the attempt. The exam itself is rebuilt from the seed. */
+/** What is saved so a refresh mid-exam does not lose the attempt. */
 interface SavedAttempt {
   length: ExamLength;
   mode: ExamMode;
   seed: number;
+  /** The drawn questions. Older saves lack it and are rebuilt from the seed. */
+  items?: ExamItem[];
   answers: Record<string, ExamAnswer>;
   flagged: string[];
   checked: string[];
@@ -30,6 +32,8 @@ interface SavedAttempt {
 }
 
 const STORAGE_KEY = 'sp-exam';
+/** Times each question has appeared in a graded attempt, so new attempts draw unseen questions first. */
+const SEEN_KEY = 'sp-exam-seen';
 
 @Component({
   selector: 'app-practice-exam',
@@ -82,6 +86,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
         this.pool = pool;
         this.byId = new Map(pool.map(q => [q.id, q]));
         this.saved = this.loadSaved();
+        this.seen = this.loadSeen();
         this.state = 'intro';
       },
       error: () => (this.state = 'error'),
@@ -98,12 +103,31 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   get choiceCount(): number { return this.pool.length - this.pbqCount; }
   totalFor(length: ExamLength): number { return examSize(length); }
 
+  seen: SeenCounts = {};
+  get seenCount(): number { return this.pool.filter(q => this.seen[q.id]).length; }
+
+  resetSeen() {
+    this.seen = {};
+    try { localStorage.removeItem(SEEN_KEY); } catch { /* storage unavailable */ }
+  }
+
+  private loadSeen(): SeenCounts {
+    try { return JSON.parse(localStorage.getItem(SEEN_KEY) ?? '{}') as SeenCounts; } catch { return {}; }
+  }
+
+  private recordSeen() {
+    for (const it of this.items) this.seen[it.id] = (this.seen[it.id] ?? 0) + 1;
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(this.seen)); } catch { /* storage unavailable */ }
+  }
+
   /** The Networking Basics lesson behind a question, for the "review the lesson" link in feedback. */
   lessonFor(q: ExamQuestion) { return lessonBySlug(q.lesson); }
 
   start() {
+    const seed = Math.floor(Math.random() * 2 ** 31);
     this.begin({
-      length: this.length, mode: this.mode, seed: Math.floor(Math.random() * 2 ** 31), answers: {}, flagged: [], checked: [],
+      length: this.length, mode: this.mode, seed, items: buildExam(this.pool, this.length, seed, this.seen),
+      answers: {}, flagged: [], checked: [],
       index: 0, deadline: this.mode === 'exam' ? Date.now() + this.specs[this.length].minutes * 60_000 : null,
     });
   }
@@ -121,7 +145,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.length = a.length;
     this.mode = a.mode;
     this.seed = a.seed;
-    this.items = buildExam(this.pool, a.length, a.seed);
+    this.items = a.items?.every(it => this.byId.has(it.id)) ? a.items : buildExam(this.pool, a.length, a.seed);
     this.answers = a.answers;
     this.flagged = new Set(a.flagged);
     this.checked = new Set(a.checked);
@@ -145,7 +169,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   private save() {
     if (this.state !== 'running') return;
     const attempt: SavedAttempt = {
-      length: this.length, mode: this.mode, seed: this.seed, answers: this.answers, flagged: [...this.flagged],
+      length: this.length, mode: this.mode, seed: this.seed, items: this.items, answers: this.answers, flagged: [...this.flagged],
       checked: [...this.checked], index: this.index, deadline: this.deadline,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(attempt)); } catch { /* storage unavailable */ }
@@ -282,6 +306,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   submit() {
     clearInterval(this.timer);
     this.grade = gradeExam(this.pool, this.items, this.answers);
+    this.recordSeen();
     this.state = 'result';
     this.reviewFilter = this.grade.correctCount === this.items.length ? 'all' : 'wrong';
     this.discardSaved();

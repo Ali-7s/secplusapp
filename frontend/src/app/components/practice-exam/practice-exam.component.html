@@ -64,7 +64,11 @@
       <button mat-flat-button color="primary" class="start-btn" (click)="start()">
         <mat-icon aria-hidden="true">play_arrow</mat-icon> Start {{ specs[length].label.toLowerCase() }}
       </button>
-      <p class="pool-note">Drawn at random from {{ pbqCount }} PBQs and {{ choiceCount }} multiple choice questions, so each attempt is different.</p>
+      <p class="pool-note">
+        Drawn at random from {{ pbqCount }} PBQs and {{ choiceCount }} multiple choice questions, with answer order reshuffled every time.
+        Questions you have not seen yet come first: you have seen {{ seenCount }} of {{ pool.length }} so far.
+        @if (seenCount) { <button class="link-btn" (click)="resetSeen()">Start the rotation over</button> }
+      </p>
     </section>
   }
 

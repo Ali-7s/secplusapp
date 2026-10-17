@@ -102,13 +102,21 @@ export function shuffled<T>(list: readonly T[], rand: () => number): T[] {
 
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
-/** Draws an exam from the pool: PBQs first, then multiple choice spread by domain weight in random order. */
-export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, seed: number): ExamItem[] {
+/** How many past attempts each question appeared in, keyed by question id. */
+export type SeenCounts = Record<string, number>;
+
+/**
+ * Draws an exam from the pool: PBQs first, then multiple choice spread by domain weight in random order.
+ * Questions seen in fewer past attempts are drawn first, so repeats only start once the pool runs dry.
+ */
+export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, seed: number, seen: SeenCounts = {}): ExamItem[] {
   const spec: ExamSpec = EXAM_SPECS[length];
   const rand = seededRandom(seed);
+  // Random order, then a stable sort by times seen: unseen first, ties stay random.
+  const freshFirst = (list: ExamQuestion[]) => shuffled(list, rand).sort((a, b) => (seen[a.id] ?? 0) - (seen[b.id] ?? 0));
   if (spec.networking) pool = pool.filter(q => !!q.lesson);
   // Every exam gets at least one firewall rule table, the PBQ type learners most need practice on.
-  const allPbqs = shuffled(pool.filter(isPbq), rand);
+  const allPbqs = freshFirst(pool.filter(isPbq));
   const firewall = allPbqs.find(q => q.kind === 'firewall');
   const picked = firewall ? [firewall, ...allPbqs.filter(q => q !== firewall)] : allPbqs;
   const pbqs = shuffled(picked.slice(0, spec.pbqs), rand);
@@ -116,10 +124,10 @@ export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, see
   if (spec.perDomain) {
     for (const domain of [1, 2, 3, 4, 5] as ExamDomain[]) {
       const inDomain = pool.filter(q => !isPbq(q) && q.domain === domain);
-      choices.push(...shuffled(inDomain, rand).slice(0, spec.perDomain[domain]));
+      choices.push(...freshFirst(inDomain).slice(0, spec.perDomain[domain]));
     }
   } else {
-    choices.push(...shuffled(pool.filter(q => !isPbq(q)), rand).slice(0, spec.choices));
+    choices.push(...freshFirst(pool.filter(q => !isPbq(q))).slice(0, spec.choices));
   }
   return [...pbqs, ...shuffled(choices, rand)].map(q => {
     const item: ExamItem = { id: q.id };

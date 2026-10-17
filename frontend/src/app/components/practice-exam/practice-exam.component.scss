@@ -192,6 +192,7 @@ li.correct .part-head mat-icon { color: var(--c-success); }
 li.picked-wrong .part-head mat-icon { color: var(--c-error); }
 .part-ans { margin: 4px 0 0; font-size: 14px; color: var(--c-text); line-height: 1.5; word-break: break-word;
   .lbl { font-weight: 700; color: var(--c-text-2); } }
+.link-btn { border: 0; padding: 0; background: none; font: inherit; color: var(--c-accent-solid); text-decoration: underline; cursor: pointer; }
 .lesson-link { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm);
   border: 1px solid var(--c-accent); color: var(--c-accent-solid); font-size: 14px; font-weight: 600; text-decoration: none;
   span { flex: 1; } mat-icon { flex-shrink: 0; }
