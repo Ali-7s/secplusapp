@@ -4,6 +4,7 @@ import { analogy, exam, h, hSecure, list, mcq, p, table, trap } from './dsl';
 export const ADDRESSES: LessonBody = {
   goals: [
     'Tell a MAC address from an IP address and say what each is used for',
+    'Explain what a subnet mask is for and use one to tell whether two addresses are on the same network',
     'Read an IPv4 address and a CIDR block such as 192.168.1.0/24',
     'Recognize private, loopback and link-local (APIPA) addresses on sight',
     'Explain what a default gateway does',
@@ -27,11 +28,45 @@ export const ADDRESSES: LessonBody = {
     ),
 
     h('Reading an IPv4 address'),
-    p('An IPv4 address is four numbers from 0 to 255 separated by dots, such as `192.168.1.25`. Each number is called an **octet** because it is 8 bits. The address has two parts: the **network part** (which network) and the **host part** (which device on that network). The **subnet mask** says where the split is.'),
-    p('With the mask `255.255.255.0`, the first three octets are the network and the last octet is the host. So `192.168.1.25` is host 25 on the network `192.168.1.0`. The first address of a block (`.0`) names the network and the last (`.255`) is the **broadcast** address, so devices can use `.1` to `.254`.'),
+    p('An IPv4 address is four numbers separated by dots, such as `192.168.1.25`. Each number is called an **octet** and can only be 0 to 255. The reason is that computers store everything as **bits**: a bit is a single on/off switch (1 or 0). Each octet is 8 switches, and 8 switches can make exactly 256 combinations, which are the numbers 0 to 255.'),
+
+    h('Why an address has two parts'),
+    p('An IP address works like a street address. Part of it says **which network** the device is on (the street) and the rest says **which device** it is on that network (the house number). These are called the **network part** and the **host part**.'),
+    p('The split matters because of one decision every device makes before it sends anything: **is the destination on my own network?**'),
+    list(
+      '**Yes, same network:** the device delivers the traffic itself, directly.',
+      '**No, a different network:** it hands the traffic to its router (the **default gateway**, covered below), which knows how to reach other networks.',
+    ),
+    analogy('Houses on the **same street** can pass a note over the fence. To reach a house on **another street**, you take it to the post office (the router) and let it deliver. To decide which to do, you only compare the **street names**, never the house numbers.'),
+
+    h('The subnet mask: where the street name ends'),
+    p('Here is the problem. Looking at `192.168.1.25`, you cannot tell where the network part stops. It could be network `192.168.1` with device 25, or network `192.168` with device `1.25`. The address alone does not say.'),
+    p('The **subnet mask** is a second number, set alongside the IP address on every device, that answers exactly this. Line it up under the address, octet by octet. Where the mask says **255**, that octet belongs to the **network**. Where it says **0**, that octet belongs to the **host**.'),
+    table(
+      ['Octet', 'Address', 'Mask', 'Part'],
+      [
+        ['1st', '192', '255', '**network**'],
+        ['2nd', '168', '255', '**network**'],
+        ['3rd', '1', '255', '**network**'],
+        ['4th', '25', '0', '**host**'],
+      ],
+      { caption: 'Address 192.168.1.25 with mask 255.255.255.0: host 25 on network 192.168.1.0', mono: [1, 2] },
+    ),
+    p('Now the device can make its decision. With address `192.168.1.25` and mask `255.255.255.0`, it compares the network octets (the first three) of itself and the destination:'),
+    table(
+      ['Destination', 'Same network?', 'So the device'],
+      [
+        ['`192.168.1.80`', 'Yes: 192.168.1 matches', 'Sends it directly'],
+        ['`192.168.2.10`', 'No: 192.168.2 differs', 'Sends it to the gateway'],
+        ['`8.8.8.8`', 'No: 8.8.8 differs', 'Sends it to the gateway'],
+      ],
+    ),
+    p('Change the mask and the answer changes. With `255.255.0.0`, only the first **two** octets are the network, so `192.168.2.10` **would** count as the same network. That is all a subnet mask does: it tells a device how much of an address is the network, so it knows what it can reach directly.'),
+    p('Why 255 and 0? Remember each octet is 8 switches. **255** is all 8 switches on (`11111111`) and **0** is all 8 off (`00000000`). The mask is really 32 switches in a row: **on means network, off means host**, and the on switches always come first. Usually the split falls between octets, which gives the friendly 255s and 0s. When it falls in the middle of an octet you get values like `255.255.255.192`; the calculator below handles those.'),
+    p('Two addresses in every network are reserved. The first (host part all zeros, such as `192.168.1.0`) is the name of the network itself, and the last (host part all ones, such as `192.168.1.255`) is the **broadcast** address, which reaches every device on the network at once. So devices get `.1` to `.254`.'),
 
     h('CIDR notation: the /24 you keep seeing'),
-    p('Writing the mask in full is clumsy, so we just count the network bits. **CIDR notation** puts a slash and that count after the address. `192.168.1.0/24` means "the first 24 bits are the network", which is the same as the mask `255.255.255.0`. A **bigger** number after the slash means a **smaller** network.'),
+    p('Writing the mask in full is clumsy, so we just count how many of the 32 switches are on. **CIDR notation** puts a slash and that count after the address. `255.255.255.0` is three octets of 8 on switches, so 24 on: `192.168.1.0/24`. It means exactly the same as the mask, just shorter. A **bigger** number after the slash means more of the address is network and less is host, so the network holds **fewer** devices.'),
     table(
       ['CIDR', 'Subnet mask', 'Usable hosts', 'Typically used for'],
       [
@@ -85,6 +120,12 @@ export const ADDRESSES: LessonBody = {
     ),
   ],
   check: [
+    mcq(
+      'A PC has the address 10.1.5.20 with the mask 255.255.255.0. It sends data to 10.1.6.20. What does it do?',
+      'It sends the data to its default gateway, because 10.1.6 is a different network',
+      ['It delivers the data directly, because both addresses start with 10.1', 'It drops the data, because the host numbers are the same', 'It asks DNS which network 10.1.6.20 is on'],
+      'The mask 255.255.255.0 makes the first three octets the network. 10.1.5 and 10.1.6 differ, so the destination is on another network and the PC hands the traffic to its default gateway (the router).',
+    ),
     mcq(
       'A PC shows the address 169.254.12.7. What does this most likely mean?',
       'It could not reach a DHCP server and gave itself an address',

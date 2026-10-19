@@ -112,14 +112,36 @@
 
       <app-lesson-quiz [questions]="l.check" />
 
-      <section class="related" aria-labelledby="related-title">
+      <section class="related" aria-labelledby="related-title" #related>
         <h2 id="related-title"><mat-icon aria-hidden="true">style</mat-icon> Flashcards for this lesson</h2>
-        <p>Open a card to see its definition, an exam tip and a quick quiz.</p>
+        <p>{{ touch ? 'Tap a card to preview its definition, then tap it again to open the full card and its quiz.' : 'Hover over a card to preview its definition. Click it to open the full card and its quiz.' }}</p>
         <div class="chips">
           @for (r of l.related; track r.kind + r.name) {
-            <a class="chip" [routerLink]="linkFor(r.kind)" [queryParams]="{ q: r.name }">{{ r.name }}</a>
+            <a class="chip" [class.previewing]="preview?.key === r.kind + r.name" [routerLink]="touch ? null : linkFor(r.kind)" [queryParams]="{ q: r.name }" [attr.role]="touch ? 'button' : null" tabindex="0"
+              [attr.aria-describedby]="preview?.key === r.kind + r.name ? 'card-preview' : null"
+              (mouseenter)="hoverPreview(r, $event)" (mouseleave)="hidePreview()" (focus)="hoverPreview(r, $event)" (blur)="hidePreview()"
+              (click)="chipClick(r, $event)">{{ r.name }}</a>
           }
         </div>
+        @if (preview) {
+          <div class="card-preview" id="card-preview" role="tooltip" [style.left.px]="preview.left" [style.top.px]="preview.top"
+            (mouseenter)="keepPreview()" (mouseleave)="hidePreview()">
+            @if (preview.card; as c) {
+              <div class="cp-title">{{ c.title }}</div>
+              @if (c.subtitle) { <div class="cp-sub">{{ c.subtitle }}</div> }
+              <p class="cp-text">{{ c.text }}</p>
+              @if (touch) {
+                <a class="cp-open" [routerLink]="linkFor(preview.kind)" [queryParams]="{ q: preview.name }">Open flashcard <mat-icon aria-hidden="true">chevron_right</mat-icon></a>
+              } @else {
+                <div class="cp-hint">Click to open the full card and quiz</div>
+              }
+            } @else if (preview.missing) {
+              <p class="cp-text">No preview for this card.</p>
+            } @else {
+              <p class="cp-text">Loading…</p>
+            }
+          </div>
+        }
       </section>
 
       <nav class="pager" aria-label="Lesson navigation">

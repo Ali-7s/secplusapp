@@ -76,7 +76,10 @@ td { padding: 9px 12px; vertical-align: top; border-top: 1px solid var(--c-borde
 tbody tr:first-child td { border-top: none; }
 tbody tr:hover { background: var(--c-surface-2); }
 td.first { font-weight: 700; }
+td code { white-space: nowrap; }
 td.mono { font-family: 'Courier New', monospace; font-size: 13px; }
+// Phones: let short tables fit without sideways scrolling.
+@media (max-width: 600px) { th, td { padding: 8px 9px; } td { min-width: 64px; } }
 
 // ── Call to action ─────────────────────────────────────────
 .cta {
@@ -89,6 +92,7 @@ td.mono { font-family: 'Courier New', monospace; font-size: 13px; }
 
 // ── Related cards ──────────────────────────────────────────
 .related {
+  position: relative;
   margin-top: 28px; padding: 18px 20px; border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-border);
   h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--c-primary); mat-icon { color: var(--c-accent); } }
   p { margin: 0 0 12px; font-size: 13.5px; color: var(--c-text-2); }
@@ -96,7 +100,17 @@ td.mono { font-family: 'Courier New', monospace; font-size: 13px; }
   .chip {
     padding: 5px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; text-decoration: none;
     color: var(--c-text); background: var(--c-surface-3); border: 1px solid var(--c-border-dark); transition: border-color .15s, background .15s;
-    &:hover { border-color: var(--c-accent); background: var(--c-accent-light); }
+    &:hover, &.previewing { border-color: var(--c-accent); background: var(--c-accent-light); }
+  }
+  .card-preview {
+    position: absolute; z-index: 5; box-sizing: border-box; width: min(320px, calc(100% - 16px)); padding: 12px 14px; border-radius: var(--r-md);
+    background: var(--c-surface); border: 1px solid var(--c-border-dark); box-shadow: var(--shadow-lg); color: var(--c-text);
+    .cp-title { font-size: 15px; font-weight: 800; color: var(--c-primary); }
+    .cp-sub { font-size: 12.5px; font-weight: 600; color: var(--c-text-2); margin-top: 1px; }
+    .cp-text { margin: 8px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--c-text); }
+    .cp-hint { margin-top: 8px; font-size: 12px; color: var(--c-muted); }
+    .cp-open { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; font-size: 13.5px; font-weight: 700; color: var(--c-accent-solid); text-decoration: none;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; } }
   }
 }
 
