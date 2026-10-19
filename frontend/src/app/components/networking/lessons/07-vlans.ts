@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, recap, table, words } from './dsl';
+import { analogy, exam, h, hSecure, list, mcq, p, pbq, recap, table, words } from './dsl';
+import { VLAN_CONFIG } from './practice';
 
 export const VLANS: LessonBody = {
   goals: [
@@ -96,6 +97,8 @@ export const VLANS: LessonBody = {
     ),
     p('Microsegmentation is part of a wider approach called **zero trust**: never trust a device just because it is inside the network, and check every connection.'),
     exam('"Which control limits **lateral movement** after a breach?" Segmentation. "Which attack lets a user reach another VLAN by negotiating a trunk?" Switch spoofing (VLAN hopping).'),
+
+    pbq('Try it: configure the switch ports', VLAN_CONFIG, { intro: 'A performance-based question often hands you a switch and asks you to set up each port. Here is a small one.' }),
 
     hSecure('How to secure it: VLANs and trunks'),
     {

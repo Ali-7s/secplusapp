@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { exam, h, hSecure, list, mcq, p, recap, table, tip, words } from './dsl';
+import { exam, h, hSecure, list, mcq, p, pbq, recap, table, tip, words } from './dsl';
+import { PORT_NUMBERS, PORT_PAIRS } from './practice';
 
 export const PORTS_TO_KNOW: LessonBody = {
   goals: [
@@ -88,6 +89,9 @@ export const PORTS_TO_KNOW: LessonBody = {
       '**DNS 53 uses both UDP and TCP.** UDP for everyday lookups, TCP for big answers and for copying whole sets of records between DNS servers.',
     ),
     exam('Expect two kinds of question: a port given and the protocol asked for (or the other way round), and a firewall scenario such as "allow secure web and block plaintext email retrieval" where you choose the ports. Also expect "which protocol should replace Telnet or FTP?"'),
+
+    pbq('Try it: name the port', PORT_NUMBERS, { intro: 'Exam firewall questions assume you know these by heart. See how many you get without scrolling up.' }),
+    pbq('Try it: replace the plaintext protocol', PORT_PAIRS),
 
     h('Practice it'),
     p('Memorizing needs repetition, not reading. Short rounds on several days in a row work far better than one long session.'),

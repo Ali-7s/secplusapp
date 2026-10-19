@@ -107,6 +107,12 @@
           @case ('spot') {
             <app-spot-issues [title]="b.title" [intro]="b.intro" [lines]="b.lines" />
           }
+          @case ('pbq') {
+            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [questions]="[b.question]" [given]="b.given ?? 0" />
+          }
+          @case ('pbqs') {
+            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" />
+          }
         }
       }
 

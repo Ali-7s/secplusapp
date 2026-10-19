@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, mcq, p, recap, table, tip, words } from './dsl';
+import { analogy, exam, h, hSecure, mcq, p, pbq, recap, table, tip, words } from './dsl';
+import { DEVICES_MATCH } from './practice';
 
 export const DEVICES: LessonBody = {
   goals: [
@@ -127,6 +128,7 @@ export const DEVICES: LessonBody = {
         ['Router attacks', 'Default passwords, exposed admin pages, and fake routing updates that send traffic the wrong way', 'Hardening (below), ACLs (allow and block lists) and authenticated routing updates'],
       ],
     ),
+    pbq('Try it: name the device, stop the attack', DEVICES_MATCH),
     p('Locking a device down is called **hardening** (lesson 11 covers it in depth). Here are the checklists for switches and routers. Tap each item as you go; each one says what to do and why.'),
     {
       type: 'harden',

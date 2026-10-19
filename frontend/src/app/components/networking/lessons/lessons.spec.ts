@@ -126,6 +126,35 @@ describe('lesson content', () => {
     }
   });
 
+  it('gives every guided PBQ a complete answer key with a reason for every part', () => {
+    const words = (t: string) => t.trim().split(/\s+/).length;
+    eachBlock((slug, b) => {
+      if (b.type !== 'pbq') return;
+      const q = b.question;
+      expect(words(q.takeaway)).withContext(`${slug} ${q.id} takeaway`).toBeGreaterThanOrEqual(8);
+      if (q.kind === 'firewall') {
+        expect(q.rows.length).withContext(q.id).toBe(q.requirements.length);
+        expect(b.given ?? 0).withContext(q.id).toBeLessThan(q.rows.length);
+        q.rows.forEach((row, r) => {
+          for (const c of q.columns) expect(q.choices[c]).withContext(`${q.id} rule ${r + 1} ${c}`).toContain(row.answer[c]);
+          expect(words(row.why)).withContext(`${q.id} rule ${r + 1}`).toBeGreaterThanOrEqual(8);
+        });
+      } else if (q.kind === 'match') {
+        for (const p of q.prompts) {
+          expect(p.choices ?? q.choices ?? []).withContext(`${q.id}: ${p.label}`).toContain(p.answer);
+          expect(words(p.why)).withContext(`${q.id}: ${p.label}`).toBeGreaterThanOrEqual(8);
+        }
+      } else {
+        expect(q.items.length).withContext(q.id).toBeGreaterThanOrEqual(4);
+        for (const it of q.items) expect(words(it.why)).withContext(`${q.id}: ${it.text}`).toBeGreaterThanOrEqual(8);
+      }
+    });
+  });
+
+  it('gives the firewall lesson a guided rule table to fill in', () => {
+    expect(LESSON_BODIES['security-devices'].blocks.some(b => b.type === 'pbq' && b.question.kind === 'firewall')).toBeTrue();
+  });
+
   it('spreads the correct answers over the options', () => {
     const slots = new Set<number>();
     for (const body of Object.values(LESSON_BODIES)) for (const q of body.check) slots.add(q.answer);

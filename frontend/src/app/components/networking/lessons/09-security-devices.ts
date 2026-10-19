@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, recap, table, trap, words } from './dsl';
+import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, trap, words } from './dsl';
+import { FIREWALL_GUIDED, FIREWALL_PLACEMENT, FIREWALL_TRACE } from './practice';
 
 export const SECURITY_DEVICES: LessonBody = {
   goals: [
@@ -45,6 +46,14 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     analogy('A bouncer with a list, reading from the top. "Rule 1: anyone with a ticket for the concert hall, let in. Rule 2: the manager, let in anywhere." The bouncer stops at the first line that fits the person in front of them. If no line fits, they do not get in.'),
     trap('**Order matters.** If an "allow everything" rule sits above a more specific "block Telnet" rule, the block never happens, because the first match wins. Specific rules go **first** and broad rules go **last**.'),
+
+    pbq('Try it: write your first firewall rules', FIREWALL_GUIDED, {
+      given: 1,
+      intro: 'This is the most common PBQ on the exam: a network drawing, a list of requirements, and a rule table to fill in. Rule 1 is done for you as an example. Read why it looks the way it does, then fill in rules 2 to 4 the same way. For each rule, ask: **who** is it from (source), **to what** (destination), **which service** (protocol and port), and **allow or block**?',
+    }),
+    pbq('Try it: trace the packets', FIREWALL_TRACE, {
+      intro: 'The other half of firewall questions: given a rule list, what happens to each connection? Go down the list for each one and stop at the first rule where everything matches.',
+    }),
 
     h('Kinds of firewall'),
     p('Firewalls differ in how much they understand about the traffic:'),
@@ -136,6 +145,8 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     exam('"Which control stops an attacker setting up an access point with your company\'s network name?" A **wireless intrusion prevention system (WIPS)**, plus 802.1X with certificate checking. "Which Wi-Fi mode gives each user their own login?" Enterprise mode (802.1X with RADIUS).'),
 
+    pbq('Try it: place the servers, pick the firewall', FIREWALL_PLACEMENT),
+
     hSecure('How to secure it: firewalls, Wi-Fi and VPNs'),
     {
       type: 'harden',
@@ -173,6 +184,7 @@ export const SECURITY_DEVICES: LessonBody = {
         { action: 'Log connections and alert on odd behavior', why: 'Logins from unexpected countries or at strange hours are a sign of a stolen password.' },
       ],
     },
+    examPbqs('security-devices', 'Ready for the real thing? These are the practice exam\'s firewall tables, rule traces and network PBQs, as hard as the exam. Do the guided ones above first. Expect to get rules wrong at first: every rule\'s explanation tells you why.'),
   ],
   check: [
     mcq(

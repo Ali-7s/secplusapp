@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, list, mcq, p, recap, table, words } from './dsl';
+import { analogy, exam, examPbqs, h, list, mcq, p, pbq, recap, table, words } from './dsl';
+import { HARDEN_ORDER } from './practice';
 
 export const HARDENING: LessonBody = {
   goals: [
@@ -134,7 +135,9 @@ export const HARDENING: LessonBody = {
       '**Testing.** **Vulnerability scans** look for known weaknesses, **penetration tests** have experts try to break in for real, and **audits** check that the process is actually being followed.',
       '**Monitoring.** Logs and alerts (often in a SIEM) show attack attempts and unexpected changes, so hardening does not quietly decay.',
     ),
+    pbq('Try it: bring a new router into service', HARDEN_ORDER),
     exam('"Which is the BEST first step when deploying a new device?" Usually: **change the default credentials and switch off unnecessary services**, then patch it, then apply the baseline. Also expect "which control detects a device that has moved away from its approved configuration?" (a compliance or configuration scan).'),
+    examPbqs('hardening'),
   ],
   check: [
     mcq(

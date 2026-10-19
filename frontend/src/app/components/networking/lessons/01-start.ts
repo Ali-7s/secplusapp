@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, steps, table, tip, words } from './dsl';
+import { analogy, exam, h, hSecure, list, mcq, p, pbq, steps, table, tip, words } from './dsl';
+import { START_LABELS } from './practice';
 
 export const START: LessonBody = {
   goals: [
@@ -118,6 +119,8 @@ export const START: LessonBody = {
     },
     p('Bigger networks have names too. A **WAN** (wide area network) links LANs that are far apart, such as a company\'s offices in different cities. A **MAN** (metropolitan area network) covers a city or a campus. The internet is the biggest WAN of all.'),
     exam('Security+ assumes you already know the basics in this course: what addresses, ports, protocols, switches and routers are. It rarely asks about them directly, but it constantly builds questions on top of them ("which device should be placed...", "which port should be blocked..."). That is why this groundwork matters.'),
+
+    pbq('Try it: labels, clients and servers', START_LABELS, { intro: 'A quick check on the three labels and the two roles before you move on. Pick an answer for each line, then check.' }),
 
     hSecure('Why every one of these ideas matters for security'),
     p('Each idea in this lesson is also something attackers abuse. You will see the defenses in later lessons, but it helps to know now why you are learning each one:'),

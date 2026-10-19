@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, mcq, p, recap, table, tip, words } from './dsl';
+import { analogy, exam, h, hSecure, mcq, p, pbq, recap, table, tip, words } from './dsl';
+import { LAYERS_MATCH, LAYERS_WRAP } from './practice';
 
 export const LAYERS: LessonBody = {
   goals: [
@@ -71,6 +72,8 @@ export const LAYERS: LessonBody = {
     analogy('Your letter (the data) goes in an envelope addressed to the right person (the segment, with the port). That goes in a bigger envelope addressed to the right building (the packet, with the IP address). That goes in a courier bag labeled for the next sorting office (the frame, with the MAC address). Each sorting office opens only the courier bag, reads where it goes next, and puts it in a new bag for the next leg.'),
     exam('Learn the names of the data at each layer, from the top: **Data, Segment, Packet, Frame, Bits** (Layers 7 to 5, then 4, 3, 2 and 1). Common questions: "at which layer does this device work?" and "what is the data called at Layer 3?" (a packet).'),
 
+    pbq('Try it: wrap the data', LAYERS_WRAP, { intro: 'Put the steps in the order they happen as your request leaves the laptop. Drag them, or use the arrows.' }),
+
     h('Which device works at which layer?'),
     p('A device "works at" a layer when that layer\'s information is what it reads to make decisions. Here are the devices you will meet in this course:'),
     table(
@@ -86,6 +89,8 @@ export const LAYERS: LessonBody = {
         ['IDS and IPS', '3 to 7', 'Watch traffic for signs of attack. An IDS alerts, an IPS also blocks (lesson 9)'],
       ],
     ),
+
+    pbq('Try it: which layer?', LAYERS_MATCH),
 
     hSecure('How to secure it: a control at every layer'),
     p('An attacker only needs **one** weak layer, so defenders put protections at **every** layer. This idea is called **defense in depth**: if one protection fails, the next one still stands. The table below is a map, not something to memorize. Every attack and defense in it is explained in a later lesson.'),

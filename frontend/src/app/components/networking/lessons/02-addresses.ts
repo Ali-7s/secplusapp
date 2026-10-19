@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, recap, table, trap, words } from './dsl';
+import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, trap, words } from './dsl';
+import { ADDRESS_DECISION, ADDRESS_TYPES } from './practice';
 
 export const ADDRESSES: LessonBody = {
   goals: [
@@ -85,6 +86,8 @@ export const ADDRESSES: LessonBody = {
     p('Why 255 and 0? Remember each octet is 8 switches. **255** is all 8 switches on (`11111111`) and **0** is all 8 off (`00000000`). The mask is really 32 switches in a row: **on means network, off means host**, and the on switches always come first. Usually the split falls between octets, which gives the friendly 255s and 0s. When it falls in the middle of an octet you get values like `255.255.255.192`; the calculator below handles those for you.'),
     p('Two addresses in every subnet are reserved. The first one (host part all zeros, such as `192.168.1.0`) is the name of the network itself. The last one (host part all ones, such as `192.168.1.255`) is the **broadcast** address: a message sent to it reaches **every** device on that network at once. So the devices themselves get `.1` to `.254`.'),
 
+    pbq('Try it: directly, or through the gateway?', ADDRESS_DECISION, { intro: 'This is the decision every device makes before sending anything. Use the mask to compare the network octets.' }),
+
     h('CIDR notation: the /24 you keep seeing'),
     p('Writing the mask in full is clumsy, so we just count how many of the 32 switches are on. **CIDR notation** (pronounced "cider") puts a slash and that count after the address. `255.255.255.0` is three octets of 8 on switches, so 24 on: `192.168.1.0/24`. It means exactly the same as the mask, just shorter.'),
     p('A **bigger** number after the slash means more of the address is network and less is host, so the network holds **fewer** devices.'),
@@ -121,6 +124,8 @@ export const ADDRESSES: LessonBody = {
     p('The three private ranges are defined in a standards document called **RFC 1918**, so you will see them called "RFC 1918 addresses".'),
     trap('`172.32.0.1` is **not** private. The private block stops at `172.31.255.255`. Questions love this one.'),
 
+    pbq('Try it: what kind of address is this?', ADDRESS_TYPES),
+
     h('The default gateway'),
     p('Back to the decision every device makes. When the destination is on **another** network, the device does not try to find the way itself. It hands the packet to its **default gateway**: the router\'s address on the device\'s own subnet (often the `.1` or `.254` address). The router takes it from there.'),
     p('Every device is configured with three settings for this to work: its **IP address**, its **subnet mask** and its **default gateway**. DHCP usually hands out all three at once.'),
@@ -145,6 +150,7 @@ export const ADDRESSES: LessonBody = {
       '**Separate by trust.** Put guests, smart devices, servers and staff in their own subnets, so a firewall can sit between them (lesson 7).',
       '**Do not forget IPv6.** If IPv6 is switched on but nobody manages it, it can slip past controls that only cover IPv4. Secure it properly or turn it off where it is not used.',
     ),
+    examPbqs('addresses'),
   ],
   check: [
     mcq(

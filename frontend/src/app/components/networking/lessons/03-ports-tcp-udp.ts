@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, recap, table, tip, trap, words } from './dsl';
+import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, tip, trap, words } from './dsl';
+import { PORT_STATES } from './practice';
 
 export const PORTS_TCP_UDP: LessonBody = {
   goals: [
@@ -104,6 +105,8 @@ export const PORTS_TCP_UDP: LessonBody = {
     p('Every **open port** is a door an attacker can try: if the program behind it has a flaw, that flaw is reachable. The total of everything an attacker could try is called the **attack surface**, and making it smaller always starts with closing the doors you do not need.'),
     trap('Moving a service to an unusual port (SSH on 2222 instead of 22) is **obscurity, not security**. It cuts down on automated noise, but any port scan finds the new port in seconds. It is fine as an extra, never as the only protection.'),
 
+    pbq('Try it: read a scan, pick a protocol', PORT_STATES),
+
     hSecure('How to secure it: ports and services'),
     list(
       '**Close what you do not use.** Stop the service itself, not just block it. A program that is not running cannot be attacked.',
@@ -113,6 +116,7 @@ export const PORTS_TCP_UDP: LessonBody = {
       '**Scan yourself.** Run regular port scans of your own systems and compare the open ports with the list you expect. Anything extra is worth investigating.',
       '**Blunt flood attacks.** Use SYN cookies and rate limiting on servers and firewalls, and keep DDoS protection (a service that soaks up floods from many attacking machines at once) in front of public services.',
     ),
+    examPbqs('ports-tcp-udp'),
   ],
   check: [
     mcq(

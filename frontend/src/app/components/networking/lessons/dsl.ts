@@ -1,4 +1,4 @@
-import { Block, CalloutKind, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, PbqQuestion, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -20,6 +20,14 @@ export const secure = callout('secure', 'How to secure it');
 /** The lesson's new vocabulary up front, in plain English, so nothing is used before it is explained. */
 export const words = (...rows: [string, string][]): Block =>
   ({ type: 'table', columns: ['Word', 'What it means'], rows, caption: 'New words in this lesson. Come back here whenever one trips you up.' });
+
+/** A hands-on PBQ written for the lesson. For firewall tables, `given` rows are filled in as a worked example. */
+export const pbq = (title: string, question: PbqQuestion, opts: { intro?: string; given?: number } = {}): Block =>
+  ({ type: 'pbq', title, question, intro: opts.intro, given: opts.given });
+
+/** The practice exam's PBQs tagged with this lesson, offered at the end of it. */
+export const examPbqs = (lesson: string, intro?: string): Block =>
+  ({ type: 'pbqs', title: 'Exam-level PBQs on this lesson', lesson, intro: intro ?? 'These come from the practice exam and are as hard as the real thing. Expect to get parts wrong at first: the explanations are where you learn. They load when you press Start.' });
 
 /** A short reminder of what this lesson builds on. */
 export const recap = (md: string): Block => tip(md, 'From earlier lessons');

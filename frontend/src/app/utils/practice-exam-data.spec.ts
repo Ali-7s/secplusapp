@@ -7,6 +7,7 @@
  */
 import { EXAM_SPECS } from './exam-engine';
 import { LESSON_META } from '../components/networking/lessons/lesson-index';
+import { LESSON_BODIES } from '../components/networking/lessons/lessons';
 import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
 
 describe('practice exam pool', () => {
@@ -62,6 +63,15 @@ describe('practice exam pool', () => {
     expect(linked.filter(q => !isPbq(q)).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.choices);
     expect(linked.filter(isPbq).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.pbqs);
     expect(linked.some(q => q.kind === 'firewall')).toBeTrue();
+  });
+
+  it('has PBQs for every lesson that offers exam-level PBQ practice', () => {
+    for (const [slug, body] of Object.entries(LESSON_BODIES)) {
+      for (const b of body.blocks) {
+        if (b.type !== 'pbqs') continue;
+        expect(pool.filter(q => isPbq(q) && q.lesson === b.lesson).length).withContext(`${slug} offers ${b.lesson}`).toBeGreaterThan(0);
+      }
+    }
   });
 
   it('gives single answer questions four options with one correct, and multi select the count its stem asks for', () => {

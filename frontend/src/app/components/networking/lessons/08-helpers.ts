@@ -1,5 +1,6 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, h, hSecure, list, mcq, p, recap, secure, table, tip, trap, words } from './dsl';
+import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, secure, table, tip, trap, words } from './dsl';
+import { DNS_ORDER, HELPERS_SYMPTOMS } from './practice';
 
 export const HELPERS: LessonBody = {
   goals: [
@@ -100,6 +101,7 @@ export const HELPERS: LessonBody = {
         },
       ],
     },
+    pbq('Try it: put the lookup in order', DNS_ORDER),
     p('DNS holds several kinds of **record** (entry), each mapping a name to a different kind of information:'),
     table(
       ['Record', 'What it maps'],
@@ -203,6 +205,8 @@ export const HELPERS: LessonBody = {
     tip('One more helper: **NTP** (network time protocol, UDP 123) keeps every device\'s clock in sync. Accurate time matters for logs (to line up events from different devices), for certificates, and for **Kerberos**, the Windows sign-in system, which refuses logins if clocks differ by more than about five minutes. NTP can also be abused for amplification attacks, so use trusted internal time servers where you can.'),
     exam('Match the symptom to the helper: "devices got a strange gateway" is a rogue DHCP server, "users reach a fake site even though they typed the right name" is DNS poisoning, "traffic on the local network flows through the attacker" is ARP poisoning, and "one public IP address shared by many devices" is PAT.'),
 
+    pbq('Try it: diagnose the symptom', HELPERS_SYMPTOMS),
+
     hSecure('The defenses at a glance'),
     table(
       ['Attack', 'Best defense'],
@@ -215,6 +219,7 @@ export const HELPERS: LessonBody = {
         ['Exposed devices behind NAT', 'A stateful firewall (lesson 9), UPnP turned off, as little port forwarding as possible'],
       ],
     ),
+    examPbqs('helpers'),
   ],
   check: [
     mcq(

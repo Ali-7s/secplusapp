@@ -4,6 +4,7 @@
  * A lesson is a list of content blocks followed by a short self-check. Blocks are plain data so the
  * lesson text can be edited without touching any component code.
  */
+import { FirewallQuestion, MatchQuestion, OrderQuestion } from '../../models/exam.model';
 
 /** A glossary card a lesson points to ("see the flashcard for this"). */
 export interface CardRef {
@@ -102,7 +103,14 @@ export type Block =
   | { type: 'cidr' }
   | { type: 'cta'; to: string; label: string; icon: string; note?: string }
   | { type: 'harden'; title: string; intro?: string; items: HardenItem[] }
-  | { type: 'spot'; title: string; intro: string; lines: SpotLine[] };
+  | { type: 'spot'; title: string; intro: string; lines: SpotLine[] }
+  /** A guided PBQ written for this lesson. `given` pre-fills (and locks) that many firewall rows as a worked example. */
+  | { type: 'pbq'; title: string; intro?: string; question: PbqQuestion; given?: number }
+  /** The practice exam's PBQs tagged with this lesson, one at a time. */
+  | { type: 'pbqs'; title: string; intro?: string; lesson: string };
+
+/** The PBQ kinds a lesson can embed (the practice exam's own types). */
+export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;
 
 /** What the lesson list and the glossary cards need, without the lesson text itself. */
 export interface LessonMeta {

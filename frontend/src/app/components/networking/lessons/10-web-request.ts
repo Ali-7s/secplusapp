@@ -1,5 +1,6 @@
 import { LessonBody, SequenceField } from '../networking.model';
-import { h, hSecure, mcq, p, recap, table, tip, words } from './dsl';
+import { h, hSecure, mcq, p, pbq, recap, table, tip, words } from './dsl';
+import { WEB_ORDER } from './practice';
 
 const f = (name: string, value: string, changed = false): SequenceField => ({ name, value, changed });
 
@@ -87,6 +88,8 @@ export const WEB_REQUEST: LessonBody = {
         },
       ],
     },
+
+    pbq('Try it: the whole journey in order', WEB_ORDER, { intro: 'Without scrolling back up, put the whole journey in order, starting from joining the Wi-Fi.' }),
 
     hSecure('Where could an attacker interfere, and what stops them?'),
     p('Every step above is a chance for an attacker. This table lines them up with the defenses from earlier lessons. Each attack is described in plain words, with the lesson that covers it:'),

@@ -14,6 +14,7 @@ import { LayerExplorerComponent } from './blocks/layer-explorer.component';
 import { CidrReaderComponent } from './blocks/cidr-reader.component';
 import { HardenListComponent } from './blocks/harden-list.component';
 import { SpotIssuesComponent } from './blocks/spot-issues.component';
+import { PbqPracticeComponent } from './blocks/pbq-practice.component';
 import { FlowComponent, NestedBoxesComponent, PortStripComponent } from './blocks/visuals.component';
 
 /** What the hover preview of a flashcard shows. */
@@ -32,7 +33,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   standalone: true,
   imports: [
     RouterLink, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
-    CidrReaderComponent, HardenListComponent, SpotIssuesComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
+    CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',

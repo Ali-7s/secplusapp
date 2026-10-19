@@ -1,0 +1,139 @@
+<section class="pbq" [class.exam-level]="exam" [attr.aria-label]="title">
+  <header class="pbq-head">
+    <mat-icon aria-hidden="true">{{ exam ? 'assignment' : 'construction' }}</mat-icon>
+    <div>
+      <div class="eyebrow">{{ exam ? 'Exam-level practice' : 'Hands-on practice' }}</div>
+      <h3>{{ title }}</h3>
+    </div>
+  </header>
+  @if (intro) { <p class="intro" [innerHTML]="intro | md"></p> }
+
+  @if (exam && !list.length) {
+    @if (loadFailed) {
+      <p class="status">The practice questions could not be loaded. Check your connection and try again.</p>
+    }
+    <button mat-flat-button color="primary" class="start" [disabled]="loading" (click)="start()">
+      <mat-icon aria-hidden="true">play_arrow</mat-icon> {{ loading ? 'Loading…' : 'Start exam-level practice' }}
+    </button>
+  }
+
+  @if (q; as q) {
+    @if (list.length > 1) {
+      <div class="counter">
+        <span class="chip">{{ kindLabel(q) }}</span>
+        <span>{{ index + 1 }} of {{ list.length }}</span>
+      </div>
+    }
+    @if (q.scenario) { <p class="scenario">{{ q.scenario }}</p> }
+    @if (q.exhibit) { <pre class="exhibit">{{ q.exhibit }}</pre> }
+    <p class="stem">{{ q.stem }}</p>
+
+    @switch (q.kind) {
+      @case ('firewall') {
+        @let f = asFirewall(q);
+        <ol class="reqs">
+          @for (r of f.requirements; track $index) { <li>{{ r }}</li> }
+        </ol>
+        <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are read top to bottom and the first match wins. Rule N carries out requirement N.@if (givenRows) { Rule 1 is filled in for you as an example. }</p>
+        <div class="fw-wrap">
+          <table class="fw">
+            <thead><tr><th>#</th>@for (c of f.columns; track c) { <th>{{ c }}</th> }</tr></thead>
+            <tbody>
+              @for (row of f.rows; track $index; let r = $index) {
+                <tr [class.given]="isGiven(r)">
+                  <td class="rn">{{ r + 1 }}</td>
+                  @for (c of f.columns; track c) {
+                    <td>
+                      <select [value]="cell(r, c)" [disabled]="checked || isGiven(r)" [attr.aria-label]="'Rule ' + (r + 1) + ' ' + c"
+                        (change)="setCell(r, c, $any($event.target).value)">
+                        <option value="" disabled [selected]="!cell(r, c)">Select</option>
+                        @for (o of f.choices[c]; track o) { <option [value]="o" [selected]="cell(r, c) === o">{{ o }}</option> }
+                      </select>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (givenRows && !checked) {
+          <p class="example"><mat-icon aria-hidden="true">lightbulb</mat-icon> <span><strong>Why rule 1 looks like that:</strong> {{ f.rows[0].why }}</span></p>
+        }
+      }
+      @case ('match') {
+        @let m = asMatch(q);
+        <div class="match" [class.code]="m.codeLabels">
+          @for (p of m.prompts; track $index; let i = $index) {
+            @if (p.group && (i === 0 || m.prompts[i - 1].group !== p.group)) { <h4 class="mgroup">{{ p.group }}</h4> }
+            <label class="mrow">
+              <span class="mlabel">{{ p.label }}</span>
+              <select [value]="pick(i)" [disabled]="checked" (change)="setPick(i, $any($event.target).value)">
+                <option value="" disabled [selected]="!pick(i)">Select</option>
+                @for (o of p.choices ?? m.choices ?? []; track o) { <option [value]="o" [selected]="pick(i) === o">{{ o }}</option> }
+              </select>
+            </label>
+          }
+        </div>
+      }
+      @case ('order') {
+        @let o = asOrder(q);
+        <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Use the arrows (or drag the items on a computer) to put them in the right order. First at the top.</p>
+        <div class="order" cdkDropList [cdkDropListDisabled]="checked" (cdkDropListDropped)="drop($event)">
+          @for (idx of orderOf(); track idx; let pos = $index) {
+            <div class="oitem" cdkDrag>
+              <mat-icon class="grip" cdkDragHandle aria-hidden="true">drag_indicator</mat-icon>
+              <span class="opos">{{ pos + 1 }}</span>
+              <span class="otext">{{ o.items[idx].text }}</span>
+              <span class="oarrows">
+                <button mat-icon-button [disabled]="checked || pos === 0" (click)="move(pos, -1)" [attr.aria-label]="'Move up: ' + o.items[idx].text"><mat-icon>arrow_upward</mat-icon></button>
+                <button mat-icon-button [disabled]="checked || pos === o.items.length - 1" (click)="move(pos, 1)" [attr.aria-label]="'Move down: ' + o.items[idx].text"><mat-icon>arrow_downward</mat-icon></button>
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @if (graded; as g) {
+      <div class="feedback" aria-live="polite">
+        <div class="result" [class.perfect]="g.correct">
+          <mat-icon aria-hidden="true">{{ g.correct ? 'check_circle' : 'info' }}</mat-icon>
+          <strong>{{ g.correct ? 'All correct.' : score + '.' }}</strong>
+          <span>{{ g.correct ? 'Read the reasons below anyway: they are what the exam tests.' : 'Each part below says what you chose, the right answer and why.' }}</span>
+        </div>
+        <ul class="parts">
+          @for (p of g.parts; track $index) {
+            <li [class.correct]="p.ok" [class.picked-wrong]="!p.ok">
+              <div class="part-head">
+                <mat-icon aria-hidden="true">{{ p.ok ? 'check' : 'close' }}</mat-icon>
+                <strong [class.code]="q.kind === 'match' && asMatch(q).codeLabels">{{ p.label }}</strong>
+              </div>
+              @if (p.ok) {
+                <p class="part-ans">{{ p.expected }}</p>
+              } @else {
+                <p class="part-ans"><span class="lbl">You:</span> {{ p.given }}</p>
+                <p class="part-ans"><span class="lbl">Correct:</span> {{ p.expected }}</p>
+              }
+              <p class="why">{{ p.why }}</p>
+            </li>
+          }
+        </ul>
+        <p class="takeaway"><mat-icon aria-hidden="true">lightbulb</mat-icon> <span>{{ q.takeaway }}</span></p>
+      </div>
+    }
+
+    <div class="actions">
+      @if (!checked) {
+        <button mat-flat-button color="primary" [disabled]="!ready" (click)="check()">Check my answer</button>
+        @if (!ready) { <span class="todo">Fill in every box to check.</span> }
+      } @else {
+        <button mat-stroked-button (click)="reset()"><mat-icon>refresh</mat-icon> Try again</button>
+      }
+      @if (list.length > 1) {
+        <span class="spacer"></span>
+        <button mat-stroked-button [disabled]="index === 0" (click)="go(index - 1)" aria-label="Previous question"><mat-icon>chevron_left</mat-icon></button>
+        <button mat-flat-button color="primary" [disabled]="index === list.length - 1" (click)="go(index + 1)">Next <mat-icon iconPositionEnd>chevron_right</mat-icon></button>
+      }
+    </div>
+  }
+</section>
