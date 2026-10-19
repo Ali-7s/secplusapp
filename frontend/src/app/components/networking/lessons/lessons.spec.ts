@@ -115,6 +115,17 @@ describe('lesson content', () => {
     }
   });
 
+  it('opens every lesson with its new words, and reminds later lessons what they build on', () => {
+    for (const [slug, body] of Object.entries(LESSON_BODIES)) {
+      const glossary = body.blocks.find(b => b.type === 'table' && b.columns[0] === 'Word');
+      expect(glossary).withContext(`${slug} has a new words table`).toBeTruthy();
+      expect(body.blocks.indexOf(glossary!)).withContext(`${slug} lists its words near the top`).toBeLessThan(3);
+      if (slug !== 'start') {
+        expect(body.blocks[0].type === 'callout' && body.blocks[0].title === 'From earlier lessons').withContext(`${slug} starts with a recap`).toBeTrue();
+      }
+    }
+  });
+
   it('spreads the correct answers over the options', () => {
     const slots = new Set<number>();
     for (const body of Object.values(LESSON_BODIES)) for (const q of body.check) slots.add(q.answer);

@@ -17,6 +17,13 @@ export const tip = callout('tip', 'Tip');
 export const trap = callout('trap', 'Common trap');
 export const secure = callout('secure', 'How to secure it');
 
+/** The lesson's new vocabulary up front, in plain English, so nothing is used before it is explained. */
+export const words = (...rows: [string, string][]): Block =>
+  ({ type: 'table', columns: ['Word', 'What it means'], rows, caption: 'New words in this lesson. Come back here whenever one trips you up.' });
+
+/** A short reminder of what this lesson builds on. */
+export const recap = (md: string): Block => tip(md, 'From earlier lessons');
+
 export const table = (columns: string[], rows: string[][], opts: { caption?: string; mono?: number[] } = {}): Block =>
   ({ type: 'table', columns, rows, caption: opts.caption, mono: opts.mono });
 

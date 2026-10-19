@@ -1,21 +1,23 @@
 import { Lesson, LessonBody } from '../networking.model';
 import { lessonBySlug } from './lesson-index';
-import { LAYERS } from './01-layers';
+import { START } from './01-start';
+import { LAYERS } from './04-layers';
 import { ADDRESSES } from './02-addresses';
 import { PORTS_TCP_UDP } from './03-ports-tcp-udp';
-import { PORTS_TO_KNOW } from './04-ports-to-know';
-import { DEVICES } from './05-devices';
-import { VLANS } from './06-vlans';
-import { HELPERS } from './07-helpers';
-import { SECURITY_DEVICES } from './08-security-devices';
-import { WEB_REQUEST } from './09-web-request';
-import { HARDENING } from './10-hardening';
+import { PORTS_TO_KNOW } from './05-ports-to-know';
+import { DEVICES } from './06-devices';
+import { VLANS } from './07-vlans';
+import { HELPERS } from './08-helpers';
+import { SECURITY_DEVICES } from './09-security-devices';
+import { WEB_REQUEST } from './10-web-request';
+import { HARDENING } from './11-hardening';
 
 /** Lesson text, keyed by slug. The list, titles and related cards live in lesson-index.ts. */
 export const LESSON_BODIES: Record<string, LessonBody> = {
-  layers: LAYERS,
+  start: START,
   addresses: ADDRESSES,
   'ports-tcp-udp': PORTS_TCP_UDP,
+  layers: LAYERS,
   'ports-to-know': PORTS_TO_KNOW,
   devices: DEVICES,
   vlans: VLANS,

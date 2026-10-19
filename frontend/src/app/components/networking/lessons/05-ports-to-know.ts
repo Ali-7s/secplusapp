@@ -1,0 +1,138 @@
+import { LessonBody } from '../networking.model';
+import { exam, h, hSecure, list, mcq, p, recap, table, tip, words } from './dsl';
+
+export const PORTS_TO_KNOW: LessonBody = {
+  goals: [
+    'Say in plain words what each common protocol does',
+    'Group the common ports by job instead of memorizing a flat list',
+    'Pair each insecure protocol with its secure replacement',
+    'Use a few memory hooks for the numbers that always show up',
+  ],
+  blocks: [
+    recap('A **port number** tells a device which program the data is for, and each service **listens** on an agreed port (lesson 3). A **protocol** is an agreed set of rules (lesson 1). **Plaintext** means anyone watching can read it; **encryption** scrambles it so only the receiver can.'),
+    words(
+      ['TLS', 'The standard encryption used to secure other protocols. The S in HTTPS comes from it'],
+      ['Secure version', 'The same protocol wrapped in encryption, usually on a different port'],
+      ['Remote access', 'Controlling a computer or network device from somewhere else, over the network'],
+      ['Directory', 'A central database of users, computers and groups that other systems check logins against'],
+      ['STARTTLS', 'A way to start a conversation in plaintext and then switch on encryption before anything sensitive is sent'],
+      ['Implicit TLS', 'Encryption from the very first byte, usually on its own dedicated port'],
+      ['VPN', 'An encrypted tunnel across the internet into a private network (lesson 9)'],
+    ),
+
+    p('There is no way to work out a port number by reasoning. They are conventions everyone agreed on years ago, and you simply have to learn them. Two tricks make it far easier: learn them **by job** (about ten families instead of forty loose numbers), and always learn the **secure version next to the insecure one**.'),
+
+    h('The ports, by job'),
+    p('Read the "What it does" column first. A port number is much easier to remember once you know what the protocol is for. All of these use **TCP** unless the table says **UDP** (lesson 3 explains the difference).'),
+    table(
+      ['Job', 'Protocol and port', 'What it does'],
+      [
+        ['Remote access', '**SSH** `22`', 'Log in to another computer or device and type commands, encrypted. Also carries file transfers (SFTP)'],
+        ['', '**Telnet** `23`', 'The old, plaintext way to do the same. Replace it with SSH'],
+        ['', '**RDP** `3389`', 'Windows Remote Desktop: see and control another Windows screen. A favorite target, so never expose it to the internet'],
+        ['Web', '**HTTP** `80`', 'Fetching web pages, in plaintext'],
+        ['', '**HTTPS** `443`', 'Fetching web pages, encrypted with TLS'],
+        ['Email', '**SMTP** `25`', 'Mail servers passing email to each other'],
+        ['', '**SMTP submission** `587`, or `465`', 'Your mail app sending a new email to your mail server. 587 uses STARTTLS; 465 is encrypted from the start'],
+        ['', '**POP3** `110`, secure **POP3S** `995`', 'Downloading email from the server to one device'],
+        ['', '**IMAP** `143`, secure **IMAPS** `993`', 'Reading email that stays on the server, so every device sees the same inbox'],
+        ['File transfer', '**FTP** `21` (and `20`)', 'The old way to transfer files. Logins and files travel in plaintext'],
+        ['', '**SFTP** `22`', 'File transfer inside SSH. Not the same as FTPS'],
+        ['', '**FTPS** `990` (or `21`)', 'The old FTP wrapped in TLS encryption'],
+        ['', '**TFTP** `69` UDP', 'A tiny file transfer with no login and no encryption, used to load settings onto network gear'],
+        ['', '**SMB** `445`', 'Windows file and printer sharing. The old version, SMBv1, is dangerous'],
+        ['Names and addresses', '**DNS** `53` UDP and TCP', 'Looking up the IP address for a name like `www.example.com` (lesson 8)'],
+        ['', '**DHCP** `67` and `68` UDP', 'Handing out IP addresses automatically. The server uses 67, devices use 68 (lesson 8)'],
+        ['Directory and sign-in', '**LDAP** `389`, secure **LDAPS** `636`', 'Looking things up in a **directory** (the central list of users and groups), and checking logins against it'],
+        ['', '**Kerberos** `88` TCP and UDP', 'How Windows networks sign you in once and give you "tickets" to use other services'],
+        ['', '**RADIUS** `1812` and `1813` UDP', 'A central login server that Wi-Fi, VPNs and switches ask "is this user allowed in?"'],
+        ['', '**TACACS+** `49`', 'A central login server for administrators of network devices. Encrypts the whole conversation'],
+        ['Management', '**SNMP** `161` and `162` UDP', 'Monitoring network devices (traffic, errors, temperature). Only version 3 is secure'],
+        ['', '**Syslog** `514` UDP', 'Sending log messages to a central log server. The encrypted version uses `6514`'],
+        ['', '**NTP** `123` UDP', 'Keeping every device\'s clock in sync, which logs and logins depend on'],
+        ['VPN and tunnels', '**IKE** `500` UDP and **NAT-T** `4500` UDP', 'Setting up IPsec VPN tunnels; 4500 lets them work through home routers (lesson 9)'],
+        ['', '**L2TP** `1701` UDP and **PPTP** `1723`', 'Older VPN types. L2TP needs IPsec added for encryption. PPTP is broken: do not use it'],
+        ['', '**OpenVPN** `1194` and **WireGuard** `51820` UDP', 'Modern VPN software (these are their default ports)'],
+        ['Databases', '**MS SQL** `1433`, **Oracle** `1521`, **MySQL** `3306`', 'Programs talking to databases. Only the servers that need them should reach these ports'],
+        ['Voice', '**SIP** `5060` (and `5061` with TLS)', 'Setting up internet phone calls (VoIP)'],
+      ],
+    ),
+
+    h('Insecure to secure: learn them in pairs'),
+    p('Many old protocols send everything, passwords included, in plaintext. Each has a secure replacement, and the exam loves asking "which protocol should replace this one?"'),
+    table(
+      ['Plaintext (avoid)', 'Secure replacement', 'How it is secured'],
+      [
+        ['Telnet `23`', 'SSH `22`', 'An encrypted session, and logins with keys instead of only passwords'],
+        ['HTTP `80`', 'HTTPS `443`', 'The same web traffic wrapped in TLS'],
+        ['FTP `21`', 'SFTP `22` or FTPS `990`', 'SFTP runs inside SSH. FTPS wraps FTP in TLS'],
+        ['POP3 `110`', 'POP3S `995`', 'TLS from the start'],
+        ['IMAP `143`', 'IMAPS `993`', 'TLS from the start'],
+        ['SMTP `25`', 'SMTPS `465`, or STARTTLS on `587`', 'Encrypted from the start, or switched to encryption with STARTTLS'],
+        ['LDAP `389`', 'LDAPS `636`', 'Directory lookups wrapped in TLS'],
+        ['SNMP v1 and v2c `161`', 'SNMP v3 `161`', 'Adds real logins and encryption. The old versions use a shared password called a "community string", sent in plaintext'],
+        ['Syslog `514`', 'Syslog over TLS `6514`', 'Encrypted, reliable log delivery'],
+        ['TFTP `69`', 'SFTP or SCP', 'TFTP has no login and no encryption at all'],
+      ],
+    ),
+
+    h('Memory hooks'),
+    list(
+      '**The rising run.** 22 SSH, 23 Telnet, 25 SMTP, 53 DNS, 80 HTTP, 110 POP3, 123 NTP, 143 IMAP, 161 SNMP, 389 LDAP, 443 HTTPS, 445 SMB, 3389 RDP. Say it out loud a few times: the numbers go up in order.',
+      '**22 and 23 are neighbors.** SSH (22) is the secure replacement for Telnet (23).',
+      '**Mail goes out on 25 and comes in on 110 or 143.** The secure versions of the incoming ones both live in the 990s: POP3S is 995 and IMAPS is 993.',
+      '**80 is the open web, 443 is the locked web** (the S in HTTPS).',
+      '**DHCP: server 67, client 68.** The server gets the lower number.',
+      '**SNMP: 161 asks, 162 tells.** A monitoring server asks devices questions on 161, and devices send unprompted alerts (called **traps**) on 162.',
+      '**LDAPS is 636,** a number that reads the same backwards. **RADIUS is 1812 and 1813.** **TACACS+ is a lone 49.**',
+      '**DNS 53 uses both UDP and TCP.** UDP for everyday lookups, TCP for big answers and for copying whole sets of records between DNS servers.',
+    ),
+    exam('Expect two kinds of question: a port given and the protocol asked for (or the other way round), and a firewall scenario such as "allow secure web and block plaintext email retrieval" where you choose the ports. Also expect "which protocol should replace Telnet or FTP?"'),
+
+    h('Practice it'),
+    p('Memorizing needs repetition, not reading. Short rounds on several days in a row work far better than one long session.'),
+    {
+      type: 'cta',
+      to: '/reference',
+      icon: 'fitness_center',
+      label: 'Open the Reference Sheet and start the Ports recall drill',
+      note: 'The first tab, Network Ports, has a Recall Drill button that quizzes you on exactly this list.',
+    },
+    tip('You do not need all of these on day one. Start with the rising run in the memory hooks, then add the secure pairs.'),
+
+    hSecure('How to secure it: protocols and ports'),
+    list(
+      '**Use the encrypted version and switch off the plaintext one.** On every device, turn off Telnet, FTP, plain HTTP admin pages and old SNMP, and use SSH, SFTP, HTTPS and SNMPv3 instead.',
+      '**Keep management ports off the internet.** SSH, RDP, SNMP and database ports should only be reachable from administrators\' networks, through a VPN, or through a **jump server** (one locked-down computer that administrators must go through, lesson 9).',
+      '**Block what you do not use at the firewall, in both directions.** Blocking unexpected outgoing traffic (called **egress filtering**) also catches malware trying to contact its owner on odd ports.',
+      '**Hunt for old leftovers.** Common ones: SMBv1, SNMP still using the default community string "public", FTP that allows anonymous logins, and TFTP.',
+      '**Watch for surprises.** Alert on connections from the internet to risky ports such as 23, 445 or 3389.',
+    ),
+  ],
+  check: [
+    mcq(
+      'An administrator must replace Telnet for managing routers. Which protocol and port should they use?',
+      'SSH on TCP 22',
+      ['SFTP on TCP 21', 'HTTP on TCP 80', 'SNMP on UDP 161'],
+      'SSH is the encrypted replacement for Telnet and uses TCP 22. SFTP is for file transfer, HTTP is plaintext web traffic and SNMP is for monitoring.',
+    ),
+    mcq(
+      'Which pair shows a plaintext email-reading protocol and its encrypted replacement?',
+      'IMAP on 143 and IMAPS on 993',
+      ['SMTP on 25 and POP3 on 110', 'HTTP on 80 and IMAPS on 993', 'POP3 on 110 and IMAP on 143'],
+      'IMAP (143) is plaintext and IMAPS (993) is the same protocol inside TLS. The other pairs mix unrelated protocols or pair two plaintext ones.',
+    ),
+    mcq(
+      'Which ports does DHCP use?',
+      'UDP 67 for the server and UDP 68 for the client',
+      ['TCP 67 and TCP 68', 'UDP 53 and UDP 123', 'UDP 161 and UDP 162'],
+      'DHCP runs over UDP. The server listens on 67 and devices use 68. Port 53 is DNS, 123 is NTP, and 161 and 162 are SNMP.',
+    ),
+    mcq(
+      'Which protocol sends encrypted directory lookups over port 636?',
+      'LDAPS',
+      ['LDAP', 'Kerberos', 'RADIUS'],
+      'LDAP uses 389 in plaintext. LDAPS wraps the same directory protocol in TLS on 636. Kerberos is 88 and RADIUS is 1812 and 1813.',
+    ),
+  ],
+};
