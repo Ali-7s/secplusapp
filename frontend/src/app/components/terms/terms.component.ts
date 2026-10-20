@@ -20,6 +20,7 @@ import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
+import { rankBySearch, searchRank } from '../../utils/search-rank';
 
 @Component({
   selector: 'app-terms',
@@ -97,14 +98,9 @@ export class TermsComponent implements OnInit {
   }
 
   filter() {
-    const q = this.searchText.toLowerCase();
-    this.filteredTerms = this.allTerms.filter(t => {
-      const matchSearch = !q || t.term.toLowerCase().includes(q) ||
-        t.definition?.toLowerCase().includes(q) || t.analogy?.toLowerCase().includes(q) ||
-        variantsSearchText(t).includes(q);
-      const matchCat = this.selectedCategory === 'All' || t.category === this.selectedCategory;
-      return matchSearch && matchCat;
-    });
+    // Best matches first: searching "PKI" lists the PKI card before cards that only mention PKI.
+    const inCategory = this.allTerms.filter(t => this.selectedCategory === 'All' || t.category === this.selectedCategory);
+    this.filteredTerms = rankBySearch(inCategory, t => searchRank(this.searchText, t.term, '', [t.definition, t.analogy, variantsSearchText(t)]));
     if (this.expandedTerm && !this.filteredTerms.some(t => t.term === this.expandedTerm)) {
       this.expandedTerm = null;
     }

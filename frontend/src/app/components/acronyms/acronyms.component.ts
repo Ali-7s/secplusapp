@@ -21,6 +21,7 @@ import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
+import { rankBySearch, searchRank } from '../../utils/search-rank';
 
 @Component({
   selector: 'app-acronyms',
@@ -95,14 +96,9 @@ export class AcronymsComponent implements OnInit {
   }
 
   filter() {
-    const q = this.searchText.toLowerCase();
-    this.filteredAcronyms = this.allAcronyms.filter(a => {
-      const matchSearch = !q || a.acronym.toLowerCase().includes(q) ||
-        a.expansion.toLowerCase().includes(q) || a.definition?.toLowerCase().includes(q) ||
-        variantsSearchText(a).includes(q);
-      const matchCat = this.selectedCategory === 'All' || a.category === this.selectedCategory;
-      return matchSearch && matchCat;
-    });
+    // Best matches first: searching "PKI" lists the PKI card before cards that only mention PKI.
+    const inCategory = this.allAcronyms.filter(a => this.selectedCategory === 'All' || a.category === this.selectedCategory);
+    this.filteredAcronyms = rankBySearch(inCategory, a => searchRank(this.searchText, a.acronym, a.expansion, [a.definition, variantsSearchText(a)]));
     if (this.expandedAcronym && !this.filteredAcronyms.some(a => a.acronym === this.expandedAcronym)) {
       this.expandedAcronym = null;
     }
