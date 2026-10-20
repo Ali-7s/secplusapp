@@ -110,9 +110,58 @@ export interface ThreatActorEntry {
 export class ReferenceComponent {
   searchText = '';
 
-  /** Tabs that other pages can open directly with ?tab=..., by their position in the tab group. */
-  private readonly linkableTabs: Record<string, number> = { ports: 0, subnetting: 1 };
-  selectedTab = this.linkableTabs[inject(ActivatedRoute).snapshot.queryParamMap.get('tab') ?? ''] ?? 0;
+  /**
+   * The sections, in the same order as the tabs in the template, grouped for the dropdown. `count` is how many
+   * rows match the search box (null for a section the search does not cover). `key` lets other pages open a
+   * section directly with ?tab=key.
+   */
+  readonly sections: { key: string; label: string; group: string; count: () => number | null }[] = [
+    { key: 'ports', label: 'Network Ports', group: 'Networking', count: () => this.filteredPorts.length },
+    { key: 'subnetting', label: 'Subnetting', group: 'Networking', count: () => null },
+    { key: 'vpn', label: 'VPN & Tunneling', group: 'Networking', count: () => this.filteredVpn.length },
+    { key: 'wireless', label: 'Wireless Security', group: 'Networking', count: () => this.filteredWireless.length },
+    { key: 'legacy', label: 'Legacy → Modern', group: 'Networking', count: () => this.filteredReplacements.length },
+    { key: 'ciphers', label: 'Encryption Ciphers', group: 'Cryptography', count: () => this.filteredCiphers.length },
+    { key: 'hashes', label: 'Hashing & MACs', group: 'Cryptography', count: () => this.filteredHashes.length },
+    { key: 'pki', label: 'PKI & Certs', group: 'Cryptography', count: () => this.filteredPkiReference.length },
+    { key: 'auth', label: 'Auth Protocols', group: 'Identity and access', count: () => this.filteredAuth.length },
+    { key: 'mfa', label: 'MFA Factors', group: 'Identity and access', count: () => this.filteredMfaFactors.length },
+    { key: 'access', label: 'Access Models', group: 'Identity and access', count: () => this.filteredAccessModels.length },
+    { key: 'actors', label: 'Threat Actors', group: 'Threats and response', count: () => this.filteredThreatActors.length },
+    { key: 'frameworks', label: 'Attack Frameworks', group: 'Threats and response', count: () => this.filteredAttackFrameworks.length },
+    { key: 'ir', label: 'IR Phases', group: 'Threats and response', count: () => this.filteredIrPhases.length },
+    { key: 'bcdr', label: 'BCP/DR Metrics', group: 'Resilience and recovery', count: () => this.filteredBcdrMetrics.length },
+    { key: 'backups', label: 'Backup Types', group: 'Resilience and recovery', count: () => this.filteredBackupTypes.length },
+    { key: 'raid', label: 'RAID Levels', group: 'Resilience and recovery', count: () => this.filteredRaidLevels.length },
+    { key: 'sites', label: 'Site Types', group: 'Resilience and recovery', count: () => this.filteredSiteTypes.length },
+    { key: 'cloud', label: 'Cloud Models', group: 'Resilience and recovery', count: () => this.filteredCloudModels.length },
+    { key: 'risk', label: 'Risk Formulas', group: 'Risk and governance', count: () => this.filteredRiskFormulas.length },
+    { key: 'compliance', label: 'Compliance', group: 'Risk and governance', count: () => this.filteredComplianceFrameworks.length },
+    { key: 'data', label: 'Data Classification', group: 'Risk and governance', count: () => this.filteredDataClassifications.length },
+  ];
+
+  selectedTab = Math.max(0, this.sections.findIndex(sec => sec.key === inject(ActivatedRoute).snapshot.queryParamMap.get('tab')));
+
+  /** The dropdown's option groups, each section keeping its tab index. */
+  get sectionGroups(): { name: string; sections: { index: number; label: string; count: number | null }[] }[] {
+    const groups: { name: string; sections: { index: number; label: string; count: number | null }[] }[] = [];
+    this.sections.forEach((sec, index) => {
+      let g = groups.find(x => x.name === sec.group);
+      if (!g) groups.push(g = { name: sec.group, sections: [] });
+      g.sections.push({ index, label: sec.label, count: sec.count() });
+    });
+    return groups;
+  }
+
+  /** While searching, leave a section with no matches for the first one that has some. */
+  jumpToMatches() {
+    if (!this.searchText.trim() || this.sections[this.selectedTab].count() !== 0) return;
+    const first = this.sections.findIndex(sec => (sec.count() ?? 0) > 0);
+    if (first >= 0) this.selectedTab = first;
+  }
+
+  get searchableCount(): number { return this.sections.filter(sec => sec.count() !== null).length; }
+  get sectionsWithMatches(): number { return this.sections.filter(sec => (sec.count() ?? 0) > 0).length; }
 
   readonly PORTS: PortEntry[] = [
     { port: '20', protocol: 'FTP-DATA', service: 'FTP Data Transfer', transport: 'TCP', status: 'insecure', notes: 'Transmits file data in cleartext' },

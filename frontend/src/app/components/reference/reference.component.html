@@ -17,7 +17,7 @@
   <div class="search-bar">
     <mat-form-field appearance="outline" class="search-field">
       <mat-label>Search across all tables...</mat-label>
-      <input matInput [(ngModel)]="searchText" placeholder="e.g. AES, 443, RADIUS, WPA3...">
+      <input matInput [(ngModel)]="searchText" (ngModelChange)="jumpToMatches()" placeholder="e.g. AES, 443, RADIUS, WPA3...">
       <mat-icon matSuffix>search</mat-icon>
     </mat-form-field>
   </div>
@@ -98,7 +98,35 @@
     </div>
   } @else {
 
-  <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false" [(selectedIndex)]="selectedTab">
+  <!-- Section picker: a grouped dropdown, so every section is visible and you always know how many there are -->
+  <nav class="section-picker" aria-label="Reference sections">
+    <label class="picker-label" for="ref-section">Section</label>
+    <div class="picker-row">
+      <button mat-icon-button class="step" [disabled]="selectedTab === 0" (click)="selectedTab = selectedTab - 1" aria-label="Previous section">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <select id="ref-section" class="picker" [ngModel]="selectedTab" (ngModelChange)="selectedTab = +$event">
+        @for (g of sectionGroups; track g.name) {
+          <optgroup [label]="g.name">
+            @for (sec of g.sections; track sec.index) {
+              <option [ngValue]="sec.index">{{ sec.label }}{{ searchText.trim() && sec.count ? ' (' + sec.count + (sec.count === 1 ? ' match)' : ' matches)') : '' }}</option>
+            }
+          </optgroup>
+        }
+      </select>
+      <button mat-icon-button class="step" [disabled]="selectedTab === sections.length - 1" (click)="selectedTab = selectedTab + 1" aria-label="Next section">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    <div class="picker-meta">
+      <span>{{ selectedTab + 1 }} of {{ sections.length }} · {{ sections[selectedTab].group }}</span>
+      @if (searchText.trim()) {
+        <span class="matches">{{ sectionsWithMatches }} of {{ searchableCount }} sections match "{{ searchText.trim() }}"</span>
+      }
+    </div>
+  </nav>
+
+  <mat-tab-group class="ref-tabs" animationDuration="0ms" mat-stretch-tabs="false" [(selectedIndex)]="selectedTab">
 
     <!-- ── Ports ──────────────────────────────────────────── -->
     <mat-tab label="Network Ports">
@@ -146,125 +174,6 @@
     <mat-tab label="Subnetting">
       <div class="tab-content">
         <app-subnet-cheat-sheet />
-      </div>
-    </mat-tab>
-
-    <!-- ── Ciphers ─────────────────────────────────────────── -->
-    <mat-tab label="Encryption Ciphers">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('ciphers', 'Encryption Ciphers')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Algorithm</th>
-                <th>Type</th>
-                <th>Key Size</th>
-                <th>Status</th>
-                <th>Primary Use</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredCiphers; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td class="type-cell">{{ row.type }}</td>
-                  <td class="mono">{{ row.keySize }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td>{{ row.use }}</td>
-                  <td class="notes-cell">{{ row.notes }}</td>
-                </tr>
-              }
-              @if (filteredCiphers.length === 0) {
-                <tr><td colspan="6" class="no-results">No ciphers match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── Hashing ─────────────────────────────────────────── -->
-    <mat-tab label="Hashing &amp; MACs">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('hashes', 'Hashing & MACs')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Algorithm</th>
-                <th>Output</th>
-                <th>Status</th>
-                <th>Use Case</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredHashes; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td class="mono">{{ row.outputBits }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td>{{ row.use }}</td>
-                  <td class="notes-cell">{{ row.notes }}</td>
-                </tr>
-              }
-              @if (filteredHashes.length === 0) {
-                <tr><td colspan="5" class="no-results">No algorithms match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── Auth Protocols ──────────────────────────────────── -->
-    <mat-tab label="Auth Protocols">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('auth', 'Auth Protocols')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Protocol</th>
-                <th>Port / Layer</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredAuth; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td class="mono">{{ row.port }}</td>
-                  <td class="type-cell">{{ row.type }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td class="notes-cell">{{ row.notes }}</td>
-                </tr>
-              }
-              @if (filteredAuth.length === 0) {
-                <tr><td colspan="5" class="no-results">No protocols match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
       </div>
     </mat-tab>
 
@@ -395,12 +304,12 @@
       </div>
     </mat-tab>
 
-    <!-- ── Risk Formulas ─────────────────────────────────────── -->
-    <mat-tab label="Risk Formulas">
+    <!-- ── Ciphers ─────────────────────────────────────────── -->
+    <mat-tab label="Encryption Ciphers">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredRiskFormulas.length }} formulas · know SLE, ALE, ARO, and EF cold — risk-math questions are common</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('risk-formulas', 'Risk Formulas')">
+          <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('ciphers', 'Encryption Ciphers')">
             <mat-icon>fitness_center</mat-icon> Recall Drill
           </button>
         </div>
@@ -408,23 +317,327 @@
           <table class="ref-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Formula</th>
-                <th>Variables</th>
-                <th>Example</th>
+                <th>Algorithm</th>
+                <th>Type</th>
+                <th>Key Size</th>
+                <th>Status</th>
+                <th>Primary Use</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
-              @for (row of filteredRiskFormulas; track row.name) {
-                <tr>
+              @for (row of filteredCiphers; track row.name) {
+                <tr [class]="row.status">
                   <td class="mono bold">{{ row.name }}</td>
-                  <td class="mono">{{ row.formula }}</td>
-                  <td class="notes-cell">{{ row.variables }}</td>
-                  <td class="notes-cell">{{ row.example }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td class="mono">{{ row.keySize }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.use }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
                 </tr>
               }
-              @if (filteredRiskFormulas.length === 0) {
-                <tr><td colspan="4" class="no-results">No formulas match "{{ searchText }}"</td></tr>
+              @if (filteredCiphers.length === 0) {
+                <tr><td colspan="6" class="no-results">No ciphers match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Hashing ─────────────────────────────────────────── -->
+    <mat-tab label="Hashing &amp; MACs">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('hashes', 'Hashing & MACs')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Output</th>
+                <th>Status</th>
+                <th>Use Case</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredHashes; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.outputBits }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.use }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredHashes.length === 0) {
+                <tr><td colspan="5" class="no-results">No algorithms match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── PKI & Certificates ─────────────────────────────────── -->
+    <mat-tab label="PKI &amp; Certs">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredPkiReference.length }} concepts · know the difference between CRL (a list) and OCSP (a real-time check)</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('pki', 'PKI & Certificates')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredPkiReference; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredPkiReference.length === 0) {
+                <tr><td colspan="4" class="no-results">No concepts match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Auth Protocols ──────────────────────────────────── -->
+    <mat-tab label="Auth Protocols">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('auth', 'Auth Protocols')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Protocol</th>
+                <th>Port / Layer</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredAuth; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.port }}</td>
+                  <td class="type-cell">{{ row.type }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredAuth.length === 0) {
+                <tr><td colspan="5" class="no-results">No protocols match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── MFA Factors ────────────────────────────────────────── -->
+    <mat-tab label="MFA Factors">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredMfaFactors.length }} factors · true MFA combines factors from DIFFERENT categories, not two of the same type</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('mfa-factors', 'MFA Factors')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Factor</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredMfaFactors; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredMfaFactors.length === 0) {
+                <tr><td colspan="4" class="no-results">No factors match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Access Control Models ──────────────────────────────── -->
+    <mat-tab label="Access Models">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredAccessModels.length }} models · DAC = owner decides, MAC = labels, RBAC = role, ABAC = attributes</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('access-models', 'Access Models')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredAccessModels; track row.name) {
+                <tr [class]="row.status">
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredAccessModels.length === 0) {
+                <tr><td colspan="4" class="no-results">No access models match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Threat Actors ──────────────────────────────────────── -->
+    <mat-tab label="Threat Actors">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredThreatActors.length }} actor types · know the motivation and sophistication level that distinguishes each one</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('threat-actors', 'Threat Actors')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Actor</th>
+                <th>Sophistication</th>
+                <th>Resources</th>
+                <th>Motivation</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredThreatActors; track row.name) {
+                <tr>
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td>{{ row.sophistication }}</td>
+                  <td>{{ row.resources }}</td>
+                  <td>{{ row.motivation }}</td>
+                  <td class="notes-cell">{{ row.notes }}</td>
+                </tr>
+              }
+              @if (filteredThreatActors.length === 0) {
+                <tr><td colspan="5" class="no-results">No actor types match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Attack Frameworks ──────────────────────────────────── -->
+    <mat-tab label="Attack Frameworks">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredAttackFrameworks.length }} frameworks · ATT&amp;CK catalogs TTPs, the Kill Chain models attack stages, Diamond Model links campaigns</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('attack-frameworks', 'Attack Frameworks')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Framework</th>
+                <th>Summary</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredAttackFrameworks; track row.name) {
+                <tr>
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td>{{ row.summary }}</td>
+                  <td class="notes-cell">{{ row.detail }}</td>
+                </tr>
+              }
+              @if (filteredAttackFrameworks.length === 0) {
+                <tr><td colspan="3" class="no-results">No frameworks match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Incident Response Phases ───────────────────────────── -->
+    <mat-tab label="IR Phases">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredIrPhases.length }} phases · memorize the order — containment comes before eradication, which comes before recovery</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('ir-phases', 'IR Phases')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Phase</th>
+                <th>Goal</th>
+                <th>Key Activities</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredIrPhases; track row.order) {
+                <tr>
+                  <td class="mono bold">{{ row.order }}</td>
+                  <td class="mono">{{ row.phase }}</td>
+                  <td>{{ row.description }}</td>
+                  <td class="notes-cell">{{ row.keyActivities }}</td>
+                </tr>
+              }
+              @if (filteredIrPhases.length === 0) {
+                <tr><td colspan="4" class="no-results">No phases match "{{ searchText }}"</td></tr>
               }
             </tbody>
           </table>
@@ -545,12 +758,12 @@
       </div>
     </mat-tab>
 
-    <!-- ── Access Control Models ──────────────────────────────── -->
-    <mat-tab label="Access Models">
+    <!-- ── DR Site Types ──────────────────────────────────────── -->
+    <mat-tab label="Site Types">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAccessModels.length }} models · DAC = owner decides, MAC = labels, RBAC = role, ABAC = attributes</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('access-models', 'Access Models')">
+          <p class="tab-hint">{{ filteredSiteTypes.length }} site types · recovery speed and cost move in opposite directions — hot is fastest and priciest, cold is slowest and cheapest</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('site-types', 'DR Site Types')">
             <mat-icon>fitness_center</mat-icon> Recall Drill
           </button>
         </div>
@@ -558,60 +771,23 @@
           <table class="ref-table">
             <thead>
               <tr>
-                <th>Model</th>
-                <th>Status</th>
-                <th>Summary</th>
-                <th>Detail</th>
+                <th>Site Type</th>
+                <th>Recovery Time</th>
+                <th>Cost</th>
+                <th>Description</th>
               </tr>
             </thead>
             <tbody>
-              @for (row of filteredAccessModels; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td>{{ row.summary }}</td>
-                  <td class="notes-cell">{{ row.detail }}</td>
-                </tr>
-              }
-              @if (filteredAccessModels.length === 0) {
-                <tr><td colspan="4" class="no-results">No access models match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── Incident Response Phases ───────────────────────────── -->
-    <mat-tab label="IR Phases">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredIrPhases.length }} phases · memorize the order — containment comes before eradication, which comes before recovery</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('ir-phases', 'IR Phases')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Phase</th>
-                <th>Goal</th>
-                <th>Key Activities</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredIrPhases; track row.order) {
+              @for (row of filteredSiteTypes; track row.type) {
                 <tr>
-                  <td class="mono bold">{{ row.order }}</td>
-                  <td class="mono">{{ row.phase }}</td>
-                  <td>{{ row.description }}</td>
-                  <td class="notes-cell">{{ row.keyActivities }}</td>
+                  <td class="mono bold">{{ row.type }}</td>
+                  <td>{{ row.recoveryTime }}</td>
+                  <td>{{ row.cost }}</td>
+                  <td class="notes-cell">{{ row.description }}</td>
                 </tr>
               }
-              @if (filteredIrPhases.length === 0) {
-                <tr><td colspan="4" class="no-results">No phases match "{{ searchText }}"</td></tr>
+              @if (filteredSiteTypes.length === 0) {
+                <tr><td colspan="4" class="no-results">No site types match "{{ searchText }}"</td></tr>
               }
             </tbody>
           </table>
@@ -663,6 +839,43 @@
       </div>
     </mat-tab>
 
+    <!-- ── Risk Formulas ─────────────────────────────────────── -->
+    <mat-tab label="Risk Formulas">
+      <div class="tab-content">
+        <div class="tab-hint-row">
+          <p class="tab-hint">{{ filteredRiskFormulas.length }} formulas · know SLE, ALE, ARO, and EF cold — risk-math questions are common</p>
+          <button mat-stroked-button class="drill-btn" (click)="startDrill('risk-formulas', 'Risk Formulas')">
+            <mat-icon>fitness_center</mat-icon> Recall Drill
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Formula</th>
+                <th>Variables</th>
+                <th>Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredRiskFormulas; track row.name) {
+                <tr>
+                  <td class="mono bold">{{ row.name }}</td>
+                  <td class="mono">{{ row.formula }}</td>
+                  <td class="notes-cell">{{ row.variables }}</td>
+                  <td class="notes-cell">{{ row.example }}</td>
+                </tr>
+              }
+              @if (filteredRiskFormulas.length === 0) {
+                <tr><td colspan="4" class="no-results">No formulas match "{{ searchText }}"</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
     <!-- ── Compliance Frameworks ──────────────────────────────── -->
     <mat-tab label="Compliance">
       <div class="tab-content">
@@ -691,191 +904,6 @@
               }
               @if (filteredComplianceFrameworks.length === 0) {
                 <tr><td colspan="3" class="no-results">No frameworks match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── Attack Frameworks ──────────────────────────────────── -->
-    <mat-tab label="Attack Frameworks">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAttackFrameworks.length }} frameworks · ATT&amp;CK catalogs TTPs, the Kill Chain models attack stages, Diamond Model links campaigns</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('attack-frameworks', 'Attack Frameworks')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Framework</th>
-                <th>Summary</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredAttackFrameworks; track row.name) {
-                <tr>
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td>{{ row.summary }}</td>
-                  <td class="notes-cell">{{ row.detail }}</td>
-                </tr>
-              }
-              @if (filteredAttackFrameworks.length === 0) {
-                <tr><td colspan="3" class="no-results">No frameworks match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── PKI & Certificates ─────────────────────────────────── -->
-    <mat-tab label="PKI &amp; Certs">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredPkiReference.length }} concepts · know the difference between CRL (a list) and OCSP (a real-time check)</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('pki', 'PKI & Certificates')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Concept</th>
-                <th>Status</th>
-                <th>Summary</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredPkiReference; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td>{{ row.summary }}</td>
-                  <td class="notes-cell">{{ row.detail }}</td>
-                </tr>
-              }
-              @if (filteredPkiReference.length === 0) {
-                <tr><td colspan="4" class="no-results">No concepts match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── MFA Factors ────────────────────────────────────────── -->
-    <mat-tab label="MFA Factors">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredMfaFactors.length }} factors · true MFA combines factors from DIFFERENT categories, not two of the same type</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('mfa-factors', 'MFA Factors')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Factor</th>
-                <th>Status</th>
-                <th>Summary</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredMfaFactors; track row.name) {
-                <tr [class]="row.status">
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td>{{ row.summary }}</td>
-                  <td class="notes-cell">{{ row.detail }}</td>
-                </tr>
-              }
-              @if (filteredMfaFactors.length === 0) {
-                <tr><td colspan="4" class="no-results">No factors match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── Threat Actors ──────────────────────────────────────── -->
-    <mat-tab label="Threat Actors">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredThreatActors.length }} actor types · know the motivation and sophistication level that distinguishes each one</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('threat-actors', 'Threat Actors')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Actor</th>
-                <th>Sophistication</th>
-                <th>Resources</th>
-                <th>Motivation</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredThreatActors; track row.name) {
-                <tr>
-                  <td class="mono bold">{{ row.name }}</td>
-                  <td>{{ row.sophistication }}</td>
-                  <td>{{ row.resources }}</td>
-                  <td>{{ row.motivation }}</td>
-                  <td class="notes-cell">{{ row.notes }}</td>
-                </tr>
-              }
-              @if (filteredThreatActors.length === 0) {
-                <tr><td colspan="5" class="no-results">No actor types match "{{ searchText }}"</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </mat-tab>
-
-    <!-- ── DR Site Types ──────────────────────────────────────── -->
-    <mat-tab label="Site Types">
-      <div class="tab-content">
-        <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredSiteTypes.length }} site types · recovery speed and cost move in opposite directions — hot is fastest and priciest, cold is slowest and cheapest</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('site-types', 'DR Site Types')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="ref-table">
-            <thead>
-              <tr>
-                <th>Site Type</th>
-                <th>Recovery Time</th>
-                <th>Cost</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of filteredSiteTypes; track row.type) {
-                <tr>
-                  <td class="mono bold">{{ row.type }}</td>
-                  <td>{{ row.recoveryTime }}</td>
-                  <td>{{ row.cost }}</td>
-                  <td class="notes-cell">{{ row.description }}</td>
-                </tr>
-              }
-              @if (filteredSiteTypes.length === 0) {
-                <tr><td colspan="4" class="no-results">No site types match "{{ searchText }}"</td></tr>
               }
             </tbody>
           </table>

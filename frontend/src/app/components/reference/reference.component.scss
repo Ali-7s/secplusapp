@@ -381,3 +381,23 @@
   .rep-arrow mat-icon { color: var(--c-muted); }
   .rep-reason { color: var(--c-muted); }
 }
+
+// ── Section picker (replaces the sliding tab bar) ──────────
+// The tab group still holds the sections; its header is hidden and the dropdown drives it instead.
+:host ::ng-deep .ref-tabs > .mat-mdc-tab-header { display: none; }
+
+.section-picker {
+  position: sticky; top: 60px; z-index: 20;
+  margin: 0 0 8px; padding: 10px 12px; border-radius: var(--r-md);
+  background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--shadow-sm);
+  .picker-label { display: block; margin: 0 0 4px 4px; font-size: 11px; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--c-text-2); }
+  .picker-row { display: flex; align-items: center; gap: 4px; }
+  .picker { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 700;
+    border: 2px solid var(--c-border-dark); background: var(--c-surface-2); color: var(--c-text); cursor: pointer;
+    &:focus { outline: none; border-color: var(--c-accent); } }
+  .step { flex-shrink: 0; color: var(--c-text-2); }
+  .picker-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 6px 4px 0;
+    font-size: 12.5px; color: var(--c-text-2);
+    .matches { font-weight: 700; color: var(--c-accent-solid); } }
+}
