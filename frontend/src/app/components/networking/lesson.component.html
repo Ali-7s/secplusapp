@@ -95,7 +95,7 @@
             <app-cidr-reader />
           }
           @case ('cta') {
-            <a class="cta" [routerLink]="b.to">
+            <a class="cta" [routerLink]="b.to" [queryParams]="b.query ?? null">
               <mat-icon aria-hidden="true">{{ b.icon }}</mat-icon>
               <span class="cta-text"><strong>{{ b.label }}</strong>@if (b.note) { <small>{{ b.note }}</small> }</span>
               <mat-icon class="go" aria-hidden="true">chevron_right</mat-icon>

@@ -1,12 +1,13 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, trap, words } from './dsl';
-import { ADDRESS_DECISION, ADDRESS_TYPES } from './practice';
+import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, steps, table, tip, trap, words } from './dsl';
+import { ADDRESS_DECISION, ADDRESS_TYPES, SUBNET_GUIDED } from './practice';
 
 export const ADDRESSES: LessonBody = {
   goals: [
     'Tell a MAC address from an IP address and say what each is used for',
     'Explain what a subnet mask is for and use one to tell whether two addresses are on the same network',
     'Read a CIDR block such as 192.168.1.0/24',
+    'Split a network into subnets: pick the prefix, then find the network, broadcast and usable range',
     'Recognize private, loopback and link-local (APIPA) addresses on sight',
     'Explain what a default gateway does',
     'Describe the main ways IPv6 differs from IPv4',
@@ -22,6 +23,8 @@ export const ADDRESSES: LessonBody = {
       ['Subnet mask', 'A second number that says where the network part ends and the host part begins'],
       ['Subnet', 'One network, defined by an address and a mask. Devices in the same subnet talk directly'],
       ['CIDR notation', 'A short way to write the mask: a slash and a number, such as /24'],
+      ['Subnetting', 'Splitting one network into several smaller subnets, one per group of devices'],
+      ['Block size', 'How many addresses one subnet holds, such as 64 for a /26'],
       ['Broadcast', 'A message sent to every device on the local network at once'],
       ['Default gateway', 'The router a device sends traffic to when the destination is on another network'],
       ['DHCP', 'A service that hands out IP addresses to devices automatically (lesson 8)'],
@@ -104,7 +107,63 @@ export const ADDRESSES: LessonBody = {
     ),
     p('Where do those counts come from? Each host switch doubles the number of possible addresses. A /24 leaves 32 − 24 = **8** host switches, and 8 switches give 2 × 2 × 2 × 2 × 2 × 2 × 2 × 2 = **256** combinations. Take away the 2 reserved ones (network and broadcast) and you get **254** usable addresses. Try a few in the calculator:'),
     { type: 'cidr' },
-    exam('You will **not** be asked to do heavy subnetting in Security+ (that is the Network+ exam). Know how to **read** `10.0.0.0/8` and `192.168.1.0/24`, know what a mask does, and know that devices in the same subnet talk directly while devices in different subnets need a router or firewall between them.'),
+    exam('Security+ itself rarely asks you to subnet; that is the Network+ exam\'s job. It does expect you to **read** `10.0.0.0/8` and `192.168.1.0/24`, know what a mask does, and know that devices in different subnets need a router or firewall between them. Practice exams sometimes go further and ask you to plan subnets, which is what the next section teaches.'),
+
+    h('Carving a network into subnets'),
+    p('Sometimes you are given one network and asked to split it into smaller subnets: one for staff, one for Wi-Fi, one for servers, and so on. This is called **subnetting**, and it is how real networks are separated so a firewall can sit between the groups (lesson 7). It looks like hard maths, but it only needs one table and five steps, using nothing harder than doubling and subtracting.'),
+    p('Everything here stays inside one /24, so only the **last octet** changes. That is what practice exams ask. Here is the table, which is also on the Reference Sheet to keep open while you practice:'),
+    table(
+      ['Prefix', 'Mask', 'Block size', 'Usable'],
+      [
+        ['/24', '255.255.255.0', '256', '254'],
+        ['/25', '255.255.255.128', '128', '126'],
+        ['/26', '255.255.255.192', '64', '62'],
+        ['/27', '255.255.255.224', '32', '30'],
+        ['/28', '255.255.255.240', '16', '14'],
+        ['/29', '255.255.255.248', '8', '6'],
+        ['/30', '255.255.255.252', '4', '2'],
+      ],
+      { caption: 'The block size is how many addresses one subnet holds. Usable is the block minus 2 (network and broadcast).', mono: [0, 1, 2, 3] },
+    ),
+    p('You do not need to memorize it, because it builds itself. Each step down in the prefix (from /30 toward /24) **doubles** the block: 4, 8, 16, 32, 64, 128, 256. And the mask\'s last number is always **256 minus the block size**: 256 − 64 = 192, 256 − 32 = 224, 256 − 16 = 240.'),
+    p('Now the five steps. Read them once, then follow the worked example below, which uses each one.'),
+    steps(
+      '**Hosts to prefix.** Find the smallest block whose **usable** count covers the hosts you need. For 50 hosts: a /27 gives only 30, a /26 gives 62, so use a /26. (Always compare with usable, not the block size, because 2 addresses are reserved.)',
+      '**Prefix to block size and mask.** Read them from the table, or work them out: /26 leaves 6 host bits, 2 to the power of 6 is 64, and 256 − 64 = 192, so the mask is 255.255.255.192.',
+      '**Find where the subnet starts.** Subnets can only start at a **multiple of their block size**. Blocks of 64 start at .0, .64, .128 or .192; blocks of 32 at .0, .32, .64, .96 and so on. When you are placing several subnets, each one starts right after the previous one ends (the previous broadcast plus one).',
+      '**Work out the network, broadcast and usable range.** The **network address** is where the block starts. The **broadcast** is the start plus the block size minus one (start .64, block 32: .64 + 32 − 1 = .95). The **usable** addresses are everything in between (.65 to .94). The **default gateway** usually takes the first usable address.',
+      '**Biggest first.** When you carve several subnets, place the largest one first, then the next largest, and so on. Doing it in that order means every subnet automatically lands on a multiple of its own block size, with no gaps.',
+    ),
+    analogy('Packing boxes into a long shelf marked in centimeters. Each box must start on a mark that divides by its own width. Put the biggest boxes in first and every smaller box fits snugly after the one before; start with the small ones and the big ones no longer line up with their marks.'),
+
+    h('Worked example: carving up 192.168.50.0/24'),
+    p('A small office needs four subnets: **Office** for 60 hosts, **Lab** for 25, **Printers** for 10, and a **router link** for 2 (one address for each router). They are already sorted biggest first.'),
+    list(
+      '**Office (60 hosts).** A /27 gives only 30 usable, so it is a **/26** (62 usable), with a block of 64 and the mask 255.255.255.192. It is first, so it starts at **.0** and runs to .0 + 64 − 1 = **.63**. Network `.0`, broadcast `.63`, usable `.1` to `.62`, gateway `.1`.',
+      '**Lab (25 hosts).** A /28 gives only 14, so it is a **/27** (30 usable), with a block of 32 and the mask 255.255.255.224. It starts right after Office\'s broadcast: .63 + 1 = **.64** (a multiple of 32, as it must be). It runs to .64 + 32 − 1 = **.95**. Usable `.65` to `.94`.',
+      '**Printers (10 hosts).** A /29 gives only 6, so it is a **/28** (14 usable), block 16, mask 255.255.255.240. It starts at .95 + 1 = **.96** and runs to .96 + 16 − 1 = **.111**. Usable `.97` to `.110`, gateway `.97`.',
+      '**Router link (2 hosts).** A **/30** (2 usable), block 4, mask 255.255.255.252. It starts at **.112** and runs to **.115**, so the two routers get `.113` and `.114`. (A /31, with just two addresses and no network or broadcast, also exists, but only routers that specifically support it can use one. Practice questions usually say so when it is not allowed.)',
+    ),
+    table(
+      ['Subnet', 'Prefix', 'Network', 'Usable', 'Broadcast'],
+      [
+        ['Office', '/26', '192.168.50.0', '.1 to .62', '.63'],
+        ['Lab', '/27', '192.168.50.64', '.65 to .94', '.95'],
+        ['Printers', '/28', '192.168.50.96', '.97 to .110', '.111'],
+        ['Router link', '/30', '192.168.50.112', '.113 to .114', '.115'],
+      ],
+      { caption: 'The result. Each network starts one address after the previous broadcast, and .116 to .255 are left free for later.', mono: [1, 2, 3, 4] },
+    ),
+    tip('Check yourself with one question at the end: does each network address divide evenly by its block size? 0 by 64, 64 by 32, 96 by 16 and 112 by 4 all do, so the plan is valid.'),
+    {
+      type: 'cta',
+      to: '/reference',
+      query: { tab: 'subnetting' },
+      icon: 'grid_on',
+      label: 'Open the subnetting cheat sheet',
+      note: 'The table, the five steps, and a practice panel that gives you as many problems as you want, with the working shown.',
+    },
+    pbq('Try it: plan the subnets yourself', SUBNET_GUIDED, { intro: 'Same method, new numbers. Go one subnet at a time and use the five steps. If you get stuck, the worked example above has a subnet of each size.' }),
 
     h('Private, public and special addresses'),
     p('Some address ranges are set aside for special uses. The most important are the **private** ranges. Anyone can use them inside their own network, but they are **never sent across the internet**. That is why millions of homes can all use `192.168.1.x` without clashing: those addresses never leave the home.'),
@@ -150,7 +209,7 @@ export const ADDRESSES: LessonBody = {
       '**Separate by trust.** Put guests, smart devices, servers and staff in their own subnets, so a firewall can sit between them (lesson 7).',
       '**Do not forget IPv6.** If IPv6 is switched on but nobody manages it, it can slip past controls that only cover IPv4. Secure it properly or turn it off where it is not used.',
     ),
-    examPbqs('addresses'),
+    examPbqs('addresses', 'These come from the practice exam and are as hard as the real thing. One is a full subnet plan with five subnets: do "Carving a network into subnets" and its guided practice first, and keep the Subnetting cheat sheet open beside you. They load when you press Start.'),
   ],
   check: [
     mcq(

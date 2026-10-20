@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -9,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
+import { SubnetCheatSheetComponent } from './subnet-cheat-sheet.component';
 
 export interface PortEntry {
   port: string;
@@ -101,12 +103,16 @@ export interface ThreatActorEntry {
   standalone: true,
   imports: [CommonModule, FormsModule, MatTabsModule, MatInputModule,
     MatFormFieldModule, MatIconModule, MatTooltipModule, MatChipsModule,
-    MatProgressBarModule, MatButtonModule],
+    MatProgressBarModule, MatButtonModule, SubnetCheatSheetComponent],
   templateUrl: './reference.component.html',
   styleUrl: './reference.component.scss'
 })
 export class ReferenceComponent {
   searchText = '';
+
+  /** Tabs that other pages can open directly with ?tab=..., by their position in the tab group. */
+  private readonly linkableTabs: Record<string, number> = { ports: 0, subnetting: 1 };
+  selectedTab = this.linkableTabs[inject(ActivatedRoute).snapshot.queryParamMap.get('tab') ?? ''] ?? 0;
 
   readonly PORTS: PortEntry[] = [
     { port: '20', protocol: 'FTP-DATA', service: 'FTP Data Transfer', transport: 'TCP', status: 'insecure', notes: 'Transmits file data in cleartext' },

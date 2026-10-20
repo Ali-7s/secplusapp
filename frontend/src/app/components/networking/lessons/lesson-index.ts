@@ -19,9 +19,9 @@ export const LESSON_META: LessonMeta[] = [
     focus: 3,
   },
   {
-    slug: 'addresses', number: 2, minutes: 14, icon: 'tag',
+    slug: 'addresses', number: 2, minutes: 22, icon: 'tag',
     title: 'Addresses: MAC, IP and subnets',
-    summary: 'Why every device has two addresses, how to read an IP address and a /24, which ranges are private, and what a default gateway is.',
+    summary: 'Why every device has two addresses, what a subnet mask does, how to read a /24 and split a network into subnets, which ranges are private, and what a default gateway is.',
     related: [...acr('MAC', 'IP', 'IPv4', 'IPv6', 'CIDR', 'VLSM'), ...term('MAC address', 'IP address', 'Subnet', 'Subnet mask', 'Default gateway', 'Spoofing'), ...acr('NAT', 'DHCP', 'ARP'), ...term('Network segmentation')],
     focus: 12,
   },

@@ -134,6 +134,31 @@ export const ADDRESS_TYPES: MatchQuestion = {
   takeaway: 'Private: 10, 172.16 to 172.31, 192.168. Loopback: 127. Link-local (APIPA): 169.254. Everything else is public.',
 };
 
+export const SUBNET_GUIDED: MatchQuestion = {
+  id: 'lesson-subnet-plan', domain: 3, objective: '3.2', kind: 'match',
+  scenario: 'You must split 172.16.8.0/24 into the four subnets below. They are already sorted biggest first. Start at 172.16.8.0, put each subnet straight after the previous one, and use the smallest subnet that fits. The gateway takes the first usable address.',
+  exhibit: [
+    'Order  Subnet        Hosts needed',
+    '1      Staff         50',
+    '2      Wi-Fi         20',
+    '3      Servers       12',
+    '4      Router link   2',
+  ].join('\n'),
+  stem: 'Work through the five steps for each subnet, then choose each value.',
+  prompts: [
+    { group: 'Staff (50 hosts)', label: 'Prefix length', answer: '/26', choices: ['/25', '/26', '/27', '/28'], why: 'A /27 has only 30 usable addresses, too few for 50. A /26 has a block of 64 and 62 usable, the smallest that fits.' },
+    { group: 'Staff (50 hosts)', label: 'Broadcast address', answer: '172.16.8.63', choices: ['172.16.8.50', '172.16.8.62', '172.16.8.63', '172.16.8.64'], why: 'Staff starts at .0 with a block of 64, so it covers .0 to .63. The last address, .63, is the broadcast; .62 is the last usable host.' },
+    { group: 'Wi-Fi (20 hosts)', label: 'Network address', answer: '172.16.8.64', choices: ['172.16.8.63', '172.16.8.64', '172.16.8.65', '172.16.8.96'], why: 'Wi-Fi starts right after Staff\'s broadcast: .63 plus one is .64. And 64 is a multiple of 32, so it is a valid start for a /27.' },
+    { group: 'Wi-Fi (20 hosts)', label: 'Subnet mask', answer: '255.255.255.224', choices: ['255.255.255.192', '255.255.255.224', '255.255.255.240', '255.255.255.248'], why: '20 hosts need a /27 (30 usable). Its block is 32, and 256 minus 32 is 224.' },
+    { group: 'Wi-Fi (20 hosts)', label: 'Broadcast address', answer: '172.16.8.95', choices: ['172.16.8.84', '172.16.8.94', '172.16.8.95', '172.16.8.127'], why: 'A block of 32 starting at .64 runs to .95 (64 + 32 − 1). The next subnet starts at .96.' },
+    { group: 'Servers (12 hosts)', label: 'Prefix length', answer: '/28', choices: ['/27', '/28', '/29', '/30'], why: 'A /29 has only 6 usable addresses. A /28 has a block of 16 and 14 usable, enough for 12.' },
+    { group: 'Servers (12 hosts)', label: 'Default gateway', answer: '172.16.8.97', choices: ['172.16.8.96', '172.16.8.97', '172.16.8.110', '172.16.8.111'], why: 'Servers is 172.16.8.96/28. .96 is the network address, so the first usable address, and the gateway, is .97.' },
+    { group: 'Servers (12 hosts)', label: 'Broadcast address', answer: '172.16.8.111', choices: ['172.16.8.108', '172.16.8.110', '172.16.8.111', '172.16.8.112'], why: 'A block of 16 starting at .96 runs to .111 (96 + 16 − 1), and the last address is the broadcast.' },
+    { group: 'Router link (2 hosts)', label: 'Network address and prefix', answer: '172.16.8.112/30', choices: ['172.16.8.108/30', '172.16.8.112/29', '172.16.8.112/30', '172.16.8.116/30'], why: 'The link starts right after .111, at .112. Two routers need 2 usable addresses, which is exactly a /30 (block of 4: .112 to .115).' },
+  ],
+  takeaway: 'For each subnet: hosts to prefix, prefix to block size and mask, start right after the previous broadcast, and the broadcast is the start plus the block minus one. The gateway is the network address plus one.',
+};
+
 // ── Lesson 3: ports, TCP and UDP ────────────────────────────────────────
 
 export const PORT_STATES: MatchQuestion = {

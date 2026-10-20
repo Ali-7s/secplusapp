@@ -1,0 +1,148 @@
+<div class="sheet">
+  <p class="lead">
+    Everything you need to subnet in one place. New to this? Read <a routerLink="/networking/addresses">Lesson 2: Addresses</a>
+    first; its "Carving a network into subnets" section walks through this method slowly.
+  </p>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">table_rows</mat-icon> The table: subnets inside one /24</h2>
+    <p class="note"><strong>Block size</strong> is how many addresses each subnet holds. <strong>Usable</strong> is the block minus two (the network and broadcast addresses).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Prefix</th><th>Subnet mask</th><th>Block</th><th>Usable</th><th class="wide-only">Typical use</th></tr></thead>
+        <tbody>
+          @for (r of smallBlocks; track r.prefix) {
+            <tr><td class="mono strong">{{ r.prefix }}</td><td class="mono">{{ r.mask }}</td><td class="mono">{{ r.block }}</td><td class="mono">{{ r.usable }}</td><td class="wide-only">{{ r.use }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="note">*A /31 has no network or broadcast address. Only point-to-point router links that support it (RFC 3021) use one; otherwise use a /30.</p>
+  </section>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">psychology</mat-icon> How to remember it</h2>
+    <ul class="tips">
+      <li><strong>The mask values</strong> come from switching on one more bit at a time, from the left:</li>
+    </ul>
+    <div class="mask-strip" role="list">
+      @for (m of maskValues; track m.bits) {
+        <div class="mask-cell" role="listitem"><span class="v">{{ m.value }}</span><span class="b">{{ m.bits }} bit{{ m.bits > 1 ? 's' : '' }}</span></div>
+      }
+    </div>
+    <ul class="tips">
+      <li><strong>Block size = 256 minus the mask's last number.</strong> 256 − 224 = 32, so a /27 holds 32 addresses.</li>
+      <li><strong>Each step down in prefix doubles the block:</strong> /30 is 4, /29 is 8, /28 is 16, /27 is 32, /26 is 64, /25 is 128, /24 is 256.</li>
+      <li><strong>Usable = block − 2.</strong> The first address names the network and the last is the broadcast.</li>
+      <li><strong>Powers of two:</strong> 2, 4, 8, 16, 32, 64, 128, 256. Every block size is one of them.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">format_list_numbered</mat-icon> The method in five steps</h2>
+    <ol class="steps">
+      <li><strong>Hosts to prefix.</strong> Find the smallest block whose usable count covers the hosts you need. 50 hosts: a /27 gives only 30, a /26 gives 62, so use a /26.</li>
+      <li><strong>Prefix to block size and mask.</strong> /26 means a block of 64, and 256 − 64 = 192, so the mask is 255.255.255.192.</li>
+      <li><strong>Blocks start at multiples of the block size.</strong> For 64: .0, .64, .128, .192. A subnet can never start anywhere else.</li>
+      <li><strong>Network, broadcast and usable range.</strong> The network is the block's first address and the broadcast is the next block's start minus one. Usable is everything in between. The default gateway is usually the first usable address.</li>
+      <li><strong>Several subnets in one network:</strong> do the <strong>biggest first</strong>, and start each new subnet right after the previous broadcast (previous broadcast + 1). Biggest first keeps every block on its proper boundary.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">search</mat-icon> Which subnet is this address in?</h2>
+    <p>Example: <code>192.168.1.130/26</code>.</p>
+    <ol class="steps">
+      <li>/26 means blocks of 64.</li>
+      <li>Blocks start at 0, 64, 128 and 192. 130 is between 128 and 191, so it is in the block that starts at <strong>128</strong>.</li>
+      <li>Network <code>192.168.1.128</code>, broadcast <code>192.168.1.191</code>, usable <code>.129</code> to <code>.190</code> (62 hosts).</li>
+    </ol>
+    <p class="note">Two addresses are in the same subnet only if they land in the same block. <code>192.168.1.70/26</code> (block .64) and <code>192.168.1.130/26</code> (block .128) are not, so they need a router between them.</p>
+  </section>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">account_tree</mat-icon> Worked example: carving up 192.168.50.0/24</h2>
+    <p>Needs, already sorted biggest first: Office 60 hosts, Lab 25, Printers 10, Router link 2.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Subnet</th><th>Need</th><th>Prefix</th><th>Block</th><th>Network</th><th>Usable</th><th>Broadcast</th></tr></thead>
+        <tbody>
+          @for (r of example; track r.name) {
+            <tr><td class="strong">{{ r.name }}</td><td class="mono">{{ r.need }}</td><td class="mono">{{ r.prefix }}</td><td class="mono">{{ r.block }}</td><td class="mono">{{ r.network }}</td><td class="mono">{{ r.usable }}</td><td class="mono">{{ r.broadcast }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Each network starts one address after the previous broadcast: .63 then .64, .95 then .96, .111 then .112. Everything from .116 to .255 is left free for later.</p>
+  </section>
+
+  <section class="card practice" aria-labelledby="practice-title">
+    <h2 id="practice-title"><mat-icon aria-hidden="true">fitness_center</mat-icon> Practice until it sticks</h2>
+    <p>Work out every value for this address, then check. A new problem appears whenever you ask.@if (attempted) { <span class="tally">{{ solved }} of {{ attempted }} fully solved so far.</span> }</p>
+    <div class="problem"><span class="mono">{{ problem.address }}/{{ problem.prefix }}</span></div>
+    <div class="fields">
+      @for (f of fields; track f.key) {
+        <label class="field" [class.right]="checked && isRight(f.key)" [class.wrong]="checked && !isRight(f.key)">
+          <span class="flabel">{{ f.label }}</span>
+          <input type="text" [(ngModel)]="given[f.key]" [placeholder]="f.placeholder" [disabled]="checked"
+            autocomplete="off" autocapitalize="off" spellcheck="false" (keydown.enter)="checked ? next() : check()" />
+          @if (checked && !isRight(f.key)) { <span class="expected">Answer: <span class="mono">{{ problem.answers[f.key] }}</span></span> }
+        </label>
+      }
+    </div>
+    @if (checked) {
+      <p class="score" [class.perfect]="rightCount === fields.length" aria-live="polite">
+        <mat-icon aria-hidden="true">{{ rightCount === fields.length ? 'check_circle' : 'info' }}</mat-icon>
+        {{ rightCount }} of {{ fields.length }} right.
+      </p>
+    }
+    <div class="actions">
+      @if (!checked) {
+        <button mat-flat-button color="primary" (click)="check()">Check</button>
+        <button mat-button (click)="showSteps = !showSteps">{{ showSteps ? 'Hide' : 'Show' }} the working</button>
+      } @else {
+        <button mat-flat-button color="primary" (click)="next()">Next problem</button>
+        <button mat-button (click)="showSteps = !showSteps">{{ showSteps ? 'Hide' : 'Show' }} the working</button>
+      }
+    </div>
+    @if (showSteps || (checked && rightCount < fields.length)) {
+      <ol class="working">
+        @for (s of problem.steps; track $index) { <li>{{ s }}</li> }
+      </ol>
+    }
+  </section>
+
+  <app-cidr-reader />
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">bookmark</mat-icon> Special addresses</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Range</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">10.0.0.0/8</td><td>Private</td></tr>
+          <tr><td class="mono">172.16.0.0/12</td><td>Private (172.16 to 172.31 only)</td></tr>
+          <tr><td class="mono">192.168.0.0/16</td><td>Private</td></tr>
+          <tr><td class="mono">127.0.0.0/8</td><td>Loopback ("this computer")</td></tr>
+          <tr><td class="mono">169.254.0.0/16</td><td>Link-local (APIPA): DHCP failed</td></tr>
+          <tr><td class="mono">224.0.0.0/4</td><td>Multicast</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">zoom_out_map</mat-icon> Bigger networks</h2>
+    <p class="note">For these, the block size applies to the third octet instead of the fourth. A /23 is two /24s side by side, a /22 is four, and so on.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Prefix</th><th>Subnet mask</th><th>Addresses</th><th>Usable</th></tr></thead>
+        <tbody>
+          @for (r of bigBlocks; track r.prefix) {
+            <tr><td class="mono strong">{{ r.prefix }}</td><td class="mono">{{ r.mask }}</td><td class="mono">{{ r.addresses }}</td><td class="mono">{{ r.usable }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

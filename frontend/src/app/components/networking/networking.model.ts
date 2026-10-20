@@ -101,7 +101,7 @@ export type Block =
   | { type: 'sequence'; title: string; intro?: string; steps: SequenceStep[] }
   | { type: 'layers' }
   | { type: 'cidr' }
-  | { type: 'cta'; to: string; label: string; icon: string; note?: string }
+  | { type: 'cta'; to: string; query?: Record<string, string>; label: string; icon: string; note?: string }
   | { type: 'harden'; title: string; intro?: string; items: HardenItem[] }
   | { type: 'spot'; title: string; intro: string; lines: SpotLine[] }
   /** A guided PBQ written for this lesson. `given` pre-fills (and locks) that many firewall rows as a worked example. */

@@ -4,7 +4,7 @@
     <mat-icon>table_chart</mat-icon>
     <div>
       <h1>Reference Cheat Sheet</h1>
-      <p>Ports, ciphers, hashing, auth &amp; VPN protocols — quick-reference for SY0-701</p>
+      <p>Ports, subnetting, ciphers, hashing, auth and VPN protocols: quick reference for SY0-701</p>
     </div>
     <div class="legend">
       <span class="badge secure">Secure</span>
@@ -98,7 +98,7 @@
     </div>
   } @else {
 
-  <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false">
+  <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false" [(selectedIndex)]="selectedTab">
 
     <!-- ── Ports ──────────────────────────────────────────── -->
     <mat-tab label="Network Ports">
@@ -139,6 +139,13 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </mat-tab>
+
+    <!-- ── Subnetting ──────────────────────────────────────── -->
+    <mat-tab label="Subnetting">
+      <div class="tab-content">
+        <app-subnet-cheat-sheet />
       </div>
     </mat-tab>
 
