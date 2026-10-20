@@ -24,6 +24,8 @@ export const HELPERS: LessonBody = {
       ['NAT', 'A router swapping private addresses for its public address on the way out, and back again'],
       ['PAT', 'The kind of NAT that lets many devices share one public address, by also swapping port numbers'],
       ['Rogue', 'Unauthorized: a device or server set up by an attacker or without permission'],
+      ['Unicast', 'A message sent to one specific address, as opposed to a broadcast to everyone'],
+      ['DHCP relay', 'A router feature that forwards DHCP requests to a server on another network (also called IP helper)'],
       ['On-path attack', 'An attacker secretly sitting between two devices so their traffic flows through the attacker'],
     ),
 
@@ -64,6 +66,12 @@ export const HELPERS: LessonBody = {
         },
       ],
     },
+    p('Two details complete the picture:'),
+    list(
+      '**After the acknowledge**, a careful device checks that no other machine is already using the address (it sends an ARP question for it, explained below) before it starts using it. If someone answers, it declines the address and asks again.',
+      '**Renewing** works differently from joining. Halfway through the lease the device sends its renewal request straight to the server it already knows, as a **unicast**: a message to one specific address, instead of a broadcast to everyone.',
+    ),
+    p('**What if the DHCP server is on another network?** Broadcasts never cross a router (lesson 6), so a Discover sent on a user VLAN cannot reach a server on the server network. The fix is a **DHCP relay agent** (on Cisco routers, the "IP helper" setting): the router interface on the user VLAN hears the broadcast and forwards it as a unicast to the DHCP server, adding its own address so the server knows which network the device is on and which pool of addresses (the **scope**) to hand out from. The server\'s replies come back the same way. One DHCP server can then serve every VLAN.'),
     p('Notice the weakness: the device takes the **first** offer it gets, from anyone. That leads to two attacks:'),
     list(
       '**Rogue DHCP server.** An attacker runs their own DHCP server and answers first. They hand out a gateway or DNS server that points to the attacker\'s own machine, so victims send their traffic through the attacker. That is an **on-path attack** (an attacker secretly sitting in the middle of a conversation).',
@@ -123,7 +131,7 @@ export const HELPERS: LessonBody = {
       '**Zone transfer leaks.** A zone transfer copies all of a domain\'s records from one DNS server to another. If anyone can request one, the attacker gets a full list of your systems.',
       '**Lookalike domains.** **Typosquatting** registers misspellings of real names (`exmaple.com`) to catch typing mistakes, and **pharming** redirects users from the real site to a fake one.',
     ),
-    secure('**DNSSEC** adds digital signatures to DNS records, so a resolver can tell a forged answer from a real one. **DoH and DoT** (DNS over HTTPS and DNS over TLS) encrypt lookups so others cannot see or change them. Also: allow zone transfers only to your own named servers, do not answer lookups for strangers on the internet (no "open recursion"), patch DNS servers, limit how many answers one source can get, block known malicious domains (**DNS filtering**, or a **sinkhole** that sends them nowhere), and log lookups to spot tunneling.', 'Securing DNS'),
+    secure('**DNSSEC** adds digital signatures to DNS records, so a resolver can tell a forged answer from a real one. **DoH and DoT** (DNS over HTTPS on port 443, and DNS over TLS on port 853) encrypt lookups so others cannot see or change them. Also: allow zone transfers only to your own named servers, do not answer lookups for strangers on the internet (no "open recursion"), patch DNS servers, limit how many answers one source can get, block known malicious domains (**DNS filtering**, or a **sinkhole** that sends them nowhere), and log lookups to spot tunneling.', 'Securing DNS'),
 
     h('ARP: finding the MAC address'),
     p('Here is a gap from lesson 6: to deliver a frame on the local network, a device needs the destination\'s **MAC address**, but usually it only knows the **IP address**. Even to reach the internet, it needs the MAC address of its default gateway. **ARP** (Address Resolution Protocol) fills the gap by shouting a question to everyone, and the owner answers.'),

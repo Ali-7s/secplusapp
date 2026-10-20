@@ -43,6 +43,7 @@ export const PORTS_TO_KNOW: LessonBody = {
         ['', '**TFTP** `69` UDP', 'A tiny file transfer with no login and no encryption, used to load settings onto network gear'],
         ['', '**SMB** `445`', 'Windows file and printer sharing. The old version, SMBv1, is dangerous'],
         ['Names and addresses', '**DNS** `53` UDP and TCP', 'Looking up the IP address for a name like `www.example.com` (lesson 8)'],
+        ['', '**DNS over TLS (DoT)** `853`', 'DNS lookups inside TLS encryption, so nobody along the way can read or change them (lesson 8)'],
         ['', '**DHCP** `67` and `68` UDP', 'Handing out IP addresses automatically. The server uses 67, devices use 68 (lesson 8)'],
         ['Directory and sign-in', '**LDAP** `389`, secure **LDAPS** `636`', 'Looking things up in a **directory** (the central list of users and groups), and checking logins against it'],
         ['', '**Kerberos** `88` TCP and UDP', 'How Windows networks sign you in once and give you "tickets" to use other services'],

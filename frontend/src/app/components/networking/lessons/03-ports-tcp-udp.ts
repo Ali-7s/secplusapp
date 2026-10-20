@@ -1,5 +1,5 @@
 import { LessonBody } from '../networking.model';
-import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, tip, trap, words } from './dsl';
+import { analogy, exam, h, hSecure, list, mcq, p, pbq, recap, table, tip, trap, words } from './dsl';
 import { PORT_STATES } from './practice';
 
 export const PORTS_TCP_UDP: LessonBody = {
@@ -116,7 +116,6 @@ export const PORTS_TCP_UDP: LessonBody = {
       '**Scan yourself.** Run regular port scans of your own systems and compare the open ports with the list you expect. Anything extra is worth investigating.',
       '**Blunt flood attacks.** Use SYN cookies and rate limiting on servers and firewalls, and keep DDoS protection (a service that soaks up floods from many attacking machines at once) in front of public services.',
     ),
-    examPbqs('ports-tcp-udp'),
   ],
   check: [
     mcq(

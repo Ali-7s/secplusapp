@@ -142,6 +142,7 @@ export class ReferenceComponent {
     { port: '514', protocol: 'Syslog', service: 'System Logging', transport: 'UDP', status: 'insecure', notes: 'No auth, cleartext. Use syslog over TLS (6514)' },
     { port: '587', protocol: 'SMTP Submission', service: 'Mail Client → Server', transport: 'TCP', status: 'secure', notes: 'STARTTLS required; replaces port 25 for submission' },
     { port: '636', protocol: 'LDAPS', service: 'LDAP over TLS', transport: 'TCP', status: 'secure', notes: 'Encrypted directory queries' },
+    { port: '853', protocol: 'DoT', service: 'DNS over TLS', transport: 'TCP', status: 'secure', notes: 'Encrypts DNS lookups so they cannot be read or changed in transit' },
     { port: '989/990', protocol: 'FTPS', service: 'FTP over TLS', transport: 'TCP', status: 'secure', notes: 'Implicit TLS: control 990, data 989. Explicit FTPS starts on port 21 and upgrades with AUTH TLS. Not SFTP' },
     { port: '993', protocol: 'IMAPS', service: 'IMAP over TLS', transport: 'TCP', status: 'secure', notes: 'Encrypted mail reading; replaces 143' },
     { port: '995', protocol: 'POP3S', service: 'POP3 over TLS', transport: 'TCP', status: 'secure', notes: 'Encrypted mail download; replaces 110' },

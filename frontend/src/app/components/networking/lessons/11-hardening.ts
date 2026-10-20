@@ -11,7 +11,7 @@ export const HARDENING: LessonBody = {
     'Explain how baselines and drift checks keep devices hardened over time',
   ],
   blocks: [
-    recap('Every open port is a door an attacker can try, and all those doors together are the **attack surface** (lesson 3). Plaintext protocols such as Telnet have secure replacements such as SSH (lesson 5). The switch and router checklists in lesson 6 were hardening for those two devices; this lesson turns that into a method for any device.'),
+    recap('Every open port is a door an attacker can try, and all those doors together are the **attack surface** (lesson 3). Host-based firewalls have inbound and outbound rules (lesson 9). Plaintext protocols such as Telnet have secure replacements such as SSH (lesson 5). The switch and router checklists in lesson 6 were hardening for those two devices; this lesson turns that into a method for any device.'),
     words(
       ['Hardening', 'Making a device harder to attack: removing what is not needed and locking down what is'],
       ['Default credentials', 'The username and password a device ships with, which are published online'],
@@ -23,6 +23,8 @@ export const HARDENING: LessonBody = {
       ['SIEM', 'Security information and event management: a system that collects logs from everywhere and raises alerts'],
       ['Change management', 'A process where every change is requested, approved, tested and recorded before it happens'],
       ['Decommissioning', 'Retiring a device safely: wiping it, removing it from records, and disposing of it properly'],
+      ['SSH key', 'A pair of matching keys used to log in instead of a password. The private key never leaves your computer'],
+      ['Break-glass account', 'An emergency local admin account, used only when the central login server is down'],
     ),
 
     h('What hardening means'),
@@ -67,6 +69,35 @@ export const HARDENING: LessonBody = {
         ['**Servers and computers**', 'Patch, remove unneeded software, a host-based firewall, endpoint protection (**EDR**, software that watches the device for attacks), full disk encryption, least privilege, and **application allow listing** (only approved programs may run)'],
         ['**IoT and embedded devices**', 'Change defaults, update firmware, put them in their own VLAN with limited access, turn off features such as UPnP, and monitor them'],
       ],
+    ),
+
+    h('Hardening an SSH server'),
+    p('Almost every Linux server and network device is managed over SSH, so locking down the SSH server itself is a common task and a common PBQ. On Linux its settings live in a text file, `/etc/ssh/sshd_config`, one setting (a **directive**) per line. A line starting with `#` is a comment and does nothing, so the built-in default applies. The ones to know:'),
+    table(
+      ['Directive', 'Hardened value', 'What it does'],
+      [
+        ['`ListenAddress`', 'The management address only', 'Which of the server\'s addresses SSH accepts connections on. `0.0.0.0` means all of them, including a public one'],
+        ['`PermitRootLogin`', '`no`', 'Stops anyone logging in directly as root, the all-powerful account. Admins log in as themselves and use `sudo`, which also leaves a record of who did what'],
+        ['`PasswordAuthentication`', '`no`', 'Turns off passwords, so only **SSH keys** work: a key pair where the private half never leaves the admin\'s computer. This defeats password guessing'],
+        ['`AllowGroups`', 'One admin group', 'Only members of the named group may connect at all'],
+        ['`MaxAuthTries`', 'A small number, such as `3`', 'How many login attempts one connection gets before it is cut off'],
+        ['`X11Forwarding`', '`no`', 'Turns off running graphical programs over SSH, which a server does not need'],
+        ['`Ciphers`', 'AEAD ciphers only', 'Which encryption methods are allowed (see below)'],
+        ['`Banner`', 'A legal warning file, such as `/etc/issue.net`', 'Text shown **before** login, warning that access is monitored and only for authorized users'],
+      ],
+      { mono: [1] },
+    ),
+    p('About ciphers: an **AEAD** cipher (authenticated encryption) both encrypts the data and proves it was not changed on the way. The ones to choose are `chacha20-poly1305` and the AES **GCM** ciphers such as `aes256-gcm`. Avoid anything ending in **CBC**, plus `3des` and old ones such as `arcfour` and `blowfish`: they are outdated or have known weaknesses.'),
+
+    h('Words you will meet in hardening questions'),
+    list(
+      '**Break-glass account**: one local emergency admin account, kept locked away and used only when the central login server (such as TACACS+ or RADIUS) is down. Without it, a login server outage can lock everyone out of the network gear; with it, normal logins still go through the central server.',
+      '**SNMPv3 security levels**: SNMPv3 can run at three levels. **noAuthNoPriv** has no login and no encryption, **authNoPriv** checks a login but sends data in plaintext, and **authPriv** both checks a login and encrypts. Hardened devices use **authPriv**.',
+      '**Sticky MAC**: a port security option where a switch port remembers the first MAC address it sees and only allows that one afterwards. Easy to set up, but MAC addresses can be faked, so it is weaker than 802.1X.',
+      '**EAP-TLS**: the 802.1X login method where devices prove who they are with certificates instead of passwords (lesson 9). The strongest choice for "only company laptops may connect".',
+      '**Captive portal**: the "accept the terms" web page a guest network shows before giving access. It is for guests, not a security control for company devices.',
+      '**PoE** (Power over Ethernet): power for phones, cameras and access points delivered through the network cable itself. Turning it off does not secure a port.',
+      '**Web shell**: a malicious script an attacker plants on a hacked web server to run commands through a web page. Strict outbound host firewall rules stop it calling home (lesson 9).',
     ),
 
     h('Exercise: spot the weaknesses'),

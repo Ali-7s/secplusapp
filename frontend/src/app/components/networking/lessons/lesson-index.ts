@@ -61,14 +61,14 @@ export const LESSON_META: LessonMeta[] = [
     focus: 9,
   },
   {
-    slug: 'helpers', number: 8, minutes: 18, icon: 'dns',
+    slug: 'helpers', number: 8, minutes: 20, icon: 'dns',
     title: 'The helpers: DHCP, DNS, ARP, ICMP and NAT',
     summary: 'The quiet protocols every connection depends on: how each works step by step, how each is attacked, and how each is defended.',
     related: [...acr('DHCP', 'DNS', 'DNSSEC', 'ARP', 'ICMP', 'NAT', 'PAT', 'DNAT', 'NTP'), ...term('DNS poisoning', 'ARP poisoning', 'Pharming', 'Spoofing', 'Amplification attack', 'DNS filtering')],
     focus: 15,
   },
   {
-    slug: 'security-devices', number: 9, minutes: 15, icon: 'security',
+    slug: 'security-devices', number: 9, minutes: 26, icon: 'security',
     title: 'Firewalls, zones, VPNs and Wi-Fi',
     summary: 'How firewall rules are read, where firewalls and the screened subnet sit, what proxies and load balancers do, and the basics of VPNs and Wi-Fi security, with hardening for each.',
     related: [...term('Firewall', 'Screened subnet', 'Proxy server', 'Load balancing', 'Implicit deny', 'Packet filtering', 'Stateful inspection'), ...acr('NGFW', 'WAF', 'UTM', 'SWG', 'DMZ', 'VPN', 'IPSec', 'WPA2', 'WPA3'), ...term('Evil twin', 'Rogue access point', 'Web filter', 'Jump server')],
@@ -83,7 +83,7 @@ export const LESSON_META: LessonMeta[] = [
     focus: 0,
   },
   {
-    slug: 'hardening', number: 11, minutes: 14, icon: 'shield',
+    slug: 'hardening', number: 11, minutes: 18, icon: 'shield',
     title: 'Hardening: how to secure network devices',
     summary: 'What hardening means, a checklist that works for any device, quick lists for each kind of device, and a hands-on exercise: spot the weaknesses in a router configuration.',
     related: [...term('Hardening', 'Attack surface', 'Secure baseline', 'Baseline configuration', 'Default credentials', 'Patch management', 'Least privilege', 'Misconfiguration', 'Change management', 'Port security', 'Application allow list'), ...acr('CIS', 'STIG', 'SNMP', 'SSH')],

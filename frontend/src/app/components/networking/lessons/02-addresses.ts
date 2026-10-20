@@ -154,6 +154,7 @@ export const ADDRESSES: LessonBody = {
       ],
       { caption: 'The result. Each network starts one address after the previous broadcast, and .116 to .255 are left free for later.', mono: [1, 2, 3, 4] },
     ),
+    p('The same idea works for bigger blocks, which you will meet in firewall rules. Two neighboring /24s combine into one **/23**: `10.50.0.0/23` covers both `10.50.0.x` and `10.50.1.x` (512 addresses). Four combine into a /22, and so on. So when a firewall rule must cover two side-by-side subnets, a /23 does it with one rule, and a /30 can cover exactly four neighboring addresses, such as two servers at `.53` and `.54` (the block `.52` to `.55`).'),
     tip('Check yourself with one question at the end: does each network address divide evenly by its block size? 0 by 64, 64 by 32, 96 by 16 and 112 by 4 all do, so the plan is valid.'),
     {
       type: 'cta',
