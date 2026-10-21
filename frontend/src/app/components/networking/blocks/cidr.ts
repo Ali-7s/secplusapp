@@ -107,3 +107,70 @@ export function analyse(input: string): CidrResult {
   result.kind = describeAddress(network);
   return result;
 }
+
+/** The fields the reader shows, in the order a person would work them out. */
+export type CidrField = 'mask' | 'network' | 'broadcast' | 'firstHost' | 'lastHost' | 'hosts';
+
+/** Plain-English working for each value, using the numbers of the address being read. Text supports **bold** and `code`. */
+export type CidrWorking = Record<CidrField, string>;
+
+const MASK_OCTET: Record<number, number> = { 1: 128, 2: 192, 3: 224, 4: 240, 5: 248, 6: 252, 7: 254 };
+const ORDINAL = ['1st', '2nd', '3rd', '4th'];
+
+/** Explains how each value of `ip/prefix` is worked out, step by step. */
+export function explain(ipText: string, prefix: number): CidrWorking | null {
+  const ip = parseIpv4(ipText);
+  if (ip === null || prefix < 0 || prefix > 32) return null;
+  const r = analyse(`${ipText}/${prefix}`);
+  const octets = [24, 16, 8, 0].map(shift => (ip >>> shift) & 255);
+  const hostBits = 32 - prefix;
+  const size = 2 ** hostBits;
+  const sizeText = size.toLocaleString('en-US');
+  const full = Math.floor(prefix / 8);
+  const rem = prefix % 8;
+  const code = (s: string | undefined) => '`' + s + '`';
+
+  if (prefix === 32) {
+    const one = `A /32 has no host bits at all: it is exactly one address, ${code(r.ip)}. It is used in firewall rules to mean "this one device".`;
+    return { mask: 'All 32 bits are network bits, so every octet is 255: `255.255.255.255`.', network: one, broadcast: 'A single address has no separate broadcast address.', firstHost: one, lastHost: one, hosts: 'One address, and nothing is reserved, so 1 usable.' };
+  }
+  if (prefix === 31) {
+    const two = `A /31 has 1 host bit, so it holds just 2 addresses: ${code(r.network)} and ${code(r.broadcast === 'none' ? r.lastHost : r.broadcast)}. Routers that support it use both for a link between them, with no network or broadcast address.`;
+    return { mask: 'Three full octets (255.255.255) plus 7 of the last 8 bits switched on, which is 254: `255.255.255.254`.', network: two, broadcast: 'A /31 has no broadcast address: both addresses belong to the two routers.', firstHost: two, lastHost: two, hosts: two };
+  }
+
+  // The mask
+  let mask: string;
+  if (rem === 0) {
+    mask = `/${prefix} means the first ${prefix} of the 32 bits are the network part. ${prefix} ÷ 8 = ${full} full octet${full === 1 ? '' : 's'}, and a full octet is 255. The rest are 0: ${code(r.mask)}.`;
+  } else {
+    const fullPart = full ? `${full} full octet${full === 1 ? '' : 's'} (${full * 8} bits) give${full === 1 ? 's' : ''} ${Array(full).fill('255').join('.')}, and ` : '';
+    mask = `/${prefix} means ${prefix} network bits. ${fullPart}${rem} bit${rem === 1 ? ' is' : 's are'} left over for the ${ORDINAL[full]} octet. Switching on ${rem === 1 ? 'one bit' : rem + ' bits'} from the left gives **${MASK_OCTET[rem]}** (1 bit = 128, 2 = 192, 3 = 224, 4 = 240, 5 = 248, 6 = 252, 7 = 254). So the mask is ${code(r.mask)}.`;
+  }
+
+  // Network and broadcast
+  let network: string;
+  let broadcast: string;
+  if (rem === 0) {
+    const hostOctets = 4 - full;
+    const which = hostOctets === 1 ? 'the last octet' : `the last ${hostOctets} octets`;
+    network = `The mask ends on an octet boundary, so the host part is simply ${which}. Set ${hostOctets === 1 ? 'it' : 'them'} to **0** and you have the network address: ${code(r.network)}. It is the first address of the block and names the network itself, so no device can be given it.`;
+    broadcast = `Set the host part (${which}) to **255** instead: ${code(r.broadcast)}. It is the last address of the block. A message sent to it reaches every device on the network, so no device can be given it either.`;
+  } else {
+    const block = 2 ** (8 - rem);
+    const value = octets[full];
+    const start = Math.floor(value / block) * block;
+    const end = start + block - 1;
+    const starts = Array.from({ length: Math.min(256 / block, 8) }, (_, i) => i * block);
+    const more = 256 / block > 8 ? ', and so on' : '';
+    const after = full < 3 ? ', and every octet after it set to 0' : '';
+    const afterB = full < 3 ? ', and every octet after it set to 255' : '';
+    network = `Look at the ${ORDINAL[full]} octet, where the mask is ${MASK_OCTET[rem]} (not 255 or 0). Subnets there come in blocks of 256 − ${MASK_OCTET[rem]} = **${block}**, which start at ${starts.join(', ')}${more}. Your address has **${value}** in that octet, which falls in the block that starts at **${start}** (it runs to ${end}). So the network address is that start${after}: ${code(r.network)}. It names the network itself, so no device can be given it.`;
+    broadcast = `The broadcast is the **last** address of the block. The block starts at ${start} and holds ${block}, so it ends at ${start} + ${block} − 1 = **${end}**${afterB}: ${code(r.broadcast)}. A message sent to it reaches every device on the network, so no device can be given it either.`;
+  }
+
+  const firstHost = `The very first address of the block (${code(r.network)}) is the network address, which is reserved. So the first address a device can use is the **next one**: network + 1 = ${code(r.firstHost)}.`;
+  const lastHost = `The very last address of the block (${code(r.broadcast)}) is the broadcast address, which is reserved. So the last address a device can use is the **one before it**: broadcast − 1 = ${code(r.lastHost)}.`;
+  const hosts = `There are 32 − ${prefix} = **${hostBits}** host bits, and each one doubles the count, so the block holds 2 to the power of ${hostBits} = **${sizeText}** addresses. Two are reserved (the network and the broadcast address), leaving ${sizeText} − 2 = **${r.hosts}** for devices.`;
+  return { mask, network, broadcast, firstHost, lastHost, hosts };
+}

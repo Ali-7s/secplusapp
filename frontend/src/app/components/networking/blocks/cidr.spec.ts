@@ -1,4 +1,4 @@
-import { analyse, describeAddress, formatIpv4, parseIpv4 } from './cidr';
+import { analyse, describeAddress, explain, formatIpv4, parseIpv4 } from './cidr';
 
 describe('parseIpv4 and formatIpv4', () => {
   it('round-trips valid addresses', () => {
@@ -86,5 +86,36 @@ describe('analyse', () => {
     expect(analyse('10.0.0.0/abc').ok).toBeFalse();
     expect(analyse('10.0.0.0/8/8').ok).toBeFalse();
     expect(analyse('10.0.0.0/8/8').error).toBeTruthy();
+  });
+});
+
+describe('explain', () => {
+  it('walks through a /25 with its own numbers', () => {
+    const w = explain('192.168.1.128', 25)!;
+    expect(w.mask).toContain('**128**');
+    expect(w.network).toContain('blocks of 256 − 128 = **128**');
+    expect(w.network).toContain('`192.168.1.128`');
+    expect(w.broadcast).toContain('128 + 128 − 1 = **255**');
+    expect(w.firstHost).toContain('`192.168.1.129`');
+    expect(w.lastHost).toContain('`192.168.1.254`');
+    expect(w.hosts).toContain('**7** host bits');
+    expect(w.hosts).toContain('**126**');
+  });
+
+  it('handles a block boundary on a whole octet, and a split inside an earlier octet', () => {
+    const w24 = explain('192.168.1.77', 24)!;
+    expect(w24.network).toContain('`192.168.1.0`');
+    expect(w24.broadcast).toContain('`192.168.1.255`');
+    const w12 = explain('172.20.5.9', 12)!;
+    expect(w12.network).toContain('2nd octet');
+    expect(w12.network).toContain('starts at **16**');
+    expect(w12.network).toContain('`172.16.0.0`');
+    expect(w12.broadcast).toContain('`172.31.255.255`');
+  });
+
+  it('explains the special /31 and /32 cases and rejects bad input', () => {
+    expect(explain('10.0.0.5', 32)!.hosts).toContain('1 usable');
+    expect(explain('10.0.0.4', 31)!.broadcast).toContain('no broadcast');
+    expect(explain('300.1.1.1', 24)).toBeNull();
   });
 });
