@@ -136,6 +136,7 @@
           <span class="qnum">Question {{ index + 1 }}</span>
           <span class="chip kind" [class.pbq]="q.kind !== 'single' && q.kind !== 'multi'">{{ kindLabel(q) }}</span>
           <span class="chip">Domain {{ q.domain }} · {{ q.objective }}</span>
+          <app-guess-toggle class="guess" [on]="guessed.has(q.id)" [disabled]="locked(q.id)" (toggled)="toggleGuess(q.id)" />
           <button mat-icon-button class="flag-btn" [class.on]="flagged.has(q.id)" (click)="toggleFlag(q.id)"
             [attr.aria-label]="flagged.has(q.id) ? 'Remove flag' : 'Flag for review'" [attr.aria-pressed]="flagged.has(q.id)">
             <mat-icon aria-hidden="true">{{ flagged.has(q.id) ? 'flag' : 'outlined_flag' }}</mat-icon>
@@ -225,6 +226,9 @@
 
         @if (mode === 'study') {
           @if (locked(q.id)) {
+            @if (guessed.has(q.id) && graded(q, item).earned > 0) {
+              <p class="lucky"><mat-icon aria-hidden="true">help</mat-icon> Right, but you marked it as a guess, so it counts as not known yet and stays in your weak spots.</p>
+            }
             <ng-container [ngTemplateOutlet]="feedback" [ngTemplateOutletContext]="{ q: q, item: item, g: graded(q, item) }"></ng-container>
           } @else {
             <button mat-flat-button color="primary" class="check-btn" [disabled]="!answered(q) && q.kind !== 'order'" (click)="check(q)">Check answer</button>
@@ -253,6 +257,12 @@
           <span>{{ grade.percent | number: '1.0-0' }}% of points</span>
           <span>{{ grade.correctCount }} of {{ items.length }} fully correct</span>
         </div>
+        @if (guessedRight) {
+          <div class="known">
+            Without your {{ guessedRight }} lucky guess{{ guessedRight === 1 ? '' : 'es' }}: <strong>{{ knownScaled }}</strong>.
+            {{ guessedRight === 1 ? 'It counts' : 'They count' }} as not known yet, so {{ guessedRight === 1 ? 'it stays' : 'they stay' }} in your weak spots.
+          </div>
+        }
       </div>
 
       <h2>By domain</h2>
@@ -277,6 +287,9 @@
       <div class="filters" role="tablist">
         <button role="tab" [attr.aria-selected]="reviewFilter === 'wrong'" [class.on]="reviewFilter === 'wrong'" (click)="reviewFilter = 'wrong'">Missed ({{ wrongCount }})</button>
         <button role="tab" [attr.aria-selected]="reviewFilter === 'flagged'" [class.on]="reviewFilter === 'flagged'" (click)="reviewFilter = 'flagged'">Flagged ({{ flagged.size }})</button>
+        @if (guessed.size) {
+          <button role="tab" [attr.aria-selected]="reviewFilter === 'guessed'" [class.on]="reviewFilter === 'guessed'" (click)="reviewFilter = 'guessed'">Guessed ({{ guessed.size }})</button>
+        }
         <button role="tab" [attr.aria-selected]="reviewFilter === 'all'" [class.on]="reviewFilter === 'all'" (click)="reviewFilter = 'all'">All ({{ items.length }})</button>
       </div>
 
@@ -288,6 +301,7 @@
             <span class="chip kind" [class.pbq]="r.q.kind !== 'single' && r.q.kind !== 'multi'">{{ kindLabel(r.q) }}</span>
             <span class="chip">Domain {{ r.q.domain }} · {{ r.q.objective }}</span>
             @if (r.g.max > 1) { <span class="chip pts">{{ r.g.earned }} / {{ r.g.max }} points</span> }
+            @if (guessed.has(r.q.id)) { <span class="chip guessed">{{ r.g.earned > 0 ? 'Lucky guess' : 'Guessed' }}</span> }
             @if (flagged.has(r.q.id)) { <mat-icon class="flagged" aria-label="Flagged">flag</mat-icon> }
           </div>
           <ng-container [ngTemplateOutlet]="prompt" [ngTemplateOutletContext]="{ q: r.q }"></ng-container>

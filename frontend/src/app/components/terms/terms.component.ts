@@ -20,6 +20,7 @@ import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
+import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
 import { ProgressService, cardKey } from '../../services/progress.service';
@@ -30,7 +31,7 @@ import { isDue, smartOrder } from '../../utils/progress';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
   templateUrl: './terms.component.html',
   styleUrl: './terms.component.scss'
 })
@@ -55,6 +56,8 @@ export class TermsComponent implements OnInit {
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
+  /** Quick Checks marked "I'm guessing" before answering: a right guess counts as not known yet. */
+  quizGuessing = new Set<string>();
 
   private progress = inject(ProgressService);
 
@@ -158,7 +161,12 @@ export class TermsComponent implements OnInit {
     if (this.quizSelected.has(term)) return;
     this.quizSelected.set(term, letter);
     const answer = this.cardDetails.get(term)?.quizAnswer;
-    if (answer) this.progress.recordCard('term', term, letter === answer);
+    if (answer) this.progress.recordCard('term', term, letter === answer && !this.quizGuessing.has(term));
+  }
+
+  toggleQuizGuess(term: string) {
+    if (this.quizSelected.has(term)) return;
+    this.quizGuessing.has(term) ? this.quizGuessing.delete(term) : this.quizGuessing.add(term);
   }
 
   isQuizCorrect(term: string): boolean {

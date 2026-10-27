@@ -8,6 +8,7 @@ import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
+import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
 import {
   ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion, isPbq,
 } from '../../models/exam.model';
@@ -17,7 +18,7 @@ import {
 } from '../../utils/exam-engine';
 
 export type ExamMode = 'exam' | 'study';
-type ReviewFilter = 'all' | 'wrong' | 'flagged';
+type ReviewFilter = 'all' | 'wrong' | 'flagged' | 'guessed';
 
 /** What is saved so a refresh mid-exam does not lose the attempt. */
 interface SavedAttempt {
@@ -28,6 +29,8 @@ interface SavedAttempt {
   items?: ExamItem[];
   answers: Record<string, ExamAnswer>;
   flagged: string[];
+  /** Questions marked "I'm guessing". Older saves lack it. */
+  guessed?: string[];
   checked: string[];
   index: number;
   deadline: number | null;
@@ -40,7 +43,7 @@ const SEEN_KEY = 'sp-exam-seen';
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule],
+  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule, GuessToggleComponent],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss',
 })
@@ -69,6 +72,8 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   items: ExamItem[] = [];
   answers: Record<string, ExamAnswer> = {};
   flagged = new Set<string>();
+  /** Questions marked "I'm guessing": a right answer still scores, but is remembered as not known yet. */
+  guessed = new Set<string>();
   /** Study mode: questions whose answer has been checked (and is now locked). */
   checked = new Set<string>();
   index = 0;
@@ -164,7 +169,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.begin({
       length: this.length, mode: this.mode, seed,
       items: buildExam(this.length === 'weak' ? this.weakPool : this.pool, this.length, seed, this.seen),
-      answers: {}, flagged: [], checked: [],
+      answers: {}, flagged: [], guessed: [], checked: [],
       index: 0, deadline: this.mode === 'exam' ? Date.now() + this.specs[this.length].minutes * 60_000 : null,
     });
   }
@@ -185,6 +190,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.items = a.items?.every(it => this.byId.has(it.id)) ? a.items : buildExam(this.pool, a.length, a.seed);
     this.answers = a.answers;
     this.flagged = new Set(a.flagged);
+    this.guessed = new Set(a.guessed ?? []);
     this.checked = new Set(a.checked);
     this.index = Math.min(a.index, this.items.length - 1);
     this.deadline = a.deadline;
@@ -207,7 +213,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     if (this.state !== 'running') return;
     const attempt: SavedAttempt = {
       length: this.length, mode: this.mode, seed: this.seed, items: this.items, answers: this.answers, flagged: [...this.flagged],
-      checked: [...this.checked], index: this.index, deadline: this.deadline,
+      guessed: [...this.guessed], checked: [...this.checked], index: this.index, deadline: this.deadline,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(attempt)); } catch { /* storage unavailable */ }
   }
@@ -241,6 +247,13 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   toggleFlag(id: string) {
     this.flagged.has(id) ? this.flagged.delete(id) : this.flagged.add(id);
+    this.save();
+  }
+
+  /** Locked once a study-mode answer is checked: the point is to decide before seeing the result. */
+  toggleGuess(id: string) {
+    if (this.locked(id)) return;
+    this.guessed.has(id) ? this.guessed.delete(id) : this.guessed.add(id);
     this.save();
   }
 
@@ -347,8 +360,13 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     const g = this.grade;
     const byDomain = Object.fromEntries(this.domains.map(d => [d, g.byDomain[d].max ? Math.round((g.byDomain[d].earned / g.byDomain[d].max) * 100) : null]));
     this.progress.recordExam(
-      { length: this.length, mode: this.mode, scaled: g.scaled, percent: Math.round(g.percent), correct: g.correctCount, total: this.items.length, byDomain: byDomain as Record<ExamDomain, number | null> },
-      this.items.map((it, i) => ({ id: it.id, correct: g.results[i].correct })),
+      {
+        length: this.length, mode: this.mode, scaled: g.scaled, percent: Math.round(g.percent), correct: g.correctCount,
+        total: this.items.length, byDomain: byDomain as Record<ExamDomain, number | null>,
+        guessedRight: this.guessedRight, knownScaled: this.knownScaled,
+      },
+      // A right answer marked as a guess is remembered as not known, so it stays in the weak spots.
+      this.items.map((it, i) => ({ id: it.id, correct: g.results[i].correct && !this.guessed.has(it.id) })),
     );
     this.state = 'result';
     this.reviewFilter = this.grade.correctCount === this.items.length ? 'all' : 'wrong';
@@ -370,7 +388,26 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     if (!this.grade) return [];
     return this.items
       .map((item, i) => ({ item, q: this.question(item), g: this.grade!.results[i], n: i + 1 }))
-      .filter(r => this.reviewFilter === 'all' || (this.reviewFilter === 'wrong' ? !r.g.correct : this.flagged.has(r.q.id)));
+      .filter(r => {
+        switch (this.reviewFilter) {
+          case 'wrong': return !r.g.correct;
+          case 'flagged': return this.flagged.has(r.q.id);
+          case 'guessed': return this.guessed.has(r.q.id);
+          default: return true;
+        }
+      });
+  }
+
+  /** Right (or partly right) answers that were marked as guesses. */
+  get guessedRight(): number {
+    return this.grade ? this.items.filter((it, i) => this.guessed.has(it.id) && this.grade!.results[i].earned > 0).length : 0;
+  }
+
+  /** The scaled score counting only what you knew: guessed answers are taken out and graded as blank. */
+  get knownScaled(): number {
+    if (!this.grade) return 0;
+    const known = Object.fromEntries(Object.entries(this.answers).filter(([id]) => !this.guessed.has(id)));
+    return gradeExam(this.pool, this.items, known).scaled;
   }
 
   get wrongCount(): number { return this.grade ? this.grade.results.filter(r => !r.correct).length : 0; }

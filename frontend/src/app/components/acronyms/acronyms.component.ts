@@ -21,6 +21,7 @@ import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
+import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
 import { ProgressService, cardKey } from '../../services/progress.service';
@@ -31,7 +32,7 @@ import { isDue, smartOrder } from '../../utils/progress';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
@@ -57,6 +58,8 @@ export class AcronymsComponent implements OnInit {
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
+  /** Quick Checks marked "I'm guessing" before answering: a right guess counts as not known yet. */
+  quizGuessing = new Set<string>();
 
   private progress = inject(ProgressService);
 
@@ -262,7 +265,12 @@ export class AcronymsComponent implements OnInit {
     if (this.quizSelected.has(acronym)) return;
     this.quizSelected.set(acronym, letter);
     const answer = this.cardDetails.get(acronym)?.quizAnswer;
-    if (answer) this.progress.recordCard('acr', acronym, letter === answer);
+    if (answer) this.progress.recordCard('acr', acronym, letter === answer && !this.quizGuessing.has(acronym));
+  }
+
+  toggleQuizGuess(acronym: string) {
+    if (this.quizSelected.has(acronym)) return;
+    this.quizGuessing.has(acronym) ? this.quizGuessing.delete(acronym) : this.quizGuessing.add(acronym);
   }
 
   isQuizCorrect(acronym: string): boolean {

@@ -71,7 +71,10 @@
               <tr>
                 <td>{{ e.at | date: 'MMM d, h:mm a' }}</td>
                 <td>{{ lengthLabel(e) }}{{ e.mode === 'study' ? ' (study)' : '' }}</td>
-                <td><span class="score" [class.pass]="e.scaled >= passing">{{ e.scaled }}</span></td>
+                <td>
+                  <span class="score" [class.pass]="e.scaled >= passing">{{ e.scaled }}</span>
+                  @if (e.guessedRight) { <span class="guess-note">{{ e.knownScaled }} without {{ e.guessedRight }} guess{{ e.guessedRight === 1 ? '' : 'es' }}</span> }
+                </td>
                 <td class="wide-only">{{ e.correct }} of {{ e.total }}</td>
               </tr>
             }

@@ -281,6 +281,7 @@
                   <div class="quiz-section">
                     <div class="detail-label"><mat-icon>quiz</mat-icon> Quick Check</div>
                     <p class="quiz-question">{{ detail.quizQuestion }}</p>
+                    <app-guess-toggle class="quiz-guess" [on]="quizGuessing.has(a.acronym)" [disabled]="quizSelected.has(a.acronym)" (toggled)="toggleQuizGuess(a.acronym)" />
                     <div class="quiz-options">
                       @for (opt of detail.quizOptions; track opt) {
                         @let letter = opt.charAt(0);
@@ -304,7 +305,9 @@
                     @if (quizSelected.has(a.acronym)) {
                       <div class="quiz-result" [class.pass]="isQuizCorrect(a.acronym)">
                         <mat-icon>{{ isQuizCorrect(a.acronym) ? 'check_circle' : 'info' }}</mat-icon>
-                        {{ isQuizCorrect(a.acronym) ? 'Correct!' : 'Correct answer: ' + detail.quizAnswer }}
+                        @if (!isQuizCorrect(a.acronym)) { Correct answer: {{ detail.quizAnswer }} }
+                        @else if (quizGuessing.has(a.acronym)) { Correct, but it was a guess, so this card comes back soon. }
+                        @else { Correct! }
                       </div>
                       @if (detail.explanation) {
                         <p class="quiz-why"><strong>Why:</strong> {{ detail.explanation }}</p>

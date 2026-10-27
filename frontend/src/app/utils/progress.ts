@@ -19,6 +19,9 @@ export interface ExamRecord {
   total: number;
   /** Percent of points per domain, or null when the exam had no questions from that domain. */
   byDomain: Record<ExamDomainKey, number | null>;
+  /** Right answers marked "I'm guessing", and the scaled score with those answers taken out. */
+  guessedRight?: number;
+  knownScaled?: number;
 }
 
 /** How one practice exam question has gone over time. */

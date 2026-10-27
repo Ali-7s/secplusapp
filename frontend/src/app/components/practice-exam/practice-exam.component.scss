@@ -94,13 +94,16 @@
 }
 .qhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
   .qnum { font-weight: 800; color: var(--c-primary); }
+  .guess { margin-left: auto; }
   .flag-btn { margin-left: auto; color: var(--c-muted); &.on { color: var(--c-warning); } }
+  .guess + .flag-btn { margin-left: 0; }
   .flagged { color: var(--c-warning); margin-left: auto; }
 }
 .chip { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
   background: var(--c-surface-3); color: var(--c-text-2); text-transform: uppercase; letter-spacing: .03em;
   &.kind { background: var(--c-accent-light); color: var(--c-accent-solid); }
   &.kind.pbq { background: var(--c-warning-light); color: var(--c-text); }
+  &.guessed { background: var(--c-warning-light); color: var(--c-text); }
   &.pts { background: var(--c-surface-3); }
 }
 .scenario { margin: 0 0 12px; padding: 12px 14px; border-radius: var(--r-sm); line-height: 1.6;
@@ -214,7 +217,9 @@ li.picked-wrong .part-head mat-icon { color: var(--c-error); }
   &.pass { background: var(--c-success-light); border-color: var(--c-success); }
   .scaled { font-size: 52px; font-weight: 900; line-height: 1; small { font-size: 20px; color: var(--c-text-2); } }
   .verdict { margin-top: 6px; font-weight: 700; }
-  .stats { margin-top: 8px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; color: var(--c-text-2); font-size: 14px; } }
+  .stats { margin-top: 8px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; color: var(--c-text-2); font-size: 14px; }
+  .known { max-width: 520px; margin: 12px auto 0; padding: 8px 12px; border-radius: var(--r-md); font-size: 14px; line-height: 1.5;
+    background: var(--c-warning-light); border: 1px solid var(--c-warning); color: var(--c-text); } }
 .domains { display: flex; flex-direction: column; gap: 8px; }
 .drow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 44px; gap: 12px; align-items: center;
   .dname { font-size: 14px; color: var(--c-text); }
@@ -244,3 +249,7 @@ li.picked-wrong .part-head mat-icon { color: var(--c-error); }
   .mrow { grid-template-columns: 1fr; gap: 6px; }
   .drow { grid-template-columns: 1fr 44px; .dbar { grid-column: 1 / -1; grid-row: 2; } }
 }
+
+.lucky { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding: 8px 12px; border-radius: var(--r-md); font-size: 14px;
+  background: var(--c-warning-light); border: 1px solid var(--c-warning); color: var(--c-text);
+  mat-icon { flex-shrink: 0; color: var(--c-warning); } }
