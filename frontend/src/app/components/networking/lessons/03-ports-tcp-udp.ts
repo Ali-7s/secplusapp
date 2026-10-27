@@ -27,7 +27,7 @@ export const PORTS_TCP_UDP: LessonBody = {
       ['DoS / DDoS', 'Denial of service: flooding a target so real users cannot use it. DDoS uses many attacking machines at once'],
     ),
 
-    h('What is a port?'),
+    h('What is a port?', { keep: 'The IP address finds the computer; the port number finds the program on it (HTTPS listens on 443). An IP address plus a port is a socket.' }),
     p('An IP address gets data to the right **computer**. But one computer runs many network programs at the same time: a web browser, an email app, a game, an update checker. When a packet arrives, the computer needs to know **which program** it is for. That is what the **port number** is for. Ports are numbered from 0 to 65,535, and the port number travels in the packet\'s header next to the IP address.'),
     analogy('An IP address is the **street address of an apartment building**. The port is the **apartment number**. The mail carrier gets the letter to the building (IP address), and the front desk hands it to the right apartment (port).'),
     p('On a server, each **service** (a program offering something over the network) **listens** on an agreed port, so clients know where to knock. For example, a secure web server listens on port **443**. That number is a convention everyone agreed on, which is why your browser knows to use it without being told.'),
@@ -43,7 +43,7 @@ export const PORTS_TCP_UDP: LessonBody = {
     ),
     p('"Ephemeral" just means short-lived: the port is used for one conversation and then released.'),
 
-    h('TCP and UDP: two ways to deliver'),
+    h('TCP and UDP: two ways to deliver', { keep: 'TCP is reliable: it sets up a connection and resends anything lost (web, email). UDP is fast with no guarantees (DNS lookups, streaming, voice).' }),
     p('Once a packet knows which program it is for, there is still a choice to make: **how carefully** should the data be delivered? There are two protocols for this, and each program picks the one that suits it.'),
     list(
       '**TCP** (Transmission Control Protocol) is the careful one. Before sending data it sets up a **connection** with the other side, numbers every piece, waits for an **acknowledgement** ("got it") for each one, and sends again anything that goes missing. Everything arrives, complete and in order. The cost is speed: all that checking adds delay and extra traffic.',
@@ -62,7 +62,7 @@ export const PORTS_TCP_UDP: LessonBody = {
     ),
     tip('If losing a piece breaks the whole thing (a file, a web page), use **TCP**. If a late piece is useless anyway (a live call, a game), use **UDP**. In a video call, resending a sound from two seconds ago would only make things worse.'),
 
-    h('The TCP three-way handshake'),
+    h('The TCP three-way handshake', { keep: 'TCP opens a connection with SYN, SYN-ACK, ACK. A SYN flood sends masses of SYNs and never finishes, to wear the server out.' }),
     p('Before any data moves, TCP sets up the connection with three messages. Each message has **flags** in its header: short markers that say what kind of message it is. The three you need are **SYN** (synchronize: "let us start"), **ACK** (acknowledge: "got it") and **FIN** (finish: "I am done"). Step through it:'),
     {
       type: 'sequence',
@@ -92,7 +92,7 @@ export const PORTS_TCP_UDP: LessonBody = {
     },
     exam('A **SYN flood** is a denial of service (**DoS**) attack: an attempt to overwhelm a server so real users cannot use it. The attacker sends huge numbers of SYN packets, often with fake source addresses, and never sends the final ACK. The server keeps memory set aside for every half-open connection until it runs out, and real users cannot connect. Defenses: **SYN cookies** (a trick that lets the server avoid setting memory aside until the handshake completes), shorter timeouts, limiting how many new connections one source may open (**rate limiting**), and a firewall in front.'),
 
-    h('Open, closed and filtered'),
+    h('Open, closed and filtered', { keep: 'A port scan shows which ports answer. Every open port is attack surface, and moving a service to an odd port is obscurity, not security.' }),
     p('A **port scan** knocks on a device\'s ports one by one to see which ones answer. Attackers do it to find targets, and defenders do it to check their own systems. The best-known scanning tool is **nmap**. Each port ends up in one of three states:'),
     table(
       ['State', 'Meaning', 'What the scanner sees'],
@@ -107,7 +107,7 @@ export const PORTS_TCP_UDP: LessonBody = {
 
     pbq('Try it: read a scan, pick a protocol', PORT_STATES),
 
-    hSecure('How to secure it: ports and services'),
+    hSecure('How to secure it: ports and services', { keep: 'Turn off services you do not need, block by default (implicit deny), and allow remote admin ports such as 22 and 3389 only from admin networks or a VPN.' }),
     list(
       '**Close what you do not use.** Stop the service itself, not just block it. A program that is not running cannot be attacked.',
       '**Block by default.** Set firewalls to block everything and allow only what is needed, in both directions. The automatic "block anything not allowed" rule is called **implicit deny**.',

@@ -41,7 +41,7 @@ export const HELPERS: LessonBody = {
       ],
     ),
 
-    h('DHCP: getting an address'),
+    h('DHCP: getting an address', { keep: 'DHCP hands a device its IP address, mask, gateway and DNS server in four steps: Discover, Offer, Request, Acknowledge (DORA). DHCP snooping stops rogue DHCP servers.' }),
     p('A device that has just joined a network has no IP address yet, and it cannot talk properly without one. **DHCP** (Dynamic Host Configuration Protocol) solves this. A DHCP server on the network (often built into the router) hands out an address, the subnet mask, the default gateway and the DNS server to use, all at once. The address is a **lease**: the device may keep it for a set time (say 8 hours) and must renew it to keep using it.'),
     p('The exchange has four steps, remembered as **DORA**: Discover, Offer, Request, Acknowledge.'),
     {
@@ -79,7 +79,7 @@ export const HELPERS: LessonBody = {
     ),
     secure('Turn on **DHCP snooping** on the switches. You tell the switch which ports lead to the real DHCP server; DHCP offers arriving on any other port are dropped, and the number of requests from one port is limited. Also use **port security** and **802.1X** (lesson 6) so unknown devices never get on the network, and watch for DHCP servers that should not exist.', 'Stopping rogue DHCP'),
 
-    h('DNS: turning names into addresses'),
+    h('DNS: turning names into addresses', { keep: 'DNS turns names into IP addresses (A record for IPv4, AAAA for IPv6, MX for mail). DNS poisoning sends users to fake sites; DNSSEC lets answers be checked.' }),
     p('People remember names; computers need numbers. A **domain name** like `www.example.com` is easy to type, but to connect, your device needs the IP address behind it. **DNS** (Domain Name System) is the internet\'s phone book: you give it a name, and it gives you the address.'),
     p('Your device does not search the whole internet itself. It asks one DNS server, called a **resolver** (usually provided by your router or your ISP), and the resolver does the legwork. The resolver keeps recent answers in a **cache** (a short-term memory) so it can answer the same question instantly next time. Each answer comes with a **TTL** (time to live): how many seconds it may be remembered before it must be looked up again.'),
     p('Names are read from right to left, like an address from country down to house: `.com` is the top level, `example.com` is a domain inside it, and `www.example.com` is one name inside that domain. A full lookup walks down that tree:'),
@@ -133,7 +133,7 @@ export const HELPERS: LessonBody = {
     ),
     secure('**DNSSEC** adds digital signatures to DNS records, so a resolver can tell a forged answer from a real one. **DoH and DoT** (DNS over HTTPS on port 443, and DNS over TLS on port 853) encrypt lookups so others cannot see or change them. Also: allow zone transfers only to your own named servers, do not answer lookups for strangers on the internet (no "open recursion"), patch DNS servers, limit how many answers one source can get, block known malicious domains (**DNS filtering**, or a **sinkhole** that sends them nowhere), and log lookups to spot tunneling.', 'Securing DNS'),
 
-    h('ARP: finding the MAC address'),
+    h('ARP: finding the MAC address', { keep: 'ARP finds the MAC address that goes with an IP address on the local network. ARP poisoning puts the attacker in the middle; Dynamic ARP Inspection stops it.' }),
     p('Here is a gap from lesson 6: to deliver a frame on the local network, a device needs the destination\'s **MAC address**, but usually it only knows the **IP address**. Even to reach the internet, it needs the MAC address of its default gateway. **ARP** (Address Resolution Protocol) fills the gap by shouting a question to everyone, and the owner answers.'),
     {
       type: 'sequence',
@@ -155,7 +155,7 @@ export const HELPERS: LessonBody = {
     },
     secure('**Dynamic ARP Inspection (DAI)** makes the switch check every ARP reply against the list of genuine address assignments that DHCP snooping recorded, and drop fakes. Also: fixed (static) ARP entries for critical devices such as the gateway, port security and 802.1X, segmentation (lesson 7), and encryption (HTTPS and VPNs) so that even intercepted traffic is unreadable. IPv6 uses a different protocol, **NDP**, for the same job and has similar attacks; a switch feature called **RA Guard** helps block them.', 'Stopping ARP poisoning'),
 
-    h('ICMP: the network\'s messenger'),
+    h('ICMP: the network\'s messenger', { keep: 'ICMP carries the network\'s status messages, and ping and traceroute use it. Attackers abuse it for floods and for sneaking data out.' }),
     p('**ICMP** (Internet Control Message Protocol) carries the network\'s status messages: "that address cannot be reached", "this packet expired on the way", "are you there?" "yes I am". It has no ports. Instead each message has a **type** that says what it is.'),
     p('Two everyday tools use it:'),
     list(
@@ -186,7 +186,7 @@ export const HELPERS: LessonBody = {
       { caption: 'Windows names come first where the tools differ (ipconfig, tracert), Linux and Mac names second.' },
     ),
 
-    h('NAT and PAT: sharing one public address'),
+    h('NAT and PAT: sharing one public address', { keep: 'NAT swaps private addresses for a public one; PAT also swaps port numbers so a whole network can share one address. NAT is not a firewall.' }),
     p('Lesson 2 said **private addresses** (such as `192.168.x.x`) are never sent across the internet. So how does your laptop, with a private address, load a website? Your router uses **NAT** (Network Address Translation). On the way out, it replaces the private source address in each packet with its own **public** address, and writes down the swap in a **translation table**. When the reply comes back, it looks up the table and swaps the address back, so the reply reaches the right device.'),
     p('A home has many devices but only one public address. To tell their conversations apart, the router also swaps the **source port number**, giving each conversation its own port. This version is called **PAT** (port address translation, also known as NAT overload), and it is what nearly every home and small office router does:'),
     table(
@@ -215,7 +215,7 @@ export const HELPERS: LessonBody = {
 
     pbq('Try it: diagnose the symptom', HELPERS_SYMPTOMS),
 
-    hSecure('The defenses at a glance'),
+    hSecure('The defenses at a glance', { keep: 'Match the symptom to the helper: a strange gateway means rogue DHCP, a fake site means DNS poisoning, traffic through the attacker means ARP poisoning.' }),
     table(
       ['Attack', 'Best defense'],
       [

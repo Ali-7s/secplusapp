@@ -23,7 +23,7 @@ export const PORTS_TO_KNOW: LessonBody = {
 
     p('There is no way to work out a port number by reasoning. They are conventions everyone agreed on years ago, and you simply have to learn them. Two tricks make it far easier: learn them **by job** (about ten families instead of forty loose numbers), and always learn the **secure version next to the insecure one**.'),
 
-    h('The ports, by job'),
+    h('The ports, by job', { keep: 'Learn each port together with its job. The ones you will see constantly: 22 SSH, 25 SMTP, 53 DNS, 80 HTTP, 443 HTTPS, 3389 RDP.' }),
     p('Read the "What it does" column first. A port number is much easier to remember once you know what the protocol is for. All of these use **TCP** unless the table says **UDP** (lesson 3 explains the difference).'),
     table(
       ['Job', 'Protocol and port', 'What it does'],
@@ -60,7 +60,7 @@ export const PORTS_TO_KNOW: LessonBody = {
       ],
     ),
 
-    h('Insecure to secure: learn them in pairs'),
+    h('Insecure to secure: learn them in pairs', { keep: 'Learn the ports in pairs: Telnet 23 to SSH 22, HTTP 80 to HTTPS 443, FTP 21 to SFTP 22, LDAP 389 to LDAPS 636.' }),
     p('Many old protocols send everything, passwords included, in plaintext. Each has a secure replacement, and the exam loves asking "which protocol should replace this one?"'),
     table(
       ['Plaintext (avoid)', 'Secure replacement', 'How it is secured'],
@@ -78,7 +78,7 @@ export const PORTS_TO_KNOW: LessonBody = {
       ],
     ),
 
-    h('Memory hooks'),
+    h('Memory hooks', { keep: 'Use any hook that makes a number stick; you do not need all of them.' }),
     list(
       '**The rising run.** 22 SSH, 23 Telnet, 25 SMTP, 53 DNS, 80 HTTP, 110 POP3, 123 NTP, 143 IMAP, 161 SNMP, 389 LDAP, 443 HTTPS, 445 SMB, 3389 RDP. Say it out loud a few times: the numbers go up in order.',
       '**22 and 23 are neighbors.** SSH (22) is the secure replacement for Telnet (23).',
@@ -94,7 +94,7 @@ export const PORTS_TO_KNOW: LessonBody = {
     pbq('Try it: name the port', PORT_NUMBERS, { intro: 'Exam firewall questions assume you know these by heart. See how many you get without scrolling up.' }),
     pbq('Try it: replace the plaintext protocol', PORT_PAIRS),
 
-    h('Practice it'),
+    h('Practice it', { keep: 'Ports stick through short, repeated practice on several days, not through rereading.' }),
     p('Memorizing needs repetition, not reading. Short rounds on several days in a row work far better than one long session.'),
     {
       type: 'cta',
@@ -105,7 +105,7 @@ export const PORTS_TO_KNOW: LessonBody = {
     },
     tip('You do not need all of these on day one. Start with the rising run in the memory hooks, then add the secure pairs.'),
 
-    hSecure('How to secure it: protocols and ports'),
+    hSecure('How to secure it: protocols and ports', { keep: 'Use the encrypted protocol and switch the plaintext one off, and keep management ports (SSH, RDP, SNMP) off the internet.' }),
     list(
       '**Use the encrypted version and switch off the plaintext one.** On every device, turn off Telnet, FTP, plain HTTP admin pages and old SNMP, and use SSH, SFTP, HTTPS and SNMPv3 instead.',
       '**Keep management ports off the internet.** SSH, RDP, SNMP and database ports should only be reachable from administrators\' networks, through a VPN, or through a **jump server** (one locked-down computer that administrators must go through, lesson 9).',

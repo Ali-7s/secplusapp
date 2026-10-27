@@ -2,6 +2,7 @@ import { Block } from '../networking.model';
 import { mcq } from './dsl';
 import { LESSON_META, lessonBySlug, lessonsForCard } from './lesson-index';
 import { LESSON_BODIES, getLesson } from './lessons';
+import { lessonMinutes, lessonParts } from './parts';
 
 describe('mcq', () => {
   it('keeps the right answer pointing at the right option', () => {
@@ -206,5 +207,26 @@ describe('lesson content', () => {
     const hasSecurity = (slug: string) => LESSON_BODIES[slug].blocks.some(b => b.type === 'harden' || (b.type === 'h' && b.tone === 'secure'));
     for (const slug of ['devices', 'vlans', 'helpers', 'security-devices', 'hardening']) expect(hasSecurity(slug)).withContext(slug).toBeTrue();
     expect(LESSON_BODIES['hardening'].blocks.some(b => b.type === 'spot')).toBeTrue();
+  });
+});
+
+describe('lesson parts', () => {
+  it('gives every part a short "Remember this" line', () => {
+    const problems: string[] = [];
+    for (const [slug, body] of Object.entries(LESSON_BODIES)) {
+      for (const part of lessonParts(body).filter(p => !p.intro)) {
+        if (!part.keep) problems.push(`${slug}: ${part.title} has no keep`);
+        else if (part.keep.split(/\s+/).length > 45) problems.push(`${slug}: ${part.title} keep is too long`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('lists each lesson with the time its content really takes', () => {
+    const wrong = LESSON_META
+      .map(m => ({ slug: m.slug, listed: [m.minutes, m.optionalMinutes ?? 0], actual: lessonMinutes(LESSON_BODIES[m.slug]) }))
+      .filter(r => r.listed[0] !== r.actual.core || r.listed[1] !== r.actual.optional)
+      .map(r => `${r.slug}: listed ${r.listed.join('+')}, content ${r.actual.core}+${r.actual.optional}`);
+    expect(wrong).toEqual([]);
   });
 });

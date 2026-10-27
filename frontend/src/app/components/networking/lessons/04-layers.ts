@@ -22,12 +22,12 @@ export const LAYERS: LessonBody = {
       ['Defense in depth', 'Using protections at many layers, so one failure does not let an attacker straight in'],
     ),
 
-    h('Why networking has layers'),
+    h('Why networking has layers', { keep: 'Networking is split into layers that each do one job, so a problem or a protection can be pinned to one layer.' }),
     p('Loading one web page involves many separate jobs: turning bits into signals, getting them to the right device on your network, finding a path across the internet, reaching the right program, keeping the data private, and finally showing you the page. Instead of one giant program doing everything, networking splits the work into **layers**. Each layer does one job and only deals with the layer directly above it and the layer directly below it.'),
     p('This is why you can switch from Wi-Fi to a cable and your web browser never notices: only the bottom layer changed. It is also why a network problem can usually be traced to one layer ("the cable is fine, the address is wrong").'),
     analogy('Mailing a letter. You write the letter. You put it in an envelope and write the address. The post office sorts the envelope into a bag and puts the bag on a truck. The truck drives on roads. You never think about the roads, and the truck driver never reads your letter. Each step only cares about its own job.'),
 
-    h('The seven layers (the OSI model)'),
+    h('The seven layers (the OSI model)', { keep: 'OSI layers 1 to 7: Physical, Data link, Network, Transport, Session, Presentation, Application. Layer 2 uses MAC addresses, Layer 3 IP addresses, Layer 4 ports.' }),
     p('The standard picture has **seven layers** and is called the **OSI model**. You already know what lives on most of them:'),
     table(
       ['Layer', 'Its job', 'What you already know there'],
@@ -55,7 +55,7 @@ export const LAYERS: LessonBody = {
       { caption: 'The TCP/IP model is the OSI model with the top three and bottom two layers merged.' },
     ),
 
-    h('Encapsulation: envelopes inside envelopes'),
+    h('Encapsulation: envelopes inside envelopes', { keep: 'Each layer adds its own header on the way down. The data is called a segment at Layer 4, a packet at Layer 3, a frame at Layer 2 and bits at Layer 1.' }),
     p('Lesson 1 said every packet has a **header**: a label at the front. In fact, data gets **several** headers, one from each layer, as it travels down from your program to the cable. Each layer takes what the layer above handed it, adds its own header to the front, and passes it down. This wrapping is called **encapsulation**.'),
     p('At the receiving end, each layer reads and removes its own header and passes the rest up, until your data reaches the program. The unwrapping is called **de-encapsulation**.'),
     p('The data even has a different name at each stage, depending on how far it has been wrapped:'),
@@ -74,7 +74,7 @@ export const LAYERS: LessonBody = {
 
     pbq('Try it: wrap the data', LAYERS_WRAP, { intro: 'Put the steps in the order they happen as your request leaves the laptop. Drag them, or use the arrows.' }),
 
-    h('Which device works at which layer?'),
+    h('Which device works at which layer?', { keep: 'A device works at the layer whose information it reads: a switch at Layer 2 (MAC), a router at Layer 3 (IP).' }),
     p('A device "works at" a layer when that layer\'s information is what it reads to make decisions. Here are the devices you will meet in this course:'),
     table(
       ['Device or control', 'Layer', 'What it reads to decide'],
@@ -92,7 +92,7 @@ export const LAYERS: LessonBody = {
 
     pbq('Try it: which layer?', LAYERS_MATCH),
 
-    hSecure('How to secure it: a control at every layer'),
+    hSecure('How to secure it: a control at every layer', { keep: 'Defense in depth: put a protection at every layer, so when one fails the next one still stands.' }),
     p('An attacker only needs **one** weak layer, so defenders put protections at **every** layer. This idea is called **defense in depth**: if one protection fails, the next one still stands. The table below is a map, not something to memorize. Every attack and defense in it is explained in a later lesson.'),
     table(
       ['Layer', 'What attackers do', 'What defends it'],

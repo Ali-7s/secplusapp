@@ -124,6 +124,12 @@ export class ProgressService {
     });
   }
 
+  /** Remembers the part of a lesson being read. Reading position is not study activity, so it does not count toward streaks. */
+  setLessonPart(slug: string, part: number) {
+    if (this.state().lessons[slug]?.part === part) return;
+    this.update(d => { this.lesson(d, slug).part = part; });
+  }
+
   lessonRecord(slug: string): LessonRecord | undefined {
     return this.state().lessons[slug];
   }

@@ -32,7 +32,7 @@ export const SECURITY_DEVICES: LessonBody = {
       ['Exfiltration', 'Stolen data being sent out of the network'],
     ),
 
-    h('Firewalls: the rule-based guard'),
+    h('Firewalls: the rule-based guard', { keep: 'A firewall checks its rules from the top and the first match wins. Anything not allowed is blocked (implicit deny), so specific rules go first.' }),
     p('A **firewall** sits where traffic passes and checks each packet against a list of **rules**. Each rule names a **source** (where the traffic comes from), a **destination** (where it is going), a **port and protocol** (which service, lesson 3), and an **action**: allow or deny (block).'),
     p('Three facts decide what happens to any packet:'),
     list(
@@ -60,7 +60,7 @@ export const SECURITY_DEVICES: LessonBody = {
       intro: 'The other half of firewall questions: given a rule list, what happens to each connection? Go down the list for each one and stop at the first rule where everything matches.',
     }),
 
-    h('Reading rule lists the way exams write them'),
+    h('Reading rule lists the way exams write them', { keep: 'Every rule says where from (source), where to (destination), which port and protocol, and whether to allow or deny. Read a list from the top down.' }),
     p('Real firewalls, routers and exam questions all write rules a little differently. Once you know these few words, every rule list reads the same way:'),
     table(
       ['You see', 'It means'],
@@ -82,7 +82,7 @@ export const SECURITY_DEVICES: LessonBody = {
       '**Logging the final deny.** Some firewalls do not log what their built-in implicit deny blocks. When every blocked attempt must appear in the log, you add your own "deny any to any" rule at the very bottom with logging switched on. Other firewalls log the built-in deny, and then no extra rule is needed. Exam questions tell you which.',
     ),
 
-    h('Kinds of firewall'),
+    h('Kinds of firewall', { keep: 'Stateless filters judge each packet alone; stateful firewalls track connections so replies get in automatically; next-generation and web application firewalls understand the application itself.' }),
     p('Firewalls differ in how much they understand about the traffic:'),
     list(
       'A **packet filter** (also called **stateless**) judges each packet on its own, by addresses, ports and protocol, with no memory. It is fast and simple, but it does not know whether a packet is a reply to something you asked for, so you have to write extra rules for replies.',
@@ -103,7 +103,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     p('Why does a stateless filter need extra rules for replies? Remember from lesson 3 that when a server downloads an update, it uses a random high (ephemeral) port for its side, say 51514, and the reply comes back **to** that port. A stateless list has no memory of the request, so to let replies in it must allow incoming traffic to the whole range 1024 to 65535. But that rule also lets in **new** connections to any high port, such as Remote Desktop on 3389. A stateful firewall avoids this, because it only lets in replies to conversations it saw start. In cloud networks, the subnet-level **network ACLs** are usually stateless, while **security groups** on each server are stateful.'),
 
-    h('Host-based firewalls: inbound and outbound'),
+    h('Host-based firewalls: inbound and outbound', { keep: 'A firewall on the device itself has inbound and outbound rules. Tight outbound rules stop a hacked server from calling out.' }),
     p('A firewall running on the device itself has one extra column in its rules: **direction**. **Inbound** rules control connections other devices open **to** this device. **Outbound** rules control connections this device starts **itself**. The address in each rule is the device at the other end, often called the **remote address**.'),
     p('Outbound rules matter more than people expect. A web server only needs to answer visitors, so it should allow inbound HTTPS and almost nothing outbound (perhaps only its time server). Then, if an attacker breaks in and plants a **web shell** (a small malicious script on a hacked web server that lets them run commands through a web page), it cannot download more tools or contact the attacker\'s computer.'),
     p('On Linux the host firewall is often written as **iptables** rules, which look cryptic but follow the same ideas:'),
@@ -122,7 +122,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     p('Windows Defender Firewall uses exactly the same ideas through a settings screen, with separate inbound and outbound rule lists.'),
 
-    h('IDS and IPS, and where devices go'),
+    h('IDS and IPS, and where devices go', { keep: 'An IDS watches and alerts; an IPS sits in the traffic path and blocks. Signatures catch known attacks, anomaly detection catches unusual behavior.' }),
     p('Related to firewalls are **IDS** and **IPS** (intrusion detection and intrusion prevention systems). They watch traffic for signs of attack, using known attack patterns (**signatures**) or unusual behavior. An IDS only **alerts** someone; an IPS can **block** too. Where you put them depends on that difference:'),
     list(
       'An IPS must be **inline**: the traffic flows **through** it, so it can stop a bad packet. The risk is that if it fails or misjudges, real traffic stops too.',
@@ -140,7 +140,7 @@ export const SECURITY_DEVICES: LessonBody = {
       ],
     ),
 
-    h('Where firewalls sit: zones and the screened subnet'),
+    h('Where firewalls sit: zones and the screened subnet', { keep: 'Public servers go in a screened subnet (DMZ) between the internet and the internal network, so a hacked web server cannot reach staff PCs directly.' }),
     p('Networks are divided into **zones** by how much they are trusted: the internet (not trusted at all), servers the public must reach (somewhat trusted), and the internal network (trusted). Firewalls enforce the rules where zones meet.'),
     p('Public-facing servers, such as a website, mail server or public DNS, must be reachable from the internet. But you do not want them sitting next to your staff PCs and databases, because a public server is the most likely thing to be hacked. So they go in a **screened subnet**: a buffer zone with a firewall on each side. Its older name, still widely used, is **DMZ** (demilitarized zone).'),
     {
@@ -168,7 +168,7 @@ export const SECURITY_DEVICES: LessonBody = {
       ],
     ),
 
-    h('Proxies, load balancers and jump servers'),
+    h('Proxies, load balancers and jump servers', { keep: 'A proxy makes requests on behalf of clients, a load balancer spreads traffic across servers, and a jump server is the single hardened way in for administrators.' }),
     table(
       ['Device', 'Sits in front of', 'What it does'],
       [
@@ -180,7 +180,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     analogy('A forward proxy is like a personal assistant who makes calls for you: the other side only sees the assistant. A reverse proxy is like a company\'s receptionist: callers only ever talk to the receptionist, who passes messages to the right person inside.'),
 
-    h('VPNs: a private tunnel over a public network'),
+    h('VPNs: a private tunnel over a public network', { keep: 'A VPN wraps traffic in an encrypted tunnel across an untrusted network: site-to-site joins offices, remote access connects one user.' }),
     p('A **VPN** (virtual private network) wraps traffic in an encrypted **tunnel**, so it can cross an untrusted network such as the internet or café Wi-Fi as safely as if it were a private cable. Anyone watching sees only scrambled data going to the VPN server. There are two main shapes:'),
     table(
       ['Type', 'Connects', 'Typical use'],
@@ -214,7 +214,7 @@ export const SECURITY_DEVICES: LessonBody = {
       ],
     ),
 
-    h('Wi-Fi basics'),
+    h('Wi-Fi basics', { keep: 'Use WPA3 (or WPA2 with AES); Enterprise mode gives each user their own login through 802.1X. Watch for evil twins and rogue access points.' }),
     p('A wireless **access point** broadcasts a network name, called the **SSID**, and connects Wi-Fi devices to the wired network (lesson 6). Wi-Fi travels through the air, so **anyone nearby can capture it**. That is why encryption is essential. The security standards, from worst to best:'),
     table(
       ['Standard', 'Verdict', 'Why'],
@@ -250,7 +250,7 @@ export const SECURITY_DEVICES: LessonBody = {
 
     pbq('Try it: place the servers, pick the firewall', FIREWALL_PLACEMENT),
 
-    h('Reading security logs: what attacks look like'),
+    h('Reading security logs: what attacks look like', { keep: 'Read logs for a pattern: many ports from one source is a scan, many failed logins on one account is brute force, one password tried on many accounts is spraying.' }),
     p('Firewalls, IDS sensors, proxies and login servers all write logs, and a common PBQ hands you log excerpts and asks what each one shows. You are reading for a **pattern**. These are the ones to recognize:'),
     table(
       ['Pattern in the log', 'What it is'],
@@ -270,7 +270,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
     tip('Ask three questions of every log line: how many sources, how many targets, and how many ports or accounts? Most patterns fall out of those three numbers.'),
 
-    hSecure('How to secure it: firewalls, Wi-Fi and VPNs'),
+    hSecure('How to secure it: firewalls, Wi-Fi and VPNs', { keep: 'Block by default in both directions, keep rules tidy with specific ones first, use WPA3 with WPS turned off, and protect every admin login.' }),
     {
       type: 'harden',
       title: 'Harden a firewall',

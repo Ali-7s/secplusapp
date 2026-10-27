@@ -30,12 +30,12 @@ export const START: LessonBody = {
       ['Encryption', 'Scrambling data so that only the intended receiver can read it'],
     ),
 
-    h('What a network is'),
+    h('What a network is', { keep: 'A network is two or more devices connected so they can send each other messages.' }),
     p('A **network** is simply two or more devices connected so they can send each other messages. A **device** is anything with a network connection: a laptop, a phone, a printer, a smart TV, a security camera, or a **server** (a computer whose job is to provide something to others, such as a website). Networking books often call a device a **host** or a **node**. They all mean the same thing.'),
     p('Every time you load a web page, stream a video or send a message, your device is swapping messages with another device somewhere else. **Networking** is the equipment plus the agreed rules that get those messages to the right place, in one piece.'),
     analogy('The postal service. You write a letter, put it in an envelope with an address, and drop it in a mailbox. Sorting offices read the address and pass it along, one office at a time, until it reaches the right house. Nobody along the way reads the letter itself. Almost every idea in networking has a match in this picture, and the lessons keep coming back to it.'),
 
-    h('What actually travels: bits'),
+    h('What actually travels: bits', { keep: 'Everything sent over a network is bits (0s and 1s). The part of a device that sends and receives them is its network card (NIC).' }),
     p('Computers do not store words or pictures. Underneath, they store only numbers, and those numbers are written using just two values: **0 and 1**. A single 0 or 1 is called a **bit**. Think of a bit as a light switch: off (0) or on (1).'),
     p('Everything you send (a message, a photo, a video call) is turned into a long row of bits. Eight bits together are called a **byte**, and one letter of text takes about one byte. A photo might be a few million bytes.'),
     p('To travel, bits are turned into something physical:'),
@@ -47,7 +47,7 @@ export const START: LessonBody = {
     p('The part of a device that sends and receives these signals is its **network interface card**, or **NIC** (also called a network adapter). Every device that connects to a network has one, whether it is a socket for a cable or a Wi-Fi radio inside the device.'),
     tip('Network speeds are measured in **bits per second**. "100 Mbps" means 100 million bits per second. A lowercase **b** means bits and an uppercase **B** means bytes, so 100 Mbps is about 12.5 MB (megabytes) per second.'),
 
-    h('Messages are chopped into packets'),
+    h('Messages are chopped into packets', { keep: 'Data travels in small packets. Each one has a header (a label saying where it is going) and a payload (the data itself).' }),
     p('A big file is not sent as one giant stream. It is cut into small pieces, usually up to about 1,500 bytes each, called **packets**. Each packet travels on its own, and the receiving device puts them back together in the right order.'),
     p('Why chop things up? Two reasons:'),
     list(
@@ -65,7 +65,7 @@ export const START: LessonBody = {
       ],
     },
 
-    h('Addresses: how a packet finds the right device'),
+    h('Addresses: how a packet finds the right device', { keep: 'Three labels deliver a packet: the IP address finds the device across networks, the MAC address finds it on the local network, and the port finds the program on it.' }),
     p('To deliver a packet, the network has to know which device it is for, just as a letter needs an address. Networks use three kinds of label, and each answers a different question. You do not need the details yet: each one gets its own lesson.'),
     table(
       ['The question', 'Answered by', 'Looks like'],
@@ -77,7 +77,7 @@ export const START: LessonBody = {
     ),
     analogy('An **IP address** is like a postal address: it gets the letter to the right building anywhere in the country. A **MAC address** is like the name on the door, used for the final hand-off inside the building. A **port number** is like the apartment number, saying which resident (which program) the letter is for.'),
 
-    h('Protocols: the agreed rules'),
+    h('Protocols: the agreed rules', { keep: 'A protocol is an agreed set of rules for talking. An S at the end (HTTPS, SFTP) usually means the secure, encrypted version.' }),
     p('Two devices can only understand each other if they follow the same rules: how a conversation starts, how messages are laid out, what reply to send, and what to do when something goes wrong. An agreed set of rules like this is called a **protocol**.'),
     analogy('A phone call has a protocol everyone learns as a child. You dial, the other person says "hello", you say who you are, you take turns talking, and you say "bye" before hanging up. If one person spoke French and the other only Japanese, the call would connect but nothing would be understood. Devices are the same: they must speak the same protocol.'),
     p('You will meet many protocols. Most have short names, and many end in **P** for protocol. A few you will see constantly:'),
@@ -92,12 +92,12 @@ export const START: LessonBody = {
     ),
     p('An **S** on the end of a protocol name usually means a **secure** version that uses **encryption**. Encryption scrambles the data so that only the intended receiver can unscramble and read it. Without encryption, data is sent in **plaintext** (also called clear text), and anyone who can see the packets can read them, including passwords.'),
 
-    h('Clients and servers'),
+    h('Clients and servers', { keep: 'The client asks and the server answers. A server is a role (a program listening for requests), not a special kind of box.' }),
     p('Most network conversations have two sides. The **client** asks for something and the **server** answers. Your web browser is a client. The computer that holds the website is a server.'),
     p('"Server" describes a **role**, not a special kind of box. A server is just a program that waits for requests. Waiting for requests is called **listening**. The same laptop can be a client when it browses the web and a server when it shares a folder with other computers.'),
     analogy('A restaurant. You (the client) order from the menu. The kitchen (the server) waits for orders, prepares them and sends them out. The kitchen never phones you to suggest dinner: it only responds to orders.'),
 
-    h('Local networks and the internet'),
+    h('Local networks and the internet', { keep: 'A LAN is the network in one place; the internet is millions of networks joined by routers. A switch connects devices inside a LAN, a router connects networks.' }),
     p('A **LAN** (local area network) is the network in one place: your home, an office floor, a school. Devices on the same LAN can reach each other **directly**. Two boxes usually build a LAN:'),
     list(
       'A **switch**: a box with many network sockets. Every wired device plugs into it, and it passes packets between them (lesson 6 shows how it knows where to send each one).',
@@ -122,7 +122,7 @@ export const START: LessonBody = {
 
     pbq('Try it: labels, clients and servers', START_LABELS, { intro: 'A quick check on the three labels and the two roles before you move on. Pick an answer for each line, then check.' }),
 
-    hSecure('Why every one of these ideas matters for security'),
+    hSecure('Why every one of these ideas matters for security', { keep: 'Every idea in this lesson is also something attackers abuse, which is why Security+ builds on all of it.' }),
     p('Each idea in this lesson is also something attackers abuse. You will see the defenses in later lessons, but it helps to know now why you are learning each one:'),
     table(
       ['Idea', 'What can go wrong', 'Defense in'],
@@ -135,7 +135,7 @@ export const START: LessonBody = {
       ],
     ),
 
-    h('Your path through the rest of the course'),
+    h('Your path through the rest of the course', { keep: 'Take the lessons in order: each one adds a single idea to the ones before.', optional: 'A map of the rest of the course. Skim it; there is nothing here to remember.' }),
     p('Each lesson adds one idea on top of the ones before it, so take them in order:'),
     steps(
       '**Addresses** (lesson 2): how IP and MAC addresses work, what a subnet mask is, and how a device decides whether to send a packet directly or to the router.',

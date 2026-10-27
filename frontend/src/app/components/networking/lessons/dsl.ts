@@ -2,8 +2,11 @@ import { Block, CalloutKind, PbqQuestion, QuizQuestion } from '../networking.mod
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
-export const h = (text: string): Block => ({ type: 'h', text });
-export const hSecure = (text: string): Block => ({ type: 'h', text, tone: 'secure' });
+/** Options for a part heading: what to remember from the part, and whether it can be skipped on a first read. */
+export interface PartOptions { keep?: string; optional?: string }
+
+export const h = (text: string, opts: PartOptions = {}): Block => ({ type: 'h', text, ...opts });
+export const hSecure = (text: string, opts: PartOptions = {}): Block => ({ type: 'h', text, tone: 'secure', ...opts });
 export const p = (md: string): Block => ({ type: 'p', md });
 export const list = (...items: string[]): Block => ({ type: 'list', items });
 export const steps = (...items: string[]): Block => ({ type: 'list', items, ordered: true });
@@ -19,7 +22,7 @@ export const secure = callout('secure', 'How to secure it');
 
 /** The lesson's new vocabulary up front, in plain English, so nothing is used before it is explained. */
 export const words = (...rows: [string, string][]): Block =>
-  ({ type: 'table', columns: ['Word', 'What it means'], rows, caption: 'New words in this lesson. Come back here whenever one trips you up.' });
+  ({ type: 'table', columns: ['Word', 'What it means'], rows, words: true, caption: 'New words in this lesson. Look one up when it trips you up; there is no need to learn the list.' });
 
 /** A hands-on PBQ written for the lesson. For firewall tables, `given` rows are filled in as a worked example. */
 export const pbq = (title: string, question: PbqQuestion, opts: { intro?: string; given?: number } = {}): Block =>

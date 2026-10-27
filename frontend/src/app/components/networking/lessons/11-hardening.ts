@@ -27,13 +27,13 @@ export const HARDENING: LessonBody = {
       ['Break-glass account', 'An emergency local admin account, used only when the central login server is down'],
     ),
 
-    h('What hardening means'),
+    h('What hardening means', { keep: 'Hardening shrinks the attack surface: turn off what is not needed and lock down the rest. Devices ship built for easy setup, not for security.' }),
     p('**Hardening** means making a device harder to attack by reducing its **attack surface**: turning off everything it does not need, and locking down everything it does.'),
     p('Why is it needed at all? Because devices come out of the box built to be **easy to set up**, not to be secure. They ship with **default credentials** (a username and password printed in the manual and published online), extra features switched on, unnecessary ports open, and old plaintext protocols enabled. Hardening fixes all of that, and then keeps it fixed.'),
     analogy('Moving into a new house. You change the locks, because the builder and previous owners have keys (default passwords). You brick up the doors you never use (unused services and ports). You fit an alarm (logging), and you check the windows from time to time (patching and audits).'),
     exam('Related terms to know: **attack surface**, **secure baseline** (the approved hardened settings), **least functionality** (a device runs only what it needs), **configuration drift** (a device slowly moving away from its baseline), and published hardening guides such as the **CIS Benchmarks** (free, detailed hardening guides from the Center for Internet Security) and vendors\' own guides.'),
 
-    h('A checklist that works for any device'),
+    h('A checklist that works for any device', { keep: 'For any device: change the default credentials, turn off unused services and ports, patch it, manage it only over encrypted connections, and send its logs somewhere central.' }),
     p('Whether it is a switch, router, firewall, access point, server or a smart camera, the same steps apply. Tap each item as you go; each one says what to do and why.'),
     {
       type: 'harden',
@@ -55,7 +55,7 @@ export const HARDENING: LessonBody = {
       ],
     },
 
-    h('Quick reference by device'),
+    h('Quick reference by device', { keep: 'Each kind of device adds its own steps on top of the general checklist.', optional: 'A summary of steps from earlier lessons, handy to come back to later.' }),
     p('The checklist applies everywhere. On top of it, each kind of device has its own extra steps, all explained in the earlier lessons:'),
     table(
       ['Device', 'The most important hardening steps'],
@@ -71,7 +71,7 @@ export const HARDENING: LessonBody = {
       ],
     ),
 
-    h('Hardening an SSH server'),
+    h('Hardening an SSH server', { keep: 'Lock SSH down: keys instead of passwords, no direct root login, and only modern ciphers.' }),
     p('Almost every Linux server and network device is managed over SSH, so locking down the SSH server itself is a common task and a common PBQ. On Linux its settings live in a text file, `/etc/ssh/sshd_config`, one setting (a **directive**) per line. A line starting with `#` is a comment and does nothing, so the built-in default applies. The ones to know:'),
     table(
       ['Directive', 'Hardened value', 'What it does'],
@@ -89,7 +89,7 @@ export const HARDENING: LessonBody = {
     ),
     p('About ciphers: an **AEAD** cipher (authenticated encryption) both encrypts the data and proves it was not changed on the way. The ones to choose are `chacha20-poly1305` and the AES **GCM** ciphers such as `aes256-gcm`. Avoid anything ending in **CBC**, plus `3des` and old ones such as `arcfour` and `blowfish`: they are outdated or have known weaknesses.'),
 
-    h('Words you will meet in hardening questions'),
+    h('Words you will meet in hardening questions', { keep: 'Know the words: attack surface, secure baseline, least functionality and configuration drift.' }),
     list(
       '**Break-glass account**: one local emergency admin account, kept locked away and used only when the central login server (such as TACACS+ or RADIUS) is down. Without it, a login server outage can lock everyone out of the network gear; with it, normal logins still go through the central server.',
       '**SNMPv3 security levels**: SNMPv3 can run at three levels. **noAuthNoPriv** has no login and no encryption, **authNoPriv** checks a login but sends data in plaintext, and **authPriv** both checks a login and encrypts. Hardened devices use **authPriv**.',
@@ -100,7 +100,7 @@ export const HARDENING: LessonBody = {
       '**Web shell**: a malicious script an attacker plants on a hacked web server to run commands through a web page. Strict outbound host firewall rules stop it calling home (lesson 9).',
     ),
 
-    h('Exercise: spot the weaknesses'),
+    h('Exercise: spot the weaknesses', { keep: 'Configuration PBQs ask you to find the weak lines: default passwords, plaintext protocols, needless open ports and missing logging.' }),
     p('Security+ includes **performance-based questions**: small hands-on tasks instead of multiple choice. A common one shows you a device\'s **configuration** (its settings, written as a list of commands) and asks you to find the problems. Below is part of a router\'s configuration in the style used by Cisco, the most common brand. You do not need to know the command language: each line is close to plain English, and the explanations appear when you check your answers.'),
     {
       type: 'spot',
@@ -156,7 +156,7 @@ export const HARDENING: LessonBody = {
       ],
     },
 
-    h('Keeping devices hardened over time'),
+    h('Keeping devices hardened over time', { keep: 'Hardening never finishes: compare devices with their secure baseline, keep patching, and watch for configuration drift.' }),
     p('Hardening is not done once and forgotten. Devices drift: someone opens a port "just for now", an update is missed, a factory reset brings the defaults back. These habits keep devices hardened:'),
     list(
       '**Baselines.** Write down the approved hardened settings for each kind of device (start from the CIS Benchmarks or the vendor\'s guide) and build every new device from them.',

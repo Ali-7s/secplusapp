@@ -60,6 +60,8 @@ export interface LessonRecord {
   /** Best fraction (0 to 1) reached on each PBQ in the lesson, by question id. */
   pbqs: Record<string, number>;
   completedAt?: number;
+  /** The part being read in step-by-step mode, so the lesson reopens where you stopped. */
+  part?: number;
 }
 
 export interface ProgressData {

@@ -20,7 +20,7 @@ export const WEB_REQUEST: LessonBody = {
       ['GET request', 'The message a browser sends to ask a web server for a page'],
     ),
 
-    h('The setup'),
+    h('The setup', { keep: 'The laptop already has its IP address, mask, gateway and DNS server from DHCP.' }),
     p('Here is where it all comes together. You are on a laptop at home, connected over Wi-Fi to your home router, which is a switch, a router, a NAT device and a firewall in one box (lesson 1). You type `https://www.example.com` and press Enter. Step through what happens, and watch the address and port fields in the packet change.'),
     table(
       ['Device', 'Addresses used in this walkthrough'],
@@ -36,7 +36,7 @@ export const WEB_REQUEST: LessonBody = {
     ),
     p('When the laptop joined the Wi-Fi earlier, **DHCP** already gave it an IP address, a subnet mask, a default gateway and a DNS server (lesson 8). So we start from there.'),
 
-    h('The request, step by step'),
+    h('The request, step by step', { keep: 'Loading one page uses everything so far: DNS finds the address, ARP finds the gateway, TCP connects to port 443, TLS encrypts, and NAT swaps the address on the way out.' }),
     {
       type: 'sequence',
       title: 'Loading https://www.example.com',
@@ -91,7 +91,7 @@ export const WEB_REQUEST: LessonBody = {
 
     pbq('Try it: the whole journey in order', WEB_ORDER, { intro: 'Without scrolling back up, put the whole journey in order, starting from joining the Wi-Fi.' }),
 
-    hSecure('Where could an attacker interfere, and what stops them?'),
+    hSecure('Where could an attacker interfere, and what stops them?', { keep: 'Every step has an attack and a defense from an earlier lesson. Use this table as a revision sheet.' }),
     p('Every step above is a chance for an attacker. This table lines them up with the defenses from earlier lessons. Each attack is described in plain words, with the lesson that covers it:'),
     table(
       ['Step', 'What an attacker could do', 'What stops it'],

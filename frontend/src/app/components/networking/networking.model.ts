@@ -90,11 +90,16 @@ export interface NestedLayer {
 }
 
 export type Block =
-  | { type: 'h'; text: string; tone?: 'secure' }
+  /**
+   * A heading starts a new part of the lesson. `keep` is the one or two lines worth remembering from the part,
+   * shown in a "Remember this" box at its end; `optional` marks a part that can be skipped on a first pass, and why.
+   */
+  | { type: 'h'; text: string; tone?: 'secure'; keep?: string; optional?: string }
   | { type: 'p'; md: string }
   | { type: 'list'; items: string[]; ordered?: boolean }
   | { type: 'callout'; kind: CalloutKind; title?: string; md: string }
-  | { type: 'table'; caption?: string; columns: string[]; rows: string[][]; mono?: number[] }
+  /** `words` marks the lesson's vocabulary table, shown folded away so it reads as a lookup, not a list to learn. */
+  | { type: 'table'; caption?: string; columns: string[]; rows: string[][]; mono?: number[]; words?: boolean }
   | { type: 'flow'; caption?: string; direction?: 'down' | 'right'; nodes: FlowNode[] }
   | { type: 'ports'; caption?: string; cells: PortCell[]; legend: PortLegend[] }
   | { type: 'nested'; caption?: string; layers: NestedLayer[] }
@@ -118,7 +123,10 @@ export interface LessonMeta {
   number: number;
   title: string;
   summary: string;
+  /** Estimated time for the lesson's core parts and self-check, checked against the content by a test. */
   minutes: number;
+  /** Extra time for parts marked optional, when there are any. */
+  optionalMinutes?: number;
   icon: string;
   /** Flashcards that go with the lesson. The first `focus` of them are what the lesson is mainly about. */
   related: CardRef[];

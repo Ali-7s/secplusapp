@@ -1,13 +1,15 @@
 import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, forkJoin, map, shareReplay } from 'rxjs';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
-import { CalloutKind, CardRef, Lesson } from './networking.model';
+import { Block, CalloutKind, CardRef, Lesson } from './networking.model';
 import { LESSON_META } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
+import { LessonPart, checkMinutes, lessonParts } from './lessons/parts';
 import { MdPipe } from './blocks/md.pipe';
 import { LessonQuizComponent } from './blocks/lesson-quiz.component';
 import { SequenceComponent } from './blocks/sequence.component';
@@ -21,6 +23,10 @@ import { FlowComponent, NestedBoxesComponent, PortStripComponent } from './block
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
 
+/** Step-by-step (one part at a time) or the whole lesson on one page. Remembered in this browser. */
+type LessonView = 'steps' | 'all';
+const VIEW_KEY = 'sp-lesson-view';
+
 const CALLOUT_ICONS: Record<CalloutKind, string> = {
   analogy: 'lightbulb',
   exam: 'school',
@@ -33,7 +39,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   selector: 'app-lesson',
   standalone: true,
   imports: [
-    RouterLink, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
+    RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
   ],
   templateUrl: './lesson.component.html',
@@ -56,12 +62,72 @@ export class LessonComponent {
   readonly total = LESSON_META.length;
   readonly calloutIcons = CALLOUT_ICONS;
 
+  /** The lesson split at its headings; the self-check comes after the last part. */
+  parts: LessonPart[] = [];
+  /** Index into `parts`, or `parts.length` for the self-check. */
+  step = 0;
+  /** Set when the lesson reopened partway through, to offer starting over. */
+  resumed = false;
+  view: LessonView = this.loadView();
+
   constructor() {
     inject(ActivatedRoute).paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
       this.lesson = getLesson(params.get('slug'));
+      this.parts = this.lesson ? lessonParts(this.lesson) : [];
+      const saved = this.lesson ? this.progress.lessonRecord(this.lesson.slug)?.part ?? 0 : 0;
+      this.step = Math.min(Math.max(saved, 0), this.parts.length);
+      this.resumed = this.step > 0;
       this.preview = null;
       this.scrollToTop();
     });
+  }
+
+  // ── Step-by-step reading ─────────────────────────────────────────
+
+  get onCheck(): boolean { return this.step >= this.parts.length; }
+  get part(): LessonPart | undefined { return this.parts[this.step]; }
+  get checkMinutes(): number { return this.lesson ? checkMinutes(this.lesson) : 1; }
+
+  /** Title of whatever comes after the current step, for the Next button. */
+  get nextTitle(): string {
+    const next = this.parts[this.step + 1];
+    return next ? next.title : 'Check yourself';
+  }
+
+  /** Skips the current optional part and any optional parts right after it. */
+  skipOptional() {
+    let next = this.step + 1;
+    while (this.parts[next]?.optional) next++;
+    this.goTo(next);
+  }
+
+  /** Title of the first part that is not optional after this one, for the Skip button. */
+  get afterOptionalTitle(): string {
+    let next = this.step + 1;
+    while (this.parts[next]?.optional) next++;
+    return this.parts[next]?.title ?? 'Check yourself';
+  }
+
+  goTo(step: number, scroll = true) {
+    if (!this.lesson) return;
+    this.step = Math.min(Math.max(step, 0), this.parts.length);
+    this.resumed = false;
+    this.progress.setLessonPart(this.lesson.slug, this.step);
+    this.preview = null;
+    if (scroll) this.scrollToTop();
+  }
+
+  /** Template outlets pass untyped context; these restore the types for the shared templates. */
+  blocksOf(list: unknown): Block[] { return list as Block[]; }
+  partOf(part: unknown): LessonPart { return part as LessonPart; }
+
+  setView(view: LessonView) {
+    this.view = view;
+    try { localStorage.setItem(VIEW_KEY, view); } catch { /* storage unavailable */ }
+  }
+
+  private loadView(): LessonView {
+    try { return localStorage.getItem(VIEW_KEY) === 'all' ? 'all' : 'steps'; } catch { return 'steps'; }
   }
 
   get previous() {

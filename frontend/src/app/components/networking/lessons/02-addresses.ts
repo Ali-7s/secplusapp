@@ -7,7 +7,7 @@ export const ADDRESSES: LessonBody = {
     'Tell a MAC address from an IP address and say what each is used for',
     'Explain what a subnet mask is for and use one to tell whether two addresses are on the same network',
     'Read a CIDR block such as 192.168.1.0/24',
-    'Split a network into subnets: pick the prefix, then find the network, broadcast and usable range',
+    'Optional, for a second pass: split a network into subnets and find each one\'s network, broadcast and usable range',
     'Recognize private, loopback and link-local (APIPA) addresses on sight',
     'Explain what a default gateway does',
     'Describe the main ways IPv6 differs from IPv4',
@@ -33,7 +33,7 @@ export const ADDRESSES: LessonBody = {
       ['Spoofing', 'Faking an address so traffic seems to come from somewhere else'],
     ),
 
-    h('Two addresses, two jobs'),
+    h('Two addresses, two jobs', { keep: 'MAC address: built into the network card, used only on the local network. IP address: given by the network, used to reach devices anywhere.' }),
     p('Every device on a network has **two different addresses**, and they do different jobs. This trips up almost everyone at first, so take it slowly.'),
     p('**1. The MAC address.** Every network card (NIC) has a **MAC address** set at the factory. It is 48 bits long and written as six pairs of **hexadecimal** characters (hex uses the digits 0 to 9 plus the letters a to f), like `00:1A:2B:3C:4D:5E`. It identifies that one card. MAC addresses are only used to deliver data **between devices on the same local network**.'),
     p('**2. The IP address.** A device also gets an **IP address**, such as `192.168.1.25`. This one is not built in: the network gives it to the device, usually automatically through a service called **DHCP** (lesson 8), or an administrator types it in. The IP address says **where on the network** the device sits, and it is what lets data travel **across networks and the internet**.'),
@@ -49,11 +49,11 @@ export const ADDRESSES: LessonBody = {
       ],
     ),
 
-    h('Reading an IPv4 address'),
+    h('Reading an IPv4 address', { keep: 'An IPv4 address is four numbers from 0 to 255, such as 192.168.1.25.' }),
     p('The common kind of IP address is called **IPv4** (version 4). It is four numbers separated by dots, such as `192.168.1.25`. Each number is called an **octet** and can only be 0 to 255.'),
     p('Why 0 to 255? Remember that computers store everything as **bits** (0s and 1s, like light switches). Each octet is 8 bits. Eight switches can be set in exactly 256 different on/off combinations, which give the numbers 0 to 255. Four octets make 32 bits in total.'),
 
-    h('Why an address has two parts'),
+    h('Why an address has two parts', { keep: 'An IP address has a network part and a host part. Destination on my network: deliver it directly. On another network: send it to the router (the default gateway).' }),
     p('An IP address works like a street address. Part of it says **which network** the device is on (the street), and the rest says **which device** it is on that network (the house number). These are called the **network part** and the **host part** ("host" is just another word for device).'),
     p('The split matters because of one decision every device makes before it sends anything: **is the destination on my own network?**'),
     list(
@@ -62,7 +62,7 @@ export const ADDRESSES: LessonBody = {
     ),
     analogy('Houses on the **same street** can pass a note over the fence. To reach a house on **another street**, you take it to the post office (the router) and let it deliver. To decide which to do, you only compare the **street names**, never the house numbers.'),
 
-    h('The subnet mask: where the street name ends'),
+    h('The subnet mask: where the street name ends', { keep: 'The subnet mask says how much of the address is the network: 255 means network, 0 means host.' }),
     p('Here is the problem. Looking at `192.168.1.25`, you cannot tell where the network part stops. It could be network `192.168.1` with device 25, or network `192.168` with device `1.25`. The address alone does not say.'),
     p('The **subnet mask** is a second number, set alongside the IP address on every device, that answers exactly this. Line it up under the address, octet by octet. Where the mask says **255**, that octet belongs to the **network**. Where it says **0**, that octet belongs to the **host**.'),
     table(
@@ -91,7 +91,7 @@ export const ADDRESSES: LessonBody = {
 
     pbq('Try it: directly, or through the gateway?', ADDRESS_DECISION, { intro: 'This is the decision every device makes before sending anything. Use the mask to compare the network octets.' }),
 
-    h('CIDR notation: the /24 you keep seeing'),
+    h('CIDR notation: the /24 you keep seeing', { keep: '/24 is shorthand for the mask 255.255.255.0. A bigger number after the slash means a smaller network: a /24 holds 254 devices.' }),
     p('Writing the mask in full is clumsy, so we just count how many of the 32 switches are on. **CIDR notation** (pronounced "cider") puts a slash and that count after the address. `255.255.255.0` is three octets of 8 on switches, so 24 on: `192.168.1.0/24`. It means exactly the same as the mask, just shorter.'),
     p('A **bigger** number after the slash means more of the address is network and less is host, so the network holds **fewer** devices.'),
     table(
@@ -109,7 +109,7 @@ export const ADDRESSES: LessonBody = {
     { type: 'cidr' },
     exam('Security+ itself rarely asks you to subnet; that is the Network+ exam\'s job. It does expect you to **read** `10.0.0.0/8` and `192.168.1.0/24`, know what a mask does, and know that devices in different subnets need a router or firewall between them. Practice exams sometimes go further and ask you to plan subnets, which is what the next section teaches.'),
 
-    h('Carving a network into subnets'),
+    h('Carving a network into subnets', { keep: 'Find the smallest block that fits the hosts, start each subnet on a multiple of its block size, and place the biggest first.', optional: 'Planning subnets is mostly a Network+ skill. Practice exams sometimes ask for it, so skip this on your first pass and come back once the rest of the course makes sense.' }),
     p('Sometimes you are given one network and asked to split it into smaller subnets: one for staff, one for Wi-Fi, one for servers, and so on. This is called **subnetting**, and it is how real networks are separated so a firewall can sit between the groups (lesson 7). It looks like hard maths, but it only needs one table and five steps, using nothing harder than doubling and subtracting.'),
     p('Everything here stays inside one /24, so only the **last octet** changes. That is what practice exams ask. Here is the table, which is also on the Reference Sheet to keep open while you practice:'),
     table(
@@ -136,7 +136,7 @@ export const ADDRESSES: LessonBody = {
     ),
     analogy('Packing boxes into a long shelf marked in centimeters. Each box must start on a mark that divides by its own width. Put the biggest boxes in first and every smaller box fits snugly after the one before; start with the small ones and the big ones no longer line up with their marks.'),
 
-    h('Worked example: carving up 192.168.50.0/24'),
+    h('Worked example: carving up 192.168.50.0/24', { keep: 'Each subnet starts one address after the previous broadcast, and its network address divides evenly by its block size.', optional: 'Planning subnets is mostly a Network+ skill. Practice exams sometimes ask for it, so skip this on your first pass and come back once the rest of the course makes sense.' }),
     p('A small office needs four subnets: **Office** for 60 hosts, **Lab** for 25, **Printers** for 10, and a **router link** for 2 (one address for each router). They are already sorted biggest first.'),
     list(
       '**Office (60 hosts).** A /27 gives only 30 usable, so it is a **/26** (62 usable), with a block of 64 and the mask 255.255.255.192. It is first, so it starts at **.0** and runs to .0 + 64 − 1 = **.63**. Network `.0`, broadcast `.63`, usable `.1` to `.62`, gateway `.1`.',
@@ -166,7 +166,7 @@ export const ADDRESSES: LessonBody = {
     },
     pbq('Try it: plan the subnets yourself', SUBNET_GUIDED, { intro: 'Same method, new numbers. Go one subnet at a time and use the five steps. If you get stuck, the worked example above has a subnet of each size.' }),
 
-    h('Private, public and special addresses'),
+    h('Private, public and special addresses', { keep: 'Private ranges never cross the internet: 10.x.x.x, 172.16 to 172.31, and 192.168.x.x. 127.0.0.1 means this computer; 169.254.x.x means DHCP failed.' }),
     p('Some address ranges are set aside for special uses. The most important are the **private** ranges. Anyone can use them inside their own network, but they are **never sent across the internet**. That is why millions of homes can all use `192.168.1.x` without clashing: those addresses never leave the home.'),
     p('So how does a device with a private address reach the internet? The router swaps the private address for its own **public** address on the way out, and swaps it back for the reply. This trick is called **NAT** (network address translation), and lesson 8 shows it step by step.'),
     table(
@@ -186,13 +186,13 @@ export const ADDRESSES: LessonBody = {
 
     pbq('Try it: what kind of address is this?', ADDRESS_TYPES),
 
-    h('The default gateway'),
+    h('The default gateway', { keep: 'The default gateway is the router a device sends everything bound for other networks. Local devices work but nothing beyond? Check the gateway.' }),
     p('Back to the decision every device makes. When the destination is on **another** network, the device does not try to find the way itself. It hands the packet to its **default gateway**: the router\'s address on the device\'s own subnet (often the `.1` or `.254` address). The router takes it from there.'),
     p('Every device is configured with three settings for this to work: its **IP address**, its **subnet mask** and its **default gateway**. DHCP usually hands out all three at once.'),
     analogy('The default gateway is the post office at the end of your street. Anything addressed to another street goes there, and the post office works out the rest.'),
     p('This gives you a handy troubleshooting rule. If a computer can reach devices on its own network but **nothing** beyond it, not even an internet address typed in directly, check the default gateway setting first.'),
 
-    h('IPv6 in a minute'),
+    h('IPv6 in a minute', { keep: 'IPv6 addresses are 128 bits, written in hex with colons. ::1 is loopback, fe80: is link-local, and there is no broadcast.' }),
     p('IPv4 only has about 4.3 billion addresses, which is not enough for every device on Earth. **IPv6** (version 6) is the newer version with vastly more. You will meet it less often, but you should recognize it.'),
     list(
       'IPv6 addresses are **128 bits**, written in hex with colons: `2001:db8:85a3::8a2e:370:7334`. A double colon (`::`) is shorthand for a run of zeros, and can appear once per address.',
@@ -201,7 +201,7 @@ export const ADDRESSES: LessonBody = {
       'There are so many addresses that NAT is not needed, which means devices can be reached directly from the internet. That makes a **firewall** more important, not less.',
     ),
 
-    hSecure('How to secure it: do not trust addresses'),
+    hSecure('How to secure it: do not trust addresses', { keep: 'Addresses can be faked (spoofing), so never trust an address alone: drop impossible addresses at the edge, tie devices to switch ports, and separate groups into subnets.' }),
     p('Addresses are just numbers written in a packet\'s header, and an attacker can write anything there. Faking an address is called **spoofing**. Here is how defenders cope:'),
     list(
       '**Filter impossible addresses at the edge.** A packet arriving from the internet that claims a private, loopback or your-own-network source address must be fake, so the edge router or firewall drops it. Checking incoming traffic like this is **ingress filtering**. Checking that your own outgoing traffic only uses your real addresses is **egress filtering**.',

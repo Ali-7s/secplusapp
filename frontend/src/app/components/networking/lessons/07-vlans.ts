@@ -26,7 +26,7 @@ export const VLANS: LessonBody = {
       ['NAC', 'Network access control: checking who or what a device is, and whether it is safe, before letting it on the network'],
     ),
 
-    h('What a VLAN is'),
+    h('What a VLAN is', { keep: 'A VLAN splits one switch into separate virtual networks. Devices in different VLANs need a router or firewall to reach each other.' }),
     p('Lesson 6 showed that everything plugged into a switch is one network: every device hears every broadcast, and every device can reach every other. That is a problem when the guest Wi-Fi, the security cameras and the finance team\'s PCs all hang off the same switches.'),
     p('A **VLAN** (virtual LAN) solves it. It lets you split one physical switch into several separate **virtual** switches, just by setting which VLAN each port belongs to. Devices in different VLANs cannot talk to each other directly, even when they are plugged into the same switch. As far as the devices can tell, they are on completely separate networks, and in practice each VLAN gets its own subnet (lesson 2).'),
     p('To get from one VLAN to another, traffic has to go through a router or a firewall, and that is exactly where rules can be applied about what may cross.'),
@@ -48,7 +48,7 @@ export const VLANS: LessonBody = {
       ],
     },
 
-    h('Why bother with VLANs?'),
+    h('Why bother with VLANs?', { keep: 'VLANs are the usual way to segment a network: smaller broadcast domains, and separate zones you can put rules between.' }),
     p('Splitting a network into separate zones is called **segmentation**, and VLANs are the most common way to do it. The benefits:'),
     list(
       '**Security.** An infected laptop or a guest in one VLAN cannot directly reach or listen in on another VLAN. That makes **lateral movement** (an attacker hopping from the first device they broke into on to others) much harder.',
@@ -57,7 +57,7 @@ export const VLANS: LessonBody = {
       '**Compliance.** Some rules require separation. For example, the card payment industry\'s standard (**PCI DSS**) expects systems that handle card numbers to be kept apart from everything else.',
     ),
 
-    h('Access ports and trunk ports'),
+    h('Access ports and trunk ports', { keep: 'An access port carries one VLAN to one device; a trunk carries many tagged VLANs between switches. The untagged native VLAN is VLAN 1 by default.' }),
     p('Each switch port is set up in one of two ways:'),
     table(
       ['Port type', 'Carries', 'Used for'],
@@ -69,12 +69,12 @@ export const VLANS: LessonBody = {
     p('A trunk has a problem to solve: if frames from many VLANs share one cable, how does the switch at the other end know which VLAN each frame belongs to? The answer is a small label added to each frame, called an **802.1Q tag** (802.1Q is the name of the standard). The tag holds the **VLAN ID**, a number from 1 to 4094. The receiving switch reads the tag, keeps the frame inside the right VLAN, and removes the tag before delivering it to a normal device.'),
     p('One VLAN on a trunk is allowed to travel **without** a tag. That is the **native VLAN**, and by default it is VLAN 1. Remember that: it matters for an attack below.'),
 
-    h('How VLANs talk to each other'),
+    h('How VLANs talk to each other', { keep: 'VLANs separate traffic but do not filter it. The router or firewall between them is where the rules (ACLs) go.' }),
     p('Since each VLAN is a separate network, getting from one to another needs a router, just like getting between any two networks. A router or **Layer 3 switch** (a switch that can also route, lesson 6) has a connection in each VLAN and passes traffic between them. This is called **inter-VLAN routing**.'),
     p('The important part is that this crossing point is where you control what is allowed, using an **ACL** (access control list: a list of allow and block rules) or a full firewall. For example: "staff may reach the printers, guests may reach nothing internal".'),
     exam('Know that **VLANs separate traffic but do not filter it**. Once a router joins two VLANs, everything can cross unless an ACL or firewall says otherwise.'),
 
-    h('VLAN hopping'),
+    h('VLAN hopping', { keep: 'VLAN hopping reaches another VLAN by abusing switch defaults: switch spoofing (pretending to be a trunk) or double tagging (abusing the native VLAN).' }),
     p('**VLAN hopping** is an attack that lets someone reach a VLAN they should not. There are two classic ways, and both abuse switch defaults:'),
     table(
       ['Method', 'How it works', 'The fix'],
@@ -84,7 +84,7 @@ export const VLANS: LessonBody = {
       ],
     ),
 
-    h('Segmentation: the whole family'),
+    h('Segmentation: the whole family', { keep: 'Segmentation limits how far an attacker can move after a breach. Microsegmentation, part of zero trust, separates even single workloads.' }),
     p('VLANs are one tool among several for splitting a network into zones of different trust:'),
     table(
       ['Method', 'What it is', 'Example'],
@@ -100,7 +100,7 @@ export const VLANS: LessonBody = {
 
     pbq('Try it: configure the switch ports', VLAN_CONFIG, { intro: 'A performance-based question often hands you a switch and asks you to set up each port. Here is a small one.' }),
 
-    hSecure('How to secure it: VLANs and trunks'),
+    hSecure('How to secure it: VLANs and trunks', { keep: 'Never use VLAN 1, set every port to access or trunk yourself, allow only the needed VLANs on trunks, and block traffic between VLANs by default.' }),
     {
       type: 'harden',
       title: 'Harden VLANs and trunks',
