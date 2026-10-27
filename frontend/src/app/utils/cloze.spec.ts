@@ -1,4 +1,4 @@
-import { CLOZE_BLANK as BLANK, isAcronymClozeCorrect, maskAnswer } from './cloze';
+import { CLOZE_BLANK as BLANK, answerSpans, isAcronymClozeCorrect, maskAnswer, otherCardNamed } from './cloze';
 
 describe('maskAnswer', () => {
   it('blanks the acronym wherever it appears', () => {
@@ -104,5 +104,43 @@ describe('isAcronymClozeCorrect', () => {
   it('accepts a synonym that has the same expansion', () => {
     expect(isAcronymClozeCorrect('TTPs', card('TTP'), deck)).toBeTrue();
     expect(isAcronymClozeCorrect('ttp', card('TTPs'), deck)).toBeTrue();
+  });
+});
+
+describe('answerSpans', () => {
+  it('splits the text into plain text and mentions of the answer, keeping the original wording', () => {
+    expect(answerSpans('AH is an IPsec protocol. Use an AH header.', ['AH', 'Authentication Header'])).toEqual([
+      { text: 'AH', answer: true },
+      { text: ' is an IPsec protocol. Use an ', answer: false },
+      { text: 'AH', answer: true },
+      { text: ' header.', answer: false },
+    ]);
+  });
+
+  it('keeps plurals with the name and skips upper-case look-alikes', () => {
+    expect(answerSpans('ACLs and ACLS', ['ACL'])).toEqual([
+      { text: 'ACLs', answer: true },
+      { text: ' and ACLS', answer: false },
+    ]);
+  });
+
+  it('rebuilds the original text exactly', () => {
+    const text = 'The Address Resolution Protocol (ARP) maps IPs to MACs.';
+    expect(answerSpans(text, ['ARP', 'Address Resolution Protocol']).map(s => s.text).join('')).toBe(text);
+    expect(answerSpans('', ['ARP'])).toEqual([]);
+  });
+});
+
+describe('otherCardNamed', () => {
+  const deck = [{ name: 'AH' }, { name: 'IPsec' }, { name: 'ESP' }];
+
+  it('finds the other card a wrong answer names, ignoring case and punctuation', () => {
+    expect(otherCardNamed('ip-sec', deck[0], deck, c => c.name)).toBe(deck[1]);
+  });
+
+  it('ignores the card itself, unknown answers and blank input', () => {
+    expect(otherCardNamed('AH', deck[0], deck, c => c.name)).toBeUndefined();
+    expect(otherCardNamed('nope', deck[0], deck, c => c.name)).toBeUndefined();
+    expect(otherCardNamed('  ', deck[0], deck, c => c.name)).toBeUndefined();
   });
 });

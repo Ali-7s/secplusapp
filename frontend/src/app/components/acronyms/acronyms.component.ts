@@ -15,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
-import { isAcronymClozeCorrect, maskAnswer } from '../../utils/cloze';
+import { ClozeSpan, answerSpans, isAcronymClozeCorrect, maskAnswer, otherCardNamed } from '../../utils/cloze';
 import { DumpCard, acronymToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
@@ -81,7 +81,10 @@ export class AcronymsComponent implements OnInit {
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
+  /** Another card that a wrong answer named, to explain the near miss. */
+  fcClozeNearMiss?: Acronym;
   private clozeMasks = new Map<string, string>();
+  private clozeReveals = new Map<string, ClozeSpan[]>();
 
   ngOnInit() {
     const q = this.route.snapshot.queryParamMap.get('q');
@@ -135,6 +138,7 @@ export class AcronymsComponent implements OnInit {
     this.fcClozeInput = '';
     this.fcClozeChecked = false;
     this.fcClozeCorrect = false;
+    this.fcClozeNearMiss = undefined;
   }
 
   get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
@@ -153,7 +157,6 @@ export class AcronymsComponent implements OnInit {
    * protocol..."), so the acronym and its expansion are blanked out until the answer has been checked.
    */
   clozeText(a: Acronym): string {
-    if (this.fcClozeChecked) return a.definition;
     let masked = this.clozeMasks.get(a.acronym);
     if (masked === undefined) {
       masked = maskAnswer(a.definition, [a.acronym, a.expansion]);
@@ -162,11 +165,27 @@ export class AcronymsComponent implements OnInit {
     return masked;
   }
 
+  /** The full description once checked, with the blanked words marked so it is clear where they were. */
+  clozeReveal(a: Acronym): ClozeSpan[] {
+    let spans = this.clozeReveals.get(a.acronym);
+    if (!spans) {
+      spans = answerSpans(a.definition, [a.acronym, a.expansion]);
+      this.clozeReveals.set(a.acronym, spans);
+    }
+    return spans;
+  }
+
+  /** True when the near-miss card is named in this card's description, which is usually why it was typed. */
+  nearMissMentioned(a: Acronym, other: Acronym): boolean {
+    return answerSpans(a.definition, [other.acronym, other.expansion]).some(span => span.answer);
+  }
+
   checkAcronymCloze() {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
-    this.fcClozeCorrect = isAcronymClozeCorrect(
-      this.fcClozeInput, this.deck[this.fcIndex], this.allAcronyms);
+    const card = this.deck[this.fcIndex];
+    this.fcClozeCorrect = isAcronymClozeCorrect(this.fcClozeInput, card, this.allAcronyms);
+    this.fcClozeNearMiss = this.fcClozeCorrect ? undefined : otherCardNamed(this.fcClozeInput, card, this.allAcronyms, a => a.acronym);
   }
 
   fcClozeNext(known: boolean) {

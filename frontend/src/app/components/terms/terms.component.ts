@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
-import { maskAnswer } from '../../utils/cloze';
+import { ClozeSpan, answerSpans, maskAnswer, otherCardNamed } from '../../utils/cloze';
 import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
@@ -79,7 +79,10 @@ export class TermsComponent implements OnInit {
   fcClozeInput = '';
   fcClozeChecked = false;
   fcClozeCorrect = false;
+  /** Another card that a wrong answer named, to explain the near miss. */
+  fcClozeNearMiss?: Term;
   private clozeMasks = new Map<string, string>();
+  private clozeReveals = new Map<string, ClozeSpan[]>();
 
   ngOnInit() {
     const q = this.route.snapshot.queryParamMap.get('q');
@@ -219,6 +222,7 @@ export class TermsComponent implements OnInit {
     this.fcClozeInput = '';
     this.fcClozeChecked = false;
     this.fcClozeCorrect = false;
+    this.fcClozeNearMiss = undefined;
   }
 
   get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
@@ -237,7 +241,6 @@ export class TermsComponent implements OnInit {
    * until the answer has been checked.
    */
   clozeText(t: Term, field: 'definition' | 'analogy'): string {
-    if (this.fcClozeChecked) return t[field];
     const key = `${t.term}|${field}`;
     let masked = this.clozeMasks.get(key);
     if (masked === undefined) {
@@ -247,12 +250,29 @@ export class TermsComponent implements OnInit {
     return masked;
   }
 
+  /** The full text once checked, with the blanked words marked so it is clear where they were. */
+  clozeReveal(t: Term, field: 'definition' | 'analogy'): ClozeSpan[] {
+    const key = `${t.term}|${field}`;
+    let spans = this.clozeReveals.get(key);
+    if (!spans) {
+      spans = answerSpans(t[field], [t.term]);
+      this.clozeReveals.set(key, spans);
+    }
+    return spans;
+  }
+
+  /** True when the near-miss card is named in this card's description, which is usually why it was typed. */
+  nearMissMentioned(t: Term, other: Term): boolean {
+    return answerSpans(t.definition, [other.term]).some(span => span.answer);
+  }
+
   checkTermCloze() {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
     const u = this.fcClozeInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     const a = this.deck[this.fcIndex].term.toLowerCase().replace(/[^a-z0-9]/g, '');
     this.fcClozeCorrect = u === a || a.includes(u) || u.includes(a);
+    this.fcClozeNearMiss = this.fcClozeCorrect ? undefined : otherCardNamed(this.fcClozeInput, this.deck[this.fcIndex], this.allTerms, t => t.term);
   }
 
   fcClozeNext(known: boolean) {

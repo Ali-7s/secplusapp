@@ -34,17 +34,22 @@ function inflections(answer: string): string[] {
   return forms;
 }
 
+/** A piece of a description: either ordinary text or a mention of the card's answer. */
+export interface ClozeSpan {
+  text: string;
+  answer: boolean;
+}
+
 /**
- * Replaces every mention of any of `answers` in `text` with a blank.
+ * Splits `text` into ordinary text and mentions of any of `answers`, so the mentions can be blanked out before
+ * the answer is checked and highlighted after it, showing where the blanks were.
  *
- * - Matches whole names only, ignoring case: blanking "IP" leaves "IPv4" and "description" alone.
- * - A trailing plural or possessive is blanked with the name ("ACLs", "ACL's", "Checksums").
+ * - Matches whole names only, ignoring case: "IP" leaves "IPv4" and "description" alone.
+ * - A trailing plural or possessive belongs to the name ("ACLs", "ACL's", "Checksums").
  * - Parts may be separated by a space, hyphen, slash or ampersand, or not at all.
- * - When a name and its expansion sit side by side, they collapse into one blank:
- *   "Address Resolution Protocol (ARP)" becomes "_____".
  */
-export function maskAnswer(text: string | null | undefined, answers: ReadonlyArray<string | null | undefined>): string {
-  if (!text) return '';
+export function answerSpans(text: string | null | undefined, answers: ReadonlyArray<string | null | undefined>): ClozeSpan[] {
+  if (!text) return [];
 
   const names = new Set<string>();
   for (const answer of answers) {
@@ -54,18 +59,39 @@ export function maskAnswer(text: string | null | undefined, answers: ReadonlyArr
     inflections(trimmed).forEach(form => names.add(form));
   }
 
-  // Longest first, so a full phrase is blanked before any shorter name that appears inside it.
+  // Longest first, so a full phrase is matched before any shorter name that appears inside it.
   const ordered = [...names].sort((a, b) => b.length - a.length);
 
-  let masked = text;
+  let spans: ClozeSpan[] = [{ text, answer: false }];
   for (const name of ordered) {
-    const source = `(^|[^A-Za-z0-9])(${phraseSource(name)})(s|'s|’s)?(?![A-Za-z0-9])`;
-    masked = masked.replace(new RegExp(source, 'gi'), (match, before: string, _name: string, suffix?: string) =>
-      // "ACLS" is a different word from "ACL" plus a plural "s", so only a lower-case suffix is treated as one.
-      suffix === 'S' ? match : before + CLOZE_BLANK,
-    );
+    const pattern = new RegExp(`(^|[^A-Za-z0-9])(${phraseSource(name)})(s|'s|’s)?(?![A-Za-z0-9])`, 'gi');
+    spans = spans.flatMap(span => (span.answer ? [span] : splitOn(span.text, pattern)));
   }
+  return spans.filter(span => span.text);
+}
 
+function splitOn(text: string, pattern: RegExp): ClozeSpan[] {
+  const spans: ClozeSpan[] = [];
+  let from = 0;
+  for (const match of text.matchAll(pattern)) {
+    const [whole, before, name, suffix] = match;
+    // "ACLS" is a different word from "ACL" plus a plural "s", so only a lower-case suffix is treated as one.
+    if (suffix === 'S') continue;
+    const start = match.index! + before.length;
+    spans.push({ text: text.slice(from, start), answer: false }, { text: name + (suffix ?? ''), answer: true });
+    from = match.index! + whole.length;
+  }
+  spans.push({ text: text.slice(from), answer: false });
+  return spans;
+}
+
+/**
+ * Replaces every mention of any of `answers` in `text` with a blank (see answerSpans for what counts as one).
+ * When a name and its expansion sit side by side, they collapse into one blank:
+ * "Address Resolution Protocol (ARP)" becomes "_____".
+ */
+export function maskAnswer(text: string | null | undefined, answers: ReadonlyArray<string | null | undefined>): string {
+  const masked = answerSpans(text, answers).map(span => (span.answer ? CLOZE_BLANK : span.text)).join('');
   const blank = escapeRegExp(CLOZE_BLANK);
   return masked
     .replace(new RegExp(`${blank}\\s*\\(\\s*${blank}\\s*\\)`, 'g'), CLOZE_BLANK)
@@ -78,6 +104,16 @@ interface AcronymLike {
 }
 
 const normalise = (s: string): string => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * The other card a wrong answer names, if it names one: typing "IPsec" for AH ("_____ is an IPsec protocol...")
+ * is a near miss worth explaining, since the description mentions the bigger thing the answer belongs to.
+ */
+export function otherCardNamed<T>(input: string, card: T, deck: ReadonlyArray<T>, name: (c: T) => string): T | undefined {
+  const typed = normalise(input);
+  if (!typed) return undefined;
+  return deck.find(other => other !== card && normalise(name(other)) === typed);
+}
 
 /**
  * Checks a typed answer on an acronym cloze card.

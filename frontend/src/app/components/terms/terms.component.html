@@ -94,9 +94,9 @@
           <div class="cloze-card">
             <div class="cloze-category">{{ deck[fcIndex].category }}</div>
             <div class="cloze-prompt">Name this concept:</div>
-            <div class="cloze-expansion">{{ clozeText(deck[fcIndex], 'definition') }}</div>
+            <div class="cloze-expansion">@if (fcClozeChecked) {@for (s of clozeReveal(deck[fcIndex], 'definition'); track $index) {@if (s.answer) {<mark class="cloze-fill">{{ s.text }}</mark>} @else {{{ s.text }}}}} @else {{{ clozeText(deck[fcIndex], 'definition') }}}</div>
             @if (deck[fcIndex].analogy) {
-              <div class="cloze-def-hint">💡 {{ clozeText(deck[fcIndex], 'analogy') }}</div>
+              <div class="cloze-def-hint">💡 @if (fcClozeChecked) {@for (s of clozeReveal(deck[fcIndex], 'analogy'); track $index) {@if (s.answer) {<mark class="cloze-fill">{{ s.text }}</mark>} @else {{{ s.text }}}}} @else {{{ clozeText(deck[fcIndex], 'analogy') }}}</div>
             }
           </div>
           @if (!fcClozeChecked) {
@@ -116,6 +116,16 @@
                 <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
               }
             </div>
+            @if (fcClozeNearMiss; as other) {
+              <p class="cloze-near-miss">
+                <mat-icon>info</mat-icon>
+                <span><strong>{{ other.term }}</strong> is a different card.
+                  @if (nearMissMentioned(deck[fcIndex], other)) {
+                    The description mentions it, but the blank is something else.
+                  }
+                </span>
+              </p>
+            }
             <div class="fc-controls">
               <button mat-stroked-button (click)="fcPrev()" [disabled]="fcIndex === 0">
                 <mat-icon>chevron_left</mat-icon> Prev
