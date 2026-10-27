@@ -27,6 +27,8 @@ export interface SrsCard {
   right: number;
   wrong: number;
   at: number;
+  /** When the card was first studied, for the daily pace on the Today page. Missing on early records. */
+  first?: number;
 }
 
 const MIN = 60 * 1000;
@@ -46,7 +48,7 @@ export const MATURE_DAYS = 21;
 
 /** The card after answering it with `rating` at time `now`. */
 export function schedule(card: SrsCard | undefined, rating: Rating, now: number): SrsCard {
-  const base: SrsCard = card ?? { state: 'learning', step: 0, interval: 0, ease: START_EASE, due: now, reps: 0, lapses: 0, right: 0, wrong: 0, at: now };
+  const base: SrsCard = card ?? { state: 'learning', step: 0, interval: 0, ease: START_EASE, due: now, reps: 0, lapses: 0, right: 0, wrong: 0, at: now, first: now };
   const next: SrsCard = {
     ...base,
     reps: base.reps + 1,

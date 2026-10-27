@@ -10,7 +10,8 @@ import { objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
 import {
-  ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion, isPbq,
+  ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OBJECTIVE_NAMES, OrderQuestion,
+  isPbq,
 } from '../../models/exam.model';
 import {
   EXAM_SPECS, ExamAnswer, ExamGrade, ExamItem, ExamLength, GradedQuestion, PASSING_SCALED,
@@ -29,6 +30,8 @@ interface SavedAttempt {
   items?: ExamItem[];
   answers: Record<string, ExamAnswer>;
   flagged: string[];
+  /** The objective of an objective drill. */
+  objective?: string;
   /** Questions marked "I'm guessing". Older saves lack it. */
   guessed?: string[];
   checked: string[];
@@ -88,10 +91,15 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const asked = this.route.snapshot.queryParamMap.get('length');
-    if (asked && asked in this.specs) this.length = asked as ExamLength;
+    if (asked && asked in this.specs && asked !== 'objective') this.length = asked as ExamLength;
+    const objective = this.route.snapshot.queryParamMap.get('objective');
     this.content.getPracticeExam().subscribe({
       next: pool => {
         this.pool = pool;
+        if (objective && pool.some(q => q.objective === objective)) {
+          this.focusObjective = objective;
+          this.length = 'objective';
+        }
         this.byId = new Map(pool.map(q => [q.id, q]));
         this.saved = this.loadSaved();
         this.seen = this.loadSeen();
@@ -110,11 +118,24 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   get pbqCount(): number { return this.pool.filter(isPbq).length; }
   get choiceCount(): number { return this.pool.length - this.pbqCount; }
   totalFor(length: ExamLength): number {
-    if (length !== 'weak') return examSize(length);
-    const weak = this.weakPool;
-    const pbqs = weak.filter(isPbq).length;
-    return Math.min(pbqs, this.specs.weak.pbqs) + Math.min(weak.length - pbqs, this.specs.weak.choices);
+    if (length !== 'weak' && length !== 'objective') return examSize(length);
+    const pool = length === 'weak' ? this.weakPool : this.objectivePool;
+    const pbqs = pool.filter(isPbq).length;
+    return Math.min(pbqs, this.specs[length].pbqs) + Math.min(pool.length - pbqs, this.specs[length].choices);
   }
+
+  // ── Objective drill ───────────────────────────────────────────────────
+
+  /** The objective chosen on the Objectives page (from "?objective=4.6"), or null. */
+  focusObjective: string | null = null;
+  /** The objective of the attempt in progress, when it is an objective drill. */
+  private drillObjective?: string;
+
+  get objectivePool(): ExamQuestion[] { return this.pool.filter(q => q.objective === this.focusObjective); }
+  get objectiveName(): string { return this.focusObjective ? OBJECTIVE_NAMES[this.focusObjective] ?? '' : ''; }
+
+  /** The length cards on offer: the objective drill appears only when an objective was chosen. */
+  get shownLengths(): ExamLength[] { return this.focusObjective ? ['objective', ...this.lengths] : this.lengths; }
 
   // ── Weak spots ────────────────────────────────────────────────────────
 
@@ -168,7 +189,8 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     const seed = Math.floor(Math.random() * 2 ** 31);
     this.begin({
       length: this.length, mode: this.mode, seed,
-      items: buildExam(this.length === 'weak' ? this.weakPool : this.pool, this.length, seed, this.seen),
+      items: buildExam(this.length === 'weak' ? this.weakPool : this.length === 'objective' ? this.objectivePool : this.pool, this.length, seed, this.seen),
+      objective: this.length === 'objective' ? this.focusObjective ?? undefined : undefined,
       answers: {}, flagged: [], guessed: [], checked: [],
       index: 0, deadline: this.mode === 'exam' ? Date.now() + this.specs[this.length].minutes * 60_000 : null,
     });
@@ -190,6 +212,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.items = a.items?.every(it => this.byId.has(it.id)) ? a.items : buildExam(this.pool, a.length, a.seed);
     this.answers = a.answers;
     this.flagged = new Set(a.flagged);
+    this.drillObjective = a.objective;
     this.guessed = new Set(a.guessed ?? []);
     this.checked = new Set(a.checked);
     this.index = Math.min(a.index, this.items.length - 1);
@@ -213,7 +236,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     if (this.state !== 'running') return;
     const attempt: SavedAttempt = {
       length: this.length, mode: this.mode, seed: this.seed, items: this.items, answers: this.answers, flagged: [...this.flagged],
-      guessed: [...this.guessed], checked: [...this.checked], index: this.index, deadline: this.deadline,
+      objective: this.drillObjective, guessed: [...this.guessed], checked: [...this.checked], index: this.index, deadline: this.deadline,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(attempt)); } catch { /* storage unavailable */ }
   }
@@ -363,7 +386,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
       {
         length: this.length, mode: this.mode, scaled: g.scaled, percent: Math.round(g.percent), correct: g.correctCount,
         total: this.items.length, byDomain: byDomain as Record<ExamDomain, number | null>,
-        guessedRight: this.guessedRight, knownScaled: this.knownScaled,
+        guessedRight: this.guessedRight, knownScaled: this.knownScaled, objective: this.drillObjective,
       },
       // A right answer marked as a guess is remembered as not known, so it stays in the weak spots.
       this.items.map((it, i) => ({ id: it.id, correct: g.results[i].correct && !this.guessed.has(it.id) })),

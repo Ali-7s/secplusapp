@@ -118,7 +118,7 @@
 
   .desktop-nav {
     display: flex; gap: 2px;
-    @media (max-width: 960px) { display: none; }
+    @media (max-width: 1040px) { display: none; }
     a { font-size: 13px; font-weight: 500; border-radius: 8px; padding: 4px 12px; min-width: unset; }
     mat-icon { font-size: 17px; width: 17px; height: 17px; margin-right: 4px; }
   }

@@ -33,6 +33,7 @@ export class ProgressService {
     this.update(d => {
       d.exams.push({ ...exam, at: now });
       for (const r of results) d.questions[r.id] = recordQuestion(d.questions[r.id], r.correct, now);
+      this.studied(d, now, results.length);
     });
   }
 
@@ -42,7 +43,11 @@ export class ProgressService {
    */
   recordCard(kind: CardKind, name: string, known: boolean) {
     const key = cardKey(kind, name);
-    this.update(d => { d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', Date.now()); });
+    const now = Date.now();
+    this.update(d => {
+      d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', now);
+      this.studied(d, now);
+    });
   }
 
   /** An answer in Review mode. A card seen for the first time counts toward today's new-card limit. */
@@ -55,6 +60,15 @@ export class ProgressService {
         d.review.newToday[kind]++;
       }
       d.cards[key] = schedule(d.cards[key], rating, now);
+      this.studied(d, now);
+    });
+  }
+
+  /** The exam date the Today page plans toward ("2026-12-15"), or null to clear it. */
+  setExamDate(date: string | null) {
+    this.update(d => {
+      if (date) d.plan.examDate = date;
+      else delete d.plan.examDate;
     });
   }
 
@@ -97,6 +111,7 @@ export class ProgressService {
       const l = this.lesson(d, slug);
       l.check = { score, total, at: now };
       l.completedAt ??= now;
+      this.studied(d, now, total);
     });
   }
 
@@ -105,6 +120,7 @@ export class ProgressService {
     this.update(d => {
       const l = this.lesson(d, slug);
       l.pbqs[id] = Math.max(l.pbqs[id] ?? 0, fraction);
+      this.studied(d, Date.now());
     });
   }
 
@@ -153,6 +169,14 @@ export class ProgressService {
   }
 
   // ── Internals ─────────────────────────────────────────────────────────
+
+  /** Counts study activity on today's date, keeping the last 120 days. */
+  private studied(d: ProgressData, now: number, amount = 1) {
+    const today = dayKey(now);
+    d.days[today] = (d.days[today] ?? 0) + amount;
+    const keys = Object.keys(d.days).sort();
+    for (const k of keys.slice(0, Math.max(0, keys.length - 120))) delete d.days[k];
+  }
 
   /** Starts fresh new-card counts on a new day. */
   private rollDay(d: ProgressData, now: number) {

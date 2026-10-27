@@ -1,0 +1,100 @@
+<div class="page-container objectives-page">
+  <div class="page-header">
+    <mat-icon aria-hidden="true">checklist</mat-icon>
+    <div>
+      <h1>Exam Objectives</h1>
+      <p>Every SY0-701 objective and every topic CompTIA lists under it, linked to the cards that teach it and the
+        practice questions that test it. Use it as your syllabus checklist.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="status">Loading the objectives…</p>
+  } @else if (error()) {
+    <p class="status error">The study content could not be loaded. Refresh the page to try again.</p>
+  } @else {
+    @let t = totals();
+    <section class="summary">
+      <div class="stat"><span class="v">{{ t.topics }}</span><span class="l">official topics</span></div>
+      <div class="stat"><span class="v">{{ t.covered }}</span><span class="l">have a card and practice questions</span></div>
+      <div class="stat"><span class="v">{{ t.cardOnly + t.questionOnly }}</span><span class="l">have one or the other</span></div>
+      <div class="stat you"><span class="v">{{ testedCount() }} of 28</span><span class="l">objectives you have been tested on</span></div>
+    </section>
+
+    <div class="controls">
+      <div class="domains" role="group" aria-label="Domain">
+        <button type="button" [class.on]="domain() === null" [attr.aria-pressed]="domain() === null" (click)="setDomain(null)">All</button>
+        @for (d of domains; track d) {
+          <button type="button" [class.on]="domain() === d" [attr.aria-pressed]="domain() === d" (click)="setDomain(d)"
+            [title]="domainNames[d] + ' (' + weights[d] + '% of the exam)'">
+            {{ d }}.0 <span class="w">{{ weights[d] }}%</span>
+          </button>
+        }
+      </div>
+      <label class="search">
+        <mat-icon aria-hidden="true">search</mat-icon>
+        <input type="search" placeholder="Find a topic, e.g. honeytoken" [value]="search()" (input)="onSearch($event)" aria-label="Find a topic" />
+      </label>
+    </div>
+
+    <p class="legend" aria-hidden="true">
+      Card dots: <i class="dot new"></i> not studied <i class="dot learning"></i> learning <i class="dot young"></i> studied
+      <i class="dot mature"></i> mature
+    </p>
+
+    @for (v of shown(); track v.id) {
+      @let s = stats(v);
+      <details class="obj" [open]="!!search()">
+        <summary>
+          <span class="id">{{ v.id }}</span>
+          <span class="head">
+            <span class="name">{{ v.name }}</span>
+            <span class="meta">
+              {{ v.topics }} topics · {{ v.questionCount }} practice questions ·
+              @if (s.rate !== null) { <strong [class.weak]="s.rate < 75">You: {{ s.rate }}% over {{ s.distinct }} answered</strong> }
+              @else { <span class="untested">Not tested yet</span> }
+            </span>
+          </span>
+          <span class="cardprog" [title]="s.studied + ' of ' + s.cards + ' linked cards studied'">
+            <span class="bar"><span [style.width.%]="s.cards ? (s.studied / s.cards) * 100 : 0"></span></span>
+            <span class="bl">{{ s.studied }}/{{ s.cards }} cards</span>
+          </span>
+          <mat-icon class="chev" aria-hidden="true">expand_more</mat-icon>
+        </summary>
+
+        <div class="body">
+          <p class="title">{{ v.title }}</p>
+          <div class="actions">
+            <a mat-flat-button color="primary" routerLink="/exam" [queryParams]="{ objective: v.id }">
+              <mat-icon>fitness_center</mat-icon> Practice {{ v.id }}
+            </a>
+            <span class="cards-note">{{ s.studied }} of {{ s.cards }} linked cards studied, {{ s.mature }} mature</span>
+          </div>
+
+          <ul class="rows">
+            @for (r of v.rows; track trackRow($index, r)) {
+              <li [class.heading]="!r.cov" [style.--depth]="r.depth">
+                <span class="tname">{{ r.name }}</span>
+                @if (r.cov; as c) {
+                  <span class="links">
+                    @for (card of c.cards; track card.kind + card.name) {
+                      @let st = cardState(card);
+                      <a class="chip" [routerLink]="cardLink(card)" [queryParams]="{ q: card.name }" [title]="card.name + ': ' + stateLabel(st)">
+                        <i class="dot" [class]="st"></i>{{ card.name }}
+                      </a>
+                    }
+                    <span class="qs" [class.none]="!c.questions.length">
+                      {{ c.questions.length ? c.questions.length + ' question' + (c.questions.length === 1 ? '' : 's') : 'no practice question yet' }}
+                    </span>
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      </details>
+    } @empty {
+      <p class="status">No topic matches "{{ search() }}".</p>
+    }
+  }
+</div>

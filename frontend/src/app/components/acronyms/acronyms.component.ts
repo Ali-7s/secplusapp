@@ -86,6 +86,11 @@ export class AcronymsComponent implements OnInit {
   ngOnInit() {
     const q = this.route.snapshot.queryParamMap.get('q');
     if (q) this.pendingAcronym = q;
+    // "?mode=review" (from the Today plan) opens the flashcards straight into Review mode.
+    if (this.route.snapshot.queryParamMap.get('mode') === 'review') {
+      this.flashcardMode = true;
+      this.fcMode = 'review';
+    }
     this.load();
   }
 

@@ -31,7 +31,7 @@
       }
 
       @if (lastExam; as last) {
-        <a class="last-score" routerLink="/progress">
+        <a class="last-score" routerLink="/today">
           <mat-icon aria-hidden="true">insights</mat-icon>
           <span>Last result: <strong>{{ last.scaled }}</strong> on a {{ lengthLabel(last.length) }} ({{ last.at | date: 'MMM d' }}). See your progress</span>
           <mat-icon aria-hidden="true">chevron_right</mat-icon>
@@ -40,7 +40,7 @@
 
       <h2 class="pick-title">Length</h2>
       <div class="choice-grid" role="radiogroup" aria-label="Exam length">
-        @for (l of lengths; track l) {
+        @for (l of shownLengths; track l) {
           @let spec = specs[l];
           <button class="choice-card" role="radio" [attr.aria-checked]="length === l" [class.on]="length === l" (click)="length = l"
             [disabled]="l === 'weak' && !weakReady">
@@ -48,9 +48,10 @@
             @if (l === 'weak' && !weakReady) {
               <span class="cc-sub">Unlocks after a few graded exams: the questions you miss and your weakest objectives land here.</span>
             } @else {
-              <span class="cc-sub">{{ totalFor(l) }} questions, {{ l === 'weak' ? 'up to ' : '' }}{{ spec.pbqs }} PBQs, {{ spec.minutes }} minutes</span>
+              <span class="cc-sub">{{ totalFor(l) }} questions, {{ l === 'weak' || l === 'objective' ? 'up to ' : '' }}{{ spec.pbqs }} PBQ{{ spec.pbqs === 1 ? '' : 's' }}, {{ spec.minutes }} minutes</span>
             }
             @if (l === 'weak' && weakReady) { <span class="cc-sub">Questions you last got wrong, then more from your weakest objectives ({{ weakObjectiveList }}).</span> }
+            @if (l === 'objective') { <span class="cc-sub">Objective {{ focusObjective }}: {{ objectiveName }}. Chosen on the Objectives page.</span> }
             @if (l === 'network') { <span class="cc-sub">Only the networking groundwork: subnets, ports, DHCP, DNS, ARP, VLANs, firewalls. Each question links to its lesson.</span> }
           </button>
         }

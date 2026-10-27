@@ -11,6 +11,8 @@ import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../m
 import { EXAM_SPECS, ExamLength, PASSING_SCALED } from '../../utils/exam-engine';
 import { CardRecord, ExamRecord, objectiveScores } from '../../utils/progress';
 import { isDueCard, isLearning, isMature } from '../../utils/srs';
+import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
+import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META } from '../networking/lessons/lesson-index';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -18,7 +20,8 @@ const DAY = 24 * 60 * 60 * 1000;
 interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
 
 /**
- * Everything the app remembers about your studying, in one place: exam scores over time, weak objectives and
+ * The Today page: a plan for the day toward your exam date, a readiness estimate, and below it everything the app
+ * remembers about your studying: exam scores over time, weak objectives and
  * cards, flashcard and lesson progress, plus backup, restore and reset. All of it lives in this browser.
  */
 @Component({
@@ -43,6 +46,9 @@ export class ProgressComponent implements OnInit {
   private termNames = signal<string[]>([]);
   message = signal<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
+  readonly retires = SY0_701_RETIRES;
+  readonly today = localDate(Date.now());
+
   ngOnInit() {
     forkJoin([this.content.getPracticeExam(), this.content.getAcronyms(), this.content.getTerms()]).subscribe({
       next: ([pool, acronyms, terms]) => {
@@ -52,6 +58,64 @@ export class ProgressComponent implements OnInit {
       },
       error: () => this.message.set({ kind: 'error', text: 'Some study data could not be loaded, so parts of this page may be empty.' }),
     });
+  }
+
+  // ── Today ─────────────────────────────────────────────────────────────
+
+  readonly examDate = computed(() => this.progress.data().plan.examDate ?? null);
+
+  private deckState(kind: 'acr' | 'term', names: string[], label: string, path: string): DeckState {
+    const cards = this.progress.data().cards;
+    const now = Date.now();
+    let studied = 0, due = 0;
+    for (const name of names) {
+      const c = cards[cardKey(kind, name)];
+      if (!c) continue;
+      studied++;
+      if (isDueCard(c, now)) due++;
+    }
+    return { label, path, total: names.length, studied, due, newLeftToday: Math.max(0, this.progress.newLeftToday(kind)) };
+  }
+
+  /** Objectives none of whose practice questions you have answered yet. */
+  readonly untestedObjectives = computed(() => {
+    const answered = this.progress.data().questions;
+    const tested = new Set(this.pool().filter(q => answered[q.id]).map(q => q.objective));
+    return Object.keys(OBJECTIVE_NAMES).filter(id => !tested.has(id));
+  });
+
+  readonly plan = computed<Plan | null>(() => {
+    if (!this.pool().length) return null;
+    const d = this.progress.data();
+    const next = this.lessons.find(l => !d.lessons[l.slug]?.completedAt);
+    return buildPlan({
+      now: Date.now(),
+      examDate: d.plan.examDate,
+      decks: [
+        this.deckState('acr', this.acronymNames(), 'Acronyms', '/acronyms'),
+        this.deckState('term', this.termNames(), 'Key Terms', '/terms'),
+      ],
+      newPerDay: d.review.newPerDay,
+      nextLesson: next && { slug: next.slug, number: next.number, title: next.title },
+      exams: d.exams,
+      weakObjectives: this.weakObjectives().map(o => o.objective),
+      untestedObjectives: this.untestedObjectives(),
+      missedQuestions: this.missedCount(),
+      days: d.days,
+    }, this.objectives().length, Object.keys(OBJECTIVE_NAMES).length);
+  });
+
+  setExamDate(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.progress.setExamDate(/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
+  }
+
+  clearExamDate() { this.progress.setExamDate(null); }
+
+  setNewPerDay(n: number) { this.progress.setNewPerDay(n); }
+
+  verdictLabel(v: Plan['readiness']['verdict']): string {
+    return { unknown: 'Not enough data yet', 'not-yet': 'Not ready yet', borderline: 'Borderline', ready: 'Looking ready' }[v];
   }
 
   // ── Exams ─────────────────────────────────────────────────────────────
@@ -86,6 +150,7 @@ export class ProgressComponent implements OnInit {
   });
 
   lengthLabel(e: ExamRecord): string {
+    if (e.length === 'objective' && e.objective) return `Objective ${e.objective} drill`;
     return e.length in EXAM_SPECS ? EXAM_SPECS[e.length as ExamLength].label : 'Practice exam';
   }
 

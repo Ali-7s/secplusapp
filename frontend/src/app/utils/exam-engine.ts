@@ -19,6 +19,8 @@ export const EXAM_SPECS = {
   network: { label: 'Networking drill', minutes: 30, pbqs: 2, choices: 23, networking: true },
   /** Built from the learner's history: the caller passes only the questions to draw from. */
   weak: { label: 'Weak spots', minutes: 35, pbqs: 2, choices: 28 },
+  /** One exam objective, opened from the Objectives page: the caller passes only that objective's questions. */
+  objective: { label: 'Objective drill', minutes: 25, pbqs: 1, choices: 15 },
 } satisfies Record<string, ExamSpec>;
 export type ExamLength = keyof typeof EXAM_SPECS;
 

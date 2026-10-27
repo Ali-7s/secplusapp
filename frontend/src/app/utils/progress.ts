@@ -22,6 +22,8 @@ export interface ExamRecord {
   /** Right answers marked "I'm guessing", and the scaled score with those answers taken out. */
   guessedRight?: number;
   knownScaled?: number;
+  /** The objective an objective drill covered, such as "4.6". */
+  objective?: string;
 }
 
 /** How one practice exam question has gone over time. */
@@ -46,6 +48,12 @@ export interface ReviewSettings {
 
 export const DEFAULT_NEW_PER_DAY = 20;
 
+/** The study plan: the exam date the Today page counts down to. */
+export interface StudyPlan {
+  /** Local date of the exam, "2026-12-15". */
+  examDate?: string;
+}
+
 export interface LessonRecord {
   /** The end-of-lesson self-check, last finished attempt. */
   check?: { score: number; total: number; at: number };
@@ -62,11 +70,14 @@ export interface ProgressData {
   cards: Record<string, CardRecord>;
   lessons: Record<string, LessonRecord>;
   review: ReviewSettings;
+  plan: StudyPlan;
+  /** How many things were studied on each local day ("2026-10-26": 41), for streaks. The last 120 days are kept. */
+  days: Record<string, number>;
 }
 
 const emptyReview = (): ReviewSettings => ({ newPerDay: DEFAULT_NEW_PER_DAY, day: '', newToday: { acr: 0, term: 0 } });
 
-export const emptyProgress = (): ProgressData => ({ version: 1, exams: [], questions: {}, cards: {}, lessons: {}, review: emptyReview() });
+export const emptyProgress = (): ProgressData => ({ version: 1, exams: [], questions: {}, cards: {}, lessons: {}, review: emptyReview(), plan: {}, days: {} });
 
 /** Reads stored progress, tolerating missing or older fields so a bad save never breaks the app. */
 export function parseProgress(raw: string | null): ProgressData {
@@ -80,6 +91,8 @@ export function parseProgress(raw: string | null): ProgressData {
       cards: d.cards && typeof d.cards === 'object' ? validCards(d.cards) : {},
       lessons: d.lessons && typeof d.lessons === 'object' ? d.lessons : {},
       review: { ...emptyReview(), ...(d.review && typeof d.review === 'object' ? d.review : {}) },
+      plan: d.plan && typeof d.plan === 'object' ? d.plan : {},
+      days: d.days && typeof d.days === 'object' ? d.days : {},
     };
   } catch {
     return emptyProgress();

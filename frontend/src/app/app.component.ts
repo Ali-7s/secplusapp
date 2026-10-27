@@ -39,8 +39,9 @@ export class AppComponent {
     { path: '/networking', icon: 'lan', label: 'Networking Basics', short: 'Networking' },
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary', short: 'Acronyms' },
     { path: '/terms', icon: 'menu_book', label: 'Key Terms', short: 'Key Terms' },
+    { path: '/objectives', icon: 'checklist', label: 'Exam Objectives', short: 'Objectives' },
     { path: '/reference', icon: 'table_chart', label: 'Reference Sheet', short: 'Reference' },
-    { path: '/exam', icon: 'assignment', label: 'Practice Exam', short: 'Practice Exam' },
-    { path: '/progress', icon: 'insights', label: 'Your Progress', short: 'Progress' },
+    { path: '/exam', icon: 'assignment', label: 'Practice Exam', short: 'Exam' },
+    { path: '/today', icon: 'today', label: 'Today and Progress', short: 'Today' },
   ];
 }
