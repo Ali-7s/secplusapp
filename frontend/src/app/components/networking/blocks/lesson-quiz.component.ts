@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { QuizQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
@@ -117,6 +117,8 @@ import { MdPipe } from './md.pipe';
 })
 export class LessonQuizComponent implements OnChanges {
   @Input({ required: true }) questions: QuizQuestion[] = [];
+  /** Fires once every question has an answer, so the lesson can remember the result. */
+  @Output() finished = new EventEmitter<{ score: number; total: number }>();
 
   readonly letters = ['A', 'B', 'C', 'D'];
   picked: (number | null)[] = [];
@@ -136,6 +138,7 @@ export class LessonQuizComponent implements OnChanges {
   pick(question: number, option: number) {
     if (this.picked[question] !== null) return;
     this.picked[question] = option;
+    if (this.done) this.finished.emit({ score: this.score, total: this.questions.length });
   }
 
   reset() {

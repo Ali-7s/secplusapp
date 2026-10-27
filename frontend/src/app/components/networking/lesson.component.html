@@ -13,6 +13,9 @@
           @if (coversSecurity) {
             <span class="sec"><mat-icon aria-hidden="true">shield</mat-icon> Includes how to secure it</span>
           }
+          @if (record?.completedAt) {
+            <span class="done"><mat-icon aria-hidden="true">check_circle</mat-icon> Completed · self-check {{ record?.check?.score }} of {{ record?.check?.total }}</span>
+          }
         </div>
         <div class="goals">
           <h2>After this lesson you can</h2>
@@ -108,15 +111,15 @@
             <app-spot-issues [title]="b.title" [intro]="b.intro" [lines]="b.lines" />
           }
           @case ('pbq') {
-            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [questions]="[b.question]" [given]="b.given ?? 0" />
+            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [questions]="[b.question]" [given]="b.given ?? 0" (checkedResult)="pbqChecked($event)" />
           }
           @case ('pbqs') {
-            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" />
+            <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />
           }
         }
       }
 
-      <app-lesson-quiz [questions]="l.check" />
+      <app-lesson-quiz [questions]="l.check" (finished)="checkFinished($event)" />
 
       <section class="related" aria-labelledby="related-title" #related>
         <h2 id="related-title"><mat-icon aria-hidden="true">style</mat-icon> Flashcards for this lesson</h2>

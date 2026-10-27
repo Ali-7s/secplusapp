@@ -1,0 +1,92 @@
+<div class="review">
+  <div class="bar">
+    <div class="counts" aria-label="Cards left in this session">
+      <span class="count new" [class.current]="cardQueue() === 'new'" title="New cards left today">{{ queue().newCount }}</span>
+      <span class="count learning" [class.current]="cardQueue() === 'learning'" title="Cards being learned">{{ queue().learningCount }}</span>
+      <span class="count review" [class.current]="cardQueue() === 'review'" title="Reviews due">{{ queue().reviewCount }}</span>
+    </div>
+    <span class="session">{{ reviewedThisSession() }} reviewed this session</span>
+    <button type="button" class="icon-btn" (click)="undo()" [disabled]="!canUndo()" title="Undo the last answer (Ctrl+Z)" aria-label="Undo the last answer">
+      <mat-icon>undo</mat-icon>
+    </button>
+    <button type="button" class="icon-btn" [class.on]="showSettings()" (click)="showSettings.set(!showSettings())"
+      [attr.aria-expanded]="showSettings()" title="Review settings" aria-label="Review settings">
+      <mat-icon>tune</mat-icon>
+    </button>
+  </div>
+
+  @if (showSettings()) {
+    <div class="settings">
+      <label>
+        New cards per day
+        <input type="number" min="0" max="999" [value]="progress.data().review.newPerDay" (change)="setNewPerDay($event)" />
+      </label>
+      <p>
+        Applies to each deck. New cards start on short learning steps (1 and 10 minutes); after that, each
+        Good roughly multiplies the gap before the next review by 2.5. Again sends a card back to relearning.
+      </p>
+    </div>
+  }
+
+  @let c = card();
+  @if (!cards().length) {
+    <div class="done">
+      <mat-icon aria-hidden="true">filter_alt_off</mat-icon>
+      <h3>No cards match</h3>
+      <p>Clear the search or pick another category to study in Review mode.</p>
+    </div>
+  } @else if (c) {
+    <div class="card" #card tabindex="-1" [attr.aria-label]="'Flashcard: ' + c.name">
+      <div class="front">
+        <span class="category">{{ c.category }}</span>
+        <div class="name">{{ c.name }}</div>
+        @if (cardQueue() === 'new') { <span class="badge">New {{ noun() }}</span> }
+      </div>
+
+      @if (revealed()) {
+        <hr />
+        <div class="back" role="region" aria-live="polite" aria-label="Answer">
+          @if (c.expansion) { <div class="expansion">{{ c.expansion }}</div> }
+          <p class="definition">{{ c.definition }}</p>
+          @if (c.analogy) { <p class="analogy"><strong>Think of it as:</strong> {{ c.analogy }}</p> }
+          @if (c.examContext) { <p class="exam"><strong>On the exam:</strong> {{ c.examContext }}</p> }
+        </div>
+      }
+    </div>
+
+    @if (!revealed()) {
+      <button type="button" mat-flat-button color="primary" class="show" (click)="reveal()">
+        Show answer <span class="key">Space</span>
+      </button>
+    } @else {
+      <div class="ratings" role="group" aria-label="How well did you remember it?">
+        @for (r of ratings; track r.id) {
+          <button type="button" class="rate" [class]="r.id" (click)="answer(r.id)">
+            <span class="ivl">{{ intervals()[r.id] }}</span>
+            <span class="label">{{ r.label }}</span>
+            <span class="key">{{ r.key }}</span>
+          </button>
+        }
+      </div>
+    }
+  } @else {
+    <div class="done">
+      <mat-icon aria-hidden="true">celebration</mat-icon>
+      <h3>Congratulations! You have finished this deck for now.</h3>
+      <p>
+        {{ studiedCount() }} of {{ cards().length }} {{ noun() }}s studied.
+        @if (nextDueIn(); as next) { The next card is due in {{ next }}. }
+        @if (dueTomorrow()) { {{ dueTomorrow() }} will be due within a day. }
+      </p>
+      @if (unseenCount()) {
+        <p>You have reached today's limit of {{ progress.data().review.newPerDay }} new {{ noun() }}s. {{ unseenCount() }} are still unseen.</p>
+        <div class="more">
+          <button type="button" mat-stroked-button (click)="studyMore(10)"><mat-icon>add</mat-icon> 10 more new cards</button>
+          <button type="button" mat-stroked-button (click)="studyMore(unseenCount())"><mat-icon>all_inclusive</mat-icon> All {{ unseenCount() }} new cards</button>
+        </div>
+      }
+    </div>
+  }
+
+  <p class="hint">Space shows the answer and rates Good. Keys 1 to 4 pick Again, Hard, Good or Easy. Ctrl+Z undoes.</p>
+</div>

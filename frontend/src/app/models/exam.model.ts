@@ -89,3 +89,35 @@ export const DOMAIN_NAMES: Record<ExamDomain, string> = {
 export function isPbq(q: ExamQuestion): boolean {
   return q.kind === 'firewall' || q.kind === 'match' || q.kind === 'order';
 }
+
+/** Short names for the SY0-701 exam objectives, for progress and weak-spot lists. */
+export const OBJECTIVE_NAMES: Record<string, string> = {
+  '1.1': 'Security controls',
+  '1.2': 'Fundamental security concepts',
+  '1.3': 'Change management',
+  '1.4': 'Cryptographic solutions',
+  '2.1': 'Threat actors and motivations',
+  '2.2': 'Threat vectors and attack surfaces',
+  '2.3': 'Types of vulnerabilities',
+  '2.4': 'Indicators of malicious activity',
+  '2.5': 'Mitigation techniques',
+  '3.1': 'Architecture models',
+  '3.2': 'Securing enterprise infrastructure',
+  '3.3': 'Protecting data',
+  '3.4': 'Resilience and recovery',
+  '4.1': 'Securing computing resources',
+  '4.2': 'Asset management',
+  '4.3': 'Vulnerability management',
+  '4.4': 'Alerting and monitoring',
+  '4.5': 'Enterprise security capabilities',
+  '4.6': 'Identity and access management',
+  '4.7': 'Automation and orchestration',
+  '4.8': 'Incident response',
+  '4.9': 'Data sources for investigations',
+  '5.1': 'Security governance',
+  '5.2': 'Risk management',
+  '5.3': 'Third-party risk',
+  '5.4': 'Security compliance',
+  '5.5': 'Audits and assessments',
+  '5.6': 'Security awareness',
+};

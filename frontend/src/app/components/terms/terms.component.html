@@ -62,13 +62,28 @@
 
       @if (fcMode === 'dump') {
         <app-brain-dump [cards]="dumpCards" deckId="terms" />
+      } @else if (fcMode === 'review') {
+        <app-review [cards]="dumpCards" kind="term" />
       } @else {
 
+        <div class="fc-order" role="group" aria-label="Card order">
+          <button type="button" class="order-btn" [class.on]="fcOrder === 'smart'" (click)="setFcOrder('smart')">
+            <mat-icon aria-hidden="true">auto_awesome</mat-icon> Smart order
+          </button>
+          <button type="button" class="order-btn" [class.on]="fcOrder === 'az'" (click)="setFcOrder('az')">
+            <mat-icon aria-hidden="true">sort_by_alpha</mat-icon> A to Z
+          </button>
+          <span class="order-note">
+            @if (fcOrder === 'smart') { {{ fcDueCount ? fcDueCount + ' due for review first, then new cards' : 'Nothing due: new cards first' }} }
+            @else { In alphabetical order }
+          </span>
+        </div>
+
         <div class="fc-progress-row">
-          <span>Card {{ fcIndex + 1 }} / {{ filteredTerms.length }}</span>
+          <span>Card {{ fcIndex + 1 }} / {{ deck.length }}</span>
           <span class="fc-known">{{ fcDone.size }} known</span>
           <mat-progress-bar mode="determinate"
-            [value]="(fcIndex / filteredTerms.length) * 100">
+            [value]="(fcIndex / deck.length) * 100">
           </mat-progress-bar>
           <button mat-icon-button (click)="fcReset()" matTooltip="Restart deck">
             <mat-icon>refresh</mat-icon>
@@ -77,11 +92,11 @@
 
         @if (fcClozeMode) {
           <div class="cloze-card">
-            <div class="cloze-category">{{ filteredTerms[fcIndex].category }}</div>
+            <div class="cloze-category">{{ deck[fcIndex].category }}</div>
             <div class="cloze-prompt">Name this concept:</div>
-            <div class="cloze-expansion">{{ clozeText(filteredTerms[fcIndex], 'definition') }}</div>
-            @if (filteredTerms[fcIndex].analogy) {
-              <div class="cloze-def-hint">💡 {{ clozeText(filteredTerms[fcIndex], 'analogy') }}</div>
+            <div class="cloze-expansion">{{ clozeText(deck[fcIndex], 'definition') }}</div>
+            @if (deck[fcIndex].analogy) {
+              <div class="cloze-def-hint">💡 {{ clozeText(deck[fcIndex], 'analogy') }}</div>
             }
           </div>
           @if (!fcClozeChecked) {
@@ -96,7 +111,7 @@
           } @else {
             <div class="cloze-result" [class.correct]="fcClozeCorrect" [class.wrong]="!fcClozeCorrect">
               <mat-icon>{{ fcClozeCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-              <span>{{ fcClozeCorrect ? 'Correct!' : 'Answer: ' + filteredTerms[fcIndex].term }}</span>
+              <span>{{ fcClozeCorrect ? 'Correct!' : 'Answer: ' + deck[fcIndex].term }}</span>
               @if (!fcClozeCorrect) {
                 <span class="cloze-your-answer">You wrote: "{{ fcClozeInput }}"</span>
               }
@@ -117,17 +132,17 @@
 
           <div class="flashcard" [class.flipped]="fcFlipped" (click)="fcFlip()">
             <div class="fc-front">
-              <div class="fc-category">{{ filteredTerms[fcIndex].category }}</div>
-              <div class="fc-question">{{ filteredTerms[fcIndex].term }}</div>
+              <div class="fc-category">{{ deck[fcIndex].category }}</div>
+              <div class="fc-question">{{ deck[fcIndex].term }}</div>
               <div class="fc-hint">Click to reveal answer</div>
             </div>
             <div class="fc-back">
-              <div class="fc-answer">{{ filteredTerms[fcIndex].definition }}</div>
-              @if (filteredTerms[fcIndex].analogy) {
-                <div class="fc-mnemonic">💡 {{ filteredTerms[fcIndex].analogy }}</div>
+              <div class="fc-answer">{{ deck[fcIndex].definition }}</div>
+              @if (deck[fcIndex].analogy) {
+                <div class="fc-mnemonic">💡 {{ deck[fcIndex].analogy }}</div>
               }
-              @if (filteredTerms[fcIndex].examContext) {
-                <div class="fc-tip">📋 {{ filteredTerms[fcIndex].examContext }}</div>
+              @if (deck[fcIndex].examContext) {
+                <div class="fc-tip">📋 {{ deck[fcIndex].examContext }}</div>
               }
             </div>
           </div>
@@ -148,24 +163,24 @@
                 <mat-icon>flip</mat-icon> Flip Card
               </button>
             }
-            <button mat-stroked-button [disabled]="fcIndex === filteredTerms.length - 1"
-              (click)="fcNext(false)">
+            <button mat-stroked-button [disabled]="fcIndex === deck.length - 1"
+              (click)="fcSkip()">
               Next <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
 
         }
 
-        @if (fcIndex === filteredTerms.length - 1 && (fcFlipped || (fcClozeMode && fcClozeChecked))) {
+        @if (fcIndex === deck.length - 1 && (fcFlipped || (fcClozeMode && fcClozeChecked))) {
           <div class="fc-complete">
             <mat-icon>emoji_events</mat-icon>
-            Deck complete! {{ fcDone.size }} / {{ filteredTerms.length }} marked as known.
+            Deck complete! {{ fcDone.size }} / {{ deck.length }} marked as known.
             <button mat-button color="primary" (click)="fcReset()">Restart</button>
           </div>
         }
 
         <div class="fc-dots">
-          @for (t of filteredTerms; track $index) {
+          @for (t of deck; track $index) {
             <div class="fc-dot"
               [class.active]="$index === fcIndex"
               [class.known]="fcDone.has($index)"

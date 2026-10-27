@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, forkJoin, map, shareReplay } from 'rxjs';
 import { ContentService } from '../../services/content.service';
+import { ProgressService } from '../../services/progress.service';
 import { CalloutKind, CardRef, Lesson } from './networking.model';
 import { LESSON_META } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
@@ -42,6 +43,7 @@ export class LessonComponent {
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private content = inject(ContentService);
   private router = inject(Router);
+  readonly progress = inject(ProgressService);
   @ViewChild('related') private relatedSection?: ElementRef<HTMLElement>;
 
   /** Touch screens cannot hover, so the first tap previews a card and the second opens it. */
@@ -73,6 +75,19 @@ export class LessonComponent {
   /** True when the lesson teaches how to secure something, so the list and header can say so. */
   get coversSecurity(): boolean {
     return !!this.lesson?.blocks.some(b => b.type === 'harden' || (b.type === 'callout' && b.kind === 'secure') || (b.type === 'h' && b.tone === 'secure'));
+  }
+
+  // ── Remembering how the lesson went ─────────────────────────────────
+
+  /** This lesson's saved progress: completion, self-check score and PBQs done. */
+  get record() { return this.lesson ? this.progress.lessonRecord(this.lesson.slug) : undefined; }
+
+  checkFinished(result: { score: number; total: number }) {
+    if (this.lesson) this.progress.recordLessonCheck(this.lesson.slug, result.score, result.total);
+  }
+
+  pbqChecked(result: { id: string; fraction: number }) {
+    if (this.lesson) this.progress.recordLessonPbq(this.lesson.slug, result.id, result.fraction);
   }
 
   linkFor(kind: 'acr' | 'term'): string {

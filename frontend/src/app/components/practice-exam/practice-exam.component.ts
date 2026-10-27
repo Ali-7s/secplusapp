@@ -1,10 +1,12 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { DOCUMENT, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
+import { ProgressService } from '../../services/progress.service';
+import { objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
 import {
   ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion, isPbq,
@@ -38,17 +40,18 @@ const SEEN_KEY = 'sp-exam-seen';
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule],
+  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss',
 })
 export class PracticeExamComponent implements OnInit, OnDestroy {
   private content = inject(ContentService);
+  readonly progress = inject(ProgressService);
   private document = inject(DOCUMENT);
   private route = inject(ActivatedRoute);
 
   readonly specs = EXAM_SPECS;
-  readonly lengths: ExamLength[] = ['full', 'quick', 'network'];
+  readonly lengths: ExamLength[] = ['full', 'quick', 'network', 'weak'];
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
   readonly domainNames = DOMAIN_NAMES;
   readonly passingScaled = PASSING_SCALED;
@@ -101,7 +104,40 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   get pbqCount(): number { return this.pool.filter(isPbq).length; }
   get choiceCount(): number { return this.pool.length - this.pbqCount; }
-  totalFor(length: ExamLength): number { return examSize(length); }
+  totalFor(length: ExamLength): number {
+    if (length !== 'weak') return examSize(length);
+    const weak = this.weakPool;
+    const pbqs = weak.filter(isPbq).length;
+    return Math.min(pbqs, this.specs.weak.pbqs) + Math.min(weak.length - pbqs, this.specs.weak.choices);
+  }
+
+  // ── Weak spots ────────────────────────────────────────────────────────
+
+  /** Objectives scoring under 75% across past exams, weakest first (at most six). */
+  get weakObjectives() {
+    return objectiveScores(this.progress.data().questions, id => this.byId.get(id)).filter(o => o.rate < 0.75).slice(0, 6);
+  }
+
+  /** Questions last answered wrong, plus unseen or shaky ones in the weakest objectives. */
+  get weakPool(): ExamQuestion[] {
+    const ids = weakQuestionIds(this.progress.data().questions, this.pool, this.weakObjectives.map(o => o.objective));
+    return ids.map(id => this.byId.get(id)!).filter(Boolean);
+  }
+
+  /** Enough history for a useful weak-spots exam. */
+  get weakReady(): boolean { return this.weakPool.filter(q => !isPbq(q)).length >= 5; }
+
+  get weakObjectiveList(): string { return this.weakObjectives.map(o => o.objective).join(', ') || 'questions you missed'; }
+
+  /** "full exam", "quick set" and so on, for a length saved in the history. */
+  lengthLabel(length: string): string {
+    return length in this.specs ? this.specs[length as ExamLength].label.toLowerCase() : 'practice exam';
+  }
+
+  get lastExam() {
+    const exams = this.progress.data().exams;
+    return exams.length ? exams[exams.length - 1] : null;
+  }
 
   seen: SeenCounts = {};
   get seenCount(): number { return this.pool.filter(q => this.seen[q.id]).length; }
@@ -126,7 +162,8 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   start() {
     const seed = Math.floor(Math.random() * 2 ** 31);
     this.begin({
-      length: this.length, mode: this.mode, seed, items: buildExam(this.pool, this.length, seed, this.seen),
+      length: this.length, mode: this.mode, seed,
+      items: buildExam(this.length === 'weak' ? this.weakPool : this.pool, this.length, seed, this.seen),
       answers: {}, flagged: [], checked: [],
       index: 0, deadline: this.mode === 'exam' ? Date.now() + this.specs[this.length].minutes * 60_000 : null,
     });
@@ -307,6 +344,12 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     clearInterval(this.timer);
     this.grade = gradeExam(this.pool, this.items, this.answers);
     this.recordSeen();
+    const g = this.grade;
+    const byDomain = Object.fromEntries(this.domains.map(d => [d, g.byDomain[d].max ? Math.round((g.byDomain[d].earned / g.byDomain[d].max) * 100) : null]));
+    this.progress.recordExam(
+      { length: this.length, mode: this.mode, scaled: g.scaled, percent: Math.round(g.percent), correct: g.correctCount, total: this.items.length, byDomain: byDomain as Record<ExamDomain, number | null> },
+      this.items.map((it, i) => ({ id: it.id, correct: g.results[i].correct })),
+    );
     this.state = 'result';
     this.reviewFilter = this.grade.correctCount === this.items.length ? 'all' : 'wrong';
     this.discardSaved();

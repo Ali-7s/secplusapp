@@ -34,11 +34,13 @@ export class AppComponent {
     });
   }
 
+  /** `short` is the label in the top bar on wide screens, where all six must fit; the side menu uses `label`. */
   navItems = [
-    { path: '/networking', icon: 'lan', label: 'Networking Basics' },
-    { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary' },
-    { path: '/terms', icon: 'menu_book', label: 'Key Terms' },
-    { path: '/reference', icon: 'table_chart', label: 'Reference Sheet' },
-    { path: '/exam', icon: 'assignment', label: 'Practice Exam' },
+    { path: '/networking', icon: 'lan', label: 'Networking Basics', short: 'Networking' },
+    { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary', short: 'Acronyms' },
+    { path: '/terms', icon: 'menu_book', label: 'Key Terms', short: 'Key Terms' },
+    { path: '/reference', icon: 'table_chart', label: 'Reference Sheet', short: 'Reference' },
+    { path: '/exam', icon: 'assignment', label: 'Practice Exam', short: 'Practice Exam' },
+    { path: '/progress', icon: 'insights', label: 'Your Progress', short: 'Progress' },
   ];
 }

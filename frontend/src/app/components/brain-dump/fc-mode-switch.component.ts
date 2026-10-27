@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
-export type FcMode = 'flip' | 'cloze' | 'dump';
+export type FcMode = 'flip' | 'cloze' | 'dump' | 'review';
 
 const MODES: ReadonlyArray<{ id: FcMode; label: string; icon: string; hint: string }> = [
   { id: 'flip', label: 'Flip', icon: 'flip', hint: 'See the name, then flip the card for the answer' },
   { id: 'cloze', label: 'Cloze', icon: 'edit_note', hint: 'Read a description and type the name it belongs to' },
   { id: 'dump', label: 'Brain dump', icon: 'psychology', hint: 'Explain it from memory, then check yourself' },
+  { id: 'review', label: 'Review', icon: 'event_repeat', hint: 'Spaced repetition: rate each card and it comes back just before you would forget it' },
 ];
 
-/** The three ways to study the flashcards, shared by the Acronym Glossary and Key Terms. */
+/** The four ways to study the flashcards, shared by the Acronym Glossary and Key Terms. */
 @Component({
   selector: 'app-fc-mode-switch',
   standalone: true,
@@ -41,10 +42,12 @@ const MODES: ReadonlyArray<{ id: FcMode; label: string; icon: string; hint: stri
     button:hover { color: var(--c-text); }
     button.active { background: var(--c-surface); color: var(--c-primary); box-shadow: var(--shadow-sm); }
     button:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
-    @media (max-width: 420px) {
+    @media (max-width: 520px) {
       button { gap: 4px; padding: 0 4px; font-size: 13px; }
       button mat-icon { font-size: 17px; width: 17px; height: 17px; }
     }
+    /* Four labels only fit a phone without their icons. */
+    @media (max-width: 420px) { button mat-icon { display: none; } }
     @media (prefers-reduced-motion: reduce) { button { transition: none; } }
   `],
 })

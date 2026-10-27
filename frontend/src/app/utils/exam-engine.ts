@@ -17,6 +17,8 @@ export const EXAM_SPECS = {
   full: { label: 'Full exam', minutes: 90, pbqs: 5, perDomain: { 1: 10, 2: 19, 3: 15, 4: 24, 5: 17 } },
   quick: { label: 'Quick set', minutes: 35, pbqs: 2, perDomain: { 1: 3, 2: 6, 3: 5, 4: 8, 5: 6 } },
   network: { label: 'Networking drill', minutes: 30, pbqs: 2, choices: 23, networking: true },
+  /** Built from the learner's history: the caller passes only the questions to draw from. */
+  weak: { label: 'Weak spots', minutes: 35, pbqs: 2, choices: 28 },
 } satisfies Record<string, ExamSpec>;
 export type ExamLength = keyof typeof EXAM_SPECS;
 

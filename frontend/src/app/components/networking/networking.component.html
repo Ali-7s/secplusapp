@@ -5,7 +5,7 @@
       <h1>Networking Basics</h1>
       <p>How networks work, from zero, and how to secure them. No previous knowledge needed.</p>
     </div>
-    <div class="count-badge">{{ lessons.length }} lessons · about {{ totalMinutes }} min</div>
+    <div class="count-badge">{{ doneCount }} of {{ lessons.length }} done · about {{ totalMinutes }} min</div>
   </div>
 
   <section class="intro">
@@ -27,13 +27,14 @@
   <ol class="lesson-grid">
     @for (l of lessons; track l.slug) {
       <li>
-        <a class="lesson-card" [routerLink]="['/networking', l.slug]">
-          <span class="num" aria-hidden="true">{{ l.number }}</span>
+        <a class="lesson-card" [class.completed]="done(l.slug)" [routerLink]="['/networking', l.slug]">
+          <span class="num" aria-hidden="true">@if (done(l.slug)) { <mat-icon>check</mat-icon> } @else { {{ l.number }} }</span>
           <span class="body">
             <span class="title">{{ l.title }}</span>
             <span class="summary">{{ l.summary }}</span>
             <span class="meta">
               <span><mat-icon aria-hidden="true">{{ l.icon }}</mat-icon> {{ l.minutes }} min</span>
+              @if (done(l.slug)) { <span class="done-chip">Completed</span> }
             </span>
           </span>
           <mat-icon class="go" aria-hidden="true">chevron_right</mat-icon>

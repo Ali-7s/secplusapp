@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -31,6 +31,8 @@ export class PbqPracticeComponent implements OnChanges {
   @Input() fromLesson = '';
   /** Firewall tables: pre-fill and lock this many rows as a worked example. */
   @Input() given = 0;
+  /** Fires each time an answer is checked, with the share of parts right (0 to 1). */
+  @Output() checkedResult = new EventEmitter<{ id: string; fraction: number }>();
 
   list: PbqQuestion[] = [];
   index = 0;
@@ -125,6 +127,8 @@ export class PbqPracticeComponent implements OnChanges {
   check() {
     if (this.q?.kind === 'order') this.answer.order ??= [...this.startOrder];
     this.checked = true;
+    const g = this.graded;
+    if (g && this.q) this.checkedResult.emit({ id: this.q.id, fraction: g.earned / g.max });
   }
 
   get graded(): GradedQuestion | null {

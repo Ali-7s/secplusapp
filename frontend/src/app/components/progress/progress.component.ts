@@ -1,0 +1,188 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { forkJoin } from 'rxjs';
+import { ContentService } from '../../services/content.service';
+import { ProgressService, cardKey } from '../../services/progress.service';
+import { BrainDumpStore } from '../../services/brain-dump-store.service';
+import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../models/exam.model';
+import { EXAM_SPECS, ExamLength, PASSING_SCALED } from '../../utils/exam-engine';
+import { CardRecord, ExamRecord, objectiveScores } from '../../utils/progress';
+import { isDueCard, isLearning, isMature } from '../../utils/srs';
+import { LESSON_META } from '../networking/lessons/lesson-index';
+
+const DAY = 24 * 60 * 60 * 1000;
+
+interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
+
+/**
+ * Everything the app remembers about your studying, in one place: exam scores over time, weak objectives and
+ * cards, flashcard and lesson progress, plus backup, restore and reset. All of it lives in this browser.
+ */
+@Component({
+  selector: 'app-progress',
+  standalone: true,
+  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule],
+  templateUrl: './progress.component.html',
+  styleUrl: './progress.component.scss',
+})
+export class ProgressComponent implements OnInit {
+  private content = inject(ContentService);
+  private dumpStore = inject(BrainDumpStore);
+  readonly progress = inject(ProgressService);
+
+  readonly passing = PASSING_SCALED;
+  readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
+  readonly domainNames = DOMAIN_NAMES;
+  readonly lessons = LESSON_META;
+
+  private pool = signal<ExamQuestion[]>([]);
+  private acronymNames = signal<string[]>([]);
+  private termNames = signal<string[]>([]);
+  message = signal<{ kind: 'ok' | 'error'; text: string } | null>(null);
+
+  ngOnInit() {
+    forkJoin([this.content.getPracticeExam(), this.content.getAcronyms(), this.content.getTerms()]).subscribe({
+      next: ([pool, acronyms, terms]) => {
+        this.pool.set(pool);
+        this.acronymNames.set(acronyms.map(a => a.acronym));
+        this.termNames.set(terms.map(t => t.term));
+      },
+      error: () => this.message.set({ kind: 'error', text: 'Some study data could not be loaded, so parts of this page may be empty.' }),
+    });
+  }
+
+  // ── Exams ─────────────────────────────────────────────────────────────
+
+  readonly exams = computed(() => this.progress.data().exams);
+  readonly recentExams = computed(() => [...this.exams()].reverse().slice(0, 10));
+  readonly bestScore = computed(() => Math.max(0, ...this.exams().map(e => e.scaled)));
+  /** Average of the last three scores, the best single guide to readiness. */
+  readonly recentAverage = computed(() => {
+    const last = this.exams().slice(-3);
+    return last.length ? Math.round(last.reduce((s, e) => s + e.scaled, 0) / last.length) : 0;
+  });
+
+  /** Per-domain percent averaged over the last five exams that included that domain. */
+  readonly domainAverages = computed(() => this.domains.map(d => {
+    const values = this.exams().map(e => e.byDomain[d]).filter((v): v is number => v !== null && v !== undefined).slice(-5);
+    return { domain: d, name: this.domainNames[d], value: values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null };
+  }));
+
+  /** Points for the score chart: x spread across the width, y from 100 (bottom) to 900 (top). */
+  readonly chart = computed(() => {
+    const exams = this.exams().slice(-20);
+    const w = 600, h = 200, pad = 28;
+    const x = (i: number) => exams.length === 1 ? w / 2 : pad + (i * (w - 2 * pad)) / (exams.length - 1);
+    const y = (score: number) => h - pad - ((score - 100) / 800) * (h - 2 * pad);
+    return {
+      w, h,
+      passY: y(PASSING_SCALED),
+      points: exams.map((e, i) => ({ x: x(i), y: y(e.scaled), e })),
+      line: exams.map((e, i) => `${x(i)},${y(e.scaled)}`).join(' '),
+    };
+  });
+
+  lengthLabel(e: ExamRecord): string {
+    return e.length in EXAM_SPECS ? EXAM_SPECS[e.length as ExamLength].label : 'Practice exam';
+  }
+
+  // ── Weak spots ────────────────────────────────────────────────────────
+
+  readonly objectives = computed(() => {
+    const byId = new Map(this.pool().map(q => [q.id, q]));
+    return objectiveScores(this.progress.data().questions, id => byId.get(id), 3);
+  });
+  readonly weakObjectives = computed(() => this.objectives().filter(o => o.rate < 0.75).slice(0, 8));
+  readonly answeredCount = computed(() => Object.keys(this.progress.data().questions).length);
+  readonly missedCount = computed(() => Object.values(this.progress.data().questions).filter(q => !q.last).length);
+
+  objectiveName(o: string): string { return OBJECTIVE_NAMES[o] ?? 'Objective ' + o; }
+
+  /** Glossary cards you get wrong most, for a targeted review. */
+  readonly troubleCards = computed(() => Object.entries(this.progress.data().cards)
+    .filter(([, c]) => c.wrong > 0 && !isMature(c) && (c.lapses > 0 || c.state !== 'review' || c.ease < 2.5))
+    .sort(([, a], [, b]) => b.wrong - a.wrong || a.ease - b.ease)
+    .slice(0, 16)
+    .map(([key, c]) => {
+      const [kind, ...rest] = key.split(':');
+      const name = rest.join(':');
+      return { kind, name, card: c, link: kind === 'acr' ? '/acronyms' : '/terms' };
+    }));
+
+  // ── Flashcards ────────────────────────────────────────────────────────
+
+  readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames(), 'acronyms'));
+  readonly termStats = computed(() => this.deckStats('term', this.termNames(), 'terms'));
+
+  private deckStats(kind: 'acr' | 'term', names: string[], deck: 'acronyms' | 'terms'): DeckStats {
+    const cards = this.progress.data().cards;
+    const now = Date.now();
+    let studied = 0, learning = 0, young = 0, mature = 0, due = 0;
+    for (const name of names) {
+      const c: CardRecord | undefined = cards[cardKey(kind, name)];
+      if (!c) continue;
+      studied++;
+      if (isLearning(c)) learning++;
+      else if (isMature(c)) mature++;
+      else young++;
+      if (isDueCard(c, now)) due++;
+    }
+    const dump = { nailed: 0, partly: 0, missed: 0 };
+    for (const r of this.dumpStore.load(deck).values()) dump[r]++;
+    return { total: names.length, studied, learning, young, mature, due, dump };
+  }
+
+  pct(part: number, whole: number): number { return whole ? Math.round((part / whole) * 100) : 0; }
+
+  // ── Lessons ───────────────────────────────────────────────────────────
+
+  lessonRecord(slug: string) { return this.progress.lessonRecord(slug); }
+  readonly lessonsDone = computed(() => {
+    this.progress.data();
+    return this.lessons.filter(l => this.progress.lessonRecord(l.slug)?.completedAt).length;
+  });
+  pbqCount(slug: string): number { return Object.keys(this.progress.lessonRecord(slug)?.pbqs ?? {}).length; }
+
+  // ── Backup, restore and reset ─────────────────────────────────────────
+
+  /** Remind to back up when there is progress and no backup in the last week. */
+  readonly backupDue = computed(() => {
+    const last = this.progress.lastBackup();
+    return this.progress.hasProgress() && (!last || Date.now() - last > 7 * DAY);
+  });
+
+  exportFile() {
+    const { name, text } = this.progress.exportBackup();
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.message.set({ kind: 'ok', text: `Saved ${name} to your downloads. Keep it somewhere safe, such as cloud storage.` });
+  }
+
+  async importFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (this.progress.hasProgress() && !confirm('Restoring this backup replaces the progress saved in this browser. Continue?')) return;
+    const error = this.progress.importBackup(await file.text());
+    if (error) {
+      this.message.set({ kind: 'error', text: error });
+      return;
+    }
+    // Reload so every page (exam rotation, brain dump, theme) reads the restored data.
+    location.reload();
+  }
+
+  reset() {
+    if (!confirm('This deletes all saved progress in this browser: exam history, flashcard progress, lesson progress and brain dump ratings. Export a backup first if you might want it back. Delete everything?')) return;
+    this.progress.resetAll();
+    location.reload();
+  }
+}

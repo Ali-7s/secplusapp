@@ -42,7 +42,7 @@
       <nav class="desktop-nav" aria-label="Primary">
         @for (item of navItems; track item.path) {
           <a mat-button [routerLink]="item.path" routerLinkActive="active-nav">
-            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon> {{ item.label }}
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon> {{ item.short }}
           </a>
         }
       </nav>

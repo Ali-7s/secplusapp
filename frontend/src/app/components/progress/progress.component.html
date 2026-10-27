@@ -1,0 +1,181 @@
+<div class="page-container progress-page">
+  <div class="page-header">
+    <mat-icon aria-hidden="true">insights</mat-icon>
+    <div>
+      <h1>Your Progress</h1>
+      <p>Everything the app remembers about your studying. It is saved in this browser only, so export a backup now and then.</p>
+    </div>
+  </div>
+
+  @if (message(); as m) {
+    <div class="message" [class.error]="m.kind === 'error'" role="status">
+      <mat-icon aria-hidden="true">{{ m.kind === 'error' ? 'error' : 'check_circle' }}</mat-icon>
+      <span>{{ m.text }}</span>
+      <button mat-icon-button (click)="message.set(null)" aria-label="Dismiss"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+
+  @if (!progress.hasProgress()) {
+    <section class="card empty">
+      <mat-icon aria-hidden="true">trending_up</mat-icon>
+      <h2>Nothing here yet</h2>
+      <p>Your progress fills in as you study: take a <a routerLink="/exam">practice exam</a>, rate some
+        <a routerLink="/acronyms">flashcards</a>, or finish a <a routerLink="/networking">Networking Basics</a> lesson.
+        If you have a backup file from before, restore it below.</p>
+    </section>
+  }
+
+  <!-- ── Exams ─────────────────────────────────────────────────────────── -->
+  @if (exams().length) {
+    <section class="card">
+      <h2><mat-icon aria-hidden="true">assignment</mat-icon> Practice exams</h2>
+      <div class="stats">
+        <div class="stat"><span class="v">{{ exams().length }}</span><span class="l">exams graded</span></div>
+        <div class="stat" [class.pass]="recentAverage() >= passing"><span class="v">{{ recentAverage() }}</span><span class="l">average of the last 3</span></div>
+        <div class="stat" [class.pass]="bestScore() >= passing"><span class="v">{{ bestScore() }}</span><span class="l">best score</span></div>
+        <div class="stat"><span class="v">{{ passing }}</span><span class="l">needed to pass</span></div>
+      </div>
+
+      @let c = chart();
+      <figure class="chart">
+        <svg [attr.viewBox]="'0 0 ' + c.w + ' ' + c.h" role="img" aria-label="Scaled score of each exam, oldest to newest, with the 750 pass line">
+          <line class="pass-line" x1="20" [attr.y1]="c.passY" [attr.x2]="c.w - 20" [attr.y2]="c.passY" />
+          <text class="pass-label" [attr.x]="c.w - 22" [attr.y]="c.passY - 6" text-anchor="end">750 to pass</text>
+          @if (c.points.length > 1) { <polyline class="score-line" [attr.points]="c.line" /> }
+          @for (pt of c.points; track $index) {
+            <circle class="dot" [class.ok]="pt.e.scaled >= passing" [attr.cx]="pt.x" [attr.cy]="pt.y" r="5">
+              <title>{{ pt.e.scaled }} on {{ pt.e.at | date: 'MMM d' }}</title>
+            </circle>
+          }
+        </svg>
+        <figcaption>Scaled score of each graded exam, oldest on the left (last 20 shown).</figcaption>
+      </figure>
+
+      <h3>By domain <span class="sub">(average of your last five exams)</span></h3>
+      <div class="bars">
+        @for (d of domainAverages(); track d.domain) {
+          <div class="bar-row">
+            <span class="bar-name">{{ d.domain }}. {{ d.name }}</span>
+            <span class="bar"><span [style.width.%]="d.value ?? 0" [class.weak]="(d.value ?? 0) < 75"></span></span>
+            <span class="bar-val">{{ d.value === null ? 'none yet' : d.value + '%' }}</span>
+          </div>
+        }
+      </div>
+
+      <h3>Recent exams</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Score</th><th class="wide-only">Fully correct</th></tr></thead>
+          <tbody>
+            @for (e of recentExams(); track e.at) {
+              <tr>
+                <td>{{ e.at | date: 'MMM d, h:mm a' }}</td>
+                <td>{{ lengthLabel(e) }}{{ e.mode === 'study' ? ' (study)' : '' }}</td>
+                <td><span class="score" [class.pass]="e.scaled >= passing">{{ e.scaled }}</span></td>
+                <td class="wide-only">{{ e.correct }} of {{ e.total }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- ── Weak spots ────────────────────────────────────────────────────── -->
+  @if (answeredCount() || troubleCards().length) {
+    <section class="card">
+      <h2><mat-icon aria-hidden="true">track_changes</mat-icon> Weak spots</h2>
+      @if (answeredCount()) {
+        <p class="note">From {{ answeredCount() }} different exam questions you have answered. {{ missedCount() }} were wrong the last time you saw them.</p>
+        @if (weakObjectives().length) {
+          <ul class="weak-list">
+            @for (o of weakObjectives(); track o.objective) {
+              <li>
+                <span class="obj">{{ o.objective }}</span>
+                <span class="obj-name">{{ objectiveName(o.objective) }}</span>
+                <span class="bar small"><span [style.width.%]="o.rate * 100" class="weak"></span></span>
+                <span class="bar-val">{{ (o.rate * 100).toFixed(0) }}% of {{ o.seen }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="note">No weak objectives yet: everything you have answered at least three times is at 75% or better.</p>
+        }
+        <a mat-flat-button color="primary" routerLink="/exam" [queryParams]="{ length: 'weak' }">
+          <mat-icon>fitness_center</mat-icon> Practice my weak spots
+        </a>
+      }
+
+      @if (troubleCards().length) {
+        <h3>Glossary cards you keep missing</h3>
+        <div class="chips">
+          @for (t of troubleCards(); track t.kind + t.name) {
+            <a class="chip" [routerLink]="t.link" [queryParams]="{ q: t.name }">{{ t.name }} <span class="miss">×{{ t.card.wrong }}</span></a>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ── Flashcards ────────────────────────────────────────────────────── -->
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">style</mat-icon> Flashcards</h2>
+    <p class="note">Every way of studying a card (Review mode, flip and cloze ratings, Quick Checks) feeds one spaced repetition
+      schedule. "Learning" cards are still on their short steps, "young" ones are reviewed less
+      than three weeks apart, and "mature" ones three weeks or more. "Due" cards are ready in Review mode.</p>
+    <div class="decks">
+      @for (d of [{ label: 'Acronyms', link: '/acronyms', s: acronymStats() }, { label: 'Key Terms', link: '/terms', s: termStats() }]; track d.label) {
+        <a class="deck" [routerLink]="d.link">
+          <div class="deck-title">{{ d.label }}</div>
+          <div class="bar"><span [style.width.%]="pct(d.s.studied, d.s.total)"></span></div>
+          <div class="deck-line"><strong>{{ d.s.studied }}</strong> of {{ d.s.total }} studied · <strong>{{ d.s.due }}</strong> due now</div>
+          <div class="deck-line">{{ d.s.learning }} learning · {{ d.s.young }} young · {{ d.s.mature }} mature</div>
+          @if (d.s.dump.nailed + d.s.dump.partly + d.s.dump.missed) {
+            <div class="deck-line">Brain dump: {{ d.s.dump.nailed }} nailed, {{ d.s.dump.partly }} partly, {{ d.s.dump.missed }} missed</div>
+          }
+        </a>
+      }
+    </div>
+  </section>
+
+  <!-- ── Lessons ───────────────────────────────────────────────────────── -->
+  <section class="card">
+    <h2><mat-icon aria-hidden="true">lan</mat-icon> Networking Basics <span class="sub">{{ lessonsDone() }} of {{ lessons.length }} done</span></h2>
+    <ol class="lesson-list">
+      @for (l of lessons; track l.slug) {
+        @let r = lessonRecord(l.slug);
+        <li [class.done]="r?.completedAt">
+          <mat-icon aria-hidden="true">{{ r?.completedAt ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          <a [routerLink]="['/networking', l.slug]">{{ l.number }}. {{ l.title }}</a>
+          <span class="lesson-meta">
+            @if (r?.check) { Self-check {{ r?.check?.score }} of {{ r?.check?.total }} }
+            @if (pbqCount(l.slug)) { · {{ pbqCount(l.slug) }} PBQ{{ pbqCount(l.slug) === 1 ? '' : 's' }} done }
+          </span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <!-- ── Backup ────────────────────────────────────────────────────────── -->
+  <section class="card backup" [class.nudge]="backupDue()">
+    <h2><mat-icon aria-hidden="true">save</mat-icon> Backup and restore</h2>
+    <p class="note">
+      Your progress lives in this browser. Clearing your browsing data, or using another browser or computer, starts
+      from zero. A backup file keeps it safe and lets you move it.
+      @if (progress.lastBackup(); as last) { Last backup: <strong>{{ last | date: 'MMM d, y' }}</strong>. }
+      @else if (progress.hasProgress()) { <strong>You have not made a backup yet.</strong> }
+    </p>
+    <div class="actions">
+      <button mat-flat-button color="primary" (click)="exportFile()" [disabled]="!progress.hasProgress()">
+        <mat-icon>download</mat-icon> Export backup
+      </button>
+      <label class="file-btn">
+        <input type="file" accept="application/json,.json" (change)="importFile($event)" />
+        <mat-icon aria-hidden="true">upload</mat-icon> Restore from a backup
+      </label>
+      <button mat-button color="warn" (click)="reset()" [disabled]="!progress.hasProgress()">
+        <mat-icon>delete_forever</mat-icon> Reset all progress
+      </button>
+    </div>
+  </section>
+</div>

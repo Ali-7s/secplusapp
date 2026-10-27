@@ -20,15 +20,18 @@ import { DumpCard, acronymToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
+import { ReviewComponent } from '../review/review.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
+import { ProgressService, cardKey } from '../../services/progress.service';
+import { isDue, smartOrder } from '../../utils/progress';
 
 @Component({
   selector: 'app-acronyms',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, FcModeSwitchComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
@@ -54,6 +57,12 @@ export class AcronymsComponent implements OnInit {
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
+
+  private progress = inject(ProgressService);
+
+  /** The flashcard deck: the filtered cards in smart order (due and struggling first) or A to Z. */
+  deck: Acronym[] = [];
+  fcOrder: 'smart' | 'az' = 'smart';
 
   // Carousel state
   fcIndex = 0;
@@ -102,6 +111,7 @@ export class AcronymsComponent implements OnInit {
     if (this.expandedAcronym && !this.filteredAcronyms.some(a => a.acronym === this.expandedAcronym)) {
       this.expandedAcronym = null;
     }
+    this.buildDeck();
     this.dumpCards = this.filteredAcronyms.map(acronymToDumpCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
@@ -122,7 +132,10 @@ export class AcronymsComponent implements OnInit {
   get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
 
   setFcMode(mode: FcMode) {
+    // Review answers reschedule cards, so smart order starts over with the new due dates.
+    const fromReview = this.fcMode === 'review' && mode !== 'review';
     this.fcMode = mode;
+    if (fromReview) this.fcReset();
     this.fcFlipped = false;
     this.fcClozeReset();
   }
@@ -145,23 +158,25 @@ export class AcronymsComponent implements OnInit {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
     this.fcClozeCorrect = isAcronymClozeCorrect(
-      this.fcClozeInput, this.filteredAcronyms[this.fcIndex], this.allAcronyms);
+      this.fcClozeInput, this.deck[this.fcIndex], this.allAcronyms);
   }
 
   fcClozeNext(known: boolean) {
+    this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcClozeReset();
-    if (this.fcIndex < this.filteredAcronyms.length - 1) this.fcIndex++;
+    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 
   fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; this.fcClozeReset(); }
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
+    this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
     this.fcClozeReset();
-    if (this.fcIndex < this.filteredAcronyms.length - 1) {
+    if (this.fcIndex < this.deck.length - 1) {
       this.fcIndex++;
     }
   }
@@ -171,14 +186,44 @@ export class AcronymsComponent implements OnInit {
   }
 
   fcReset() {
+    this.buildDeck();
     this.fcIndex = 0;
     this.fcFlipped = false;
     this.fcDone.clear();
     this.fcClozeReset();
   }
 
+  /** Moves on without rating the card (the Next button). */
+  fcSkip() {
+    this.fcFlipped = false;
+    this.fcClozeReset();
+    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
+  }
+
+  setFcOrder(order: 'smart' | 'az') {
+    this.fcOrder = order;
+    this.fcReset();
+  }
+
+  /** Cards in the current deck that are due for review today. */
+  get fcDueCount(): number {
+    const now = Date.now();
+    return this.deck.filter(a => isDue(this.progress.card('acr', a.acronym), now)).length;
+  }
+
+  private buildDeck() {
+    this.deck = this.fcOrder === 'smart'
+      ? smartOrder(this.filteredAcronyms, a => cardKey('acr', a.acronym), this.progress.data().cards, Date.now())
+      : [...this.filteredAcronyms];
+  }
+
+  private rememberCard(known: boolean) {
+    const card = this.deck[this.fcIndex];
+    if (card) this.progress.recordCard('acr', card.acronym, known);
+  }
+
   get fcDeckComplete(): boolean {
-    return this.fcIndex === this.filteredAcronyms.length - 1 && this.fcFlipped;
+    return this.fcIndex === this.deck.length - 1 && this.fcFlipped;
   }
 
   toggleExpand(acronym: Acronym, event: MouseEvent) {
@@ -214,9 +259,10 @@ export class AcronymsComponent implements OnInit {
 
   selectQuizOption(acronym: string, letter: string, event: MouseEvent) {
     event.stopPropagation();
-    if (!this.quizSelected.has(acronym)) {
-      this.quizSelected.set(acronym, letter);
-    }
+    if (this.quizSelected.has(acronym)) return;
+    this.quizSelected.set(acronym, letter);
+    const answer = this.cardDetails.get(acronym)?.quizAnswer;
+    if (answer) this.progress.recordCard('acr', acronym, letter === answer);
   }
 
   isQuizCorrect(acronym: string): boolean {

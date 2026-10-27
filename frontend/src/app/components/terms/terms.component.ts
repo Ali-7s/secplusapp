@@ -19,15 +19,18 @@ import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
+import { ReviewComponent } from '../review/review.component';
 import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
+import { ProgressService, cardKey } from '../../services/progress.service';
+import { isDue, smartOrder } from '../../utils/progress';
 
 @Component({
   selector: 'app-terms',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, FcModeSwitchComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent],
   templateUrl: './terms.component.html',
   styleUrl: './terms.component.scss'
 })
@@ -52,6 +55,12 @@ export class TermsComponent implements OnInit {
   loadingDetails = new Set<string>();
   detailErrors = new Set<string>();
   quizSelected = new Map<string, string>();
+
+  private progress = inject(ProgressService);
+
+  /** The flashcard deck: the filtered cards in smart order (due and struggling first) or A to Z. */
+  deck: Term[] = [];
+  fcOrder: 'smart' | 'az' = 'smart';
 
   // Carousel state
   fcIndex = 0;
@@ -104,6 +113,7 @@ export class TermsComponent implements OnInit {
     if (this.expandedTerm && !this.filteredTerms.some(t => t.term === this.expandedTerm)) {
       this.expandedTerm = null;
     }
+    this.buildDeck();
     this.dumpCards = this.filteredTerms.map(termToDumpCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
@@ -145,7 +155,10 @@ export class TermsComponent implements OnInit {
 
   selectQuizOption(term: string, letter: string, event: MouseEvent) {
     event.stopPropagation();
-    if (!this.quizSelected.has(term)) this.quizSelected.set(term, letter);
+    if (this.quizSelected.has(term)) return;
+    this.quizSelected.set(term, letter);
+    const answer = this.cardDetails.get(term)?.quizAnswer;
+    if (answer) this.progress.recordCard('term', term, letter === answer);
   }
 
   isQuizCorrect(term: string): boolean {
@@ -198,7 +211,10 @@ export class TermsComponent implements OnInit {
   get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
 
   setFcMode(mode: FcMode) {
+    // Review answers reschedule cards, so smart order starts over with the new due dates.
+    const fromReview = this.fcMode === 'review' && mode !== 'review';
     this.fcMode = mode;
+    if (fromReview) this.fcReset();
     this.fcFlipped = false;
     this.fcClozeReset();
   }
@@ -222,14 +238,15 @@ export class TermsComponent implements OnInit {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
     const u = this.fcClozeInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const a = this.filteredTerms[this.fcIndex].term.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const a = this.deck[this.fcIndex].term.toLowerCase().replace(/[^a-z0-9]/g, '');
     this.fcClozeCorrect = u === a || a.includes(u) || u.includes(a);
   }
 
   fcClozeNext(known: boolean) {
+    this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcClozeReset();
-    if (this.fcIndex < this.filteredTerms.length - 1) this.fcIndex++;
+    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 
   // Carousel
@@ -237,15 +254,51 @@ export class TermsComponent implements OnInit {
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
+    this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
     this.fcClozeReset();
-    if (this.fcIndex < this.filteredTerms.length - 1) this.fcIndex++;
+    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 
   fcPrev() {
     if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; this.fcClozeReset(); }
   }
 
-  fcReset() { this.fcIndex = 0; this.fcFlipped = false; this.fcDone.clear(); this.fcClozeReset(); }
+  fcReset() {
+    this.buildDeck();
+    this.fcIndex = 0;
+    this.fcFlipped = false;
+    this.fcDone.clear();
+    this.fcClozeReset();
+  }
+
+  /** Moves on without rating the card (the Next button). */
+  fcSkip() {
+    this.fcFlipped = false;
+    this.fcClozeReset();
+    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
+  }
+
+  setFcOrder(order: 'smart' | 'az') {
+    this.fcOrder = order;
+    this.fcReset();
+  }
+
+  /** Cards in the current deck that are due for review today. */
+  get fcDueCount(): number {
+    const now = Date.now();
+    return this.deck.filter(t => isDue(this.progress.card('term', t.term), now)).length;
+  }
+
+  private buildDeck() {
+    this.deck = this.fcOrder === 'smart'
+      ? smartOrder(this.filteredTerms, t => cardKey('term', t.term), this.progress.data().cards, Date.now())
+      : [...this.filteredTerms];
+  }
+
+  private rememberCard(known: boolean) {
+    const card = this.deck[this.fcIndex];
+    if (card) this.progress.recordCard('term', card.term, known);
+  }
 }
