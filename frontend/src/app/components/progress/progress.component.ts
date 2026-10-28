@@ -17,14 +17,12 @@ import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META } from '../networking/lessons/lesson-index';
 
-const DAY = 24 * 60 * 60 * 1000;
-
 interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
 
 /**
  * The Today page: a plan for the day toward your exam date, a readiness estimate, and below it everything the app
  * remembers about your studying: exam scores over time, weak objectives and
- * cards, flashcard and lesson progress, plus backup, restore and reset. All of it lives in this browser.
+ * cards, flashcard and lesson progress, plus sync between devices and reset.
  */
 @Component({
   selector: 'app-progress',
@@ -214,43 +212,11 @@ export class ProgressComponent implements OnInit {
   });
   pbqCount(slug: string): number { return Object.keys(this.progress.lessonRecord(slug)?.pbqs ?? {}).length; }
 
-  // ── Backup, restore and reset ─────────────────────────────────────────
-
-  /** Remind to back up when there is progress and no backup in the last week. */
-  readonly backupDue = computed(() => {
-    const last = this.progress.lastBackup();
-    return this.progress.hasProgress() && (!last || Date.now() - last > 7 * DAY);
-  });
-
-  exportFile() {
-    const { name, text } = this.progress.exportBackup();
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    this.message.set({ kind: 'ok', text: `Saved ${name} to your downloads. Keep it somewhere safe, such as cloud storage.` });
-  }
-
-  async importFile(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) return;
-    if (this.progress.hasProgress() && !confirm('Restoring this backup replaces the progress saved in this browser. Continue?')) return;
-    const error = this.progress.importBackup(await file.text());
-    if (error) {
-      this.message.set({ kind: 'error', text: error });
-      return;
-    }
-    // Reload so every page (exam rotation, brain dump, theme) reads the restored data.
-    location.reload();
-  }
+  // ── Reset ─────────────────────────────────────────────────────────────
 
   reset() {
     const where = this.sync.code() ? 'on every device you sync with' : 'in this browser';
-    if (!confirm(`This deletes all saved progress ${where}: exam history, flashcard progress, lesson progress and brain dump ratings. Export a backup first if you might want it back. Delete everything?`)) return;
+    if (!confirm(`This deletes all saved progress ${where}: exam history, flashcard progress, lesson progress and brain dump ratings. This cannot be undone. Delete everything?`)) return;
     if (this.sync.code()) {
       this.progress.resetAll();
       void this.sync.syncNow().then(() => location.reload());

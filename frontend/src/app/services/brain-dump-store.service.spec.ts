@@ -3,14 +3,21 @@ import { BrainDumpStore } from './brain-dump-store.service';
 
 describe('BrainDumpStore', () => {
   const KEY = 'sp-braindump';
+  const TIMES = 'sp-braindump-times';
   let store: BrainDumpStore;
+  const rateAll = (deck: 'acronyms' | 'terms', ratings: [string, 'missed' | 'partly' | 'nailed'][]) =>
+    ratings.forEach(([id, r]) => store.rate(deck, id, r));
 
   beforeEach(() => {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(TIMES);
     store = TestBed.inject(BrainDumpStore);
   });
 
-  afterEach(() => localStorage.removeItem(KEY));
+  afterEach(() => {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(TIMES);
+  });
 
   it('starts empty', () => {
     expect(store.load('acronyms').size).toBe(0);
@@ -24,20 +31,38 @@ describe('BrainDumpStore', () => {
   });
 
   it('remembers ratings between loads', () => {
-    store.save('acronyms', new Map([['ACL', 'nailed'], ['AES', 'missed']]));
+    rateAll('acronyms', [['ACL', 'nailed'], ['AES', 'missed']]);
     expect([...store.load('acronyms')]).toEqual([['ACL', 'nailed'], ['AES', 'missed']]);
   });
 
+  it('dates every rating and every clear, for sync', () => {
+    store.rate('acronyms', 'ACL', 'nailed');
+    const before = store.forSync();
+    expect(before.ratings).toEqual({ acronyms: { ACL: 'nailed' } });
+    expect(before.times['acronyms']?.cards['ACL']).toBeGreaterThan(0);
+    store.clear('acronyms');
+    const after = store.forSync();
+    expect(after.ratings).toEqual({ acronyms: {} });
+    expect(after.times['acronyms']?.cleared).toBeGreaterThan(0);
+  });
+
+  it('adds a rating on top of ratings that arrived from another device', () => {
+    store.rate('acronyms', 'ACL', 'nailed');
+    store.replaceFromSync({ ratings: { acronyms: { ACL: 'nailed', AES: 'partly' } }, times: { acronyms: { cards: { ACL: 1, AES: 2 } } } });
+    store.rate('acronyms', 'DNS', 'missed');
+    expect([...store.load('acronyms')].sort()).toEqual([['ACL', 'nailed'], ['AES', 'partly'], ['DNS', 'missed']]);
+  });
+
   it('keeps acronyms and key terms apart', () => {
-    store.save('acronyms', new Map([['ACL', 'nailed']]));
-    store.save('terms', new Map([['Hashing', 'partly']]));
+    store.rate('acronyms', 'ACL', 'nailed');
+    store.rate('terms', 'Hashing', 'partly');
     expect([...store.load('acronyms')]).toEqual([['ACL', 'nailed']]);
     expect([...store.load('terms')]).toEqual([['Hashing', 'partly']]);
   });
 
   it('clears one deck without touching the other', () => {
-    store.save('acronyms', new Map([['ACL', 'nailed']]));
-    store.save('terms', new Map([['Hashing', 'partly']]));
+    store.rate('acronyms', 'ACL', 'nailed');
+    store.rate('terms', 'Hashing', 'partly');
     store.clear('acronyms');
     expect(store.load('acronyms').size).toBe(0);
     expect(store.load('terms').size).toBe(1);
@@ -55,7 +80,7 @@ describe('BrainDumpStore', () => {
   it('carries on quietly when storage refuses to write or read', () => {
     spyOn(Storage.prototype, 'setItem').and.throwError('quota');
     spyOn(Storage.prototype, 'getItem').and.throwError('blocked');
-    expect(() => store.save('acronyms', new Map([['ACL', 'nailed']]))).not.toThrow();
+    expect(() => store.rate('acronyms', 'ACL', 'nailed')).not.toThrow();
     expect(store.load('acronyms').size).toBe(0);
   });
 });

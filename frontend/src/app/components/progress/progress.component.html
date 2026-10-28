@@ -5,7 +5,7 @@
       <h1>Today</h1>
       <p>Your plan for today, then everything the app remembers about your studying.
         @if (sync.code()) { It syncs between your devices. }
-        @else { It is saved in this browser only, so turn on sync or export a backup now and then. }</p>
+        @else { It is saved in this browser only until you turn on sync below. }</p>
     </div>
   </div>
 
@@ -270,33 +270,22 @@
     <ng-container *ngTemplateOutlet="syncCard" />
   }
 
-  <!-- ── Backup ────────────────────────────────────────────────────────── -->
-  <section class="card backup" [class.nudge]="backupDue()">
-    <h2><mat-icon aria-hidden="true">save</mat-icon> Backup and restore</h2>
-    <p class="note">
-      Your progress lives in this browser. Clearing your browsing data, or using another browser or computer, starts
-      from zero. A backup file keeps it safe and lets you move it.
-      @if (progress.lastBackup(); as last) { Last backup: <strong>{{ last | date: 'MMM d, y' }}</strong>. }
-      @else if (progress.hasProgress()) { <strong>You have not made a backup yet.</strong> }
-    </p>
-    <div class="actions">
-      <button mat-flat-button color="primary" (click)="exportFile()" [disabled]="!progress.hasProgress()">
-        <mat-icon>download</mat-icon> Export backup
-      </button>
-      <label class="file-btn">
-        <input type="file" accept="application/json,.json" (change)="importFile($event)" />
-        <mat-icon aria-hidden="true">upload</mat-icon> Restore from a backup
-      </label>
-      <button mat-button color="warn" (click)="reset()" [disabled]="!progress.hasProgress()">
-        <mat-icon>delete_forever</mat-icon> Reset all progress
-      </button>
-    </div>
-  </section>
+  <!-- ── Reset ─────────────────────────────────────────────────────────── -->
+  @if (progress.hasProgress()) {
+    <section class="card reset">
+      <h2><mat-icon aria-hidden="true">restart_alt</mat-icon> Start over</h2>
+      <p class="note">Deletes every exam result, flashcard schedule, lesson tick and brain dump rating
+        {{ sync.code() ? 'on all your synced devices' : 'in this browser' }}. It cannot be undone.</p>
+      <div class="actions">
+        <button mat-button color="warn" (click)="reset()"><mat-icon>delete_forever</mat-icon> Reset all progress</button>
+      </div>
+    </section>
+  }
 </div>
 
 <!-- ── Sync ──────────────────────────────────────────────────────────── -->
 <ng-template #syncCard>
-  <section class="card sync" id="sync">
+  <section class="card sync" id="sync" [class.nudge]="sync.configured && !sync.code() && progress.hasProgress()">
     @let code = sync.code();
     <h2><mat-icon aria-hidden="true">sync</mat-icon> Sync across devices</h2>
     @if (!sync.configured) {
@@ -329,12 +318,13 @@
       </div>
       <p class="note small">On a computer that is not yours, use <strong>Remove my progress from this device</strong> when you are done.</p>
     } @else {
-      <p class="note">Keep your progress the same on your phone, your computer and any other device. It is encrypted
-        with a sync code before it leaves this device, so only someone with the code can read it.</p>
+      <p class="note">Keep your progress safe and the same on your phone, your computer and any other device. Without
+        sync it lives only in this browser, and clearing browsing data erases it. It is encrypted with a sync code
+        before it leaves this device, so only someone with the code can read it.</p>
       <form class="code-row" (ngSubmit)="connectSync()">
         <input class="code-input" name="code" [(ngModel)]="syncCodeInput" placeholder="Your sync code"
           autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sync code" />
-        <button mat-flat-button color="primary" type="submit" [disabled]="syncBusy() || !syncCodeInput.trim()">
+        <button mat-flat-button color="primary" type="submit" [disabled]="syncBusy()">
           <mat-icon>link</mat-icon> Connect
         </button>
       </form>

@@ -1,9 +1,10 @@
 import { Injectable, signal } from '@angular/core';
 import { DeckId, Rating, Scope } from '../utils/brain-dump';
+import { DeckTimes, SyncedBrainDump } from '../utils/sync';
 
 const STORAGE_KEY = 'sp-braindump';
-/** When the ratings last changed on this device, so sync can keep the newer set. */
-const CHANGED_KEY = 'sp-braindump-at';
+/** When each card was rated and each deck cleared, so sync can keep the newest rating of every card. */
+const TIMES_KEY = 'sp-braindump-times';
 
 type Saved = Partial<Record<DeckId, Record<string, Rating>>>;
 
@@ -47,37 +48,64 @@ export class BrainDumpStore {
     return ratings;
   }
 
-  save(deck: DeckId, results: ReadonlyMap<string, Rating>): void {
+  /**
+   * Saves one card's rating, dated, on top of whatever is stored now. Saving card by card (rather than a whole
+   * round) means ratings that arrived from another device while a round was open are never overwritten.
+   */
+  rate(deck: DeckId, id: string, rating: Rating): void {
+    this.change(deck, (ratings, times) => {
+      ratings[id] = rating;
+      times.cards[id] = Date.now();
+    });
+  }
+
+  /** Forgets a deck's ratings. The clear is dated so synced devices forget their older ratings too. */
+  clear(deck: DeckId): void {
+    this.change(deck, (ratings, times) => {
+      for (const id of Object.keys(ratings)) delete ratings[id];
+      times.cleared = Date.now();
+      times.cards = {};
+    });
+  }
+
+  /** Every deck's ratings and when each was made, for sync. */
+  forSync(): SyncedBrainDump {
+    return { ratings: this.read() as SyncedBrainDump['ratings'], times: this.readTimes() };
+  }
+
+  /** Takes in ratings combined with another device's. Not a change made here, so it does not count as one. */
+  replaceFromSync(dump: SyncedBrainDump): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dump.ratings));
+      localStorage.setItem(TIMES_KEY, JSON.stringify(dump.times));
+    } catch {
+      // Storage is blocked or full: this device keeps what it had.
+    }
+  }
+
+  private change(deck: DeckId, edit: (ratings: Record<string, Rating>, times: DeckTimes) => void): void {
     try {
       const all = this.read();
-      all[deck] = Object.fromEntries(results);
+      const times = this.readTimes();
+      const ratings = (all[deck] ??= {});
+      const deckTimes = (times[deck] ??= { cards: {} });
+      edit(ratings, deckTimes);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-      localStorage.setItem(CHANGED_KEY, String(Date.now()));
+      localStorage.setItem(TIMES_KEY, JSON.stringify(times));
       this.changes.update(n => n + 1);
     } catch {
       // Storage is blocked or full: keep going without saving.
     }
   }
 
-  /** Every deck's ratings and when they last changed, for sync. */
-  forSync(): { at: number; ratings: Record<string, Record<string, string>> } {
-    let at = 0;
-    try { at = Number(localStorage.getItem(CHANGED_KEY)) || 0; } catch { /* storage unavailable */ }
-    return { at, ratings: this.read() as Record<string, Record<string, string>> };
-  }
-
-  /** Takes in ratings from another device. A study round already open keeps its own until it saves. */
-  replaceFromSync(dump: { at: number; ratings: Record<string, Record<string, string>> }): void {
+  private readTimes(): SyncedBrainDump['times'] {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dump.ratings));
-      localStorage.setItem(CHANGED_KEY, String(dump.at));
+      const parsed: unknown = JSON.parse(localStorage.getItem(TIMES_KEY) ?? '{}');
+      // An early build saved a single number here; ratings without a time count as the oldest.
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as SyncedBrainDump['times']) : {};
     } catch {
-      // Storage is blocked or full: this device keeps what it had.
+      return {};
     }
-  }
-
-  clear(deck: DeckId): void {
-    this.save(deck, new Map());
   }
 
   private read(): Saved {

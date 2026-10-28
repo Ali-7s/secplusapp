@@ -1,5 +1,5 @@
 import {
-  CardRecord, DEFAULT_NEW_PER_DAY, emptyProgress, makeBackup, objectiveScores, parseProgress, readBackup, recordQuestion,
+  CardRecord, DEFAULT_NEW_PER_DAY, emptyProgress, objectiveScores, parseProgress, recordQuestion,
   smartOrder, weakQuestionIds,
 } from './progress';
 
@@ -61,20 +61,5 @@ describe('weak spots', () => {
     const q = { a: recordQuestion(undefined, false, NOW), c: recordQuestion(undefined, true, NOW) };
     const pool = [{ id: 'a', objective: '2.4' }, { id: 'b', objective: '2.4' }, { id: 'c', objective: '4.5' }, { id: 'd', objective: '1.4' }];
     expect(weakQuestionIds(q, pool, ['2.4'])).toEqual(['a', 'b']);
-  });
-});
-
-describe('backup file', () => {
-  it('round-trips the saved keys and rejects files that are not backups', () => {
-    const backup = makeBackup({ 'sp-progress': '{"version":1}', 'sp-theme': 'dark' }, new Date(NOW));
-    const back = readBackup(JSON.stringify(backup));
-    expect('data' in back && back.data).toEqual({ 'sp-progress': '{"version":1}', 'sp-theme': 'dark' });
-    expect('error' in readBackup('{"hello":1}')).toBeTrue();
-    expect('error' in readBackup('not json')).toBeTrue();
-  });
-
-  it('ignores keys that do not belong to this app', () => {
-    const back = readBackup(JSON.stringify({ app: 'secplus-study', version: 1, exportedAt: '', data: { 'sp-x': '1', other: '2' } }));
-    expect('data' in back && back.data).toEqual({ 'sp-x': '1' });
   });
 });

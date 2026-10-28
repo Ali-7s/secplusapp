@@ -149,10 +149,9 @@ export class BrainDumpComponent {
     if (!card || this.phase() !== 'check') return;
 
     const rating = this.rating();
-    const results = new Map(this.results());
-    results.set(card.id, rating);
-    this.results.set(results);
-    this.store.save(this.deckId(), results);
+    this.store.rate(this.deckId(), card.id, rating);
+    // Reloading also picks up ratings synced from another device since the round began.
+    this.results.set(this.store.load(this.deckId()));
     this.session.update(s => ({ ...s, [rating]: s[rating] + 1 }));
     this.begin(this.index() + 1, true);
   }

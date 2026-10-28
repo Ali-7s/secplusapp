@@ -117,13 +117,8 @@ table { width: 100%; border-collapse: collapse; font-size: 14px;
   &.not-yet { background: var(--c-error-light); color: var(--c-text); border: 1px solid var(--c-error); } }
 .reasons { margin: 0 0 8px; padding-left: 20px; font-size: 13.5px; line-height: 1.6; color: var(--c-text-2); }
 
-.backup.nudge { border-color: var(--c-warning); border-width: 2px; }
+.sync.nudge { border-color: var(--c-warning); border-width: 2px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.file-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; height: 40px; border-radius: 20px; cursor: pointer;
-  font-size: 14px; font-weight: 600; border: 1px solid var(--c-border-dark); color: var(--c-text); background: var(--c-surface);
-  input { display: none; }
-  mat-icon { font-size: 20px; width: 20px; height: 20px; }
-  &:hover { border-color: var(--c-accent); } }
 
 @media (max-width: 600px) {
   .card { padding: 14px; }
@@ -156,3 +151,4 @@ table { width: 100%; border-collapse: collapse; font-size: 14px;
   mat-icon { flex-shrink: 0; color: var(--c-accent); } }
 .link-btn { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--c-primary); text-decoration: underline; cursor: pointer;
   &:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; } }
+.reset { h2 { margin-top: 0; } .note { margin: 0 0 8px; } }

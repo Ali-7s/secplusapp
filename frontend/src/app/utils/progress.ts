@@ -1,6 +1,6 @@
 /**
- * The study memory: what has been practiced and how it went, kept in the browser (localStorage), movable
- * between browsers as a backup file and optionally synced between devices (see sync.ts). Everything here is pure so it can be unit tested; the
+ * The study memory: what has been practiced and how it went, kept in the browser (localStorage) and synced
+ * between devices when sync is on (see sync.ts). Everything here is pure so it can be unit tested; the
  * ProgressService wraps it with storage.
  */
 
@@ -197,38 +197,4 @@ export function weakQuestionIds(
     .filter(q => weak.has(q.objective) && !missed.includes(q.id) && !(questions[q.id]?.last && questions[q.id].right >= 2))
     .map(q => q.id);
   return [...missed, ...more];
-}
-
-// ── Backup file ───────────────────────────────────────────────────────────
-
-export const BACKUP_APP = 'secplus-study';
-
-export interface BackupFile {
-  app: typeof BACKUP_APP;
-  version: 1;
-  exportedAt: string;
-  /** Every saved key of the app ("sp-..."), as stored. */
-  data: Record<string, string>;
-}
-
-export function makeBackup(data: Record<string, string>, now: Date): BackupFile {
-  return { app: BACKUP_APP, version: 1, exportedAt: now.toISOString(), data };
-}
-
-/** Checks an uploaded file really is one of this app's backups; returns its data or an error message. */
-export function readBackup(text: string): { data: Record<string, string> } | { error: string } {
-  let file: Partial<BackupFile>;
-  try {
-    file = JSON.parse(text);
-  } catch {
-    return { error: 'That file is not a backup from this app (it is not valid JSON).' };
-  }
-  if (file.app !== BACKUP_APP || !file.data || typeof file.data !== 'object') {
-    return { error: 'That file is not a backup from this app.' };
-  }
-  const data: Record<string, string> = {};
-  for (const [k, v] of Object.entries(file.data)) {
-    if (k.startsWith('sp-') && typeof v === 'string') data[k] = v;
-  }
-  return { data };
 }

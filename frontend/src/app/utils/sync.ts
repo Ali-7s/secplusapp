@@ -10,10 +10,16 @@
 import { dayKey } from './srs';
 import { LessonRecord, ProgressData, parseProgress } from './progress';
 
-/** Brain dump ratings, saved as a whole with the time they last changed. */
+/** When each card in a brain dump deck was rated, and when the deck was last cleared. */
+export interface DeckTimes {
+  cleared?: number;
+  cards: Record<string, number>;
+}
+
+/** Brain dump ratings ("missed", "partly", "nailed") per deck and card, with when each was made. */
 export interface SyncedBrainDump {
-  at: number;
   ratings: Record<string, Record<string, string>>;
+  times: Record<string, DeckTimes>;
 }
 
 /** Everything that syncs. Device preferences (theme, lesson view) and an exam in progress stay on each device. */
@@ -104,25 +110,49 @@ export function mergeProgress(a: ProgressData, b: ProgressData): ProgressData {
   return out;
 }
 
-/** Combines two whole synced copies. Brain dump ratings have no per-card times, so the newer set wins as a whole. */
+/**
+ * Combines brain dump ratings card by card: the latest rating of each card wins, and a card rated before its deck
+ * was cleared, or before all progress was reset, is dropped.
+ */
+export function mergeBrainDump(a: SyncedBrainDump, b: SyncedBrainDump, resetAt = 0): SyncedBrainDump {
+  const out: SyncedBrainDump = { ratings: {}, times: {} };
+  for (const deck of new Set([...Object.keys(a.ratings), ...Object.keys(b.ratings), ...Object.keys(a.times), ...Object.keys(b.times)])) {
+    const ta = a.times[deck], tb = b.times[deck];
+    const cleared = Math.max(ta?.cleared ?? 0, tb?.cleared ?? 0);
+    const after = Math.max(cleared, resetAt);
+    const ratings: Record<string, string> = {}, cards: Record<string, number> = {};
+    for (const id of new Set([...Object.keys(a.ratings[deck] ?? {}), ...Object.keys(b.ratings[deck] ?? {})])) {
+      const atA = a.ratings[deck]?.[id] !== undefined ? ta?.cards[id] ?? 0 : -1;
+      const atB = b.ratings[deck]?.[id] !== undefined ? tb?.cards[id] ?? 0 : -1;
+      const [rating, at] = atB > atA ? [b.ratings[deck][id], atB] : [a.ratings[deck][id], atA];
+      if (after && at < after) continue;
+      ratings[id] = rating;
+      cards[id] = at;
+    }
+    out.ratings[deck] = ratings;
+    out.times[deck] = cleared ? { cleared, cards } : { cards };
+  }
+  return out;
+}
+
+/** Combines two whole synced copies. */
 export function mergeSynced(a: SyncPayload, b: SyncPayload): SyncPayload {
-  return {
-    progress: mergeProgress(a.progress, b.progress),
-    braindump: b.braindump.at > a.braindump.at ? b.braindump : a.braindump,
-  };
+  const progress = mergeProgress(a.progress, b.progress);
+  return { progress, braindump: mergeBrainDump(a.braindump, b.braindump, progress.resetAt) };
 }
 
 /** Reads a payload from the cloud defensively, the same way stored progress is read. */
 export function parsePayload(value: unknown): SyncPayload {
   const v = (value && typeof value === 'object' ? value : {}) as Partial<SyncPayload>;
-  const dump = (v.braindump && typeof v.braindump === 'object' ? v.braindump : {}) as Partial<SyncedBrainDump>;
-  return {
-    progress: parseProgress(JSON.stringify(v.progress ?? null)),
-    braindump: {
-      at: typeof dump.at === 'number' ? dump.at : 0,
-      ratings: dump.ratings && typeof dump.ratings === 'object' ? dump.ratings : {},
-    },
-  };
+  const dump = (v.braindump && typeof v.braindump === 'object' ? v.braindump : {}) as Partial<SyncedBrainDump> & { at?: number };
+  const ratings = dump.ratings && typeof dump.ratings === 'object' ? dump.ratings : {};
+  let times = dump.times && typeof dump.times === 'object' ? dump.times : {};
+  if (typeof dump.at === 'number' && !dump.times) {
+    // The first sync build dated the ratings as a whole; give every card that date.
+    const at = dump.at;
+    times = Object.fromEntries(Object.entries(ratings).map(([deck, r]) => [deck, { cards: Object.fromEntries(Object.keys(r).map(id => [id, at])) }]));
+  }
+  return { progress: parseProgress(JSON.stringify(v.progress ?? null)), braindump: { ratings, times } };
 }
 
 /** JSON with object keys sorted, so two copies holding the same data compare equal whatever order they were built in. */

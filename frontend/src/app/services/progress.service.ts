@@ -1,25 +1,20 @@
 import { Injectable, computed, signal } from '@angular/core';
-import {
-  CardRecord, ExamRecord, LessonRecord, ProgressData, makeBackup, parseProgress, readBackup, recordQuestion,
-} from '../utils/progress';
+import { CardRecord, ExamRecord, LessonRecord, ProgressData, parseProgress, recordQuestion } from '../utils/progress';
 import { Rating, answerOutsideQueue, dayKey, schedule } from '../utils/srs';
 
 const KEY = 'sp-progress';
-const BACKUP_KEY = 'sp-last-backup';
 
 export type CardKind = 'acr' | 'term';
 export const cardKey = (kind: CardKind, name: string) => `${kind}:${name}`;
 
 /**
- * The app's memory. Progress lives in this browser's localStorage under "sp-progress"; the backup file carries
- * every "sp-" key so it can be restored here or in another browser. Nothing leaves the browser unless sync is
- * turned on (SyncService), and then only encrypted.
+ * The app's memory. Progress lives in this browser's localStorage under "sp-progress", so studying works offline
+ * and every answer saves instantly. With sync on (SyncService) an encrypted copy keeps every device alike.
  */
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
   private readonly state = signal<ProgressData>(parseProgress(this.read(KEY)));
   readonly data = this.state.asReadonly();
-  readonly lastBackup = signal<number | null>(Number(this.read(BACKUP_KEY)) || null);
   readonly hasProgress = computed(() => {
     const d = this.state();
     return d.exams.length > 0 || Object.keys(d.questions).length > 0 || Object.keys(d.cards).length > 0 || Object.keys(d.lessons).length > 0;
@@ -142,36 +137,7 @@ export class ProgressService {
     return this.state().lessons[slug];
   }
 
-  // ── Backup ────────────────────────────────────────────────────────────
-
-  /** Every saved key of the app as a downloadable backup file. */
-  exportBackup(): { name: string; text: string } {
-    const data: Record<string, string> = {};
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k?.startsWith('sp-') && k !== BACKUP_KEY) data[k] = localStorage.getItem(k) ?? '';
-      }
-    } catch { /* storage unavailable */ }
-    const now = new Date();
-    this.write(BACKUP_KEY, String(now.getTime()));
-    this.lastBackup.set(now.getTime());
-    return { name: `secplus-progress-${now.toISOString().slice(0, 10)}.json`, text: JSON.stringify(makeBackup(data, now), null, 1) };
-  }
-
-  /** Replaces this browser's saved data with a backup. The page reloads afterwards so every screen picks it up. */
-  importBackup(text: string): string | null {
-    const result = readBackup(text);
-    if ('error' in result) return result.error;
-    try {
-      for (const k of Object.keys(localStorage)) if (k.startsWith('sp-')) localStorage.removeItem(k);
-      for (const [k, v] of Object.entries(result.data)) localStorage.setItem(k, v);
-    } catch {
-      return 'This browser would not let the backup be saved.';
-    }
-    this.state.set(parseProgress(this.read(KEY)));
-    return null;
-  }
+  // ── Reset ─────────────────────────────────────────────────────────────
 
   /**
    * Forgets all study progress (keeps the light or dark theme and sync). The reset is dated so that, with sync on,
@@ -180,10 +146,7 @@ export class ProgressService {
   resetAll() {
     try {
       for (const k of Object.keys(localStorage)) if (k.startsWith('sp-') && k !== 'sp-theme' && k !== 'sp-sync') localStorage.removeItem(k);
-      // Dating the now-empty brain dump ratings lets them replace older ratings on synced devices.
-      localStorage.setItem('sp-braindump-at', String(Date.now()));
     } catch { /* storage unavailable */ }
-    this.lastBackup.set(null);
     this.update(d => {
       Object.assign(d, parseProgress(null));
       // Settings are reset too, so they count as changed now and win over other devices' older choices.
@@ -197,7 +160,6 @@ export class ProgressService {
       for (const k of Object.keys(localStorage)) if (k.startsWith('sp-') && k !== 'sp-theme') localStorage.removeItem(k);
     } catch { /* storage unavailable */ }
     this.state.set(parseProgress(null));
-    this.lastBackup.set(null);
   }
 
   /** Takes in progress combined with another device's copy. It is not a change made here, so it does not count as one. */
