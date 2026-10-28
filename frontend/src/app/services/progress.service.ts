@@ -12,7 +12,8 @@ export const cardKey = (kind: CardKind, name: string) => `${kind}:${name}`;
 
 /**
  * The app's memory. Progress lives in this browser's localStorage under "sp-progress"; the backup file carries
- * every "sp-" key so it can be restored here or in another browser. Nothing is ever sent anywhere.
+ * every "sp-" key so it can be restored here or in another browser. Nothing leaves the browser unless sync is
+ * turned on (SyncService), and then only encrypted.
  */
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
@@ -24,6 +25,8 @@ export class ProgressService {
     return d.exams.length > 0 || Object.keys(d.questions).length > 0 || Object.keys(d.cards).length > 0 || Object.keys(d.lessons).length > 0;
   });
   private askedToPersist = false;
+  /** Counts changes made on this device, so sync knows when there is something to send. */
+  readonly changes = signal(0);
 
   // ── Recording ─────────────────────────────────────────────────────────
 
@@ -69,6 +72,7 @@ export class ProgressService {
     this.update(d => {
       if (date) d.plan.examDate = date;
       else delete d.plan.examDate;
+      d.settingsAt = Date.now();
     });
   }
 
@@ -76,7 +80,8 @@ export class ProgressService {
   restoreCard(kind: CardKind, name: string, card: CardRecord | undefined, review: ProgressData['review']) {
     const key = cardKey(kind, name);
     this.update(d => {
-      if (card) d.cards[key] = card;
+      // The restored card is stamped now, so sync treats the undo as the latest answer.
+      if (card) d.cards[key] = { ...card, at: Math.max(Date.now(), (d.cards[key]?.at ?? 0) + 1) };
       else delete d.cards[key];
       d.review = review;
     });
@@ -89,7 +94,10 @@ export class ProgressService {
   }
 
   setNewPerDay(n: number) {
-    this.update(d => { d.review.newPerDay = Math.max(0, Math.min(999, Math.round(n))); });
+    this.update(d => {
+      d.review.newPerDay = Math.max(0, Math.min(999, Math.round(n)));
+      d.settingsAt = Date.now();
+    });
   }
 
   /** Raises today's new-card limit for one deck. */
@@ -165,13 +173,37 @@ export class ProgressService {
     return null;
   }
 
-  /** Forgets all study progress (keeps the light or dark theme). */
+  /**
+   * Forgets all study progress (keeps the light or dark theme and sync). The reset is dated so that, with sync on,
+   * other devices drop their older copies too instead of bringing them back.
+   */
   resetAll() {
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('sp-') && k !== 'sp-theme' && k !== 'sp-sync') localStorage.removeItem(k);
+      // Dating the now-empty brain dump ratings lets them replace older ratings on synced devices.
+      localStorage.setItem('sp-braindump-at', String(Date.now()));
+    } catch { /* storage unavailable */ }
+    this.lastBackup.set(null);
+    this.update(d => {
+      Object.assign(d, parseProgress(null));
+      // Settings are reset too, so they count as changed now and win over other devices' older choices.
+      d.resetAt = d.settingsAt = Date.now();
+    });
+  }
+
+  /** Forgets everything on this device without telling other devices, for leaving a borrowed computer clean. */
+  forgetThisDevice() {
     try {
       for (const k of Object.keys(localStorage)) if (k.startsWith('sp-') && k !== 'sp-theme') localStorage.removeItem(k);
     } catch { /* storage unavailable */ }
     this.state.set(parseProgress(null));
     this.lastBackup.set(null);
+  }
+
+  /** Takes in progress combined with another device's copy. It is not a change made here, so it does not count as one. */
+  replaceFromSync(data: ProgressData) {
+    this.state.set(data);
+    this.write(KEY, JSON.stringify(data));
   }
 
   // ── Internals ─────────────────────────────────────────────────────────
@@ -191,7 +223,9 @@ export class ProgressService {
   }
 
   private lesson(d: ProgressData, slug: string): LessonRecord {
-    return (d.lessons[slug] ??= { pbqs: {} });
+    const lesson = (d.lessons[slug] ??= { pbqs: {} });
+    lesson.at = Date.now();
+    return lesson;
   }
 
   private update(change: (d: ProgressData) => void) {
@@ -199,6 +233,7 @@ export class ProgressService {
     change(next);
     this.state.set(next);
     this.write(KEY, JSON.stringify(next));
+    this.changes.update(n => n + 1);
     this.persist();
   }
 

@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Sync for the Security+ study app. Each document is one learner's encrypted progress, named by a 64-character id
+// that is derived from their sync code, so only someone with the code can find it. Nobody can list documents, and
+// writes must look like an encrypted copy of a sensible size. Paste this into Firestore > Rules and Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sync/{id} {
+      function validId() {
+        return id.matches('^[0-9a-f]{64}$');
+      }
+      function validCopy() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['v', 'iv', 'data', 'z'])
+          && d.v is int
+          && d.iv is string && d.iv.size() < 64
+          && d.data is string && d.data.size() < 900000
+          && d.z is bool;
+      }
+      allow get: if validId();
+      allow create, update: if validId() && validCopy();
+      allow list, delete: if false;
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +8,7 @@ import { forkJoin } from 'rxjs';
 import { ContentService } from '../../services/content.service';
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { BrainDumpStore } from '../../services/brain-dump-store.service';
+import { SyncService } from '../../services/sync.service';
 import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../models/exam.model';
 import { EXAM_SPECS, ExamLength, PASSING_SCALED } from '../../utils/exam-engine';
 import { CardRecord, ExamRecord, objectiveScores } from '../../utils/progress';
@@ -27,7 +29,7 @@ interface DeckStats { total: number; studied: number; learning: number; young: n
 @Component({
   selector: 'app-progress',
   standalone: true,
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule],
+  imports: [DatePipe, NgTemplateOutlet, FormsModule, RouterLink, MatButtonModule, MatIconModule],
   templateUrl: './progress.component.html',
   styleUrl: './progress.component.scss',
 })
@@ -35,6 +37,7 @@ export class ProgressComponent implements OnInit {
   private content = inject(ContentService);
   private dumpStore = inject(BrainDumpStore);
   readonly progress = inject(ProgressService);
+  readonly sync = inject(SyncService);
 
   readonly passing = PASSING_SCALED;
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
@@ -246,8 +249,70 @@ export class ProgressComponent implements OnInit {
   }
 
   reset() {
-    if (!confirm('This deletes all saved progress in this browser: exam history, flashcard progress, lesson progress and brain dump ratings. Export a backup first if you might want it back. Delete everything?')) return;
+    const where = this.sync.code() ? 'on every device you sync with' : 'in this browser';
+    if (!confirm(`This deletes all saved progress ${where}: exam history, flashcard progress, lesson progress and brain dump ratings. Export a backup first if you might want it back. Delete everything?`)) return;
+    if (this.sync.code()) {
+      this.progress.resetAll();
+      void this.sync.syncNow().then(() => location.reload());
+      return;
+    }
     this.progress.resetAll();
+    location.reload();
+  }
+
+  // ── Sync ──────────────────────────────────────────────────────────────
+
+  syncCodeInput = '';
+  readonly syncBusy = signal(false);
+  readonly codeShown = signal(false);
+
+  /** Jumps to the sync card and puts the cursor in the code box, for a device that has nothing yet. */
+  goToSync() {
+    const card = document.getElementById('sync');
+    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.querySelector<HTMLInputElement>('.code-input')?.focus({ preventScroll: true });
+  }
+
+  async turnOnSync() {
+    this.syncBusy.set(true);
+    await this.sync.turnOn();
+    this.syncBusy.set(false);
+    this.codeShown.set(true);
+  }
+
+  async connectSync() {
+    this.syncBusy.set(true);
+    const error = await this.sync.connect(this.syncCodeInput);
+    this.syncBusy.set(false);
+    if (error) {
+      this.message.set({ kind: 'error', text: error });
+      return;
+    }
+    this.syncCodeInput = '';
+    this.message.set({ kind: 'ok', text: 'Connected. Your progress from your other devices is here, and changes now sync both ways.' });
+  }
+
+  async copyCode() {
+    const code = this.sync.code();
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      this.message.set({ kind: 'ok', text: 'Sync code copied.' });
+    } catch {
+      this.codeShown.set(true);
+    }
+  }
+
+  turnOffSync() {
+    if (!confirm('Stop syncing on this device? Your progress stays here and on your other devices, but changes here will no longer reach them.')) return;
+    this.sync.turnOff();
+    this.codeShown.set(false);
+  }
+
+  async forgetDevice() {
+    if (!confirm('Remove your progress from this device? Anything not yet synced is sent first, so nothing is lost. Your other devices keep everything.')) return;
+    this.syncBusy.set(true);
+    await this.sync.turnOffAndForget();
     location.reload();
   }
 }

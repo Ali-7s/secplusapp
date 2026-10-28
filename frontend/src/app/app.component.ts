@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavContent, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { ThemeService } from './services/theme.service';
+import { SyncService } from './services/sync.service';
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
 @Component({
@@ -24,6 +25,8 @@ export class AppComponent {
   private content = viewChild(MatSidenavContent);
 
   constructor() {
+    // Starts syncing on page load when this device has a sync code.
+    inject(SyncService);
     // The page scrolls inside the side-nav content, not the window, so the router's own scroll reset never
     // fires. Start each new page at the top; a query change on the same page (a search box) keeps its place.
     let lastPath = '';

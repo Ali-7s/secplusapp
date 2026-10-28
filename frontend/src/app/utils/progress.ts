@@ -1,6 +1,6 @@
 /**
- * The study memory: what has been practiced and how it went, kept in the browser (localStorage) and
- * movable between browsers as a backup file. Everything here is pure so it can be unit tested; the
+ * The study memory: what has been practiced and how it went, kept in the browser (localStorage), movable
+ * between browsers as a backup file and optionally synced between devices (see sync.ts). Everything here is pure so it can be unit tested; the
  * ProgressService wraps it with storage.
  */
 
@@ -62,6 +62,8 @@ export interface LessonRecord {
   completedAt?: number;
   /** The part being read in step-by-step mode, so the lesson reopens where you stopped. */
   part?: number;
+  /** When anything in this record last changed, so sync can tell which device's copy is newer. */
+  at?: number;
 }
 
 export interface ProgressData {
@@ -75,6 +77,10 @@ export interface ProgressData {
   plan: StudyPlan;
   /** How many things were studied on each local day ("2026-10-26": 41), for streaks. The last 120 days are kept. */
   days: Record<string, number>;
+  /** When the exam date or new-cards-per-day setting last changed, so sync keeps the newest choice. */
+  settingsAt?: number;
+  /** When all progress was last reset. Sync drops anything older, so a reset reaches every device. */
+  resetAt?: number;
 }
 
 const emptyReview = (): ReviewSettings => ({ newPerDay: DEFAULT_NEW_PER_DAY, day: '', newToday: { acr: 0, term: 0 } });
@@ -95,6 +101,8 @@ export function parseProgress(raw: string | null): ProgressData {
       review: { ...emptyReview(), ...(d.review && typeof d.review === 'object' ? d.review : {}) },
       plan: d.plan && typeof d.plan === 'object' ? d.plan : {},
       days: d.days && typeof d.days === 'object' ? d.days : {},
+      ...(typeof d.settingsAt === 'number' ? { settingsAt: d.settingsAt } : {}),
+      ...(typeof d.resetAt === 'number' ? { resetAt: d.resetAt } : {}),
     };
   } catch {
     return emptyProgress();

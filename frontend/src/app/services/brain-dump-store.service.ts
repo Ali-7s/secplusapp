@@ -1,7 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { DeckId, Rating, Scope } from '../utils/brain-dump';
 
 const STORAGE_KEY = 'sp-braindump';
+/** When the ratings last changed on this device, so sync can keep the newer set. */
+const CHANGED_KEY = 'sp-braindump-at';
 
 type Saved = Partial<Record<DeckId, Record<string, Rating>>>;
 
@@ -22,6 +24,8 @@ const isRating = (value: unknown): value is Rating => value === 'missed' || valu
 @Injectable({ providedIn: 'root' })
 export class BrainDumpStore {
   private options: Partial<Record<DeckId, RoundOptions>> = {};
+  /** Counts changes made on this device, so sync knows when there is something to send. */
+  readonly changes = signal(0);
 
   /**
    * The deck and shuffle choice, kept for as long as the page is open so switching to another flashcard mode and
@@ -48,8 +52,27 @@ export class BrainDumpStore {
       const all = this.read();
       all[deck] = Object.fromEntries(results);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      localStorage.setItem(CHANGED_KEY, String(Date.now()));
+      this.changes.update(n => n + 1);
     } catch {
       // Storage is blocked or full: keep going without saving.
+    }
+  }
+
+  /** Every deck's ratings and when they last changed, for sync. */
+  forSync(): { at: number; ratings: Record<string, Record<string, string>> } {
+    let at = 0;
+    try { at = Number(localStorage.getItem(CHANGED_KEY)) || 0; } catch { /* storage unavailable */ }
+    return { at, ratings: this.read() as Record<string, Record<string, string>> };
+  }
+
+  /** Takes in ratings from another device. A study round already open keeps its own until it saves. */
+  replaceFromSync(dump: { at: number; ratings: Record<string, Record<string, string>> }): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dump.ratings));
+      localStorage.setItem(CHANGED_KEY, String(dump.at));
+    } catch {
+      // Storage is blocked or full: this device keeps what it had.
     }
   }
 

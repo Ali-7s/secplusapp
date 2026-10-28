@@ -3,10 +3,18 @@
     <mat-icon aria-hidden="true">today</mat-icon>
     <div>
       <h1>Today</h1>
-      <p>Your plan for today, then everything the app remembers about your studying. It is saved in this browser only, so
-        export a backup now and then.</p>
+      <p>Your plan for today, then everything the app remembers about your studying.
+        @if (sync.code()) { It syncs between your devices. }
+        @else { It is saved in this browser only, so turn on sync or export a backup now and then. }</p>
     </div>
   </div>
+
+  @if (sync.configured && !sync.code() && !progress.hasProgress()) {
+    <p class="sync-hint">
+      <mat-icon aria-hidden="true">sync</mat-icon>
+      <span>Studied on another device? <button type="button" class="link-btn" (click)="goToSync()">Enter your sync code</button></span>
+    </p>
+  }
 
   @if (message(); as m) {
     <div class="message" [class.error]="m.kind === 'error'" role="status">
@@ -119,8 +127,9 @@
       <h2>Nothing here yet</h2>
       <p>Your progress fills in as you study: take a <a routerLink="/exam">practice exam</a>, rate some
         <a routerLink="/acronyms">flashcards</a>, or finish a <a routerLink="/networking">Networking Basics</a> lesson.
-        If you have a backup file from before, restore it below.</p>
+        Studied on another device? Enter your sync code below.</p>
     </section>
+    <ng-container *ngTemplateOutlet="syncCard" />
   }
 
   <!-- ── Exams ─────────────────────────────────────────────────────────── -->
@@ -257,6 +266,10 @@
     </ol>
   </section>
 
+  @if (progress.hasProgress()) {
+    <ng-container *ngTemplateOutlet="syncCard" />
+  }
+
   <!-- ── Backup ────────────────────────────────────────────────────────── -->
   <section class="card backup" [class.nudge]="backupDue()">
     <h2><mat-icon aria-hidden="true">save</mat-icon> Backup and restore</h2>
@@ -280,3 +293,57 @@
     </div>
   </section>
 </div>
+
+<!-- ── Sync ──────────────────────────────────────────────────────────── -->
+<ng-template #syncCard>
+  <section class="card sync" id="sync">
+    @let code = sync.code();
+    <h2><mat-icon aria-hidden="true">sync</mat-icon> Sync across devices</h2>
+    @if (!sync.configured) {
+      <p class="note">Sync is not set up for this site.</p>
+    } @else if (code) {
+      <p class="sync-status" [class]="sync.state()" role="status">
+        @switch (sync.state()) {
+          @case ('syncing') { <mat-icon aria-hidden="true">sync</mat-icon> Syncing… }
+          @case ('synced') { <mat-icon aria-hidden="true">cloud_done</mat-icon> Synced
+            @if (sync.lastSynced(); as at) { at {{ at | date: 'shortTime' }} } }
+          @case ('offline') { <mat-icon aria-hidden="true">cloud_off</mat-icon> Offline. Your progress is saved here and syncs when you are back online. }
+          @default { <mat-icon aria-hidden="true">error</mat-icon> {{ sync.error() }} }
+        }
+      </p>
+      <p class="note">To use another device, open this site there and type your sync code on its Today page. Keep the
+        code somewhere safe, such as your password manager or notes: it is the only way to reach your synced progress.</p>
+      <div class="code-row">
+        <span class="code" [class.hidden]="!codeShown()" aria-label="Sync code">{{ codeShown() ? code : '••••-••••-••••' }}</span>
+        <button mat-stroked-button (click)="codeShown.set(!codeShown())">
+          <mat-icon>{{ codeShown() ? 'visibility_off' : 'visibility' }}</mat-icon> {{ codeShown() ? 'Hide' : 'Show' }}
+        </button>
+        <button mat-stroked-button (click)="copyCode()"><mat-icon>content_copy</mat-icon> Copy</button>
+      </div>
+      <div class="actions">
+        <button mat-button (click)="sync.syncNow()" [disabled]="sync.state() === 'syncing'"><mat-icon>refresh</mat-icon> Sync now</button>
+        <button mat-button (click)="turnOffSync()"><mat-icon>sync_disabled</mat-icon> Stop syncing here</button>
+        <button mat-button color="warn" (click)="forgetDevice()" [disabled]="syncBusy()">
+          <mat-icon>logout</mat-icon> Remove my progress from this device
+        </button>
+      </div>
+      <p class="note small">On a computer that is not yours, use <strong>Remove my progress from this device</strong> when you are done.</p>
+    } @else {
+      <p class="note">Keep your progress the same on your phone, your computer and any other device. It is encrypted
+        with a sync code before it leaves this device, so only someone with the code can read it.</p>
+      <form class="code-row" (ngSubmit)="connectSync()">
+        <input class="code-input" name="code" [(ngModel)]="syncCodeInput" placeholder="Your sync code"
+          autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sync code" />
+        <button mat-flat-button color="primary" type="submit" [disabled]="syncBusy() || !syncCodeInput.trim()">
+          <mat-icon>link</mat-icon> Connect
+        </button>
+      </form>
+      <div class="actions">
+        <span class="or">No code yet?</span>
+        <button mat-stroked-button (click)="turnOnSync()" [disabled]="syncBusy()">
+          <mat-icon>cloud_upload</mat-icon> Turn on sync and get a code
+        </button>
+      </div>
+    }
+  </section>
+</ng-template>
