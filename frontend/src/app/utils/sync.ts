@@ -49,6 +49,7 @@ function mergeLesson(a: LessonRecord | undefined, b: LessonRecord | undefined): 
   for (const [id, f] of Object.entries(latest.pbqs)) pbqs[id] = Math.max(pbqs[id] ?? 0, f);
   const done = [a.completedAt, b.completedAt].filter((t): t is number => t !== undefined);
   const out: LessonRecord = { ...older, ...latest, pbqs };
+  if (a.work || b.work) out.work = mergeByTime(older.work ?? {}, latest.work ?? {});
   const check = newer(a.check, b.check);
   if (check) out.check = check;
   if (done.length) out.completedAt = Math.min(...done);

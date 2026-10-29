@@ -56,8 +56,13 @@ describe('BrainDumpComponent', () => {
     el = fixture.nativeElement;
   };
 
+  /** Ratings, their times and the saved round, so each test starts a fresh round. */
+  const clearStorage = () => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(STORAGE_KEY) || k.startsWith('sp-dump-round-')) localStorage.removeItem(k);
+  };
+
   beforeEach(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    clearStorage();
     points = { ACL: ['Permit and deny rules', 'First match wins'] };
     TestBed.configureTestingModule({
       imports: [BrainDumpComponent],
@@ -66,7 +71,7 @@ describe('BrainDumpComponent', () => {
     open();
   });
 
-  afterEach(() => localStorage.removeItem(STORAGE_KEY));
+  afterEach(clearStorage);
 
   it('shows only the name and category at first, so the card has to be explained blind', () => {
     expect(text('.bd-name')).toBe('ACL');
@@ -198,6 +203,15 @@ describe('BrainDumpComponent', () => {
     expect(text('.bd-done h3')).toBe('Every card here is nailed');
     expect(text('.bd-done p')).toContain('all 3 acronyms');
     expect(text('.bd-done-actions')).toContain('Go through them again');
+  });
+
+  it('carries on an unfinished round after a refresh, on the same card and with the half-typed answer', () => {
+    reveal(); next();                           // ACL missed
+    write('A symmetric cipher with');
+    open();
+    expect(text('.bd-progress')).toContain('Card 2 / 3');
+    expect(text('.bd-name')).toBe('AES');
+    expect(q<HTMLTextAreaElement>('.bd-input')!.value).toBe('A symmetric cipher with');
   });
 
   it('falls back to the sentences of the definition when a card has no written points', () => {

@@ -133,6 +133,19 @@ export class ProgressService {
     this.update(d => { this.lesson(d, slug).part = part; });
   }
 
+  /** Saved work on one of a lesson's exercises, or undefined when there is none (or it was reset). */
+  lessonWork(slug: string, key: string): unknown {
+    return this.state().lessons[slug]?.work?.[key]?.v ?? undefined;
+  }
+
+  /** Saves work on one of a lesson's exercises; null records a reset, so other devices drop their copy too. */
+  setLessonWork(slug: string, key: string, value: unknown) {
+    this.update(d => {
+      const work = (this.lesson(d, slug).work ??= {});
+      work[key] = { v: value == null ? null : structuredClone(value), at: Date.now() };
+    });
+  }
+
   lessonRecord(slug: string): LessonRecord | undefined {
     return this.state().lessons[slug];
   }

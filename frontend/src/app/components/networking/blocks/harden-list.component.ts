@@ -1,4 +1,5 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, inject } from '@angular/core';
+import { LessonWork } from '../lesson-work.service';
 import { MatIconModule } from '@angular/material/icon';
 import { HardenItem } from '../networking.model';
 import { MdPipe } from './md.pipe';
@@ -61,6 +62,8 @@ import { MdPipe } from './md.pipe';
   `],
 })
 export class HardenListComponent implements OnChanges {
+  private work = inject(LessonWork, { optional: true });
+
   @Input({ required: true }) title = '';
   @Input() intro = '';
   @Input({ required: true }) items: HardenItem[] = [];
@@ -68,11 +71,15 @@ export class HardenListComponent implements OnChanges {
   done = new Set<number>();
 
   ngOnChanges() {
-    this.done = new Set<number>();
+    const saved = this.work?.get<number[]>(this.key) ?? [];
+    this.done = new Set(saved.filter(i => i >= 0 && i < this.items.length));
   }
+
+  private get key(): string { return `harden:${this.title}`; }
 
   toggle(i: number) {
     if (this.done.has(i)) this.done.delete(i);
     else this.done.add(i);
+    this.work?.set(this.key, [...this.done]);
   }
 }

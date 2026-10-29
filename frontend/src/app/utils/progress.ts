@@ -64,6 +64,17 @@ export interface LessonRecord {
   part?: number;
   /** When anything in this record last changed, so sync can tell which device's copy is newer. */
   at?: number;
+  /**
+   * Work in progress on the lesson's exercises (self-check answers, PBQ answers, checklist ticks), keyed by
+   * exercise, so it survives a refresh and moves between devices. A value of null means the exercise was reset.
+   */
+  work?: Record<string, LessonWork>;
+}
+
+/** One exercise's saved state and when it was saved. */
+export interface LessonWork {
+  v: unknown;
+  at: number;
 }
 
 export interface ProgressData {

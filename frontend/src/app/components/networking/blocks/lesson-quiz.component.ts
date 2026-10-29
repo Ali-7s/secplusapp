@@ -1,9 +1,12 @@
-import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
+import { LessonWork } from '../lesson-work.service';
 import { MatIconModule } from '@angular/material/icon';
 import { QuizQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
 
 /** The short self-check at the end of a lesson: pick an answer, see the explanation straight away. */
+const CHECK_KEY = 'check';
+
 @Component({
   selector: 'app-lesson-quiz',
   standalone: true,
@@ -116,6 +119,8 @@ import { MdPipe } from './md.pipe';
   `],
 })
 export class LessonQuizComponent implements OnChanges {
+  private work = inject(LessonWork, { optional: true });
+
   @Input({ required: true }) questions: QuizQuestion[] = [];
   /** Fires once every question has an answer, so the lesson can remember the result. */
   @Output() finished = new EventEmitter<{ score: number; total: number }>();
@@ -123,8 +128,10 @@ export class LessonQuizComponent implements OnChanges {
   readonly letters = ['A', 'B', 'C', 'D'];
   picked: (number | null)[] = [];
 
+  /** Picks up answers already given, so a refresh or a trip back through the lesson keeps them. */
   ngOnChanges() {
-    this.reset();
+    const saved = this.work?.get<(number | null)[]>(CHECK_KEY);
+    this.picked = Array.isArray(saved) && saved.length === this.questions.length ? [...saved] : this.questions.map(() => null);
   }
 
   get done(): boolean {
@@ -138,10 +145,12 @@ export class LessonQuizComponent implements OnChanges {
   pick(question: number, option: number) {
     if (this.picked[question] !== null) return;
     this.picked[question] = option;
+    this.work?.set(CHECK_KEY, this.picked);
     if (this.done) this.finished.emit({ score: this.score, total: this.questions.length });
   }
 
   reset() {
     this.picked = this.questions.map(() => null);
+    this.work?.clear(CHECK_KEY);
   }
 }

@@ -29,6 +29,8 @@ const VERDICTS: Record<Rating, { icon: string; title: string; hint: string }> = 
  * The same component serves the Acronym Glossary and Key Terms. How each card is rated is remembered in this
  * browser, so a later session can go straight to the cards that were missed.
  */
+import { loadDumpRound, saveDumpRound } from '../../utils/study-session';
+
 @Component({
   selector: 'app-brain-dump',
   standalone: true,
@@ -117,7 +119,7 @@ export class BrainDumpComponent {
           this.content.getKeyPoints(deck).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(p => this.points.set(p));
         }
         // Take the keyboard to the box when the mode opens, but never while the learner is typing in the search field.
-        this.restart(this.firstRound);
+        if (!this.firstRound || !this.resume(true)) this.restart(this.firstRound);
         this.firstRound = false;
       });
     });
@@ -125,6 +127,7 @@ export class BrainDumpComponent {
 
   onInput(event: Event): void {
     this.draft.set((event.target as HTMLTextAreaElement).value);
+    this.saveRound();
   }
 
   reveal(): void {
@@ -184,6 +187,27 @@ export class BrainDumpComponent {
     this.begin(0, focus);
   }
 
+  /**
+   * Opening the mode again carries on an unfinished round, on the same card and with anything half typed, as long
+   * as the cards on offer are still the same.
+   */
+  private resume(focus: boolean): boolean {
+    const saved = loadDumpRound(this.deckId());
+    // A finished round is not worth reopening: a new one starts with the cards still to learn.
+    if (!saved || !Array.isArray(saved.ids) || !saved.ids.length || !(saved.index < saved.ids.length)) return false;
+    const byId = new Map(this.cards().map(c => [c.id, c]));
+    const deck = saved.ids.map(id => byId.get(id));
+    if (deck.some(c => !c)) return false;
+    this.deck.set(deck as DumpCard[]);
+    this.begin(Math.max(Number(saved.index) || 0, 0), focus);
+    if (this.phase() === 'write' && typeof saved.draft === 'string') this.draft.set(saved.draft);
+    return true;
+  }
+
+  private saveRound(): void {
+    saveDumpRound(this.deckId(), { ids: this.deck().map(c => c.id), index: this.index(), draft: this.phase() === 'write' ? this.draft() : '' });
+  }
+
   resetProgress(): void {
     this.store.clear(this.deckId());
     this.results.set(new Map());
@@ -202,9 +226,11 @@ export class BrainDumpComponent {
     this.covered.set(new Set());
     if (index >= this.deck().length) {
       this.phase.set('done');
+      this.saveRound();
       return;
     }
     this.phase.set('write');
+    this.saveRound();
     if (focus) this.focusLater(this.box);
   }
 

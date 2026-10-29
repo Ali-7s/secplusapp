@@ -1,4 +1,5 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, inject } from '@angular/core';
+import { LessonWork } from '../lesson-work.service';
 import { MatIconModule } from '@angular/material/icon';
 import { SequenceStep } from '../networking.model';
 import { MdPipe } from './md.pipe';
@@ -157,6 +158,8 @@ import { MdPipe } from './md.pipe';
   `],
 })
 export class SequenceComponent implements OnChanges {
+  private work = inject(LessonWork, { optional: true });
+
   @Input({ required: true }) title = '';
   @Input() intro = '';
   @Input({ required: true }) steps: SequenceStep[] = [];
@@ -169,15 +172,19 @@ export class SequenceComponent implements OnChanges {
     for (const s of this.steps) {
       for (const name of [s.from, s.to]) if (!this.actors.includes(name)) this.actors.push(name);
     }
-    this.shown = 1;
+    const saved = this.work?.get<number>(this.key);
+    this.shown = typeof saved === 'number' ? Math.min(Math.max(saved, 1), this.steps.length) : 1;
   }
+
+  private get key(): string { return `seq:${this.title}`; }
+  private save() { this.work?.set(this.key, this.shown); }
 
   actorClass(name: string): string {
     return 'a' + (this.actors.indexOf(name) % 4);
   }
 
-  next() { if (this.shown < this.steps.length) this.shown++; }
-  back() { if (this.shown > 1) this.shown--; }
-  showAll() { this.shown = this.steps.length; }
-  reset() { this.shown = 1; }
+  next() { if (this.shown < this.steps.length) { this.shown++; this.save(); } }
+  back() { if (this.shown > 1) { this.shown--; this.save(); } }
+  showAll() { this.shown = this.steps.length; this.save(); }
+  reset() { this.shown = 1; this.work?.clear(this.key); }
 }

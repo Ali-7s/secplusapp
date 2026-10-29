@@ -11,6 +11,7 @@ import { LESSON_META } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
 import { LessonPart, checkMinutes, lessonParts } from './lessons/parts';
 import { MdPipe } from './blocks/md.pipe';
+import { LessonWork } from './lesson-work.service';
 import { LessonQuizComponent } from './blocks/lesson-quiz.component';
 import { SequenceComponent } from './blocks/sequence.component';
 import { LayerExplorerComponent } from './blocks/layer-explorer.component';
@@ -44,12 +45,14 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',
+  providers: [LessonWork],
 })
 export class LessonComponent {
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private content = inject(ContentService);
   private router = inject(Router);
   readonly progress = inject(ProgressService);
+  private work = inject(LessonWork);
   @ViewChild('related') private relatedSection?: ElementRef<HTMLElement>;
 
   /** Touch screens cannot hover, so the first tap previews a card and the second opens it. */
@@ -73,6 +76,7 @@ export class LessonComponent {
   constructor() {
     inject(ActivatedRoute).paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
       this.lesson = getLesson(params.get('slug'));
+      this.work.slug = this.lesson?.slug ?? '';
       this.parts = this.lesson ? lessonParts(this.lesson) : [];
       const saved = this.lesson ? this.progress.lessonRecord(this.lesson.slug)?.part ?? 0 : 0;
       this.step = Math.min(Math.max(saved, 0), this.parts.length);

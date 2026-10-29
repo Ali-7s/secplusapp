@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, DoCheck } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -26,6 +26,9 @@ import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.comp
 import { rankBySearch, searchRank } from '../../utils/search-rank';
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { isDue, smartOrder } from '../../utils/progress';
+import {
+  DeckSession, QuickAnswer, loadDeckSession, loadQuickAnswers, restoreDeck, saveDeckSession, saveQuickAnswers, sessionSignature,
+} from '../../utils/study-session';
 
 @Component({
   selector: 'app-acronyms',
@@ -36,7 +39,7 @@ import { isDue, smartOrder } from '../../utils/progress';
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
-export class AcronymsComponent implements OnInit {
+export class AcronymsComponent implements OnInit, DoCheck {
   private contentService = inject(ContentService);
   private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
@@ -60,6 +63,8 @@ export class AcronymsComponent implements OnInit {
   quizSelected = new Map<string, string>();
   /** Quick Checks marked "I'm guessing" before answering: a right guess counts as not known yet. */
   quizGuessing = new Set<string>();
+  /** Quick Checks answered on an earlier visit stay answered (with a Try again button). */
+  private readonly savedQuick = loadQuickAnswers('acr');
 
   private progress = inject(ProgressService);
 
@@ -87,6 +92,10 @@ export class AcronymsComponent implements OnInit {
   private clozeReveals = new Map<string, ClozeSpan[]>();
 
   ngOnInit() {
+    for (const [name, answer] of this.savedQuick) {
+      this.quizSelected.set(name, answer.letter);
+      if (answer.guess) this.quizGuessing.add(name);
+    }
     const q = this.route.snapshot.queryParamMap.get('q');
     if (q) this.pendingAcronym = q;
     // "?mode=review" (from the Today plan) opens the flashcards straight into Review mode.
@@ -106,6 +115,9 @@ export class AcronymsComponent implements OnInit {
         this.categories = ['All', ...cats];
         this.filter();
         this.loading = false;
+        // A link to one card, or to Review mode, decides the view; otherwise carry on where the last visit stopped.
+        if (!this.pendingAcronym && this.fcMode !== 'review') this.restoreSession();
+        this.sessionReady = true;
         if (this.pendingAcronym) {
           this.navigateToAcronym(this.pendingAcronym);
           this.pendingAcronym = '';
@@ -288,6 +300,7 @@ export class AcronymsComponent implements OnInit {
     event.stopPropagation();
     if (this.quizSelected.has(acronym)) return;
     this.quizSelected.set(acronym, letter);
+    this.saveQuick();
     const answer = this.cardDetails.get(acronym)?.quizAnswer;
     if (answer) this.progress.recordCard('acr', acronym, letter === answer && !this.quizGuessing.has(acronym));
   }
@@ -295,6 +308,65 @@ export class AcronymsComponent implements OnInit {
   toggleQuizGuess(acronym: string) {
     if (this.quizSelected.has(acronym)) return;
     this.quizGuessing.has(acronym) ? this.quizGuessing.delete(acronym) : this.quizGuessing.add(acronym);
+  }
+
+  /** Clears an answered Quick Check so it can be taken again. */
+  retryQuiz(acronym: string, event: MouseEvent) {
+    event.stopPropagation();
+    this.quizSelected.delete(acronym);
+    this.quizGuessing.delete(acronym);
+    this.saveQuick();
+  }
+
+  private saveQuick() {
+    const answers = new Map<string, QuickAnswer>();
+    for (const [name, letter] of this.quizSelected) answers.set(name, { letter, guess: this.quizGuessing.has(name) });
+    saveQuickAnswers('acr', answers);
+  }
+
+  // ── Picking up where you left off ─────────────────────────────────────
+
+  private sessionReady = false;
+  private lastSignature = '';
+
+  /** Saves the flashcard place and filters whenever they change, so a refresh comes back to the same card. */
+  ngDoCheck() {
+    if (!this.sessionReady) return;
+    const session = this.currentSession();
+    const signature = sessionSignature(session);
+    if (signature === this.lastSignature) return;
+    this.lastSignature = signature;
+    saveDeckSession('acr', session);
+  }
+
+  private currentSession(): DeckSession {
+    return {
+      flashcards: this.flashcardMode,
+      mode: this.fcMode,
+      order: this.fcOrder,
+      category: this.selectedCategory,
+      search: this.searchText,
+      deck: this.deck.map(a => a.acronym),
+      index: this.fcIndex,
+      done: [...this.fcDone].map(i => this.deck[i]).filter(Boolean).map(a => a.acronym),
+    };
+  }
+
+  private restoreSession() {
+    const saved = loadDeckSession('acr');
+    if (!saved) return;
+    if (this.categories.includes(saved.category)) this.selectedCategory = saved.category;
+    this.searchText = typeof saved.search === 'string' ? saved.search : '';
+    this.fcOrder = saved.order === 'az' ? 'az' : 'smart';
+    this.filter();
+    this.flashcardMode = !!saved.flashcards;
+    if (saved.mode !== 'review') this.fcMode = saved.mode ?? 'flip';
+    const restored = restoreDeck(saved, this.filteredAcronyms, a => a.acronym);
+    if (restored) {
+      this.deck = restored.deck;
+      this.fcIndex = restored.index;
+      this.fcDone = restored.done;
+    }
   }
 
   isQuizCorrect(acronym: string): boolean {

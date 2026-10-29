@@ -1,4 +1,5 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, inject } from '@angular/core';
+import { LessonWork } from '../lesson-work.service';
 import { MatIconModule } from '@angular/material/icon';
 import { SpotLine } from '../networking.model';
 import { MdPipe } from './md.pipe';
@@ -114,6 +115,8 @@ import { MdPipe } from './md.pipe';
   `],
 })
 export class SpotIssuesComponent implements OnChanges {
+  private work = inject(LessonWork, { optional: true });
+
   @Input({ required: true }) title = '';
   @Input({ required: true }) intro = '';
   @Input({ required: true }) lines: SpotLine[] = [];
@@ -122,8 +125,13 @@ export class SpotIssuesComponent implements OnChanges {
   checked = false;
 
   ngOnChanges() {
-    this.reset();
+    const saved = this.work?.get<{ selected: number[]; checked: boolean }>(this.key);
+    this.selected = new Set((saved?.selected ?? []).filter(i => i >= 0 && i < this.lines.length));
+    this.checked = !!saved?.checked && this.selected.size > 0;
   }
+
+  private get key(): string { return `spot:${this.title}`; }
+  private save() { this.work?.set(this.key, { selected: [...this.selected], checked: this.checked }); }
 
   get issueCount(): number {
     return this.lines.filter(l => l.issue).length;
@@ -141,14 +149,17 @@ export class SpotIssuesComponent implements OnChanges {
     if (this.checked) return;
     if (this.selected.has(i)) this.selected.delete(i);
     else this.selected.add(i);
+    this.save();
   }
 
   check() {
     if (this.selected.size > 0) this.checked = true;
+    this.save();
   }
 
   reset() {
     this.selected = new Set<number>();
     this.checked = false;
+    this.work?.clear(this.key);
   }
 }

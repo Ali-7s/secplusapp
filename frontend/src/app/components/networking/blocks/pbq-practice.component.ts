@@ -7,6 +7,12 @@ import { FirewallQuestion, MatchQuestion, OrderQuestion, isPbq } from '../../../
 import { ExamAnswer, GradedQuestion, gradeQuestion, isAnswered, seededRandom, shuffled } from '../../../utils/exam-engine';
 import { PbqQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
+import { LessonWork } from '../lesson-work.service';
+
+/** A question's saved answer, and whether it was checked. */
+interface SavedPbq { answer: ExamAnswer; checked: boolean }
+/** Which exam questions were drawn for practice, in their order, and which one is open. */
+interface SavedBank { ids: string[]; index: number }
 
 /**
  * Hands-on PBQ practice inside a lesson: a firewall table, a matching form or an ordering task, with a
@@ -22,6 +28,7 @@ import { MdPipe } from './md.pipe';
 })
 export class PbqPracticeComponent implements OnChanges {
   private content = inject(ContentService);
+  private work = inject(LessonWork, { optional: true });
 
   @Input({ required: true }) title = '';
   @Input() intro = '';
@@ -44,38 +51,64 @@ export class PbqPracticeComponent implements OnChanges {
   private startOrder: number[] = [];
 
   ngOnChanges() {
-    if (this.fromLesson) return;
+    if (this.fromLesson) {
+      // Practice already under way carries on where it was, which means loading the question bank straight away.
+      const bank = this.work?.get<SavedBank>(this.bankKey);
+      if (bank?.ids?.length && !this.list.length && !this.loading) this.start(bank);
+      return;
+    }
     this.list = this.questions;
     this.go(0);
   }
+
+  private get bankKey(): string { return `bank:${this.fromLesson}`; }
 
   get q(): PbqQuestion | undefined { return this.list[this.index]; }
   get exam(): boolean { return !!this.fromLesson; }
 
   /** Exam-style practice loads the 1 MB question bank only when the learner asks for it. */
-  start() {
+  start(saved?: SavedBank) {
     this.loading = true;
     this.content.getPracticeExam().subscribe({
       next: pool => {
-        const rand = seededRandom(Date.now() % 2 ** 31);
-        // Random order, but firewall rule tables first: they are the PBQ type learners most need to practice.
-        this.list = shuffled(pool.filter((q): q is PbqQuestion => isPbq(q) && q.lesson === this.fromLesson), rand)
-          .sort((a, b) => Number(b.kind === 'firewall') - Number(a.kind === 'firewall'));
+        const mine = pool.filter((q): q is PbqQuestion => isPbq(q) && q.lesson === this.fromLesson);
+        const byId = new Map(mine.map(q => [q.id, q]));
+        const kept = (saved?.ids ?? []).map(id => byId.get(id)).filter((q): q is PbqQuestion => !!q);
+        if (kept.length) {
+          this.list = kept;
+        } else {
+          const rand = seededRandom(Date.now() % 2 ** 31);
+          // Random order, but firewall rule tables first: they are the PBQ type learners most need to practice.
+          this.list = shuffled(mine, rand).sort((a, b) => Number(b.kind === 'firewall') - Number(a.kind === 'firewall'));
+        }
         this.loading = false;
-        this.go(0);
+        this.go(kept.length ? Math.min(saved!.index, kept.length - 1) : 0);
       },
       error: () => { this.loading = false; this.loadFailed = true; },
     });
   }
 
+  /** Opens a question, with any answer saved for it earlier. */
   go(i: number) {
     this.index = i;
-    this.checked = false;
-    this.reset();
+    this.blank();
+    const q = this.q;
+    const saved = q ? this.work?.get<SavedPbq>(`pbq:${q.id}`) : undefined;
+    if (saved?.answer) {
+      this.answer = structuredClone(saved.answer);
+      this.checked = !!saved.checked;
+    }
+    if (this.exam) this.work?.set(this.bankKey, { ids: this.list.map(x => x.id), index: i } satisfies SavedBank);
   }
 
-  /** Clears the answers. The worked-example rows of a guided firewall table stay filled in. */
+  /** Clears the answers, including the saved ones. */
   reset() {
+    this.blank();
+    if (this.q) this.work?.clear(`pbq:${this.q.id}`);
+  }
+
+  /** Empty answers. The worked-example rows of a guided firewall table stay filled in. */
+  private blank() {
     const q = this.q;
     this.answer = {};
     this.checked = false;
@@ -100,22 +133,25 @@ export class PbqPracticeComponent implements OnChanges {
   setCell(row: number, col: string, value: string) {
     const cells = (this.answer.cells ??= []);
     cells[row] = { ...(cells[row] ?? {}), [col]: value };
+    this.save();
   }
 
   pick(i: number): string { return this.answer.picks?.[i] ?? ''; }
-  setPick(i: number, value: string) { (this.answer.picks ??= [])[i] = value; }
+  setPick(i: number, value: string) { (this.answer.picks ??= [])[i] = value; this.save(); }
 
   orderOf(): number[] { return this.answer.order ?? this.startOrder; }
   drop(e: CdkDragDrop<number[]>) {
     const order = [...this.orderOf()];
     moveItemInArray(order, e.previousIndex, e.currentIndex);
     this.answer.order = order;
+    this.save();
   }
   move(pos: number, delta: number) {
     const order = [...this.orderOf()], to = pos + delta;
     if (to < 0 || to >= order.length) return;
     [order[pos], order[to]] = [order[to], order[pos]];
     this.answer.order = order;
+    this.save();
   }
 
   /** An ordering task can always be checked; the others need every box filled. */
@@ -127,8 +163,13 @@ export class PbqPracticeComponent implements OnChanges {
   check() {
     if (this.q?.kind === 'order') this.answer.order ??= [...this.startOrder];
     this.checked = true;
+    this.save();
     const g = this.graded;
     if (g && this.q) this.checkedResult.emit({ id: this.q.id, fraction: g.earned / g.max });
+  }
+
+  private save() {
+    if (this.q) this.work?.set(`pbq:${this.q.id}`, { answer: this.answer, checked: this.checked } satisfies SavedPbq);
   }
 
   get graded(): GradedQuestion | null {

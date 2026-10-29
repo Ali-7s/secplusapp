@@ -51,6 +51,14 @@ describe('mergeProgress', () => {
     expect(l.part).toBe(6);
   });
 
+  it('keeps the latest saved work on each lesson exercise from either device', () => {
+    const a = progress(d => { d.lessons['vlans'] = { pbqs: {}, at: 100, work: { check: { v: [0, null], at: 100 }, 'harden:Switch': { v: [1], at: 300 } } }; });
+    const b = progress(d => { d.lessons['vlans'] = { pbqs: {}, at: 200, work: { check: { v: [0, 2], at: 200 } } }; });
+    const work = mergeProgress(a, b).lessons['vlans'].work!;
+    expect(work['check'].v).toEqual([0, 2]);
+    expect(work['harden:Switch'].v).toEqual([1]);
+  });
+
   it('takes settings from the device that changed them last', () => {
     const a = progress(d => { d.plan.examDate = '2026-12-01'; d.review.newPerDay = 10; d.settingsAt = 500; });
     const b = progress(d => { d.plan.examDate = '2026-11-15'; d.review.newPerDay = 30; d.settingsAt = 200; });
@@ -167,7 +175,7 @@ describe('encryption', () => {
   it('reads back what it sealed, and refuses the wrong code', async () => {
     const keys = await deriveSyncKeys('K7P29XMAQR4T');
     const sealed = await seal(keys, payload);
-    expect(sealed.data).not.toContain('AH');
+    expect(atob(sealed.data)).not.toContain('examDate');
     expect(stableStringify(await unseal(keys, sealed))).toBe(stableStringify(parsePayload(payload)));
     await expectAsync(unseal(await deriveSyncKeys('K7P29XMAQR4V'), sealed)).toBeRejected();
   });

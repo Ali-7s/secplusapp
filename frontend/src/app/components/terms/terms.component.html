@@ -336,6 +336,9 @@
                       @if (detail.explanation) {
                         <p class="quiz-why"><strong>Why:</strong> {{ detail.explanation }}</p>
                       }
+                      <button type="button" class="quiz-retry" (click)="retryQuiz(t.term, $event)">
+                        <mat-icon aria-hidden="true">refresh</mat-icon> Try again
+                      </button>
                     }
                   </div>
 
