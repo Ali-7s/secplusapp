@@ -95,6 +95,14 @@ export class ProgressService {
     });
   }
 
+  /** Whether Review mode asks you to type each answer before showing it. */
+  setTypeAnswers(on: boolean) {
+    this.update(d => {
+      d.review.typeAnswers = on;
+      d.settingsAt = Date.now();
+    });
+  }
+
   /** Raises today's new-card limit for one deck. */
   studyMoreNew(kind: CardKind, extra: number) {
     this.update(d => {

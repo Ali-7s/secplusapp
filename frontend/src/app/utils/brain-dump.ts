@@ -7,6 +7,7 @@
  */
 
 import { Acronym, Term, VariantGroup } from '../models/glossary.model';
+import { AnswerCheck } from './typed-answer';
 
 export type DeckId = 'acronyms' | 'terms';
 
@@ -34,6 +35,8 @@ export interface DumpCard {
   prompt?: string;
   /** Labelled lines under the answer ("Example: ..."). Reference deck cards only. */
   notes?: { label: string; text: string }[];
+  /** Marks an answer typed in Review mode. Reference deck cards with a short answer only (see typed-answer.ts). */
+  check?: AnswerCheck;
 }
 
 /** One line of the "a complete answer covers" checklist. */

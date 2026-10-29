@@ -101,7 +101,7 @@ export function mergeProgress(a: ProgressData, b: ProgressData): ProgressData {
     questions: mergeByTime(x.questions, y.questions),
     cards: mergeByTime(x.cards, y.cards),
     lessons,
-    review: { newPerDay: settings.review.newPerDay, day: x.review.day > y.review.day ? x.review.day : y.review.day, newToday: { ...counts } },
+    review: { newPerDay: settings.review.newPerDay, typeAnswers: settings.review.typeAnswers, day: x.review.day > y.review.day ? x.review.day : y.review.day, newToday: { ...counts } },
     plan: { ...settings.plan },
     days,
   };

@@ -51,6 +51,8 @@ export interface ReviewSettings {
   /** The local day the counts below belong to ("2026-10-26"). */
   day: string;
   newToday: Record<CardKind, number>;
+  /** False when answers are shown without typing them first. Typing is on unless turned off. */
+  typeAnswers?: boolean;
 }
 
 export const DEFAULT_NEW_PER_DAY = 20;

@@ -21,6 +21,10 @@
         New cards per day
         <input type="number" min="0" max="999" [value]="progress.data().review.newPerDay" (change)="setNewPerDay($event)" />
       </label>
+      <label class="check-setting">
+        <input type="checkbox" [checked]="typing()" (change)="setTypeAnswers($event)" />
+        Type each answer before it is shown
+      </label>
       <p>
         Applies to each deck. New cards start on short learning steps (1 and 10 minutes); after that, each
         Good roughly multiplies the gap before the next review by 2.5. Again sends a card back to relearning.
@@ -40,7 +44,7 @@
       <div class="front">
         <span class="category">{{ c.category }}</span>
         <div class="name">{{ c.name }}</div>
-        @if (c.prompt) { <p class="prompt">{{ c.prompt }}</p> }
+        <p class="prompt">{{ prompt() }}</p>
         @if (cardQueue() === 'new') { <span class="badge">New {{ noun() }}</span> }
       </div>
 
@@ -57,13 +61,39 @@
     </div>
 
     @if (!revealed()) {
-      <button type="button" mat-flat-button color="primary" class="show" (click)="reveal()">
-        Show answer <span class="key">Space</span>
-      </button>
+      @if (typing()) {
+        <form class="typed" (submit)="$event.preventDefault(); submit()">
+          <input #answerInput class="typed-input" type="text" [value]="typed()" (input)="setTyped($event)"
+            [placeholder]="kind() === 'term' ? 'Type what it means' : 'Type your answer'" aria-label="Your answer"
+            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <button type="submit" mat-flat-button color="primary" class="check-btn">Check <span class="key">Enter</span></button>
+        </form>
+        <button type="button" mat-button class="give-up" (click)="submit(true)">I don't know, show me</button>
+      } @else {
+        <button type="button" mat-flat-button color="primary" class="show" (click)="reveal()">
+          Show answer <span class="key">Space</span>
+        </button>
+      }
     } @else {
+      @if (typing() && checked()) {
+        @let v = verdict();
+        <div class="verdict" [class.right]="v?.right" [class.wrong]="v && !v.right" role="status">
+          <mat-icon aria-hidden="true">{{ !v ? 'compare_arrows' : v.right ? 'check_circle' : 'cancel' }}</mat-icon>
+          <div class="verdict-text">
+            <strong>{{ !v ? 'Compare your answer with the card' : v.right ? 'Right' : 'Not quite' }}</strong>
+            @if (typed().trim()) { <p class="you-wrote">You wrote: “{{ typed().trim() }}”</p> }
+            @if (v?.note) { <p>{{ v?.note }}</p> }
+            @if (v && !v.right) {
+              <p>A wrong answer can only be rated Again, so the card comes back soon.
+                @if (typed().trim()) { <button type="button" class="link" (click)="countAsRight()">My answer was right</button> }
+              </p>
+            }
+          </div>
+        </div>
+      }
       <div class="ratings" role="group" aria-label="How well did you remember it?">
         @for (r of ratings; track r.id) {
-          <button type="button" class="rate" [class]="r.id" (click)="answer(r.id)">
+          <button type="button" class="rate" [class]="r.id" (click)="answer(r.id)" [disabled]="onlyAgain() && r.id !== 'again'">
             <span class="ivl">{{ intervals()[r.id] }}</span>
             <span class="label">{{ r.label }}</span>
             <span class="key">{{ r.key }}</span>
@@ -90,5 +120,8 @@
     </div>
   }
 
-  <p class="hint">Space shows the answer and rates Good. Keys 1 to 4 pick Again, Hard, Good or Easy. Ctrl+Z undoes.</p>
+  <p class="hint">
+    @if (typing()) { Enter checks your answer. Then Space rates Good (Again after a miss), and keys 1 to 4 pick a rating. Ctrl+Z undoes. }
+    @else { Space shows the answer and rates Good. Keys 1 to 4 pick Again, Hard, Good or Easy. Ctrl+Z undoes. }
+  </p>
 </div>
