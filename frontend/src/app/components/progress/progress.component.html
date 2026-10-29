@@ -234,8 +234,8 @@
       schedule. "Learning" cards are still on their short steps, "young" ones are reviewed less
       than three weeks apart, and "mature" ones three weeks or more. "Due" cards are ready in Review mode.</p>
     <div class="decks">
-      @for (d of [{ label: 'Acronyms', link: '/acronyms', s: acronymStats() }, { label: 'Key Terms', link: '/terms', s: termStats() }]; track d.label) {
-        <a class="deck" [routerLink]="d.link">
+      @for (d of [{ label: 'Acronyms', link: '/acronyms', s: acronymStats() }, { label: 'Key Terms', link: '/terms', s: termStats() }, { label: 'Reference', link: '/reference', query: { mode: 'review' }, s: refStats() }]; track d.label) {
+        <a class="deck" [routerLink]="d.link" [queryParams]="d.query">
           <div class="deck-title">{{ d.label }}</div>
           <div class="bar"><span [style.width.%]="pct(d.s.studied, d.s.total)"></span></div>
           <div class="deck-line"><strong>{{ d.s.studied }}</strong> of {{ d.s.total }} studied · <strong>{{ d.s.due }}</strong> due now</div>

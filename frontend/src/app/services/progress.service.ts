@@ -1,10 +1,10 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { CardRecord, ExamRecord, LessonRecord, ProgressData, parseProgress, recordQuestion } from '../utils/progress';
+import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, noNewToday, parseProgress, recordQuestion } from '../utils/progress';
 import { Rating, answerOutsideQueue, dayKey, schedule } from '../utils/srs';
 
 const KEY = 'sp-progress';
 
-export type CardKind = 'acr' | 'term';
+export type { CardKind };
 export const cardKey = (kind: CardKind, name: string) => `${kind}:${name}`;
 
 /**
@@ -194,7 +194,7 @@ export class ProgressService {
   /** Starts fresh new-card counts on a new day. */
   private rollDay(d: ProgressData, now: number) {
     const today = dayKey(now);
-    if (d.review.day !== today) d.review = { ...d.review, day: today, newToday: { acr: 0, term: 0 } };
+    if (d.review.day !== today) d.review = { ...d.review, day: today, newToday: noNewToday() };
   }
 
   private lesson(d: ProgressData, slug: string): LessonRecord {

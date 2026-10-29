@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { ContentService } from '../../services/content.service';
-import { ProgressService, cardKey } from '../../services/progress.service';
+import { CardKind, ProgressService, cardKey } from '../../services/progress.service';
 import { BrainDumpStore } from '../../services/brain-dump-store.service';
 import { SyncService } from '../../services/sync.service';
 import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../models/exam.model';
@@ -16,6 +16,8 @@ import { isDueCard, isLearning, isMature } from '../../utils/srs';
 import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META } from '../networking/lessons/lesson-index';
+import { referenceCards } from '../reference/reference-cards';
+import { DeckId } from '../../utils/brain-dump';
 
 interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
 
@@ -44,6 +46,7 @@ export class ProgressComponent implements OnInit {
 
   private pool = signal<ExamQuestion[]>([]);
   private acronymNames = signal<string[]>([]);
+  private readonly refIds = referenceCards().map(c => c.id);
   private termNames = signal<string[]>([]);
   message = signal<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
@@ -65,7 +68,7 @@ export class ProgressComponent implements OnInit {
 
   readonly examDate = computed(() => this.progress.data().plan.examDate ?? null);
 
-  private deckState(kind: 'acr' | 'term', names: string[], label: string, path: string): DeckState {
+  private deckState(kind: CardKind, names: string[], label: string, path: string): DeckState {
     const cards = this.progress.data().cards;
     const now = Date.now();
     let studied = 0, due = 0;
@@ -95,6 +98,7 @@ export class ProgressComponent implements OnInit {
       decks: [
         this.deckState('acr', this.acronymNames(), 'Acronyms', '/acronyms'),
         this.deckState('term', this.termNames(), 'Key Terms', '/terms'),
+        this.deckState('ref', this.refIds, 'Reference', '/reference'),
       ],
       newPerDay: d.review.newPerDay,
       nextLesson: next && { slug: next.slug, number: next.number, title: next.title },
@@ -182,8 +186,9 @@ export class ProgressComponent implements OnInit {
 
   readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames(), 'acronyms'));
   readonly termStats = computed(() => this.deckStats('term', this.termNames(), 'terms'));
+  readonly refStats = computed(() => this.deckStats('ref', this.refIds));
 
-  private deckStats(kind: 'acr' | 'term', names: string[], deck: 'acronyms' | 'terms'): DeckStats {
+  private deckStats(kind: CardKind, names: string[], deck?: DeckId): DeckStats {
     const cards = this.progress.data().cards;
     const now = Date.now();
     let studied = 0, learning = 0, young = 0, mature = 0, due = 0;
@@ -197,7 +202,7 @@ export class ProgressComponent implements OnInit {
       if (isDueCard(c, now)) due++;
     }
     const dump = { nailed: 0, partly: 0, missed: 0 };
-    for (const r of this.dumpStore.load(deck).values()) dump[r]++;
+    if (deck) for (const r of this.dumpStore.load(deck).values()) dump[r]++;
     return { total: names.length, studied, learning, young, mature, due, dump };
   }
 

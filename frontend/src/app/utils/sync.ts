@@ -8,7 +8,7 @@
  */
 
 import { dayKey } from './srs';
-import { LessonRecord, ProgressData, parseProgress } from './progress';
+import { CARD_KINDS, CardKind, LessonRecord, ProgressData, parseProgress } from './progress';
 
 /** When each card in a brain dump deck was rated, and when the deck was last cleared. */
 export interface DeckTimes {
@@ -92,7 +92,7 @@ export function mergeProgress(a: ProgressData, b: ProgressData): ProgressData {
 
   const settings = (y.settingsAt ?? 0) > (x.settingsAt ?? 0) ? y : x;
   const counts = x.review.day === y.review.day
-    ? { acr: Math.max(x.review.newToday.acr, y.review.newToday.acr), term: Math.max(x.review.newToday.term, y.review.newToday.term) }
+    ? Object.fromEntries(CARD_KINDS.map(k => [k, Math.max(x.review.newToday[k], y.review.newToday[k])])) as Record<CardKind, number>
     : (x.review.day > y.review.day ? x : y).review.newToday;
 
   const out: ProgressData = {

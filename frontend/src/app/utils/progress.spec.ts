@@ -15,6 +15,11 @@ describe('progress storage', () => {
     expect(parseProgress('{"exams":[]}').review.newPerDay).toBe(DEFAULT_NEW_PER_DAY);
   });
 
+  it('gives a deck added since the last save a zero count of new cards today', () => {
+    const saved = JSON.stringify({ review: { newPerDay: 15, day: '2026-10-28', newToday: { acr: 4, term: 2 } } });
+    expect(parseProgress(saved).review).toEqual({ newPerDay: 15, day: '2026-10-28', newToday: { acr: 4, term: 2, ref: 0 } });
+  });
+
   it('drops card records saved in an older shape', () => {
     const card = { state: 'review', step: 0, interval: 3, ease: 2.5, due: NOW, reps: 3, lapses: 0, right: 3, wrong: 0, at: NOW };
     const parsed = parseProgress(JSON.stringify({ cards: { 'acr:PKI': card, 'acr:AES': { box: 3, due: NOW, right: 1, wrong: 0, at: NOW } } }));

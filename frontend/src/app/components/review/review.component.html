@@ -40,6 +40,7 @@
       <div class="front">
         <span class="category">{{ c.category }}</span>
         <div class="name">{{ c.name }}</div>
+        @if (c.prompt) { <p class="prompt">{{ c.prompt }}</p> }
         @if (cardQueue() === 'new') { <span class="badge">New {{ noun() }}</span> }
       </div>
 
@@ -50,6 +51,7 @@
           <p class="definition">{{ c.definition }}</p>
           @if (c.analogy) { <p class="analogy"><strong>Think of it as:</strong> {{ c.analogy }}</p> }
           @if (c.examContext) { <p class="exam"><strong>On the exam:</strong> {{ c.examContext }}</p> }
+          @for (n of c.notes ?? []; track n.label) { <p class="note"><strong>{{ n.label }}:</strong> {{ n.text }}</p> }
         </div>
       }
     </div>

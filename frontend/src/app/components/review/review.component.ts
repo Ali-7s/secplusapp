@@ -55,7 +55,7 @@ export class ReviewComponent {
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
-  readonly noun = computed(() => (this.kind() === 'acr' ? 'acronym' : 'term'));
+  readonly noun = computed(() => ({ acr: 'acronym', term: 'term', ref: 'card' })[this.kind()]);
 
   /** This deck's study records, by card id. */
   private readonly records = computed(() => {

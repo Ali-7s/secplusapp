@@ -14,13 +14,38 @@
     </div>
   </div>
 
+  @if (reviewing) {
+    <div class="ref-review">
+      <div class="ref-review-head">
+        <button mat-button (click)="closeReview()"><mat-icon>arrow_back</mat-icon> Back to the tables</button>
+        <label class="ref-review-pick">
+          <span>Cards from</span>
+          <select class="picker" [ngModel]="reviewSection" (ngModelChange)="setReviewSection($event)">
+            <option value="all">All sections ({{ allRefCards.length }})</option>
+            @for (s of deckSections; track s.key) {
+              <option [value]="s.key">{{ s.label }} ({{ cardsFor(s.key).length }})</option>
+            }
+          </select>
+        </label>
+      </div>
+      <app-review [cards]="reviewCards" kind="ref" />
+    </div>
+  } @else {
+
   <div class="search-bar">
     <mat-form-field appearance="outline" class="search-field">
       <mat-label>Search across all tables...</mat-label>
       <input matInput [(ngModel)]="searchText" (ngModelChange)="jumpToMatches()" placeholder="e.g. AES, 443, RADIUS, WPA3...">
       <mat-icon matSuffix>search</mat-icon>
     </mat-form-field>
+    <button mat-flat-button color="primary" class="review-btn" (click)="openReview()">
+      <mat-icon>event_repeat</mat-icon> Review mode
+      @if (refDue) { <span class="due-pill">{{ refDue }} due</span> }
+    </button>
   </div>
+  <p class="deck-note">Review mode turns ports (both ways), RAID, backups, recovery metrics, risk formulas, site types,
+    incident response order, legacy replacements, Wi-Fi security, cloud models and data labels into
+    {{ allRefCards.length }} spaced repetition cards.</p>
 
   @if (drillActive) {
     <div class="drill-container">
@@ -951,5 +976,7 @@
   </mat-tab-group>
 
   } <!-- end @else (drill inactive) -->
+
+  } <!-- end @else (not reviewing) -->
 
 </div>

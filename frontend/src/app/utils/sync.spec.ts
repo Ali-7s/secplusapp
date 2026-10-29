@@ -69,10 +69,10 @@ describe('mergeProgress', () => {
   });
 
   it('counts the new cards both devices introduced today, and keeps each day studied', () => {
-    const a = progress(d => { d.review.day = '2026-10-28'; d.review.newToday = { acr: 5, term: 0 }; d.days = { '2026-10-27': 10, '2026-10-28': 3 }; });
-    const b = progress(d => { d.review.day = '2026-10-28'; d.review.newToday = { acr: 2, term: 4 }; d.days = { '2026-10-28': 8 }; });
+    const a = progress(d => { d.review.day = '2026-10-28'; d.review.newToday = { acr: 5, term: 0, ref: 3 }; d.days = { '2026-10-27': 10, '2026-10-28': 3 }; });
+    const b = progress(d => { d.review.day = '2026-10-28'; d.review.newToday = { acr: 2, term: 4, ref: 0 }; d.days = { '2026-10-28': 8 }; });
     const m = mergeProgress(a, b);
-    expect(m.review.newToday).toEqual({ acr: 5, term: 4 });
+    expect(m.review.newToday).toEqual({ acr: 5, term: 4, ref: 3 });
     expect(m.days).toEqual({ '2026-10-27': 10, '2026-10-28': 8 });
   });
 

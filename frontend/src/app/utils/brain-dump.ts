@@ -30,6 +30,10 @@ export interface DumpCard {
   analogy?: string;
   related: string[];
   variants?: VariantGroup[];
+  /** What to recall, shown under the name. Reference deck cards only ("Which port, and TCP or UDP?"). */
+  prompt?: string;
+  /** Labelled lines under the answer ("Example: ..."). Reference deck cards only. */
+  notes?: { label: string; text: string }[];
 }
 
 /** One line of the "a complete answer covers" checklist. */

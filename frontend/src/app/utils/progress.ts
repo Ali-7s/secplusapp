@@ -38,12 +38,19 @@ export interface QuestionRecord {
 /** A glossary card's spaced repetition state (SM-2, see srs.ts) and its results. */
 export type CardRecord = SrsCard;
 
+/** The flashcard decks: acronyms, key terms, and cards made from the Reference tables. */
+export type CardKind = 'acr' | 'term' | 'ref';
+export const CARD_KINDS: readonly CardKind[] = ['acr', 'term', 'ref'];
+
+/** No new cards yet today in any deck. */
+export const noNewToday = (): Record<CardKind, number> => ({ acr: 0, term: 0, ref: 0 });
+
 /** Review mode's daily limit on new cards, and how many each deck has introduced today. */
 export interface ReviewSettings {
   newPerDay: number;
   /** The local day the counts below belong to ("2026-10-26"). */
   day: string;
-  newToday: { acr: number; term: number };
+  newToday: Record<CardKind, number>;
 }
 
 export const DEFAULT_NEW_PER_DAY = 20;
@@ -81,7 +88,7 @@ export interface ProgressData {
   version: 1;
   exams: ExamRecord[];
   questions: Record<string, QuestionRecord>;
-  /** Keyed "acr:PKI" or "term:Hardening". */
+  /** Keyed "acr:PKI", "term:Hardening" or "ref:port:22". */
   cards: Record<string, CardRecord>;
   lessons: Record<string, LessonRecord>;
   review: ReviewSettings;
@@ -94,7 +101,7 @@ export interface ProgressData {
   resetAt?: number;
 }
 
-const emptyReview = (): ReviewSettings => ({ newPerDay: DEFAULT_NEW_PER_DAY, day: '', newToday: { acr: 0, term: 0 } });
+const emptyReview = (): ReviewSettings => ({ newPerDay: DEFAULT_NEW_PER_DAY, day: '', newToday: noNewToday() });
 
 export const emptyProgress = (): ProgressData => ({ version: 1, exams: [], questions: {}, cards: {}, lessons: {}, review: emptyReview(), plan: {}, days: {} });
 
@@ -109,7 +116,7 @@ export function parseProgress(raw: string | null): ProgressData {
       questions: d.questions && typeof d.questions === 'object' ? d.questions : {},
       cards: d.cards && typeof d.cards === 'object' ? validCards(d.cards) : {},
       lessons: d.lessons && typeof d.lessons === 'object' ? d.lessons : {},
-      review: { ...emptyReview(), ...(d.review && typeof d.review === 'object' ? d.review : {}) },
+      review: parseReview(d.review),
       plan: d.plan && typeof d.plan === 'object' ? d.plan : {},
       days: d.days && typeof d.days === 'object' ? d.days : {},
       ...(typeof d.settingsAt === 'number' ? { settingsAt: d.settingsAt } : {}),
@@ -118,6 +125,18 @@ export function parseProgress(raw: string | null): ProgressData {
   } catch {
     return emptyProgress();
   }
+}
+
+/** Review settings, with a zero count for any deck added since they were saved. */
+function parseReview(r: unknown): ReviewSettings {
+  if (!r || typeof r !== 'object') return emptyReview();
+  const review = { ...emptyReview(), ...(r as Partial<ReviewSettings>) };
+  const counts = noNewToday();
+  for (const kind of CARD_KINDS) {
+    const n = review.newToday?.[kind];
+    if (typeof n === 'number' && Number.isFinite(n)) counts[kind] = n;
+  }
+  return { ...review, newToday: counts };
 }
 
 /** Keeps only cards in the current scheduler's shape (an early build saved simpler records). */
