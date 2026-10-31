@@ -12,6 +12,33 @@ export interface ExamOption {
   why: string;
 }
 
+/** A device or address range in a network diagram. */
+export interface NetHost {
+  name: string;
+  ip?: string;
+  /** What it is or listens on, listed under the diagram ("SQL Server (TCP 1433)"). */
+  role?: string;
+  icon?: 'server' | 'pc' | 'device' | 'wifi' | 'printer' | 'phone' | 'camera' | 'threat';
+}
+
+/** A network segment behind the firewall, drawn as a shaded box holding its hosts. */
+export interface NetZone {
+  name: string;
+  subnet?: string;
+  role?: string;
+  hosts: NetHost[];
+}
+
+/** A firewall PBQ's network: the firewall in the middle, the outside world as a cloud, and the zones around it. */
+export interface NetDiagram {
+  firewall: string;
+  /** The untrusted side, drawn as a cloud ("Internet", "Site-to-site VPN"), with the outside parties named in the task. */
+  outside?: { label: string; note?: string; hosts?: NetHost[] };
+  zones: NetZone[];
+  /** Facts that belong to no one box, listed under the diagram. */
+  notes?: string[];
+}
+
 interface ExamQuestionBase {
   id: string;
   domain: ExamDomain;
@@ -21,6 +48,8 @@ interface ExamQuestionBase {
   stem: string;
   /** Monospace block shown above the answer area: logs, configs, command output, a network map. */
   exhibit?: string;
+  /** A network drawn as a diagram, shown instead of the exhibit (firewall PBQs). The exhibit stays as a text fallback. */
+  diagram?: NetDiagram;
   /** The one-line lesson, shown after the per-option reasons. */
   takeaway: string;
   /** Slug of the Networking Basics lesson that teaches the background; such questions make up the networking drill. */

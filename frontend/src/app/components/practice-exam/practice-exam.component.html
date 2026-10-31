@@ -318,7 +318,8 @@
 <!-- Scenario, stem and exhibit, shared by the question and the review -->
 <ng-template #prompt let-q="q">
   @if (q.scenario) { <p class="scenario">{{ q.scenario }}</p> }
-  @if (q.exhibit) { <pre class="exhibit">{{ q.exhibit }}</pre> }
+  @if (q.diagram) { <app-network-diagram [diagram]="q.diagram" /> }
+  @else if (q.exhibit) { <pre class="exhibit">{{ q.exhibit }}</pre> }
   <p class="stem">{{ q.stem }}</p>
 </ng-template>
 

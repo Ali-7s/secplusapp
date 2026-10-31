@@ -1,0 +1,79 @@
+// Colours for the drawing. Each theme sets its own; the zone tones follow the shaded boxes of exam simulations.
+:host {
+  display: block; margin: 0 0 12px;
+  --wire: #c2410c;
+  --brick: #b45309; --brick-2: #dc2626; --mortar: #fde7d4; --flame: #f97316;
+  --cloud-fill: #e0f2fe; --cloud-stroke: #38bdf8; --cloud-text: #075985;
+  --icon-body: #e2e8f0; --icon-line: #475569; --icon-screen: #bfdbfe; --led: #16a34a;
+  --threat: #dc2626;
+  --z0-fill: #ecfeff; --z0-stroke: #67e8f9; --z0-title: #0e7490;
+  --z1-fill: #eef2ff; --z1-stroke: #a5b4fc; --z1-title: #4338ca;
+  --z2-fill: #fefce8; --z2-stroke: #fde047; --z2-title: #a16207;
+  --z3-fill: #f0fdf4; --z3-stroke: #86efac; --z3-title: #15803d;
+}
+:host-context([data-theme='dark']) {
+  --wire: #fb923c;
+  --brick: #c2410c; --brick-2: #ef4444; --mortar: #431407; --flame: #fb923c;
+  --cloud-fill: #0c4a6e; --cloud-stroke: #38bdf8; --cloud-text: #e0f2fe;
+  --icon-body: #cbd5e1; --icon-line: #1e293b; --icon-screen: #60a5fa; --led: #22c55e;
+  --threat: #f87171;
+  --z0-fill: rgba(34, 211, 238, .08); --z0-stroke: rgba(34, 211, 238, .45); --z0-title: #67e8f9;
+  --z1-fill: rgba(129, 140, 248, .1); --z1-stroke: rgba(129, 140, 248, .5); --z1-title: #a5b4fc;
+  --z2-fill: rgba(250, 204, 21, .07); --z2-stroke: rgba(250, 204, 21, .45); --z2-title: #fde047;
+  --z3-fill: rgba(74, 222, 128, .08); --z3-stroke: rgba(74, 222, 128, .45); --z3-title: #86efac;
+}
+
+.net { margin: 0; }
+.frame {
+  padding: 8px; border-radius: var(--r-sm); border: 1px solid var(--c-border); background: var(--c-surface);
+  overflow-x: auto;
+}
+svg { display: block; width: 100%; height: auto; margin: 0 auto; font-family: inherit; }
+
+@for $i from 0 through 3 {
+  .z#{$i} {
+    .zone-box { fill: var(--z#{$i}-fill); stroke: var(--z#{$i}-stroke); stroke-width: 1.5; }
+    .zone-title { fill: var(--z#{$i}-title); }
+  }
+}
+.zone-title { font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.zone-subnet { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--c-text-2); }
+
+.wire { fill: none; stroke: var(--wire); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.wire.dashed { stroke-width: 1.5; stroke-dasharray: 5 4; }
+.wire-note { font-size: 11px; font-style: italic; fill: var(--c-text-2); }
+
+.cloud-shape { fill: var(--cloud-fill); stroke: var(--cloud-stroke); stroke-width: 2; }
+.cloud-label { font-size: 15px; font-weight: 800; fill: var(--cloud-text); }
+
+.brick-wall { fill: var(--brick); stroke: var(--brick-2); stroke-width: 1.5; }
+.mortar { fill: none; stroke: var(--mortar); stroke-width: 1.5; }
+.flame { fill: var(--flame); }
+.fw-label { font-size: 13px; font-weight: 800; fill: var(--c-text); }
+
+.host {
+  .body { fill: var(--icon-body); stroke: var(--icon-line); stroke-width: 1.4; }
+  .screen { fill: var(--icon-screen); stroke: var(--icon-line); stroke-width: 1; }
+  .paper { fill: #fff; stroke: var(--icon-line); stroke-width: 1.2; }
+  .slots, .waves { fill: none; stroke: var(--icon-line); stroke-width: 1.6; stroke-linecap: round; }
+  .waves { stroke: var(--icon-body); stroke-width: 2.2; }
+  .led { fill: var(--led); }
+  .threat { fill: var(--threat); stroke: var(--threat); stroke-width: 2; stroke-linejoin: round; }
+  .threat-mark { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+}
+.host-name { font-size: 13px; font-weight: 700; fill: var(--c-text); }
+.host-ip { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--c-text-2); }
+
+// ── What each host does, under the drawing ──────────────────────────────────
+.details {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 18px;
+  margin-top: 10px; font-size: 13px; line-height: 1.5; color: var(--c-text-2);
+  ul { margin: 2px 0 0; padding: 0; list-style: none; }
+  li { margin: 2px 0; }
+  strong { color: var(--c-text); }
+  code { margin: 0 6px; font-size: 12px; color: var(--c-text); }
+  li span::before, .group-role::before { content: '· '; }
+}
+.group-title { font-weight: 800; color: var(--c-text); }
+.group-role { font-weight: 400; color: var(--c-text-2); }
+.notes { grid-column: 1 / -1; li::before { content: '• '; } }

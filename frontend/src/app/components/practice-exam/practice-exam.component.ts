@@ -9,6 +9,7 @@ import { ProgressService } from '../../services/progress.service';
 import { objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
+import { NetworkDiagramComponent } from './network-diagram.component';
 import {
   ChoiceQuestion, DOMAIN_NAMES, ExamDomain, ExamQuestion, FirewallQuestion, MatchQuestion, OBJECTIVE_NAMES, OrderQuestion,
   isPbq,
@@ -46,7 +47,7 @@ const SEEN_KEY = 'sp-exam-seen';
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule, GuessToggleComponent],
+  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule, GuessToggleComponent, NetworkDiagramComponent],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss',
 })

@@ -1,0 +1,110 @@
+@let l = layout();
+<figure class="net">
+  <div class="frame">
+    <svg [attr.viewBox]="'0 0 ' + l.w + ' ' + l.h" [style.max-width.px]="l.w * 1.1" role="img" [attr.aria-label]="summary()">
+      <!-- Zone boxes first, so the wires run over them -->
+      @for (z of l.zones; track z.name) {
+        <g [class]="'zone z' + z.tone">
+          <rect class="zone-box" [attr.x]="z.x" [attr.y]="z.y" [attr.width]="z.w" [attr.height]="z.h" rx="10" />
+          <text class="zone-title" [attr.x]="z.x + 14" [attr.y]="z.titleBelow ? z.y + z.h - 11 : z.y + 21">
+            {{ z.name }}@if (z.subnet) {<tspan class="zone-subnet" dx="8">{{ z.subnet }}</tspan>}
+          </text>
+        </g>
+      }
+
+      @for (p of l.wires; track $index) { <path class="wire" [attr.d]="p" /> }
+      @for (p of l.dashed; track $index) { <path class="wire dashed" [attr.d]="p" /> }
+
+      @if (l.cloud; as c) {
+        <g class="cloud" [attr.transform]="'translate(' + c.x + ',' + c.y + ')'">
+          <path class="cloud-shape" d="M38,82 C14,82 4,66 12,52 C2,40 14,22 32,26 C36,8 62,2 78,14 C90,0 122,2 128,22 C150,18 166,36 158,54
+            C170,66 158,84 138,82 Z" />
+          <text class="cloud-label" x="85" y="54" text-anchor="middle">{{ c.label }}</text>
+        </g>
+      }
+      @if (l.cloudNote; as n) { <text class="wire-note" [attr.x]="n.x" [attr.y]="n.y" text-anchor="middle">{{ n.text }}</text> }
+
+      <!-- The firewall: a brick wall with a flame -->
+      @let f = l.firewall;
+      <g class="firewall" [attr.transform]="'translate(' + f.x + ',' + f.y + ')'">
+        <path class="flame" d="M32,-4 C22,-14 30,-22 28,-30 C38,-24 44,-14 40,-6 C44,-10 44,-14 43,-17 C50,-10 48,0 40,2 Z" />
+        <rect class="brick-wall" x="0" y="0" [attr.width]="f.w" [attr.height]="f.h" rx="3" />
+        <path class="mortar" d="M0,12.5 H64 M0,25 H64 M0,37.5 H64 M16,0 V12.5 M40,0 V12.5 M28,12.5 V25 M52,12.5 V25
+          M16,25 V37.5 M40,25 V37.5 M28,37.5 V50 M52,37.5 V50" />
+      </g>
+      <text class="fw-label" [attr.x]="f.labelX" [attr.y]="f.labelY" [attr.text-anchor]="f.anchor">{{ f.label }}</text>
+
+      @for (p of hosts(); track $index) {
+        <g class="host" [attr.transform]="'translate(' + p.x + ',' + p.y + ')'">
+          @switch (p.host.icon ?? 'server') {
+            @case ('pc') {
+              <rect class="body" x="0" y="6" width="36" height="25" rx="2" />
+              <rect class="screen" x="3" y="9" width="30" height="19" rx="1" />
+              <path class="body" d="M15,31 H21 L23,38 H13 Z" />
+              <rect class="body" x="9" y="38" width="18" height="4" rx="1" />
+            }
+            @case ('device') {
+              <rect class="body" x="1" y="10" width="34" height="26" rx="3" />
+              <rect class="screen" x="5" y="14" width="16" height="10" rx="1" />
+              <circle class="led" cx="27" cy="17" r="2" />
+              <path class="slots" d="M6,30 H30" />
+            }
+            @case ('wifi') {
+              <rect class="body" x="2" y="28" width="32" height="12" rx="3" />
+              <path class="waves" d="M8,20 Q18,10 28,20 M12,24 Q18,18 24,24 M16,6 V28" />
+              <circle class="led" cx="9" cy="34" r="1.6" />
+            }
+            @case ('printer') {
+              <rect class="paper" x="8" y="4" width="20" height="12" />
+              <rect class="body" x="1" y="14" width="34" height="16" rx="3" />
+              <rect class="paper" x="8" y="26" width="20" height="12" />
+            }
+            @case ('phone') {
+              <rect class="body" x="4" y="16" width="28" height="22" rx="3" />
+              <rect class="body" x="1" y="9" width="34" height="7" rx="3.5" />
+              <path class="slots" d="M10,23 H14 M17,23 H21 M24,23 H28 M10,28 H14 M17,28 H21 M24,28 H28 M10,33 H14 M17,33 H21 M24,33 H28" />
+            }
+            @case ('camera') {
+              <rect class="body" x="1" y="14" width="25" height="15" rx="3" />
+              <path class="body" d="M26,18 L35,13 V31 L26,26 Z" />
+              <path class="slots" d="M10,29 V38 H20" />
+            }
+            @case ('threat') {
+              <path class="threat" d="M18,4 L35,38 H1 Z" />
+              <path class="threat-mark" d="M18,15 V27 M18,31 V33" />
+            }
+            @default {
+              <rect class="body" x="7" y="0" width="22" height="44" rx="3" />
+              <path class="slots" d="M11,7 H25 M11,12 H25 M11,17 H25" />
+              <circle class="led" cx="18" cy="36" r="2" />
+            }
+          }
+          <text class="host-name" [attr.x]="iconW + 10" [attr.y]="p.host.ip ? 18 : 26">{{ p.host.name }}</text>
+          @if (p.host.ip) { <text class="host-ip" [attr.x]="iconW + 10" y="35">{{ p.host.ip }}</text> }
+        </g>
+      }
+    </svg>
+  </div>
+
+  @if (details().length || diagram().notes?.length) {
+    <figcaption class="details">
+      @for (g of details(); track g.title) {
+        <div class="group">
+          <div class="group-title">{{ g.title }}@if (g.subnet) { <code>{{ g.subnet }}</code> }@if (g.role) { <span class="group-role">{{ g.role }}</span> }</div>
+          @if (g.hosts.length) {
+            <ul>
+              @for (h of g.hosts; track h.name) {
+                <li><strong>{{ h.name }}</strong>@if (h.ip) { <code>{{ h.ip }}</code> }@if (h.role) { <span>{{ h.role }}</span> }</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+      @if (diagram().notes?.length) {
+        <ul class="notes">
+          @for (n of diagram().notes; track n) { <li>{{ n }}</li> }
+        </ul>
+      }
+    </figcaption>
+  }
+</figure>
