@@ -82,8 +82,9 @@ export const FIREWALL_TRACE: MatchQuestion = {
     '',
     'WEB1 = 10.0.20.10   Admin PC = 10.0.10.5   Staff PC = 10.0.10.30',
   ].join('\n'),
-  tables: [
+  blocks: [
     {
+      kind: 'table',
       title: 'Firewall rules, read from the top',
       columns: ['#', 'Source', 'Destination', 'Protocol', 'Port', 'Action'],
       rows: [
@@ -96,6 +97,7 @@ export const FIREWALL_TRACE: MatchQuestion = {
       mono: [1, 2, 4],
     },
     {
+      kind: 'table',
       title: 'Who is who',
       columns: ['Device', 'Address'],
       rows: [['WEB1', '10.0.20.10'], ['Admin PC', '10.0.10.5'], ['Staff PC', '10.0.10.30']],
@@ -175,7 +177,8 @@ export const SUBNET_GUIDED: MatchQuestion = {
     '3      Servers       12',
     '4      Router link   2',
   ].join('\n'),
-  tables: [{
+  blocks: [{
+    kind: 'table',
     columns: ['Order', 'Subnet', 'Hosts needed'],
     rows: [['1', 'Staff', '50'], ['2', 'Wi-Fi', '20'], ['3', 'Servers', '12'], ['4', 'Router link', '2']],
   }],
@@ -308,7 +311,8 @@ export const VLAN_CONFIG: MatchQuestion = {
     'Port 4    empty wall socket in the lobby',
     'Port 24   cable to the second switch upstairs',
   ].join('\n'),
-  tables: [{
+  blocks: [{
+    kind: 'table',
     columns: ['Switch port', 'What is plugged in'],
     rows: [
       ['Port 1', 'staff PC'],

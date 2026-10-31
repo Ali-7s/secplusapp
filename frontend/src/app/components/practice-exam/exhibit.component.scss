@@ -7,24 +7,76 @@ figure { margin: 0; }
 .topo, .topo * { box-sizing: border-box; }
 code, .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-// ── Text exhibits: logs, config files and command output, in a window ──────
+// ── Text exhibits, each styled as what it is ────────────────────────────
+
+:host { --log-time: #0369a1; --log-key: #64748b; }
+:host-context([data-theme='dark']) { --log-time: #7dd3fc; --log-key: #94a3b8; }
+
+figure + figure { margin-top: 10px; }
 
 .window {
-  border: 1px solid var(--c-border); border-radius: var(--r-sm); overflow: hidden; background: var(--c-surface-3);
+  border: 1px solid var(--c-border); border-radius: var(--r-sm); overflow: hidden; background: var(--c-surface);
   figcaption {
-    display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 11.5px; font-weight: 700;
-    letter-spacing: .04em; text-transform: uppercase; color: var(--c-text-2);
-    background: var(--c-surface-2); border-bottom: 1px solid var(--c-border);
-    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    display: flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 12px; font-weight: 700;
+    color: var(--c-text-2); background: var(--c-surface-2); border-bottom: 1px solid var(--c-border);
+    mat-icon { flex: none; font-size: 16px; width: 16px; height: 16px; }
   }
-  pre { margin: 0; padding: 12px 14px; overflow-x: auto; color: var(--c-text); font-size: 12.5px; line-height: 1.55; }
+  pre { margin: 0; }
 }
+
+// Numbered lines, as log viewers and editors show them. A long line wraps under itself, clear of the numbers.
+.lines {
+  list-style: none; margin: 0; padding: 8px 0; counter-reset: line;
+  font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--c-text);
+  li {
+    counter-increment: line; display: grid; grid-template-columns: 3.2em minmax(0, 1fr); column-gap: 12px;
+    padding-right: 14px; min-height: 1.6em;
+    &::before {
+      content: counter(line); padding-right: 8px; text-align: right; color: var(--c-muted);
+      border-right: 1px solid var(--c-border); user-select: none;
+    }
+  }
+  .t { white-space: pre-wrap; overflow-wrap: break-word; min-width: 0; }
+  li:nth-child(even) { background: var(--c-surface-2); }
+  .time { color: var(--log-time); font-weight: 600; }
+  .key { color: var(--log-key); }
+  li.aside { font-style: italic; color: var(--c-text-2); }
+}
+
+.lines.file li { background: none; }
+.lines.file li.comment { color: var(--c-muted); font-style: italic; }
+
+// A terminal is dark in either theme, as terminals are.
+.window.terminal {
+  border-color: #1e293b; background: #0b1220;
+  figcaption { background: #1e293b; color: #cbd5e1; border-bottom-color: #1e293b; }
+}
+.dots { display: inline-flex; gap: 5px; margin-right: 6px;
+  i { width: 10px; height: 10px; border-radius: 50%; background: #f87171; }
+  i:nth-child(2) { background: #fbbf24; } i:nth-child(3) { background: #4ade80; } }
+.lines.term {
+  color: #e2e8f0; padding: 10px 0;
+  li { display: block; padding-left: 14px; background: none; &::before { display: none; } }
+  .prompt { color: #4ade80; font-weight: 700; }
+  .cmd { color: #fff; font-weight: 600; }
+}
+
+.headers {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; padding: 10px 14px;
+  font-size: 13.5px; line-height: 1.45; border-bottom: 1px solid var(--c-border);
+  dt { font-weight: 700; color: var(--c-text-2); }
+  dd { margin: 0; color: var(--c-text); overflow-wrap: anywhere; }
+  dd.cont { grid-column: 2; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--c-text-2); }
+  dd.cont.first-line { grid-column: 1 / -1; font-weight: 700; color: var(--c-text); }
+}
+.body { padding: 10px 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; color: var(--c-text); white-space: pre-wrap; }
+
+.doc { padding: 12px 16px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: var(--c-text); }
 
 // ── Tables ─────────────────────────────────────────────────────────────
 
 .ex-table {
   border: 1px solid var(--c-border); border-radius: var(--r-sm); overflow: hidden; background: var(--c-surface);
-  & + & { margin-top: 10px; }
   figcaption { padding: 8px 12px; font-size: 13px; font-weight: 700; color: var(--c-text); background: var(--c-surface-2);
     border-bottom: 1px solid var(--c-border); }
 }
@@ -38,6 +90,14 @@ td { padding: 7px 12px; vertical-align: top; border-top: 1px solid var(--c-borde
 tbody tr:first-child td { border-top: none; }
 td.first { font-weight: 700; }
 td.mono { font-size: 12.5px; white-space: nowrap; }
+// A list of settings: the label in the first column, no header row.
+.settings tbody th {
+  width: 1%; min-width: 7em; max-width: 45cqi; white-space: normal; text-transform: none; letter-spacing: 0;
+  font-size: 13px; font-weight: 700; color: var(--c-text-2); background: var(--c-surface-2);
+  border-bottom: 0; border-top: 1px solid var(--c-border); vertical-align: top;
+}
+.settings tbody tr:first-child th { border-top: none; }
+tr.span td { font-style: italic; color: var(--c-text-2); background: var(--c-surface-2); }
 .t-note { margin: 0; padding: 7px 12px; font-size: 12.5px; font-style: italic; color: var(--c-text-2);
   border-top: 1px solid var(--c-border); background: var(--c-surface-2); }
 

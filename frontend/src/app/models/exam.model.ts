@@ -39,15 +39,31 @@ export interface NetDiagram {
   notes?: string[];
 }
 
-/** A table in an exhibit. `mono` lists the columns holding addresses, ports and other values to set in code type. */
+/**
+ * A table in an exhibit. Without `columns` it is a list of settings, with the first cell of each row as the label.
+ * A row with a single cell spans the table (an "... 250 more" line). `mono` lists the columns holding addresses,
+ * ports and other values to set in code type.
+ */
 export interface ExhibitTable {
   title?: string;
-  columns: string[];
+  columns?: string[];
   rows: string[][];
   mono?: number[];
   /** A line under the table, such as the implicit deny at the end of a rule list. */
   note?: string;
 }
+
+/**
+ * Text kept as text, styled as what it is: `log` lines with their timestamps, a `terminal` session, a `file`
+ * (config or code), a `message` (email or HTTP headers and body) or a `document` excerpt.
+ */
+export interface ExhibitText {
+  style: 'log' | 'terminal' | 'file' | 'message' | 'document';
+  title?: string;
+  text: string;
+}
+
+export type ExhibitBlock = ({ kind: 'table' } & ExhibitTable) | ({ kind: 'text' } & ExhibitText);
 
 export type TopoIcon = 'cloud' | 'firewall' | 'router' | 'switch' | 'sensor' | 'server' | 'pc' | 'laptop' | 'wifi' | 'threat';
 
@@ -83,8 +99,8 @@ interface ExamQuestionBase {
   diagram?: NetDiagram;
   /** Any other network drawing, shown instead of the exhibit. The exhibit stays as a text fallback. */
   topology?: Topology;
-  /** The exhibit's tables (rule lists, subnet plans, settings), shown instead of its text columns. */
-  tables?: ExhibitTable[];
+  /** The exhibit as it would appear on screen: tables, logs, terminals, files, messages. Shown instead of the text. */
+  blocks?: ExhibitBlock[];
   /** The one-line lesson, shown after the per-option reasons. */
   takeaway: string;
   /** Slug of the Networking Basics lesson that teaches the background; such questions make up the networking drill. */
