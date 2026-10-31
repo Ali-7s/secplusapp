@@ -20,9 +20,6 @@
 
 .scenario { margin: 0 0 12px; padding: 12px 14px; border-radius: var(--r-sm); line-height: 1.6;
   border-left: 3px solid var(--c-accent); background: var(--c-surface-2); color: var(--c-text-2); }
-.exhibit { margin: 0 0 12px; padding: 12px 14px; border-radius: var(--r-sm); overflow-x: auto;
-  background: var(--c-surface-3); border: 1px solid var(--c-border); color: var(--c-text);
-  font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
 .stem { margin: 0 0 14px; font-size: 15.5px; line-height: 1.6; font-weight: 600; color: var(--c-text); }
 .hint { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--c-text-2);
   mat-icon { flex-shrink: 0; font-size: 18px; width: 18px; height: 18px; color: var(--c-accent); } }

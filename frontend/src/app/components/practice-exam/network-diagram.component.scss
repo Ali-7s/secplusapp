@@ -1,27 +1,7 @@
-// Colours for the drawing. Each theme sets its own; the zone tones follow the shaded boxes of exam simulations.
-:host {
-  display: block; margin: 0 0 12px;
-  --wire: #c2410c;
-  --brick: #b45309; --brick-2: #dc2626; --mortar: #fde7d4; --flame: #f97316;
-  --cloud-fill: #e0f2fe; --cloud-stroke: #38bdf8; --cloud-text: #075985;
-  --icon-body: #e2e8f0; --icon-line: #475569; --icon-screen: #bfdbfe; --led: #16a34a;
-  --threat: #dc2626;
-  --z0-fill: #ecfeff; --z0-stroke: #67e8f9; --z0-title: #0e7490;
-  --z1-fill: #eef2ff; --z1-stroke: #a5b4fc; --z1-title: #4338ca;
-  --z2-fill: #fefce8; --z2-stroke: #fde047; --z2-title: #a16207;
-  --z3-fill: #f0fdf4; --z3-stroke: #86efac; --z3-title: #15803d;
-}
-:host-context([data-theme='dark']) {
-  --wire: #fb923c;
-  --brick: #c2410c; --brick-2: #ef4444; --mortar: #431407; --flame: #fb923c;
-  --cloud-fill: #0c4a6e; --cloud-stroke: #38bdf8; --cloud-text: #e0f2fe;
-  --icon-body: #cbd5e1; --icon-line: #1e293b; --icon-screen: #60a5fa; --led: #22c55e;
-  --threat: #f87171;
-  --z0-fill: rgba(34, 211, 238, .08); --z0-stroke: rgba(34, 211, 238, .45); --z0-title: #67e8f9;
-  --z1-fill: rgba(129, 140, 248, .1); --z1-stroke: rgba(129, 140, 248, .5); --z1-title: #a5b4fc;
-  --z2-fill: rgba(250, 204, 21, .07); --z2-stroke: rgba(250, 204, 21, .45); --z2-title: #fde047;
-  --z3-fill: rgba(74, 222, 128, .08); --z3-stroke: rgba(74, 222, 128, .45); --z3-title: #86efac;
-}
+@use 'net-tones';
+
+:host { display: block; margin: 0 0 12px; @include net-tones.tones; }
+:host-context([data-theme='dark']) { @include net-tones.dark-tones; }
 
 .net { margin: 0; }
 .frame {

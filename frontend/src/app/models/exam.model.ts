@@ -39,6 +39,37 @@ export interface NetDiagram {
   notes?: string[];
 }
 
+/** A table in an exhibit. `mono` lists the columns holding addresses, ports and other values to set in code type. */
+export interface ExhibitTable {
+  title?: string;
+  columns: string[];
+  rows: string[][];
+  mono?: number[];
+  /** A line under the table, such as the implicit deny at the end of a rule list. */
+  note?: string;
+}
+
+export type TopoIcon = 'cloud' | 'firewall' | 'router' | 'switch' | 'sensor' | 'server' | 'pc' | 'laptop' | 'wifi' | 'threat';
+
+/** A network in a line from the internet inward, with networks hanging off some of the devices. */
+export interface Topology {
+  chain: TopoNode[];
+}
+
+export interface TopoNode {
+  name: string;
+  icon: TopoIcon;
+  note?: string;
+  branches?: TopoBranch[];
+}
+
+export interface TopoBranch {
+  name: string;
+  subnet?: string;
+  note?: string;
+  hosts?: { name: string; ip?: string; icon?: TopoIcon }[];
+}
+
 interface ExamQuestionBase {
   id: string;
   domain: ExamDomain;
@@ -50,6 +81,10 @@ interface ExamQuestionBase {
   exhibit?: string;
   /** A network drawn as a diagram, shown instead of the exhibit (firewall PBQs). The exhibit stays as a text fallback. */
   diagram?: NetDiagram;
+  /** Any other network drawing, shown instead of the exhibit. The exhibit stays as a text fallback. */
+  topology?: Topology;
+  /** The exhibit's tables (rule lists, subnet plans, settings), shown instead of its text columns. */
+  tables?: ExhibitTable[];
   /** The one-line lesson, shown after the per-option reasons. */
   takeaway: string;
   /** Slug of the Networking Basics lesson that teaches the background; such questions make up the networking drill. */

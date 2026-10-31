@@ -25,7 +25,7 @@
       </div>
     }
     @if (q.scenario) { <p class="scenario">{{ q.scenario }}</p> }
-    @if (q.exhibit) { <pre class="exhibit">{{ q.exhibit }}</pre> }
+    <app-exhibit [source]="q" />
     <p class="stem">{{ q.stem }}</p>
 
     @switch (q.kind) {

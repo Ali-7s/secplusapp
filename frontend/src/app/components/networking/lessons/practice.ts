@@ -22,6 +22,17 @@ export const FIREWALL_GUIDED: FirewallQuestion = {
     '                             ADMIN  10.0.10.5   IT admin\'s PC',
     '                             Staff  rest of 10.0.10.0/24',
   ].join('\n'),
+  diagram: {
+    firewall: 'Firewall',
+    outside: { label: 'Internet' },
+    zones: [
+      { name: 'Screened subnet', subnet: '10.0.20.0/24', hosts: [{ name: 'WEB1', ip: '10.0.20.10', role: 'the company website (HTTPS)' }] },
+      { name: 'Office network', subnet: '10.0.10.0/24', hosts: [
+        { name: 'ADMIN', ip: '10.0.10.5', role: 'the IT admin\'s PC', icon: 'pc' },
+        { name: 'Staff', ip: '10.0.10.0/24', role: 'every other PC in the office', icon: 'pc' },
+      ] },
+    ],
+  },
   stem: 'Fill in rules 2 to 4 so the list meets every requirement, giving each rule only the access it needs.',
   requirements: [
     'Anyone on the internet can view the company website, but only over an encrypted connection.',
@@ -71,6 +82,26 @@ export const FIREWALL_TRACE: MatchQuestion = {
     '',
     'WEB1 = 10.0.20.10   Admin PC = 10.0.10.5   Staff PC = 10.0.10.30',
   ].join('\n'),
+  tables: [
+    {
+      title: 'Firewall rules, read from the top',
+      columns: ['#', 'Source', 'Destination', 'Protocol', 'Port', 'Action'],
+      rows: [
+        ['1', 'Any', '10.0.20.10', 'TCP', '443', 'Allow'],
+        ['2', '10.0.10.5', '10.0.20.10', 'TCP', '22', 'Allow'],
+        ['3', 'Any', '10.0.20.10', 'TCP', '22', 'Deny'],
+        ['4', '10.0.10.0/24', 'Any', 'TCP', '443', 'Allow'],
+        ['5', 'Any', 'Any', 'Any', 'Any', 'Deny'],
+      ],
+      mono: [1, 2, 4],
+    },
+    {
+      title: 'Who is who',
+      columns: ['Device', 'Address'],
+      rows: [['WEB1', '10.0.20.10'], ['Admin PC', '10.0.10.5'], ['Staff PC', '10.0.10.30']],
+      mono: [1],
+    },
+  ],
   stem: 'For each connection attempt, choose which rule decides what happens.',
   choices: ['Allowed by rule 1', 'Allowed by rule 2', 'Denied by rule 3', 'Allowed by rule 4', 'Denied by rule 5'],
   prompts: [
@@ -144,6 +175,10 @@ export const SUBNET_GUIDED: MatchQuestion = {
     '3      Servers       12',
     '4      Router link   2',
   ].join('\n'),
+  tables: [{
+    columns: ['Order', 'Subnet', 'Hosts needed'],
+    rows: [['1', 'Staff', '50'], ['2', 'Wi-Fi', '20'], ['3', 'Servers', '12'], ['4', 'Router link', '2']],
+  }],
   stem: 'Work through the five steps for each subnet, then choose each value.',
   prompts: [
     { group: 'Staff (50 hosts)', label: 'Prefix length', answer: '/26', choices: ['/25', '/26', '/27', '/28'], why: 'A /27 has only 30 usable addresses, too few for 50. A /26 has a block of 64 and 62 usable, the smallest that fits.' },
@@ -273,6 +308,16 @@ export const VLAN_CONFIG: MatchQuestion = {
     'Port 4    empty wall socket in the lobby',
     'Port 24   cable to the second switch upstairs',
   ].join('\n'),
+  tables: [{
+    columns: ['Switch port', 'What is plugged in'],
+    rows: [
+      ['Port 1', 'staff PC'],
+      ['Port 2', 'printer used by staff'],
+      ['Port 3', 'guest Wi-Fi access point'],
+      ['Port 4', 'empty wall socket in the lobby'],
+      ['Port 24', 'cable to the second switch upstairs'],
+    ],
+  }],
   stem: 'Choose the setting for each port, then for the trunk\'s native VLAN.',
   prompts: [
     { label: 'Port 1: staff PC', answer: 'Access, VLAN 10 (staff)', choices: PORT_SETTINGS, why: 'A normal device carries one VLAN, so it gets an access port in the staff VLAN.' },

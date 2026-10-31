@@ -8,6 +8,7 @@ import { ExamAnswer, GradedQuestion, gradeQuestion, isAnswered, seededRandom, sh
 import { PbqQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
 import { LessonWork } from '../lesson-work.service';
+import { ExhibitComponent } from '../../practice-exam/exhibit.component';
 
 /** A question's saved answer, and whether it was checked. */
 interface SavedPbq { answer: ExamAnswer; checked: boolean }
@@ -22,7 +23,7 @@ interface SavedBank { ids: string[]; index: number }
 @Component({
   selector: 'app-pbq-practice',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, DragDropModule, MdPipe],
+  imports: [MatButtonModule, MatIconModule, DragDropModule, MdPipe, ExhibitComponent],
   templateUrl: './pbq-practice.component.html',
   styleUrl: './pbq-practice.component.scss',
 })
