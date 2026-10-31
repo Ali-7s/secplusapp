@@ -59,7 +59,7 @@
         }
 
         @if (part; as pt) {
-          <section class="part">
+          <section class="part" [attr.data-part]="step">
             <ng-container [ngTemplateOutlet]="partBody" [ngTemplateOutletContext]="{ $implicit: pt }"></ng-container>
             <div class="part-nav">
               <button type="button" class="back" [disabled]="step === 0" (click)="goTo(step - 1)">
@@ -72,16 +72,22 @@
             </div>
           </section>
         } @else {
-          <app-lesson-quiz [questions]="l.check" (finished)="checkFinished($event)" />
+          <div [attr.data-part]="parts.length">
+            <app-lesson-quiz [questions]="l.check" (finished)="checkFinished($event)" />
+          </div>
           <div class="part-nav">
             <button type="button" class="back" (click)="goTo(step - 1)"><mat-icon aria-hidden="true">chevron_left</mat-icon> Back</button>
           </div>
         }
       } @else {
         @for (pt of parts; track $index) {
-          <ng-container [ngTemplateOutlet]="partBody" [ngTemplateOutletContext]="{ $implicit: pt }"></ng-container>
+          <div [attr.data-part]="$index">
+            <ng-container [ngTemplateOutlet]="partBody" [ngTemplateOutletContext]="{ $implicit: pt }"></ng-container>
+          </div>
         }
-        <app-lesson-quiz [questions]="l.check" (finished)="checkFinished($event)" />
+        <div [attr.data-part]="parts.length">
+          <app-lesson-quiz [questions]="l.check" (finished)="checkFinished($event)" />
+        </div>
       }
 
       @if (view === 'all' || onCheck) {

@@ -5,6 +5,7 @@
  */
 
 import { SrsCard } from './srs';
+import { ScrollSpot } from './scroll-spot';
 
 export type ExamDomainKey = 1 | 2 | 3 | 4 | 5;
 
@@ -71,6 +72,8 @@ export interface LessonRecord {
   completedAt?: number;
   /** The part being read in step-by-step mode, so the lesson reopens where you stopped. */
   part?: number;
+  /** Where on the page you were reading, so a refresh or another device opens the lesson at the same paragraph. */
+  scroll?: ScrollSpot;
   /** When anything in this record last changed, so sync can tell which device's copy is newer. */
   at?: number;
   /**

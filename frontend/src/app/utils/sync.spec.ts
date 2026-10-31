@@ -51,6 +51,14 @@ describe('mergeProgress', () => {
     expect(l.part).toBe(6);
   });
 
+  it('keeps the reading position from whichever device read the lesson last', () => {
+    const a = progress(d => { d.lessons['vlans'] = { pbqs: {}, part: 2, scroll: { part: 2, i: 7, f: 0.4 }, at: 300 }; });
+    const b = progress(d => { d.lessons['vlans'] = { pbqs: {}, part: 1, scroll: { part: 1, i: 3, f: 0 }, at: 200 }; });
+    const l = mergeProgress(a, b).lessons['vlans'];
+    expect(l.part).toBe(2);
+    expect(l.scroll).toEqual({ part: 2, i: 7, f: 0.4 });
+  });
+
   it('keeps the latest saved work on each lesson exercise from either device', () => {
     const a = progress(d => { d.lessons['vlans'] = { pbqs: {}, at: 100, work: { check: { v: [0, null], at: 100 }, 'harden:Switch': { v: [1], at: 300 } } }; });
     const b = progress(d => { d.lessons['vlans'] = { pbqs: {}, at: 200, work: { check: { v: [0, 2], at: 200 } } }; });

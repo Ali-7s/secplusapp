@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, Injector, ViewChild, afterNextRender, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Observable, forkJoin, map, shareReplay } from 'rxjs';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
+import { ScrollSpot, readSpot, sameSpot, scrollToSpot } from '../../utils/scroll-spot';
 import { Block, CalloutKind, CardRef, Lesson } from './networking.model';
 import { LESSON_META } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
@@ -27,6 +28,9 @@ interface CardPreview { title: string; subtitle?: string; text: string }
 /** Step-by-step (one part at a time) or the whole lesson on one page. Remembered in this browser. */
 type LessonView = 'steps' | 'all';
 const VIEW_KEY = 'sp-lesson-view';
+
+/** How long the page has to sit still before the reading position is saved. */
+const SAVE_DELAY = 400;
 
 const CALLOUT_ICONS: Record<CalloutKind, string> = {
   analogy: 'lightbulb',
@@ -53,6 +57,8 @@ export class LessonComponent {
   private router = inject(Router);
   readonly progress = inject(ProgressService);
   private work = inject(LessonWork);
+  private injector = inject(Injector);
+  private destroyRef = inject(DestroyRef);
   @ViewChild('related') private relatedSection?: ElementRef<HTMLElement>;
 
   /** Touch screens cannot hover, so the first tap previews a card and the second opens it. */
@@ -73,17 +79,88 @@ export class LessonComponent {
   resumed = false;
   view: LessonView = this.loadView();
 
+  /** The open lesson's slug, as a signal so a reading position arriving from another device can be followed. */
+  private slug = signal('');
+  /** Set once you scroll, click or press a key; from then on your own position wins over one arriving by sync. */
+  private moved = false;
+  /** The position last scrolled to on opening, so the same one is not applied twice. */
+  private applied?: ScrollSpot;
+  private saveTimer?: ReturnType<typeof setTimeout>;
+
   constructor() {
     inject(ActivatedRoute).paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      this.saveNow();
       this.lesson = getLesson(params.get('slug'));
       this.work.slug = this.lesson?.slug ?? '';
       this.parts = this.lesson ? lessonParts(this.lesson) : [];
-      const saved = this.lesson ? this.progress.lessonRecord(this.lesson.slug)?.part ?? 0 : 0;
-      this.step = Math.min(Math.max(saved, 0), this.parts.length);
-      this.resumed = this.step > 0;
+      this.step = 0;
+      this.resumed = false;
+      this.moved = false;
+      this.applied = undefined;
       this.preview = null;
       this.scrollToTop();
+      this.slug.set(this.lesson?.slug ?? '');
     });
+
+    // Open the lesson where you were reading: on this device after a refresh, or on another one once sync brings
+    // the position over (which can be a moment after the page opens). Once you start reading, you stay put.
+    effect(() => {
+      const slug = this.slug();
+      const record = slug ? this.progress.lessonRecord(slug) : undefined;
+      untracked(() => {
+        if (this.moved || !record) return;
+        const spot = this.spotFor(record.part ?? 0, record.scroll);
+        if (this.applied && sameSpot(this.applied, spot)) return;
+        this.applied = spot;
+        this.step = spot.part;
+        this.resumed = this.step > 0;
+        afterNextRender(() => requestAnimationFrame(() => this.restore(spot)), { injector: this.injector });
+      });
+    });
+
+    afterNextRender(() => {
+      const scroller = this.scroller();
+      if (!scroller) return;
+      const onScroll = () => {
+        if (!this.moved) return;
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => this.saveNow(), SAVE_DELAY);
+      };
+      const onInput = () => { this.moved = true; };
+      const inputs = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+      scroller.addEventListener('scroll', onScroll, { passive: true });
+      for (const type of inputs) scroller.addEventListener(type, onInput, { passive: true });
+      // A refresh straight after scrolling should not lose the last stretch.
+      const onHide = () => this.saveNow();
+      window.addEventListener('pagehide', onHide);
+      this.destroyRef.onDestroy(() => {
+        this.saveNow();
+        scroller.removeEventListener('scroll', onScroll);
+        for (const type of inputs) scroller.removeEventListener(type, onInput);
+        window.removeEventListener('pagehide', onHide);
+      });
+    });
+  }
+
+  /** The saved position, if it belongs to the saved part; otherwise the start of that part. */
+  private spotFor(part: number, scroll: ScrollSpot | undefined): ScrollSpot {
+    const p = Math.min(Math.max(part, 0), this.parts.length);
+    return scroll && scroll.part === p ? scroll : { part: p, i: -1, f: 0 };
+  }
+
+  private restore(spot: ScrollSpot) {
+    const scroller = this.scroller();
+    if (scroller && !this.moved) scrollToSpot(this.host.nativeElement, scroller, spot);
+  }
+
+  /** Saves where you are reading, if you have moved since the lesson opened. */
+  private saveNow() {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
+    const scroller = this.scroller();
+    if (!this.lesson || !this.moved || !scroller) return;
+    const spot = readSpot(this.host.nativeElement, scroller);
+    if (spot) this.progress.setLessonScroll(this.lesson.slug, spot);
   }
 
   // ── Step-by-step reading ─────────────────────────────────────────
@@ -125,9 +202,19 @@ export class LessonComponent {
   blocksOf(list: unknown): Block[] { return list as Block[]; }
   partOf(part: unknown): LessonPart { return part as LessonPart; }
 
+  /** Switches view and keeps your place: the part you were reading opens in either. */
   setView(view: LessonView) {
+    if (view === this.view) return;
+    this.saveNow();
+    const record = this.record;
+    const spot = this.spotFor(this.view === 'all' ? record?.part ?? 0 : this.step, record?.scroll);
     this.view = view;
+    this.step = spot.part;
     try { localStorage.setItem(VIEW_KEY, view); } catch { /* storage unavailable */ }
+    afterNextRender(() => {
+      const scroller = this.scroller();
+      if (scroller) scrollToSpot(this.host.nativeElement, scroller, spot);
+    }, { injector: this.injector });
   }
 
   private loadView(): LessonView {
@@ -231,8 +318,11 @@ export class LessonComponent {
   }
 
   /** The app scrolls inside the side-nav content area, not the window. */
+  private scroller(): HTMLElement | null {
+    return this.host.nativeElement.closest<HTMLElement>('mat-sidenav-content') ?? (document.scrollingElement as HTMLElement | null);
+  }
+
   private scrollToTop() {
-    const scroller = this.host.nativeElement.closest('mat-sidenav-content');
-    (scroller ?? document.scrollingElement)?.scrollTo({ top: 0 });
+    this.scroller()?.scrollTo({ top: 0 });
   }
 }

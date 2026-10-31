@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, noNewToday, parseProgress, recordQuestion } from '../utils/progress';
 import { Rating, answerOutsideQueue, dayKey, schedule } from '../utils/srs';
+import { ScrollSpot, sameSpot } from '../utils/scroll-spot';
 
 const KEY = 'sp-progress';
 
@@ -139,6 +140,17 @@ export class ProgressService {
   setLessonPart(slug: string, part: number) {
     if (this.state().lessons[slug]?.part === part) return;
     this.update(d => { this.lesson(d, slug).part = part; });
+  }
+
+  /** Saves where you are reading. The part goes with it, so switching between one part at a time and the whole lesson keeps your place. */
+  setLessonScroll(slug: string, spot: ScrollSpot) {
+    const record = this.state().lessons[slug];
+    if (sameSpot(record?.scroll, spot) && record?.part === spot.part) return;
+    this.update(d => {
+      const lesson = this.lesson(d, slug);
+      lesson.scroll = spot;
+      lesson.part = spot.part;
+    });
   }
 
   /** Saved work on one of a lesson's exercises, or undefined when there is none (or it was reset). */
