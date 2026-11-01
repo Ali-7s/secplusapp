@@ -103,6 +103,14 @@ export const PORTS_TO_KNOW: LessonBody = {
       label: 'Open the Reference Sheet and start the Ports recall drill',
       note: 'The first tab, Network Ports, has a Recall Drill button that quizzes you on exactly this list.',
     },
+    {
+      type: 'cta',
+      to: '/lessons/build-network',
+      query: { part: '3', lab: 'ports' },
+      icon: 'settings_ethernet',
+      label: 'Then use them: write a company\'s firewall rules by port number',
+      note: 'The Ports and protocols scenario in the network lab (lesson 12) names only the program or protocol, such as "SSH" or "the email app reads new mail". You pick the protocol and port from a bare list of numbers, then run the traffic to see what you got right.',
+    },
     tip('You do not need all of these on day one. Start with the rising run in the memory hooks, then add the secure pairs.'),
 
     hSecure('How to secure it: protocols and ports', { objective: '4.5', keep: 'Use the encrypted protocol and switch the plaintext one off, and keep management ports (SSH, RDP, SNMP) off the internet.' }),

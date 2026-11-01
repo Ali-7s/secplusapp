@@ -46,7 +46,7 @@ export const BUILD_NETWORK: LessonBody = {
       '**Place** the security devices: inline where they must block, on a mirror port where they only watch.',
       '**Segment**: put each switch port in its zone\'s VLAN, turn on port security, and shut down spare ports.',
       '**Address**: servers and network devices get static addresses outside the DHCP pool; PCs use DHCP; printers and similar devices get DHCP reservations.',
-      '**Rules**: allow only what the requirements need, most specific first. The implicit deny does the rest.',
+      '**Rules**: allow only what the requirements need, most specific first, written as a protocol and port number, just as a real firewall wants them. The implicit deny does the rest.',
       '**Detect**: choose signatures, anomaly detection and reputation filtering, decide whether the IPS prevents or only detects, and send alerts to the SIEM.',
       '**Test**: run normal traffic and attacks through it, and fix whatever does not behave.',
     ),
@@ -54,7 +54,7 @@ export const BUILD_NETWORK: LessonBody = {
 
     h('Try it: build the network', { objective: '3.2', keep: 'Each scenario is graded stage by stage, then by traffic: business flows must work, and every attack must be stopped or alerted to the SIEM.' }),
     networkLab(),
-    tip('Stuck on the rules? Run the traffic first. Every flow that should work but is blocked names the rule it needs, and every attack that gets through shows which device or setting is missing.'),
+    tip('Start with **Ports and protocols** if port numbers do not stick yet: everything but the firewall is already built, and every requirement makes you turn a program or protocol into its port. Stuck on the rules anywhere? Run the traffic: every blocked flow names the protocol it needs, and a rule on the wrong port says what that port really is.'),
 
     h('Rules and detection that hold up', { objective: '4.5', keep: 'Allow only the services needed, from the smallest source to the smallest destination, specific rules first. Signatures catch known attacks, anomaly detection catches new ones, and alerts are useless unless they reach the SIEM.' }),
     list(

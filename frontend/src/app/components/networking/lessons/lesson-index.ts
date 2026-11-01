@@ -109,10 +109,10 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 11,
   },
   {
-    slug: 'build-network', number: 12, minutes: 30, icon: 'hub',
+    slug: 'build-network', number: 12, minutes: 36, icon: 'hub',
     objectives: ['3.2', '4.5', '3.1'],
     title: 'Lab: build a network',
-    summary: 'Build five networks from their requirements (a web shop, a clinic, card payments, phones and cameras, and a water plant): place firewalls, IPS and IDS, set VLANs, port security and addresses, write the rules, then run traffic and attacks through it.',
+    summary: 'Build six networks from their requirements (ports and protocols, a web shop, a clinic, card payments, phones and cameras, and a water plant): place firewalls, IPS and IDS, set VLANs, port security and addresses, write the rules by port number, then run traffic and attacks through it.',
     related: [...term('Security zone', 'Screened subnet', 'Implicit deny', 'Port security', 'Port mirroring', 'Jump server', 'Defense in depth', 'Least privilege'),
       ...acr('IDS', 'IPS', 'WAF', 'NGFW', 'VPN', 'DHCP', 'VLAN', 'SIEM', 'ICS', 'SCADA', 'OT')],
     // A capstone that revisits earlier lessons, so it never outranks the lesson a card is really about.

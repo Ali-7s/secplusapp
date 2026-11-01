@@ -1,10 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LessonWork } from '../../lesson-work.service';
 import {
   AddrMode, DEVICES, Detect, DeviceKind, FlowResult, Hop, LabFlow, LabHost, LabRule, LabScenario, LabSlot, LabWork, LabZone, PortRow,
-  START_DETECT, SERVICES, addressedHosts, emptyWork, externalById, gradeAddr, gradePort, gradeSlot, hostById, hostZone, runFlow, zoneById,
+  PORT_CHOICES, START_DETECT, SERVICES, addressedHosts, emptyWork, externalById, gradeAddr, gradePort, gradeSlot, hostById, hostZone,
+  parsePortRule, portRuleLabel, runFlow, serviceLabel, startWork, toPortRule, zoneById,
 } from './lab';
 import { SCENARIOS } from './scenarios';
 
@@ -54,12 +56,15 @@ function problems(sc: LabScenario, w: LabWork) {
 @Component({
   selector: 'app-network-lab',
   standalone: true,
-  imports: [MatIconModule, NgTemplateOutlet],
+  imports: [MatIconModule, NgTemplateOutlet, RouterLink],
   templateUrl: './network-lab.component.html',
   styleUrl: './network-lab.component.scss',
 })
 export class NetworkLabComponent implements OnInit {
   private store = inject(LessonWork, { optional: true });
+  private route = inject(ActivatedRoute, { optional: true });
+  private router = inject(Router, { optional: true });
+  readonly portChoices = PORT_CHOICES;
   readonly scenarios = SCENARIOS;
   readonly stages = STAGES;
   readonly devices = DEVICES;
@@ -79,9 +84,20 @@ export class NetworkLabComponent implements OnInit {
   /** A flow whose hops are shown. */
   openFlow: string | null = null;
   showSolution = false;
-  draft: LabRule = { from: 'internet', to: 'any', service: 'https', action: 'allow' };
+  draft: LabRule = { from: 'internet', to: 'any', service: 'any', action: 'allow' };
 
   ngOnInit() {
+    this.restore();
+    // A link such as ?lab=ports opens that scenario, then the parameter is dropped so a refresh keeps your place.
+    const want = this.route?.snapshot.queryParamMap.get('lab');
+    const i = SCENARIOS.findIndex(s => s.id === want);
+    if (i >= 0) {
+      this.pickScenario(i);
+      this.router?.navigate([], { relativeTo: this.route, queryParams: { lab: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
+  }
+
+  private restore() {
     const saved = this.store?.get<Saved>('netlab');
     if (!saved) return;
     const i = SCENARIOS.findIndex(s => s.id === saved.sc);
@@ -95,8 +111,8 @@ export class NetworkLabComponent implements OnInit {
   }
 
   get sc(): LabScenario { return SCENARIOS[this.active]; }
-  get w(): LabWork { return this.works[this.sc.id] ??= emptyWork(); }
-  workFor(sc: LabScenario): LabWork { return this.works[sc.id] ?? emptyWork(); }
+  get w(): LabWork { return this.works[this.sc.id] ??= startWork(this.sc); }
+  workFor(sc: LabScenario): LabWork { return this.works[sc.id] ?? startWork(sc); }
 
   /** A network is built when every flow behaves and nothing graded directly is wrong. */
   built(sc: LabScenario): boolean {
@@ -108,6 +124,8 @@ export class NetworkLabComponent implements OnInit {
 
   pickScenario(i: number) {
     this.active = i;
+    // A ports scenario comes built, so it opens on the rules.
+    if (this.sc.portsOnly && ['place', 'segment', 'address'].includes(this.stage)) this.stage = 'rules';
     this.picked = null;
     this.openFlow = null;
     this.showSolution = false;
@@ -193,7 +211,17 @@ export class NetworkLabComponent implements OnInit {
     return zoneById(this.sc, id)?.name ?? hostById(this.sc, id)?.name ?? externalById(this.sc, id)?.name ?? id;
   }
   isZone(id: string) { return !!zoneById(this.sc, id); }
-  service(id: string) { return id === 'any' ? 'Any service' : SERVICES[id] ?? id; }
+  service(id: string) {
+    const pr = parsePortRule(id);
+    return id === 'any' ? 'Any service' : pr ? portRuleLabel(pr) : serviceLabel(id);
+  }
+  /** Rules by port number, or (the easier way) by service name. */
+  togglePortMode() {
+    this.w.portMode = !this.w.portMode;
+    this.draft = { ...this.draft, service: 'any' };
+    this.edited('rules');
+  }
+  solutionService(id: string) { return this.service(this.w.portMode ? toPortRule(id) : id); }
   setDraft(field: keyof LabRule, e: Event) {
     this.draft = { ...this.draft, [field]: (e.target as HTMLSelectElement).value };
   }
@@ -255,16 +283,20 @@ export class NetworkLabComponent implements OnInit {
     if (r.blocked) return r.alerted ? 'Stopped, with an alert' : 'Stopped';
     return 'Never got there';
   }
-  flowService(f: LabFlow) { return f.service === 'scan' ? 'Port scan' : SERVICES[f.service]; }
+  /** With rules by port number, the traffic names its protocol but not the port: knowing that is the exercise. */
+  flowService(f: LabFlow) {
+    if (f.service === 'scan') return 'Port scan';
+    return this.w.portMode ? SERVICES[f.service]?.name ?? f.service : serviceLabel(f.service);
+  }
 
   startOver() {
-    this.works[this.sc.id] = emptyWork();
+    this.works[this.sc.id] = startWork(this.sc);
     this.checked[this.sc.id] = [];
     this.ran[this.sc.id] = false;
     this.picked = null;
     this.openFlow = null;
     this.showSolution = false;
-    this.stage = 'place';
+    this.stage = this.sc.portsOnly ? 'rules' : 'place';
     this.save();
   }
 

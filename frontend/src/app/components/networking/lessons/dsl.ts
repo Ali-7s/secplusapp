@@ -129,5 +129,5 @@ export const emailInspector = (): Block => ({ type: 'email' });
 /** Score five vulnerabilities with CVSS 3.1. */
 export const cvssCalc = (): Block => ({ type: 'cvss' });
 
-/** The network lab: five scenarios to build and test. */
+/** The network lab: six scenarios to build and test. */
 export const networkLab = (): Block => ({ type: 'netlab' });

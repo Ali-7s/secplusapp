@@ -1,3 +1,5 @@
+import { PORTS as PORT_LIST } from '../../../reference/reference-data';
+
 /**
  * The network lab's engine: what a scenario is made of, how each stage is graded, and how traffic is simulated
  * through the network the learner built. Pure functions, so the spec can prove every scenario can be solved.
@@ -19,11 +21,96 @@ export const DEVICES: Record<DeviceKind, { name: string; icon: string; does: str
   honeypot: { name: 'Honeypot', icon: 'bug_report', does: 'A decoy system that lures attackers and records what they do' },
 };
 
-export const SERVICES: Record<string, string> = {
-  https: 'HTTPS (TCP 443)', http: 'HTTP (TCP 80)', ssh: 'SSH (TCP 22)', rdp: 'RDP (TCP 3389)', sql: 'SQL (TCP 1433)',
-  smb: 'SMB (TCP 445)', print: 'Printing (TCP 9100)', modbus: 'Modbus (TCP 502)', opcua: 'OPC UA (TCP 4840)',
-  sip: 'SIP over TLS (TCP 5061)', rtp: 'SRTP voice (UDP 16384-32767)', ntp: 'NTP (UDP 123)', rtsp: 'RTSP video (TCP 554)', hl7: 'HL7 (TCP 2575)',
+export type Proto = 'TCP' | 'UDP';
+
+/** A service the scenarios use: the transport protocols it runs over and its port (or range of ports). */
+export interface Service { name: string; protos: Proto[]; port: number; to?: number }
+
+export const SERVICES: Record<string, Service> = {
+  https: { name: 'HTTPS', protos: ['TCP'], port: 443 },
+  http: { name: 'HTTP', protos: ['TCP'], port: 80 },
+  ssh: { name: 'SSH', protos: ['TCP'], port: 22 },
+  sftp: { name: 'SFTP', protos: ['TCP'], port: 22 },
+  telnet: { name: 'Telnet', protos: ['TCP'], port: 23 },
+  ftp: { name: 'FTP', protos: ['TCP'], port: 21 },
+  rdp: { name: 'RDP', protos: ['TCP'], port: 3389 },
+  sql: { name: 'SQL Server', protos: ['TCP'], port: 1433 },
+  smb: { name: 'SMB', protos: ['TCP'], port: 445 },
+  print: { name: 'Printing', protos: ['TCP'], port: 9100 },
+  modbus: { name: 'Modbus', protos: ['TCP'], port: 502 },
+  opcua: { name: 'OPC UA', protos: ['TCP'], port: 4840 },
+  sip: { name: 'SIP over TLS', protos: ['TCP'], port: 5061 },
+  rtp: { name: 'SRTP voice', protos: ['UDP'], port: 16384, to: 32767 },
+  ntp: { name: 'NTP', protos: ['UDP'], port: 123 },
+  rtsp: { name: 'RTSP video', protos: ['TCP'], port: 554 },
+  hl7: { name: 'HL7', protos: ['TCP'], port: 2575 },
+  dns: { name: 'DNS', protos: ['UDP', 'TCP'], port: 53 },
+  smtp: { name: 'SMTP', protos: ['TCP'], port: 25 },
+  submission: { name: 'SMTP submission', protos: ['TCP'], port: 587 },
+  imaps: { name: 'IMAPS', protos: ['TCP'], port: 993 },
+  pop3: { name: 'POP3', protos: ['TCP'], port: 110 },
+  ldap: { name: 'LDAP', protos: ['TCP'], port: 389 },
+  ldaps: { name: 'LDAPS', protos: ['TCP'], port: 636 },
+  kerberos: { name: 'Kerberos', protos: ['TCP', 'UDP'], port: 88 },
+  radius: { name: 'RADIUS', protos: ['UDP'], port: 1812 },
+  snmp: { name: 'SNMP', protos: ['UDP'], port: 161 },
+  syslogtls: { name: 'Syslog over TLS', protos: ['TCP'], port: 6514 },
 };
+
+/** "HTTPS (TCP 443)". */
+export function serviceLabel(id: string): string {
+  const s = SERVICES[id];
+  return s ? `${s.name} (${s.protos.join('/')} ${s.port}${s.to ? `-${s.to}` : ''})` : id;
+}
+
+/** A rule written with a port number instead of a service name, such as "tcp:443". */
+export function parsePortRule(service: string): { proto: Proto; port: number } | null {
+  const m = /^(tcp|udp):(\d{1,5})$/.exec(service);
+  const port = m ? Number(m[2]) : 0;
+  return m && port >= 1 && port <= 65535 ? { proto: m[1].toUpperCase() as Proto, port } : null;
+}
+
+/**
+ * The ports offered when writing rules by number: every port on the Reference Sheet plus the scenarios' own, with no
+ * names, so choosing one means knowing which protocol uses it.
+ */
+export const PORT_CHOICES: { value: string; label: string }[] = (() => {
+  const seen = new Map<string, { proto: Proto; port: number }>();
+  const add = (proto: Proto, port: number) => { if (port > 0) seen.set(`${proto.toLowerCase()}:${port}`, { proto, port }); };
+  for (const e of PORT_LIST) {
+    const protos = e.transport.toUpperCase().split('/').filter((x): x is Proto => x === 'TCP' || x === 'UDP');
+    for (const part of e.port.split('/')) for (const proto of protos) add(proto, Number(part.split('-')[0]));
+  }
+  for (const s of Object.values(SERVICES)) for (const proto of s.protos) add(proto, s.port);
+  return [...seen.entries()]
+    .sort(([, a], [, b]) => a.port - b.port || a.proto.localeCompare(b.proto))
+    .map(([value, r]) => ({ value, label: `${r.proto} ${r.port}` }));
+})();
+
+export const portRuleLabel = (r: { proto: Proto; port: number }) => `${r.proto} ${r.port}`;
+
+/** Whether a rule's service field covers a flow's service, by name or by protocol and port. */
+export function serviceMatches(ruleService: string, flowService: string): boolean {
+  if (ruleService === 'any') return true;
+  if (flowService === 'scan') return false;
+  const pr = parsePortRule(ruleService);
+  if (!pr) return ruleService === flowService;
+  const s = SERVICES[flowService];
+  return !!s && s.protos.includes(pr.proto) && pr.port >= s.port && pr.port <= (s.to ?? s.port);
+}
+
+/** What the Reference Sheet's port list says runs on a protocol and port. */
+export function identifyPort(proto: Proto, port: number): { names: string; insecure: boolean; notes: string } | null {
+  const hits = PORT_LIST.filter(e => {
+    if (!e.transport.toUpperCase().split('/').includes(proto)) return false;
+    return e.port.split('/').some(part => {
+      const [lo, hi] = part.split('-').map(Number);
+      return port === lo || (!!hi && port >= lo && port <= hi);
+    });
+  });
+  if (!hits.length) return null;
+  return { names: hits.map(h => h.protocol).join(', '), insecure: hits.some(h => h.status === 'insecure' || h.status === 'deprecated'), notes: hits.map(h => h.notes).join(' ') };
+}
 
 /** Where a flow is, for deciding which spots it passes: zone ids, or "internet" and "remote". */
 export interface PathCtx { src: string; dst: string; dstHost?: string }
@@ -126,6 +213,11 @@ export interface LabScenario {
   services: string[];
   flows: LabFlow[];
   externals?: LabExternal[];
+  /**
+   * The devices, ports and addresses come already set up and the lab opens on the rules, written with port numbers:
+   * for scenarios about choosing the right ports.
+   */
+  portsOnly?: boolean;
   /** A rule set and detection settings that pass every flow, shown on request and checked by the spec. */
   solution: { rules: LabRule[]; detect: Detect };
 }
@@ -137,11 +229,13 @@ export interface LabWork {
   addr: Record<string, { mode?: AddrMode; ip?: string; prefix?: number; gw?: string }>;
   rules: LabRule[];
   detect: Detect;
+  /** Rules are written as a protocol and port number ("tcp:443") instead of a service name. */
+  portMode?: boolean;
 }
 
 export const START_DETECT: Detect = { ipsMode: 'detect', signatures: true, anomaly: false, reputation: false, siem: false };
 
-export const emptyWork = (): LabWork => ({ slots: {}, ports: {}, addr: {}, rules: [], detect: { ...START_DETECT } });
+export const emptyWork = (): LabWork => ({ slots: {}, ports: {}, addr: {}, rules: [], detect: { ...START_DETECT }, portMode: true });
 
 // ── Addresses ───────────────────────────────────────────────────────────
 
@@ -261,13 +355,15 @@ export interface FlowResult { hops: Hop[]; delivered: boolean; blocked: boolean;
 
 const where = (sc: LabScenario, id: string) => id === 'internet' ? 'the internet' : id === 'remote' ? 'a remote laptop' : zoneById(sc, id)?.name ?? id;
 
-function ruleMatches(r: LabRule, src: string, srcHost: string | undefined, dst: string, dstHost: string | undefined, service: string): boolean {
+function endsMatch(r: LabRule, src: string, srcHost: string | undefined, dst: string, dstHost: string | undefined): boolean {
   const from = r.from === 'any' || r.from === src || (!!srcHost && r.from === srcHost);
   const to = r.to === 'any' || r.to === dst || (!!dstHost && r.to === dstHost);
-  // A scan tries every port, so only a rule allowing any service lets it find more than the allowed ones.
-  const svc = r.service === 'any' || (service !== 'scan' && r.service === service);
-  return from && to && svc;
+  return from && to;
 }
+
+// A scan tries every port, so only a rule allowing any service lets it find more than the allowed ones.
+const ruleMatches = (r: LabRule, src: string, srcHost: string | undefined, dst: string, dstHost: string | undefined, service: string) =>
+  endsMatch(r, src, srcHost, dst, dstHost) && serviceMatches(r.service, service);
 
 /**
  * Which threats each detection method recognizes. SQL injection hides inside encrypted HTTPS form fields, which only
@@ -399,9 +495,17 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
       filtered = true;
       const i = w.rules.findIndex(r => ruleMatches(r, src, srcHost, dst, dstHost, flow.service));
       const rule = w.rules[i];
-      const svc = flow.service === 'scan' ? 'the probed ports' : SERVICES[flow.service] ?? flow.service;
+      // When rules are written with port numbers, name the protocol but not its port, so the learner recalls it.
+      const svc = flow.service === 'scan' ? 'the probed ports' : w.portMode ? SERVICES[flow.service]?.name ?? flow.service : serviceLabel(flow.service);
       if (!rule) {
-        hops.push({ at, result: 'block', text: `No rule allows ${svc} from ${where(sc, src)} to ${dstHost ? nameOf(sc, dstHost) : where(sc, dst)}, so the implicit deny drops it.` });
+        let text = `No rule allows ${svc} from ${where(sc, src)} to ${dstHost ? nameOf(sc, dstHost) : where(sc, dst)}, so the implicit deny drops it.`;
+        const near = w.rules.findIndex(r => r.action === 'allow' && endsMatch(r, src, srcHost, dst, dstHost) && parsePortRule(r.service));
+        if (near >= 0 && flow.service !== 'scan') {
+          const pr = parsePortRule(w.rules[near].service)!;
+          const known = identifyPort(pr.proto, pr.port);
+          text += ` Rule ${near + 1} allows ${portRuleLabel(pr)}${known ? `, which is ${known.names}` : ''}, but ${svc} uses a different ${SERVICES[flow.service]?.protos.includes(pr.proto) ? 'port' : 'protocol or port'}.`;
+        }
+        hops.push({ at, result: 'block', text });
         return done(false, true, alerted);
       }
       if (rule.action === 'deny') {
@@ -451,4 +555,40 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
 
   hops.push({ at: dstHost ? nameOf(sc, dstHost) : 'Internet', result: 'pass', text: flow.threat ? `It gets there: ${THREAT_NAME[flow.threat]} reaches its target.` : 'Delivered.' });
   return done(true, false, alerted);
+}
+
+/**
+ * The network as the scenario intends it: the best device in each spot, every port and address right, and the
+ * solution's rules and detection. Used for scenarios that come set up, and by the spec.
+ */
+export function referenceWork(sc: LabScenario, portMode = false): LabWork {
+  const w = emptyWork();
+  for (const s of sc.slots) w.slots[s.id] = s.answer[0];
+  for (const row of sc.ports) {
+    if (!row.host) { w.ports[row.id] = { shut: true }; continue; }
+    const h = hostById(sc, row.host)!;
+    w.ports[row.id] = { vlan: zoneById(sc, h.zone)!.vlan, secure: h.secure ?? true };
+  }
+  for (const h of addressedHosts(sc)) {
+    const z = zoneById(sc, h.zone)!;
+    w.addr[h.id] = h.addr === 'dhcp' ? { mode: 'dhcp' }
+      : h.addr === 'reserved' ? { mode: 'reserved', ip: h.ip }
+      : { mode: 'static', ip: h.ip, prefix: subnetOf(z.subnet).prefix, gw: z.gateway };
+  }
+  w.rules = sc.solution.rules.map(r => ({ ...r, service: portMode ? toPortRule(r.service) : r.service }));
+  w.detect = { ...sc.solution.detect };
+  w.portMode = portMode;
+  return w;
+}
+
+/** A service name as a port rule ("https" becomes "tcp:443"). */
+export function toPortRule(service: string): string {
+  const s = SERVICES[service];
+  return s ? `${s.protos[0].toLowerCase()}:${s.port}` : service;
+}
+
+/** Where a scenario starts: empty, or for a ports-only scenario, built except for its rules. */
+export function startWork(sc: LabScenario): LabWork {
+  if (!sc.portsOnly) return emptyWork();
+  return { ...referenceWork(sc, true), rules: [], detect: { ...sc.solution.detect } };
 }

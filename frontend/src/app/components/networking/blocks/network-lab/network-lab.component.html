@@ -62,6 +62,9 @@
 
   <!-- ── Stage 1: place the devices ── -->
   @if (stage === 'place') {
+    @if (sc.portsOnly) {
+      <p class="note"><mat-icon aria-hidden="true">check_circle</mat-icon><span>This scenario is about ports, so this stage is already set up. Have a look, then <button type="button" class="link" (click)="goStage('rules')">go to the rules</button>.</span></p>
+    }
     <p class="lead">Tap a device, then tap the spot where it belongs. Dashed spots on a switch get a <strong>copy</strong> of the traffic from a mirror port; the others sit <strong>inline</strong>, so traffic passes through them.</p>
     <div class="palette" role="group" aria-label="Devices">
       @for (k of sc.palette; track k) {
@@ -119,6 +122,9 @@
 
   <!-- ── Stage 2: VLANs and port security ── -->
   @if (stage === 'segment') {
+    @if (sc.portsOnly) {
+      <p class="note"><mat-icon aria-hidden="true">check_circle</mat-icon><span>This scenario is about ports, so this stage is already set up. Have a look, then <button type="button" class="link" (click)="goStage('rules')">go to the rules</button>.</span></p>
+    }
     <p class="lead">Every switch port starts in the default <strong>VLAN 1</strong>. Put each device's port in its zone's VLAN, turn on <strong>port security</strong> so only that device's MAC address may use the port, and <strong>shut down</strong> ports with nothing plugged in.</p>
     <div class="table-wrap">
       <table class="ztable">
@@ -180,6 +186,9 @@
 
   <!-- ── Stage 3: addresses ── -->
   @if (stage === 'address') {
+    @if (sc.portsOnly) {
+      <p class="note"><mat-icon aria-hidden="true">check_circle</mat-icon><span>This scenario is about ports, so this stage is already set up. Have a look, then <button type="button" class="link" (click)="goStage('rules')">go to the rules</button>.</span></p>
+    }
     <p class="lead">Choose how each device gets its address. A <strong>static</strong> address is typed in with its mask and gateway; <strong>DHCP</strong> hands one out from the zone's pool; a <strong>DHCP reservation</strong> makes DHCP always give the same address to one MAC address. Each zone's gateway is the firewall's address in that VLAN.</p>
     <div class="table-wrap">
       <table class="ztable">
@@ -249,6 +258,14 @@
   <!-- ── Stage 4: firewall rules ── -->
   @if (stage === 'rules') {
     <p class="lead">The firewall checks rules from the top and acts on the <strong>first match</strong>; anything no rule allows is dropped by the <strong>implicit deny</strong> at the end. A rule can name a whole zone or one device. Allow only what the requirements need. Replies to an allowed connection are let back in automatically, because the firewall is stateful.</p>
+    @if (w.portMode) {
+      <p class="note"><mat-icon aria-hidden="true">pin</mat-icon><span>Rules here use <strong>port numbers only</strong>, as on a real firewall. The requirements and the traffic name the program or protocol ("SSH", "the email app reads new messages"); picking its protocol and port is up to you. Stuck? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</span></p>
+    }
+    @if (!sc.portsOnly) {
+      <button type="button" class="toggle easy" [class.on]="!w.portMode" [attr.aria-pressed]="!w.portMode" (click)="togglePortMode()">
+        <mat-icon aria-hidden="true">{{ w.portMode ? 'toggle_off' : 'toggle_on' }}</mat-icon>Easier: pick services by name, with their ports shown
+      </button>
+    }
 
     <ol class="rules">
       @for (r of w.rules; track $index; let i = $index) {
@@ -299,10 +316,14 @@
             }
           </select>
         </label>
-        <label class="field">Service
+        <label class="field">{{ w.portMode ? 'Protocol and port' : 'Service' }}
           <select (change)="setDraft('service', $event)">
             <option value="any" [selected]="draft.service === 'any'">Any service</option>
-            @for (s of sc.services; track s) { <option [value]="s" [selected]="draft.service === s">{{ service(s) }}</option> }
+            @if (w.portMode) {
+              @for (c of portChoices; track c.value) { <option [value]="c.value" [selected]="draft.service === c.value">{{ c.label }}</option> }
+            } @else {
+              @for (s of sc.services; track s) { <option [value]="s" [selected]="draft.service === s">{{ service(s) }}</option> }
+            }
           </select>
         </label>
         <label class="field">Action
@@ -409,7 +430,7 @@
       <div class="solution">
         <ol class="rules">
           @for (r of sc.solution.rules; track $index) {
-            <li class="rule"><span class="rn">{{ $index + 1 }}</span><span class="rt"><span class="act">Allow</span> <strong>{{ label(r.from) }}</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>{{ label(r.to) }}</strong> <span class="svc">{{ service(r.service) }}</span></span></li>
+            <li class="rule"><span class="rn">{{ $index + 1 }}</span><span class="rt"><span class="act">Allow</span> <strong>{{ label(r.from) }}</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>{{ label(r.to) }}</strong> <span class="svc">{{ solutionService(r.service) }}</span></span></li>
           }
           <li class="rule implicit"><span class="rn">{{ sc.solution.rules.length + 1 }}</span><span class="rt"><span class="act deny">Deny</span> <strong>Any</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>Any</strong> <span class="svc">Any service</span></span></li>
         </ol>

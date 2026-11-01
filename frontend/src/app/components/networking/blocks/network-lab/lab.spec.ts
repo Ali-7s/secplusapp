@@ -1,28 +1,10 @@
 import {
-  LabScenario, LabWork, SERVICES, addrFaults, addressedHosts, emptyWork, gradeAddr, gradePort, gradeSlot, hostById, ipToNum, runFlow,
-  subnetOf, zoneById,
+  LabScenario, LabWork, PORT_CHOICES, SERVICES, addrFaults, addressedHosts, emptyWork, gradeAddr, gradePort, gradeSlot, hostById, identifyPort,
+  ipToNum, parsePortRule, referenceWork, runFlow, serviceMatches, startWork, subnetOf, toPortRule, zoneById,
 } from './lab';
 import { SCENARIOS } from './scenarios';
 
-/** The network as the scenario intends it: the best device in each spot, every port and address right, the solution's rules. */
-function reference(sc: LabScenario): LabWork {
-  const w = emptyWork();
-  for (const s of sc.slots) w.slots[s.id] = s.answer[0];
-  for (const row of sc.ports) {
-    if (!row.host) { w.ports[row.id] = { shut: true }; continue; }
-    const h = hostById(sc, row.host)!;
-    w.ports[row.id] = { vlan: zoneById(sc, h.zone)!.vlan, secure: h.secure ?? true };
-  }
-  for (const h of addressedHosts(sc)) {
-    const z = zoneById(sc, h.zone)!;
-    w.addr[h.id] = h.addr === 'dhcp' ? { mode: 'dhcp' }
-      : h.addr === 'reserved' ? { mode: 'reserved', ip: h.ip }
-      : { mode: 'static', ip: h.ip, prefix: subnetOf(z.subnet).prefix, gw: z.gateway };
-  }
-  w.rules = sc.solution.rules.map(r => ({ ...r }));
-  w.detect = { ...sc.solution.detect };
-  return w;
-}
+const reference = (sc: LabScenario) => referenceWork(sc);
 
 const failing = (sc: LabScenario, w: LabWork) => sc.flows.filter(f => !runFlow(sc, w, f).ok).map(f => f.id);
 
@@ -35,6 +17,10 @@ describe('network lab scenarios', () => {
         for (const row of sc.ports) expect(gradePort(sc, w, row)).withContext(row.id).toEqual([]);
         for (const h of addressedHosts(sc)) expect(gradeAddr(sc, w, h)).withContext(h.id).toEqual([]);
         expect(failing(sc, w)).toEqual([]);
+      });
+
+      it('can be solved with rules written as port numbers too', () => {
+        expect(failing(sc, referenceWork(sc, true))).toEqual([]);
       });
 
       it('accepts every listed device in each spot', () => {
@@ -139,14 +125,73 @@ describe('network lab scenarios', () => {
     });
   }
 
-  it('offers five different scenarios', () => {
-    expect(SCENARIOS.length).toBe(5);
-    expect(new Set(SCENARIOS.map(s => s.id)).size).toBe(5);
+  it('offers six different scenarios', () => {
+    expect(SCENARIOS.length).toBe(6);
+    expect(new Set(SCENARIOS.map(s => s.id)).size).toBe(6);
+  });
+});
+
+describe('network lab ports', () => {
+  it('reads port rules and matches them by protocol and port', () => {
+    expect(parsePortRule('tcp:22')).toEqual({ proto: 'TCP', port: 22 });
+    expect(parsePortRule('udp:53')).toEqual({ proto: 'UDP', port: 53 });
+    expect(parsePortRule('tcp:0')).toBeNull();
+    expect(parsePortRule('tcp:70000')).toBeNull();
+    expect(parsePortRule('ssh')).toBeNull();
+    expect(serviceMatches('tcp:22', 'ssh')).toBeTrue();
+    expect(serviceMatches('tcp:22', 'sftp')).toBeTrue();
+    expect(serviceMatches('tcp:23', 'ssh')).toBeFalse();
+    expect(serviceMatches('udp:22', 'ssh')).toBeFalse();
+    expect(serviceMatches('tcp:53', 'dns')).toBeTrue();
+    expect(serviceMatches('udp:20000', 'rtp')).toBeTrue();
+    expect(serviceMatches('tcp:443', 'scan')).toBeFalse();
+    expect(serviceMatches('any', 'scan')).toBeTrue();
+  });
+
+  it('offers every scenario port as a bare number, sorted, with decoys from the Reference Sheet', () => {
+    const values = PORT_CHOICES.map(c => c.value);
+    for (const id of Object.keys(SERVICES)) expect(values).withContext(id).toContain(toPortRule(id));
+    for (const c of PORT_CHOICES) expect(/^(TCP|UDP) \d+$/.test(c.label)).withContext(c.label).toBeTrue();
+    expect(new Set(values).size).toBe(values.length);
+    const nums = PORT_CHOICES.map(c => Number(c.value.split(':')[1]));
+    expect(nums).toEqual([...nums].sort((a, b) => a - b));
+    expect(values).toContain('tcp:23');
+    expect(values).toContain('tcp:995');
+  });
+
+  it('names what a wrong port really is when the run blocks it', () => {
+    expect(identifyPort('TCP', 23)?.names).toContain('Telnet');
+    expect(identifyPort('TCP', 23)?.insecure).toBeTrue();
+    expect(identifyPort('TCP', 4444)).toBeNull();
+    const sc = SCENARIOS.find(s => s.id === 'ports')!;
+    const w = referenceWork(sc, true);
+    const i = w.rules.findIndex(r => r.from === 'admin' && r.to === 'wlc');
+    w.rules[i] = { ...w.rules[i], service: 'tcp:23' };
+    const r = runFlow(sc, w, sc.flows.find(f => f.service === 'ssh' && f.from === 'admin')!);
+    expect(r.delivered).toBeFalse();
+    const text = r.hops.map(h => h.text).join(' ');
+    expect(text).toContain('TCP 23, which is Telnet');
+    expect(text).not.toContain('22');
+    // ...and the Telnet attempt now gets through, which the run also fails.
+    expect(runFlow(sc, w, sc.flows.find(f => f.service === 'telnet')!).ok).toBeFalse();
+  });
+
+  it('starts the ports scenario built except for its rules', () => {
+    const sc = SCENARIOS.find(s => s.id === 'ports')!;
+    const w = startWork(sc);
+    expect(w.portMode).toBeTrue();
+    expect(w.rules).toEqual([]);
+    for (const s of sc.slots) expect(gradeSlot(s, w.slots[s.id]).ok).toBeTrue();
+    for (const row of sc.ports) expect(gradePort(sc, w, row)).toEqual([]);
+    for (const h of addressedHosts(sc)) expect(gradeAddr(sc, w, h)).toEqual([]);
+    expect(failing(sc, w).length).toBe(sc.flows.filter(f => f.expect === 'works').length);
+    // Other scenarios start empty.
+    expect(startWork(SCENARIOS.find(s => !s.portsOnly)!).slots).toEqual({});
   });
 });
 
 describe('network lab grading', () => {
-  const sc = SCENARIOS[0];
+  const sc = SCENARIOS.find(s => s.id === 'shop')!;
   const fix = (patch: (w: LabWork) => void) => { const w = reference(sc); patch(w); return w; };
   const web = hostById(sc, 'web')!;
   const faults = (w: LabWork) => addrFaults(sc, w, web).join(' ');
