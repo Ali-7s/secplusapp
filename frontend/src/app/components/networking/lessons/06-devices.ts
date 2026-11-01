@@ -42,7 +42,7 @@ export const DEVICES: LessonBody = {
       ],
     ),
 
-    h('How a switch learns', { keep: 'A switch learns which MAC address sits on which port by watching traffic, then sends each frame only where it needs to go.' }),
+    h('How a switch learns', { objective: '3.2', keep: 'A switch learns which MAC address sits on which port by watching traffic, then sends each frame only where it needs to go.' }),
     p('A switch keeps a **MAC address table**: a list of which MAC address lives on which of its ports. Nobody types this list in. The switch builds it on its own by watching the traffic go by. Step through it:'),
     {
       type: 'sequence',
@@ -70,7 +70,7 @@ export const DEVICES: LessonBody = {
     },
     tip('A **broadcast** frame (sent to the special MAC address `ff:ff:ff:ff:ff:ff`, meaning "everyone") always goes out of every port. Several helper protocols depend on broadcasts, such as ARP and DHCP (lesson 8).'),
 
-    h('Collision domains and broadcast domains', { keep: 'Each switch port is its own collision domain, but a switch passes broadcasts everywhere. Only a router or a VLAN splits a broadcast domain.' }),
+    h('Collision domains and broadcast domains', { objective: '3.2', keep: 'Each switch port is its own collision domain, but a switch passes broadcasts everywhere. Only a router or a VLAN splits a broadcast domain.' }),
     p('Two terms the exam likes to test.'),
     p('A **collision** happens when two devices on a shared wire talk at the same moment and garble each other, like two people talking over each other on a walkie-talkie. A **collision domain** is the group of devices that can collide with each other. On a hub, everyone shares one wire, so everyone is in one collision domain. On a switch, each port is its own private link, so collisions only ever involve one device and the switch.'),
     p('A **broadcast domain** is the group of devices that all receive each other\'s broadcasts. A switch forwards broadcasts out of every port, so everything plugged into one switch (or a chain of switches) is one broadcast domain. A router does **not** forward broadcasts, so a router is where a broadcast domain ends.'),
@@ -84,7 +84,7 @@ export const DEVICES: LessonBody = {
     ),
     p('So a switch splits up collision domains but still passes broadcasts everywhere. Only a **router** (or a VLAN, lesson 7) splits a broadcast domain. In practice, a broadcast domain is the same thing as a subnet.'),
 
-    h('What a router does', { keep: 'A router joins networks and forwards each packet by its destination IP address, using its routing table. The default route is its fallback.' }),
+    h('What a router does', { objective: '3.2', keep: 'A router joins networks and forwards each packet by its destination IP address, using its routing table. The default route is its fallback.' }),
     p('A router joins **different networks**. It has a separate connection (an **interface**) and its own IP address on each network it touches. When a packet arrives, the router reads the destination IP address, looks it up in its **routing table** (its list of known networks and where to send packets for each), and hands the packet to the **next hop**: either the destination itself or the next router along the way.'),
     table(
       ['Destination network', 'Next hop', 'Out of interface'],
@@ -111,11 +111,11 @@ export const DEVICES: LessonBody = {
     analogy('A parcel crossing the country by several couriers. The address on the parcel (the IP address) never changes. But each courier writes a new handover slip (the MAC addresses) saying only "from this depot to the next depot".'),
     exam('**Switch = MAC. Router = IP.** MAC addresses only matter on the local link, while IP addresses travel end to end.'),
 
-    h('Spanning tree: stopping loops', { keep: 'Spare links between switches create loops; spanning tree (STP) blocks the extra links until they are needed.' }),
+    h('Spanning tree: stopping loops', { objective: '3.2', keep: 'Spare links between switches create loops; spanning tree (STP) blocks the extra links until they are needed.' }),
     p('Networks often have spare links between switches, so that if one cable fails, traffic can take another path. But spare links create **loops**, and a broadcast caught in a loop goes round and round forever, multiplying until the whole network grinds to a halt (a **broadcast storm**).'),
     p('Switches prevent this with **spanning tree protocol (STP)**. The switches talk to each other using small messages called **BPDUs** (bridge protocol data units), agree on one central switch called the **root bridge**, and temporarily switch off just enough links to break every loop. If an active link fails, a spare one is switched back on. Only switches should ever send BPDUs, which matters for security (below).'),
 
-    hSecure('How to secure it: switches and routers', { keep: 'Whoever controls a switch or router controls the traffic: change the defaults, manage it only over SSH or HTTPS, shut unused ports, and turn on port security, 802.1X and DHCP snooping.' }),
+    hSecure('How to secure it: switches and routers', { objective: '4.1', keep: 'Whoever controls a switch or router controls the traffic: change the defaults, manage it only over SSH or HTTPS, shut unused ports, and turn on port security, 802.1X and DHCP snooping.' }),
     p('Switches and routers are favorite targets, because whoever controls them controls the traffic. An attacker who can make traffic flow through their own machine is in an **on-path** position (sometimes called man-in-the-middle) and can read or change what passes. First, the attacks:'),
     table(
       ['Attack', 'What happens', 'The defense'],

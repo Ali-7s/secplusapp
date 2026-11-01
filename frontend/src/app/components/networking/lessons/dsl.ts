@@ -3,7 +3,7 @@ import { Block, CalloutKind, CertCase, DecideOption, DecideStep, HuntRow, HuntTa
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
 /** Options for a part heading: what to remember from the part, and whether it can be skipped on a first read. */
-export interface PartOptions { keep?: string; optional?: string }
+export interface PartOptions { keep?: string; optional?: string; objective?: string }
 
 export const h = (text: string, opts: PartOptions = {}): Block => ({ type: 'h', text, ...opts });
 export const hSecure = (text: string, opts: PartOptions = {}): Block => ({ type: 'h', text, tone: 'secure', ...opts });
@@ -119,3 +119,12 @@ export const permsLab = (): Block => ({ type: 'perms' });
 
 /** The MDM policy console. */
 export const mdmConsole = (): Block => ({ type: 'mdm' });
+
+/** Sort controls by category and type. */
+export const controlSorter = (): Block => ({ type: 'controls' });
+
+/** Inspect four messages for phishing warning signs. */
+export const emailInspector = (): Block => ({ type: 'email' });
+
+/** Score five vulnerabilities with CVSS 3.1. */
+export const cvssCalc = (): Block => ({ type: 'cvss' });

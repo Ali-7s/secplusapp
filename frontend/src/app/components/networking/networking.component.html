@@ -50,6 +50,7 @@
             <span class="summary">{{ l.summary }}</span>
             <span class="meta">
               <span><mat-icon aria-hidden="true">{{ l.icon }}</mat-icon> {{ l.minutes }} min</span>
+              @if (l.objectives.length) { <span class="objs" [title]="'Exam objectives ' + l.objectives.join(', ')">Obj {{ l.objectives.join(' · ') }}</span> }
               @if (done(l.slug)) { <span class="done-chip">Completed</span> }
             </span>
           </span>

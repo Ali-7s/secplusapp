@@ -39,7 +39,7 @@
   &.mature { background: var(--c-success); } }
 
 // ── One objective ───────────────────────────────────────────────────────────
-.obj { border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text);
+.obj { scroll-margin-top: 76px; border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text);
   &[open] { border-color: var(--c-border-dark); .chev { transform: rotate(180deg); } } }
 
 summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none;
@@ -85,3 +85,20 @@ summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cur
 }
 
 @media (prefers-reduced-motion: reduce) { summary .chev { transition: none; } }
+
+// Lessons that teach the objective, each with its parts; the hands-on ones are marked.
+.learn { margin: 4px 0 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--c-surface-2); border: 1px solid var(--c-border);
+  h3 { margin: 0 0 6px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--c-text-2); }
+  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  li { display: flex; flex-direction: column; gap: 4px; }
+  .lname { font-size: 14px; font-weight: 700; color: var(--c-text); text-decoration: none;
+    .ll { color: var(--c-accent); font-weight: 800; margin-right: 4px; }
+    &:hover { text-decoration: underline; } }
+  .parts { display: flex; flex-wrap: wrap; gap: 5px; }
+  .part { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 12px; text-decoration: none;
+    font-size: 12.5px; font-weight: 600; color: var(--c-text-2); background: var(--c-surface); border: 1px solid var(--c-border);
+    mat-icon { font-size: 15px; width: 15px; height: 15px; color: var(--c-accent); }
+    &.hands { color: var(--c-text); border-color: var(--c-accent); }
+    &:hover { border-color: var(--c-accent); background: var(--c-accent-light); }
+    &:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }

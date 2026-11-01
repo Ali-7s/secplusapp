@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Observable, forkJoin, map, shareReplay } from 'rxjs';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
+import { OBJECTIVE_NAMES } from '../../models/exam.model';
 import { ScrollSpot, readSpot, sameSpot, scrollToSpot } from '../../utils/scroll-spot';
 import { Block, CalloutKind, CardRef, Lesson } from './networking.model';
 import { TRACKS, trackLessons } from './lessons/lesson-index';
@@ -32,6 +33,9 @@ import { EvidenceHuntComponent } from './blocks/evidence-hunt.component';
 import { PasswordPolicyComponent } from './blocks/password-policy.component';
 import { PermsLabComponent } from './blocks/perms-lab.component';
 import { MdmConsoleComponent } from './blocks/mdm-console.component';
+import { ControlSorterComponent } from './blocks/control-sorter.component';
+import { EmailInspectorComponent } from './blocks/email-inspector.component';
+import { CvssCalcComponent } from './blocks/cvss-calc.component';
 
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
@@ -59,6 +63,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
     HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
     BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
+    ControlSorterComponent, EmailInspectorComponent, CvssCalcComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',
@@ -82,6 +87,7 @@ export class LessonComponent {
 
   lesson: Lesson | undefined;
   readonly calloutIcons = CALLOUT_ICONS;
+  readonly objectiveNames = OBJECTIVE_NAMES;
 
   /** The lesson split at its headings; the self-check comes after the last part. */
   parts: LessonPart[] = [];
@@ -100,7 +106,8 @@ export class LessonComponent {
   private saveTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    inject(ActivatedRoute).paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
+    const route = inject(ActivatedRoute);
+    route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
       this.saveNow();
       this.lesson = getLesson(params.get('slug'));
       this.work.slug = this.lesson?.slug ?? '';
@@ -112,6 +119,16 @@ export class LessonComponent {
       this.preview = null;
       this.scrollToTop();
       this.slug.set(this.lesson?.slug ?? '');
+    });
+
+    // `?part=N` opens a given part, as the links on the objectives page do. The parameter is then dropped, so a
+    // refresh comes back to wherever you have read to instead.
+    route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(query => {
+      const raw = query.get('part');
+      if (raw === null) return;
+      const part = Number(raw);
+      if (this.lesson && Number.isInteger(part)) this.jumpTo(part);
+      this.router.navigate([], { relativeTo: route, queryParams: { part: null }, queryParamsHandling: 'merge', replaceUrl: true });
     });
 
     // Open the lesson where you were reading: on this device after a refresh, or on another one once sync brings
@@ -208,6 +225,19 @@ export class LessonComponent {
     this.progress.setLessonPart(this.lesson.slug, this.step);
     this.preview = null;
     if (scroll) this.scrollToTop();
+  }
+
+  /** Opens a part from a link, ahead of any saved reading position. */
+  private jumpTo(part: number) {
+    this.moved = true;
+    this.goTo(part, false);
+    const spot: ScrollSpot = { part: this.step, i: -1, f: 0 };
+    // The page may still be settling (fonts, widgets), so place it once more a moment later.
+    afterNextRender(() => {
+      const place = () => { const scroller = this.scroller(); if (scroller) scrollToSpot(this.host.nativeElement, scroller, spot); };
+      place();
+      setTimeout(place, 250);
+    }, { injector: this.injector });
   }
 
   /** Template outlets pass untyped context; these restore the types for the shared templates. */

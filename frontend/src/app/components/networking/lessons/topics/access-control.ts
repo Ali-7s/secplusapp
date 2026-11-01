@@ -53,7 +53,7 @@ export const ACCESS_CONTROL: LessonBody = {
       ['PAM', 'Privileged access management: tools that control and watch admin accounts'],
     ),
 
-    h('Who decides: the five models', { keep: 'DAC: the owner decides. MAC: labels and clearances decide, set by administrators. Role-based: the job role decides. Rule-based: a rule for everyone decides. ABAC: a combination of attributes decides. Look for who sets the permission.' }),
+    h('Who decides: the five models', { objective: '4.6', keep: 'DAC: the owner decides. MAC: labels and clearances decide, set by administrators. Role-based: the job role decides. Rule-based: a rule for everyone decides. ABAC: a combination of attributes decides. Look for who sets the permission.' }),
     p('An **access control model** is the scheme that decides whether a subject may use an object. The fastest way to tell them apart is to ask **who sets the permission, and based on what**.'),
     table(
       ['Model', 'Who decides, based on what', 'Example', 'Clue in a question'],
@@ -69,7 +69,7 @@ export const ACCESS_CONTROL: LessonBody = {
     trap('The acronym **RBAC** is used for both **role**-based and **rule**-based access control, so read the description, not the letters. Likewise **MAC** can mean mandatory access control or a media access control (hardware) address, depending on the topic.'),
     analogy('DAC is a party at your home: you invite whoever you like. MAC is a government building: your badge\'s clearance must match the room\'s classification, and you cannot change either. Role-based is a hotel: staff key cards open the rooms their job needs. Rule-based is the building closing at 22:00 for everyone. ABAC is a club that checks your membership, your age and the time all at once.'),
 
-    h('Mandatory access control and labels', { keep: 'MAC labels data (for example Top Secret, Secret, Confidential) and gives users clearances. Access needs a clearance at or above the label, plus a need to know. Users can never change labels or share at their discretion.' }),
+    h('Mandatory access control and labels', { objective: '4.6', keep: 'MAC labels data (for example Top Secret, Secret, Confidential) and gives users clearances. Access needs a clearance at or above the label, plus a need to know. Users can never change labels or share at their discretion.' }),
     p('Under **mandatory access control**, every object gets a **label** (its classification) and every user a **clearance**. Government labels run **Top Secret, Secret, Confidential, Unclassified**; companies use their own, such as **Restricted, Confidential, Internal, Public**.'),
     list(
       'A user can open an object only if their **clearance is at or above** the object\'s label.',
@@ -78,7 +78,7 @@ export const ACCESS_CONTROL: LessonBody = {
     ),
     exam('MAC is the strictest and least flexible model, used where confidentiality matters most. DAC is the most flexible and the weakest, because any owner can share anything, including by mistake.'),
 
-    h('Principles that apply to every model', { keep: 'Least privilege: only what the job needs. Separation of duties: no one person does a whole sensitive task. Implicit deny: nothing is allowed unless something allows it. Group permissions add up, and an explicit deny beats any allow.' }),
+    h('Principles that apply to every model', { objective: '4.6', keep: 'Least privilege: only what the job needs. Separation of duties: no one person does a whole sensitive task. Implicit deny: nothing is allowed unless something allows it. Group permissions add up, and an explicit deny beats any allow.' }),
     table(
       ['Principle', 'Meaning', 'Example'],
       [
@@ -92,7 +92,7 @@ export const ACCESS_CONTROL: LessonBody = {
     p('Two rules decide what happens when permissions overlap. **Permissions add up**: a user in two groups gets the allows of both. And an **explicit deny overrides any allow**: if any rule that applies says deny, the answer is deny, whichever group gave the allow. If no rule allows a request, the **implicit deny** blocks it.'),
     trap('Cloud access policies, such as those for storage buckets, are **not first match** like a firewall rule list. Every statement that applies is considered at once: any deny wins, then any allow, otherwise the implicit deny. The order they are written in does not matter.'),
 
-    h('Try it: a cloud storage policy', { keep: 'Check every statement that applies. Any matching deny wins, even if an allow matches too. Otherwise a matching allow permits the request. If nothing allows it, the implicit deny blocks it. Joining another group can add a deny.' }),
+    h('Try it: a cloud storage policy', { objective: '4.6', keep: 'Check every statement that applies. Any matching deny wins, even if an allow matches too. Otherwise a matching allow permits the request. If nothing allows it, the implicit deny blocks it. Joining another group can add a deny.' }),
     p('Here is a policy for a company\'s shared storage. It mixes groups with an attribute of the device, which makes it attribute-based. Set up the request on the left and watch which statements apply, then work through the challenges.'),
     policy('Shared storage policy',
       [
@@ -120,7 +120,7 @@ export const ACCESS_CONTROL: LessonBody = {
     ),
     exam('In a policy question, go request by request: list the statements that apply, look for a deny first, then an allow. Watch for users in **two groups**: they get both groups\' allows **and** both groups\' denies.'),
 
-    h('Protecting admin accounts: privileged access management', { keep: 'PAM protects powerful accounts: just-in-time access grants admin rights only when needed, password vaulting keeps admin passwords in a vault that checks them out, and ephemeral credentials expire after one use or a short time.' }),
+    h('Protecting admin accounts: privileged access management', { objective: '4.6', keep: 'PAM protects powerful accounts: just-in-time access grants admin rights only when needed, password vaulting keeps admin passwords in a vault that checks them out, and ephemeral credentials expire after one use or a short time.' }),
     p('Administrator accounts can do anything, so they are what attackers want most. **Privileged access management (PAM)** tools control and record how they are used:'),
     list(
       '**Just-in-time access**: nobody holds admin rights permanently. An admin requests them for a task, gets them (often after approval) for a limited time, and loses them automatically afterwards.',
@@ -130,7 +130,7 @@ export const ACCESS_CONTROL: LessonBody = {
     ),
     tip('Access also changes over time. **Provisioning** gives a new joiner the right access, changes follow when people move jobs (to stop "permission creep"), and **deprovisioning** removes everything on the day they leave. Regular **access reviews** catch what was missed.'),
 
-    h('Practice: name the model', { keep: 'Ask who sets the permission. Owner: DAC. Labels and clearance: MAC. Job title: role-based. A rule for everyone: rule-based. Several attributes together: ABAC. Splitting a task: separation of duties. Only what is needed: least privilege.' }),
+    h('Practice: name the model', { objective: '4.6', keep: 'Ask who sets the permission. Owner: DAC. Labels and clearance: MAC. Job title: role-based. A rule for everyone: rule-based. Several attributes together: ABAC. Splitting a task: separation of duties. Only what is needed: least privilege.' }),
     pbq('Name the model', NAME_THE_MODEL, { intro: 'Seven findings from the audit. Each answer is used once.' }),
     examPbqs('access-control', 'This one comes from the practice exam: trace requests through a storage bucket\'s policy, including a user in two groups. It loads when you press Start.'),
   ],

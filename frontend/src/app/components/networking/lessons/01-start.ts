@@ -97,7 +97,7 @@ export const START: LessonBody = {
     p('"Server" describes a **role**, not a special kind of box. A server is just a program that waits for requests. Waiting for requests is called **listening**. The same laptop can be a client when it browses the web and a server when it shares a folder with other computers.'),
     analogy('A restaurant. You (the client) order from the menu. The kitchen (the server) waits for orders, prepares them and sends them out. The kitchen never phones you to suggest dinner: it only responds to orders.'),
 
-    h('Local networks and the internet', { keep: 'A LAN is the network in one place; the internet is millions of networks joined by routers. A switch connects devices inside a LAN, a router connects networks.' }),
+    h('Local networks and the internet', { objective: '3.2', keep: 'A LAN is the network in one place; the internet is millions of networks joined by routers. A switch connects devices inside a LAN, a router connects networks.' }),
     p('A **LAN** (local area network) is the network in one place: your home, an office floor, a school. Devices on the same LAN can reach each other **directly**. Two boxes usually build a LAN:'),
     list(
       'A **switch**: a box with many network sockets. Every wired device plugs into it, and it passes packets between them (lesson 6 shows how it knows where to send each one).',
@@ -122,7 +122,7 @@ export const START: LessonBody = {
 
     pbq('Try it: labels, clients and servers', START_LABELS, { intro: 'A quick check on the three labels and the two roles before you move on. Pick an answer for each line, then check.' }),
 
-    hSecure('Why every one of these ideas matters for security', { keep: 'Every idea in this lesson is also something attackers abuse, which is why Security+ builds on all of it.' }),
+    hSecure('Why every one of these ideas matters for security', { objective: '2.2', keep: 'Every idea in this lesson is also something attackers abuse, which is why Security+ builds on all of it.' }),
     p('Each idea in this lesson is also something attackers abuse. You will see the defenses in later lessons, but it helps to know now why you are learning each one:'),
     table(
       ['Idea', 'What can go wrong', 'Defense in'],

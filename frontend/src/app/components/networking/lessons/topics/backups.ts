@@ -53,7 +53,7 @@ export const BACKUPS: LessonBody = {
       ['UPS', 'Uninterruptible power supply: batteries that take over the moment power fails'],
     ),
 
-    h('Full, incremental and differential', { keep: 'Full copies everything. Incremental copies changes since the last backup: fast nightly, but a restore needs the full plus every incremental in order. Differential copies changes since the last full: it grows, but a restore needs just two sets.' }),
+    h('Full, incremental and differential', { objective: '3.4', keep: 'Full copies everything. Incremental copies changes since the last backup: fast nightly, but a restore needs the full plus every incremental in order. Differential copies changes since the last full: it grows, but a restore needs just two sets.' }),
     p('Copying everything every night takes a long time and a lot of storage, so most schedules take a **full backup** now and then and smaller backups in between. There are two kinds of smaller backup, and the difference is what they compare against.'),
     table(
       ['Type', 'Copies', 'Archive bit', 'Backup', 'Restore needs'],
@@ -67,12 +67,12 @@ export const BACKUPS: LessonBody = {
     p('The **archive bit** explains the difference. Changing a file sets its bit. A full or an incremental backup clears it, so the next incremental only sees files changed since then. A differential leaves it set, so each differential sees everything changed since the last full.'),
     trap('Incrementals are fastest to **back up** but slowest to **restore**. Differentials are the reverse. And with incrementals, one missing or damaged set in the chain means every later one cannot be applied.'),
 
-    h('Try it: a week of backups', { keep: 'The restore point is the last good backup, so nightly backups can lose up to a day of data whatever the type. Backup type changes restore time and storage, not data loss. Back up more often to meet a tighter RPO.' }),
+    h('Try it: a week of backups', { objective: '3.4', keep: 'The restore point is the last good backup, so nightly backups can lose up to a day of data whatever the type. Backup type changes restore time and storage, not data loss. Back up more often to meet a tighter RPO.' }),
     p('A file server fails in the middle of the afternoon. Try each strategy and each day, and compare how many sets the restore needs, how long it takes, and what each strategy stores.'),
     backupWeek(),
     exam('Notice what never changes: **data lost**. With one backup a night, a failure at 15:00 loses everything since 23:00 whatever the backup type. Backup type affects the **RTO** (restore time); only backing up more often, or replicating, improves the **RPO**.'),
 
-    h('Snapshots, replication and journaling', { keep: 'A snapshot captures one moment for quick rollback. Replication keeps a live copy: synchronous loses nothing but needs short distances, asynchronous allows distance but loses the last few changes. Replication copies mistakes too, so it never replaces backups.' }),
+    h('Snapshots, replication and journaling', { objective: '3.4', keep: 'A snapshot captures one moment for quick rollback. Replication keeps a live copy: synchronous loses nothing but needs short distances, asynchronous allows distance but loses the last few changes. Replication copies mistakes too, so it never replaces backups.' }),
     table(
       ['Method', 'What it does', 'Best for', 'Watch out'],
       [
@@ -85,7 +85,7 @@ export const BACKUPS: LessonBody = {
     ),
     trap('Replication copies **everything**, including deletions, corruption and ransomware encryption, within seconds. It protects against losing a site, not against losing data. You still need backups you can go back in time with.'),
 
-    h('Keeping backups safe', { keep: 'Follow 3-2-1: three copies, on two kinds of media, one offsite. Make at least one copy immutable or offline so ransomware cannot reach it, encrypt backups, and test restores regularly. An untested backup may not work.' }),
+    h('Keeping backups safe', { objective: '3.4', keep: 'Follow 3-2-1: three copies, on two kinds of media, one offsite. Make at least one copy immutable or offline so ransomware cannot reach it, encrypt backups, and test restores regularly. An untested backup may not work.' }),
     list(
       '**The 3-2-1 rule**: keep at least **3** copies of the data, on **2** different kinds of storage, with **1** of them offsite.',
       '**Onsite and offsite**: onsite copies restore quickly; offsite copies (another building, or the cloud) survive a fire or flood at the main site.',
@@ -96,7 +96,7 @@ export const BACKUPS: LessonBody = {
     ),
     analogy('A spare house key is only useful if it is somewhere else (offsite), the burglar cannot reach it (offline), and you have checked it actually opens the door (tested).'),
 
-    h('Recovery sites and high availability', { keep: 'Hot sites take minutes and cost most; warm sites need data restored, hours to days; cold sites are empty space, days to weeks. Spread sites apart. Clustering and load balancing survive a failure; a UPS bridges to the generator.' }),
+    h('Recovery sites and high availability', { objective: '3.4', keep: 'Hot sites take minutes and cost most; warm sites need data restored, hours to days; cold sites are empty space, days to weeks. Spread sites apart. Clustering and load balancing survive a failure; a UPS bridges to the generator.' }),
     table(
       ['Site', 'Has', 'Ready in', 'Cost'],
       [
@@ -116,7 +116,7 @@ export const BACKUPS: LessonBody = {
     ),
     tip('**Capacity planning** makes sure there will be enough people, technology and infrastructure when demand grows, or when a recovery site has to carry the whole load. **Continuity of operations planning (COOP)** covers keeping the essential functions going during the disruption.'),
 
-    h('Failover, failback and testing the plan', { keep: 'Failover: declare the disaster, bring up data first, then applications, test, then switch users over. Failback: copy the changes made at the recovery site back to the repaired primary, then switch back in a planned window. Test with tabletops, failover tests, simulations and parallel processing.' }),
+    h('Failover, failback and testing the plan', { objective: '3.4', keep: 'Failover: declare the disaster, bring up data first, then applications, test, then switch users over. Failback: copy the changes made at the recovery site back to the repaired primary, then switch back in a planned window. Test with tabletops, failover tests, simulations and parallel processing.' }),
     {
       type: 'flow', direction: 'down', caption: 'Failing over to a recovery site and back',
       nodes: [
@@ -138,7 +138,7 @@ export const BACKUPS: LessonBody = {
       { caption: 'Ways to test a recovery plan' },
     ),
 
-    h('Practice: pick the protection', { keep: 'Match the requirement to the tool: recovery time picks the site type, zero data loss needs synchronous replication, quick rollback is a snapshot, ransomware calls for immutable or offline backups, and power cuts need a UPS then a generator.' }),
+    h('Practice: pick the protection', { objective: '3.4', keep: 'Match the requirement to the tool: recovery time picks the site type, zero data loss needs synchronous replication, quick rollback is a snapshot, ransomware calls for immutable or offline backups, and power cuts need a UPS then a generator.' }),
     pbq('Pick the protection', PICK_THE_PROTECTION, { intro: 'Seven requirements from the retailer\'s review. Each option is used once.' }),
     examPbqs('backups', 'These come from the practice exam: a restore with incrementals against an RTO and RPO, and the steps of failing over to a warm site and back. They load when you press Start.'),
   ],

@@ -75,7 +75,7 @@ export const ACCOUNTS: LessonBody = {
       ['NTFS', 'The Windows file system, which stores permissions on each file and folder'],
     ),
 
-    h('Accounts and the directory', { keep: 'Give every person their own account, keep admin rights on separate accounts, lock down service accounts, and avoid shared and guest accounts. A directory such as Active Directory holds them all, and Group Policy pushes settings like the password policy to every computer.' }),
+    h('Accounts and the directory', { objective: '4.6', keep: 'Give every person their own account, keep admin rights on separate accounts, lock down service accounts, and avoid shared and guest accounts. A directory such as Active Directory holds them all, and Group Policy pushes settings like the password policy to every computer.' }),
     table(
       ['Account type', 'Used for', 'Keep it safe by'],
       [
@@ -90,7 +90,7 @@ export const ACCOUNTS: LessonBody = {
     p('Companies keep accounts in a **directory service**, most often Microsoft **Active Directory**, read and written with **LDAP**. The directory holds users, groups and computers, sorted into **organizational units (OUs)**. **Group Policy** pushes settings to every computer or user in an OU: the password policy, the screen lock, which software may run, and much more, so one change reaches thousands of machines.'),
     tip('The account lifecycle matters as much as the settings. **Provisioning** gives a joiner the right groups on day one, a move between jobs removes the old access as well as adding the new, and **deprovisioning** disables the account the moment someone leaves. Regular access reviews catch what slipped through.'),
 
-    h('Passwords that hold up', { keep: 'Modern guidance: long passwords (15+), no composition rules, no scheduled expiry (change when compromise is suspected), reject breached passwords, remember past passwords, lock out after about 10 failures with automatic unlock, and add MFA.' }),
+    h('Passwords that hold up', { objective: '4.6', keep: 'Modern guidance: long passwords (15+), no composition rules, no scheduled expiry (change when compromise is suspected), reject breached passwords, remember past passwords, lock out after about 10 failures with automatic unlock, and add MFA.' }),
     p('Password advice changed a lot in recent years. NIST, the US standards body, now says length matters far more than complexity, that forced changes every 90 days make passwords weaker, and that every new password should be checked against lists of passwords already leaked. A **password manager** makes long, unique passwords practical, and **passwordless** sign-in removes them altogether.'),
     table(
       ['Setting', 'Old habit', 'Better'],
@@ -107,7 +107,7 @@ export const ACCOUNTS: LessonBody = {
     passwordPolicy(),
     trap('Lockout stops **brute force** against one account but not **password spraying**, which tries each account only once or twice. Spraying is stopped by rejecting common and breached passwords, and above all by MFA.'),
 
-    h('Multifactor authentication', { keep: 'Factors: something you know (password, PIN), have (phone, token, smart card), are (fingerprint, face) and somewhere you are (location). MFA needs two different kinds. Security keys and authenticator apps beat SMS codes; two passwords are still one factor.' }),
+    h('Multifactor authentication', { objective: '4.6', keep: 'Factors: something you know (password, PIN), have (phone, token, smart card), are (fingerprint, face) and somewhere you are (location). MFA needs two different kinds. Security keys and authenticator apps beat SMS codes; two passwords are still one factor.' }),
     table(
       ['Factor', 'Examples'],
       [
@@ -126,12 +126,12 @@ export const ACCOUNTS: LessonBody = {
     ),
     pbq('Name the factor', FACTORS, { intro: 'Six things the sign-in systems can ask for.' }),
 
-    h('File permissions on Linux', { keep: 'Linux gives read (4), write (2) and execute (1) to the owner, the group and everyone else. Add them per class for one digit each: 750 is rwxr-x---. On a folder, r lists, w adds or deletes, x lets you enter. Never 777.' }),
+    h('File permissions on Linux', { objective: '4.6', keep: 'Linux gives read (4), write (2) and execute (1) to the owner, the group and everyone else. Add them per class for one digit each: 750 is rwxr-x---. On a folder, r lists, w adds or deletes, x lets you enter. Never 777.' }),
     p('Every Linux file has an **owner**, a **group**, and permissions for three classes: the owner, members of the group, and **others** (everyone else). Each class gets **r** (read, worth 4), **w** (write, 2) and **x** (execute, 1). Add them up for one digit per class, and `chmod` sets them: `chmod 640 db.conf` gives rw- to the owner, r-- to the group and nothing to others. `ls -l` shows the same thing as letters: `-rw-r-----`.'),
     permsLab(),
     exam('Know the common ones: **600** (private files such as SSH keys), **644** (readable by everyone, writable by the owner), **640** (config files with secrets), **755** (programs and shared folders), **750** (shared with the group only). **777** lets anyone change anything and is almost always wrong.'),
 
-    h('File permissions on Windows: NTFS and shares', { keep: 'NTFS permissions from all your groups add up, and an explicit deny wins. Over the network, share and NTFS permissions both apply and the more restrictive wins; signed in locally, only NTFS counts. Folders pass permissions down by inheritance.' }),
+    h('File permissions on Windows: NTFS and shares', { objective: '4.6', keep: 'NTFS permissions from all your groups add up, and an explicit deny wins. Over the network, share and NTFS permissions both apply and the more restrictive wins; signed in locally, only NTFS counts. Folders pass permissions down by inheritance.' }),
     p('Windows stores **NTFS permissions** on each file and folder: Full control, Modify, Read & execute, Read, and Write. They pass down from a folder to everything inside it (**inheritance**), unless inheritance is turned off. A folder can also be **shared** over the network, and the share has its own, simpler permissions: Read, Change and Full control.'),
     list(
       'Permissions from all the groups you are in **add up**.',

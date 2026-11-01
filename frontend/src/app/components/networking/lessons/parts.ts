@@ -8,6 +8,8 @@ export interface LessonPart {
   keep?: string;
   /** Why the part can wait for a second pass, when it can. */
   optional?: string;
+  /** The SY0-701 objective the part teaches. */
+  objective?: string;
   blocks: Block[];
   minutes: number;
   /** The first part holds the lesson's goals, recap and new words. */
@@ -21,13 +23,13 @@ export interface LessonPart {
 const WORDS_PER_MINUTE = 110;
 
 /** Extra minutes for blocks you work through rather than read. */
-const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, decide: 4, riskcalc: 3, policy: 4, backups: 3, hunt: 5, pwpolicy: 4, perms: 3, mdm: 4 };
+const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, decide: 4, riskcalc: 3, policy: 4, backups: 3, hunt: 5, pwpolicy: 4, perms: 3, mdm: 4, controls: 4, email: 5, cvss: 5 };
 
 function words(value: unknown): number {
   if (typeof value === 'string') return value.split(/\s+/).filter(Boolean).length;
   if (Array.isArray(value)) return value.reduce((n, v) => n + words(v), 0);
   if (value && typeof value === 'object') {
-    return Object.entries(value).reduce((n, [k, v]) => n + (k === 'type' || k === 'question' ? 0 : words(v)), 0);
+    return Object.entries(value).reduce((n, [k, v]) => n + (k === 'type' || k === 'question' || k === 'objective' ? 0 : words(v)), 0);
   }
   return 0;
 }
@@ -43,7 +45,7 @@ export function estimateMinutes(blocks: Block[]): number {
 export function lessonParts(lesson: LessonBody): LessonPart[] {
   const parts: LessonPart[] = [{ title: 'Before you start', blocks: [], minutes: 0, intro: true }];
   for (const b of lesson.blocks) {
-    if (b.type === 'h') parts.push({ title: b.text, tone: b.tone, keep: b.keep, optional: b.optional, blocks: [], minutes: 0, intro: false });
+    if (b.type === 'h') parts.push({ title: b.text, tone: b.tone, keep: b.keep, optional: b.optional, objective: b.objective, blocks: [], minutes: 0, intro: false });
     else parts[parts.length - 1].blocks.push(b);
   }
   for (const part of parts) {
@@ -52,6 +54,12 @@ export function lessonParts(lesson: LessonBody): LessonPart[] {
   }
   return parts;
 }
+
+/** True when a part has something to work through rather than only read. */
+export const isHandsOn = (part: LessonPart) => part.blocks.some(b => (HANDS_ON[b.type] ?? 0) > 0);
+
+/** The objectives a lesson's parts teach, in the order they first appear. */
+export const partObjectives = (lesson: LessonBody) => [...new Set(lessonParts(lesson).map(p => p.objective).filter((o): o is string => !!o))];
 
 /** Minutes for the self-check at the end. */
 export const checkMinutes = (lesson: LessonBody) => Math.max(1, Math.round(lesson.check.length * 0.75));

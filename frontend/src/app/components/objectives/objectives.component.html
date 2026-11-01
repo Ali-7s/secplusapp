@@ -44,7 +44,7 @@
 
     @for (v of shown(); track v.id) {
       @let s = stats(v);
-      <details class="obj" [open]="!!search()">
+      <details class="obj" [id]="anchor(v.id)" [open]="!!search() || openId() === v.id">
         <summary>
           <span class="id">{{ v.id }}</span>
           <span class="head">
@@ -70,6 +70,28 @@
             </a>
             <span class="cards-note">{{ s.studied }} of {{ s.cards }} linked cards studied, {{ s.mature }} mature</span>
           </div>
+
+          @if (lessons()[v.id]; as taught) {
+            <section class="learn" [attr.aria-label]="'Lessons for objective ' + v.id">
+              <h3>Lessons and hands-on practice</h3>
+              <ul>
+                @for (l of taught; track l.slug) {
+                  <li>
+                    <a class="lname" [routerLink]="['/lessons', l.slug]"><span class="ll">{{ l.label }}</span> {{ l.title }}</a>
+                    <span class="parts">
+                      @for (p of l.parts; track p.index) {
+                        <a class="part" [class.hands]="p.handsOn" [routerLink]="['/lessons', l.slug]" [queryParams]="{ part: p.index }"
+                          [title]="p.handsOn ? 'Hands-on: you do this in the lesson' : 'Reading'">
+                          @if (p.handsOn) { <mat-icon aria-hidden="true">touch_app</mat-icon><span class="sr">Hands-on: </span> }
+                          {{ p.title }}
+                        </a>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
 
           <ul class="rows">
             @for (r of v.rows; track trackRow($index, r)) {

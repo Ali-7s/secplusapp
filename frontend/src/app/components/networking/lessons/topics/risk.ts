@@ -50,7 +50,7 @@ export const RISK: LessonBody = {
       ['RPO', 'Recovery point objective: how much recent data may be lost, measured in time'],
     ),
 
-    h('What risk is, and two ways to measure it', { keep: 'Risk is likelihood times impact. Qualitative analysis rates them in words (low, medium, high) on a heat map; quantitative analysis puts numbers in money on them. Qualitative is quick, quantitative supports spending decisions.' }),
+    h('What risk is, and two ways to measure it', { objective: '5.2', keep: 'Risk is likelihood times impact. Qualitative analysis rates them in words (low, medium, high) on a heat map; quantitative analysis puts numbers in money on them. Qualitative is quick, quantitative supports spending decisions.' }),
     p('A risk needs two things: a **threat** and a **vulnerability** it can use. How much it matters depends on the **likelihood** that it happens and its **impact** if it does. Risk management finds risks, measures them, decides what to do about each, and keeps watching.'),
     table(
       ['', 'Qualitative', 'Quantitative'],
@@ -64,7 +64,7 @@ export const RISK: LessonBody = {
     ),
     p('Risk assessments happen at different times: **one-time** (before a project), **ad hoc** (when something changes, such as a new threat), **recurring** (every quarter or year) and **continuous** (automated monitoring).'),
 
-    h('Putting a price on risk: SLE, ARO and ALE', { keep: 'SLE = AV × EF is the cost of one event. ARO is events per year: once every 5 years is 0.2, and it can be more than 1. ALE = SLE × ARO is the expected cost per year.' }),
+    h('Putting a price on risk: SLE, ARO and ALE', { objective: '5.2', keep: 'SLE = AV × EF is the cost of one event. ARO is events per year: once every 5 years is 0.2, and it can be more than 1. ALE = SLE × ARO is the expected cost per year.' }),
     p('Quantitative analysis builds the yearly cost of a risk in three steps:'),
     list(
       '**SLE = AV × EF.** A $400,000 warehouse that a flood would half destroy (EF 50%) has an SLE of $200,000.',
@@ -77,7 +77,7 @@ export const RISK: LessonBody = {
     riskCalc('ale'),
     exam('Read carefully which number the control changes. EDR and immutable backups mostly cut the **exposure factor** (less is lost per attack); a flood barrier mostly cuts the **ARO** (floods get in less often). And always subtract the control\'s own cost before calling it worth it.'),
 
-    h('Choosing a response', { keep: 'Accept (live with it), avoid (stop the risky activity), mitigate (add controls), or transfer (insurance, outsourcing). Insurance still leaves premiums and deductibles to pay. An exemption or exception is a formal, approved acceptance of not meeting a rule.' }),
+    h('Choosing a response', { objective: '5.2', keep: 'Accept (live with it), avoid (stop the risky activity), mitigate (add controls), or transfer (insurance, outsourcing). Insurance still leaves premiums and deductibles to pay. An exemption or exception is a formal, approved acceptance of not meeting a rule.' }),
     table(
       ['Response', 'What it means', 'Example'],
       [
@@ -92,7 +92,7 @@ export const RISK: LessonBody = {
     p('Two kinds of acceptance have their own names. An **exception** lets something break a security rule for a while, such as an old machine allowed to run unpatched until it is replaced. An **exemption** releases something from a rule altogether. Both are formally approved and recorded, with the risk owner signing off.'),
     trap('Transferring a risk moves the **money**, not the **responsibility**. If customer data leaks, the company still answers to its customers and regulators, insurance or not.'),
 
-    h('Keeping track: the register, appetite and tolerance', { keep: 'The risk register lists each risk with its owner, score, response and indicators. Appetite is how much risk you will take on; tolerance is how far results may stray. Controls turn inherent risk into residual risk.' }),
+    h('Keeping track: the register, appetite and tolerance', { objective: '5.2', keep: 'The risk register lists each risk with its owner, score, response and indicators. Appetite is how much risk you will take on; tolerance is how far results may stray. Controls turn inherent risk into residual risk.' }),
     p('The **risk register** is the organization\'s list of risks. Each entry usually has a description, a **risk owner** who is accountable for it, likelihood and impact (and the score they give), the chosen response and controls, and **key risk indicators (KRIs)**: measurements that warn when the risk is growing, such as the number of unpatched servers.'),
     table(
       ['Term', 'Meaning'],
@@ -106,7 +106,7 @@ export const RISK: LessonBody = {
     ),
     analogy('An investor\'s appetite is "growth stocks, some risk is fine". Their tolerance is "if a stock falls more than 20%, I sell". The threshold is the 20% line itself.'),
 
-    h('Business impact: RTO, RPO, MTBF and MTTR', { keep: 'RTO is how long a system may be down; RPO is how much data may be lost. MTBF is the average time between failures, MTTR the average repair time. Availability = MTBF ÷ (MTBF + MTTR). Series multiplies availabilities; redundant pairs multiply unavailabilities.' }),
+    h('Business impact: RTO, RPO, MTBF and MTTR', { objective: '5.2', keep: 'RTO is how long a system may be down; RPO is how much data may be lost. MTBF is the average time between failures, MTTR the average repair time. Availability = MTBF ÷ (MTBF + MTTR). Series multiplies availabilities; redundant pairs multiply unavailabilities.' }),
     p('A **business impact analysis (BIA)** works out which processes matter most (the **mission-essential functions**), what an outage of each would cost, and so how fast each must come back. It sets four numbers:'),
     table(
       ['Measure', 'Question it answers', 'Example'],
@@ -134,7 +134,7 @@ export const RISK: LessonBody = {
     riskCalc('availability'),
     tip('To check an SLA, add up **all** the downtime in the period and compare it with the allowance. Three short outages can break a 99.9% promise even if none of them alone is longer than 43.2 minutes.'),
 
-    h('Practice: price two risks', { keep: 'Work line by line: SLE, then ARO, then ALE, then the ALE with the control, then subtract the control\'s yearly cost. A positive result means mitigate; a negative one means accept or transfer.' }),
+    h('Practice: price two risks', { objective: '5.2', keep: 'Work line by line: SLE, then ARO, then ALE, then the ALE with the control, then subtract the control\'s yearly cost. A positive result means mitigate; a negative one means accept or transfer.' }),
     pbq('Price two risks', PRICE_TWO_RISKS, { intro: 'Work each value out on paper first, or use the calculator above, then pick it.' }),
     examPbqs('risk', 'These come from the practice exam: a flood barrier, ransomware and laptop insurance, and an SLA with a chain of servers. They load when you press Start.'),
   ],

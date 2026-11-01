@@ -27,7 +27,7 @@ export const ENDPOINTS: LessonBody = {
       ['Sideloading', 'Installing apps from outside the official app store'],
     ),
 
-    h('Hardening servers and workstations', { keep: 'Remove unneeded software and services, close unused ports, patch on a schedule, enable the host firewall and EDR, encrypt the disk, use secure boot, allow only approved applications, and take away everyday admin rights.' }),
+    h('Hardening servers and workstations', { objective: '2.5', keep: 'Remove unneeded software and services, close unused ports, patch on a schedule, enable the host firewall and EDR, encrypt the disk, use secure boot, allow only approved applications, and take away everyday admin rights.' }),
     {
       type: 'harden',
       title: 'Endpoint hardening checklist',
@@ -46,7 +46,7 @@ export const ENDPOINTS: LessonBody = {
     },
     tip('**Decommissioning** is part of the lifecycle too: when a device is retired, wipe or destroy its storage, remove it from the directory and MDM, and update the asset inventory.'),
 
-    h('Exercise: what is this server running?', { keep: 'Look at every listening port: plaintext protocols (Telnet, FTP) go, databases and caches should listen on 127.0.0.1 only, unused services go, and missing security updates and a disabled firewall are findings too.' }),
+    h('Exercise: what is this server running?', { objective: '4.1', keep: 'Look at every listening port: plaintext protocols (Telnet, FTP) go, databases and caches should listen on 127.0.0.1 only, unused services go, and missing security updates and a disabled firewall are findings too.' }),
     p('An admin ran these commands on a Linux web server that should only serve a website over HTTPS and be managed over SSH. The first lines are the listening ports (the address `0.0.0.0` means "on every network interface", so reachable from the network; `127.0.0.1` means only from the server itself).'),
     {
       type: 'spot',
@@ -66,7 +66,7 @@ export const ENDPOINTS: LessonBody = {
       ],
     },
 
-    h('Mobile devices: ownership and connections', { keep: 'BYOD: the employee owns the phone, so manage only a work container. COPE: company-owned, personal use allowed, fully managed. CYOD: staff choose from an approved list. Risky connections: open Wi-Fi, Bluetooth left on, and NFC.' }),
+    h('Mobile devices: ownership and connections', { objective: '4.1', keep: 'BYOD: the employee owns the phone, so manage only a work container. COPE: company-owned, personal use allowed, fully managed. CYOD: staff choose from an approved list. Risky connections: open Wi-Fi, Bluetooth left on, and NFC.' }),
     table(
       ['Model', 'Who owns it', 'What the company manages', 'Trade-off'],
       [
@@ -85,7 +85,7 @@ export const ENDPOINTS: LessonBody = {
     ),
     trap('**Jailbreaking** (iPhone) and **rooting** (Android) remove the operating system\'s protections, and **sideloading** installs apps that skipped the app store\'s checks. MDM should detect both and block company access until the device is compliant.'),
 
-    h('Mobile device management', { keep: 'MDM enforces screen lock, encryption and app rules, separates work data with containerization, wipes devices fully or selectively, uses geofencing and kiosk mode, and blocks devices that fail compliance checks, such as jailbroken phones.' }),
+    h('Mobile device management', { objective: '4.1', keep: 'MDM enforces screen lock, encryption and app rules, separates work data with containerization, wipes devices fully or selectively, uses geofencing and kiosk mode, and blocks devices that fail compliance checks, such as jailbroken phones.' }),
     p('**MDM** (often part of **UEM**, unified endpoint management, which covers laptops too) lets IT set policies for every enrolled device from one console:'),
     list(
       '**Screen lock and encryption**: a PIN or biometric, and encrypted storage.',

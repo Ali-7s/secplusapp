@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
@@ -12,6 +12,7 @@ import {
   normalize, objectiveCoverage,
 } from '../../utils/coverage';
 import { isMature } from '../../utils/srs';
+import type { ObjectiveLesson } from '../networking/lessons/lessons';
 
 /** CompTIA's weighting of each domain on the exam. */
 const DOMAIN_WEIGHTS: Record<ExamDomain, number> = { 1: 12, 2: 22, 3: 18, 4: 28, 5: 20 };
@@ -50,6 +51,7 @@ interface ObjectiveView {
 export class ObjectivesComponent implements OnInit {
   private content = inject(ContentService);
   readonly progress = inject(ProgressService);
+  private route = inject(ActivatedRoute);
 
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
   readonly domainNames = DOMAIN_NAMES;
@@ -62,8 +64,14 @@ export class ObjectivesComponent implements OnInit {
   private readonly views = signal<ObjectiveView[]>([]);
   /** Question ids per objective, for your accuracy on it. */
   private readonly questionIds = signal<Record<string, string[]>>({});
+  /** The objective a link asked to open (`?open=4.6`), shown open and scrolled to. */
+  readonly openId = signal<string | null>(null);
+  /** The lessons and parts that teach each objective. Loaded with the lessons, which have their own bundle. */
+  readonly lessons = signal<Record<string, ObjectiveLesson[]>>({});
 
   ngOnInit() {
+    this.openId.set(this.route.snapshot.queryParamMap.get('open'));
+    import('../networking/lessons/lessons').then(m => this.lessons.set(m.lessonsByObjective()));
     forkJoin([this.content.getAcronyms(), this.content.getTerms(), this.content.getPracticeExam()]).subscribe({
       next: ([acronyms, terms, pool]) => {
         const cards: GlossaryCard[] = [
@@ -77,6 +85,7 @@ export class ObjectivesComponent implements OnInit {
         this.questionIds.set(ids);
         this.views.set(buildObjectives(OBJECTIVE_OUTLINES).map(o => this.view(o, objectiveCoverage(o, index, questions), ids[o.id]?.length ?? 0)));
         this.loading.set(false);
+        this.scrollToOpen();
       },
       error: () => {
         this.error.set(true);
@@ -127,6 +136,13 @@ export class ObjectivesComponent implements OnInit {
       })
       .filter((v): v is ObjectiveView => !!v);
   });
+
+  private scrollToOpen() {
+    const id = this.openId();
+    if (id) setTimeout(() => document.getElementById(this.anchor(id))?.scrollIntoView({ block: 'start' }));
+  }
+
+  anchor(id: string): string { return 'objective-' + id.replace('.', '-'); }
 
   setDomain(d: ExamDomain | null) { this.domain.set(d); }
   onSearch(event: Event) { this.search.set((event.target as HTMLInputElement).value); }

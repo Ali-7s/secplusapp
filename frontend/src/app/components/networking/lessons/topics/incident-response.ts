@@ -47,7 +47,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
       ['Legal hold', 'An instruction to keep data that may matter in a lawsuit, stopping normal deletion'],
     ),
 
-    h('Events, incidents and the response process', { keep: 'An incident is an event that harms or threatens security. Respond in order: preparation, detection, analysis, containment, eradication, recovery, lessons learned. Contain before you clean up, and fix the cause before you restore.' }),
+    h('Events, incidents and the response process', { objective: '4.8', keep: 'An incident is an event that harms or threatens security. Respond in order: preparation, detection, analysis, containment, eradication, recovery, lessons learned. Contain before you clean up, and fix the cause before you restore.' }),
     p('Systems produce millions of **events** a day: sign-ins, file reads, connections. A few raise **alerts**, and most alerts turn out to be harmless. An **incident** is an event that actually harms or threatens security. Incident response is the planned way an organization handles one, so that people under pressure do the right things in the right order.'),
     {
       type: 'flow', direction: 'down', caption: 'The incident response process. Lessons learned feeds back into preparation.',
@@ -64,7 +64,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
     analogy('It is how firefighters work. They train before any fire (preparation), get the call (detection), size up the building (analysis), stop it spreading to the next house (containment), put it out (eradication), let people back in once it is safe (recovery), and investigate what started it (lessons learned).'),
     trap('Two orders catch people out. **Containment comes before eradication**: stop the spread first, then clean up. And **eradication comes before recovery**: if you restore before closing the hole the attacker used, they walk straight back in.'),
 
-    h('Preparation, practice and threat hunting', { keep: 'Preparation means a written plan, a trained team, playbooks and ready tools. Practice it: a tabletop exercise talks a scenario through, a simulation acts it out. Threat hunting searches for attackers no alert has caught.' }),
+    h('Preparation, practice and threat hunting', { objective: '4.8', keep: 'Preparation means a written plan, a trained team, playbooks and ready tools. Practice it: a tabletop exercise talks a scenario through, a simulation acts it out. Threat hunting searches for attackers no alert has caught.' }),
     list(
       'An **incident response plan**: who is on the team, who decides what, and who must be told (management, legal, regulators, customers, possibly law enforcement), with contact details that work even if email is down.',
       'A **CSIRT** (computer security incident response team) with clear roles, plus outside help arranged in advance where needed.',
@@ -81,7 +81,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
     ),
     p('**Threat hunting** turns detection around. Instead of waiting for alerts, hunters start from an idea ("an attacker who got in through phishing would be using PowerShell to reach file servers at night") and search the logs and endpoints for signs of it. It finds attackers who slipped past the automatic tools.'),
 
-    h('Containment, eradication and recovery', { keep: 'Contain to stop the spread while keeping evidence: isolate a device rather than power it off. Eradicate the cause and the way in. Recover from clean backups and monitor closely. Root cause analysis asks why it happened, not only what.' }),
+    h('Containment, eradication and recovery', { objective: '4.8', keep: 'Contain to stop the spread while keeping evidence: isolate a device rather than power it off. Eradicate the cause and the way in. Recover from clean backups and monitor closely. Root cause analysis asks why it happened, not only what.' }),
     table(
       ['Phase', 'Typical actions', 'Watch out'],
       [
@@ -93,7 +93,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
     ),
     p('**Root cause analysis** keeps asking "why?" until it reaches something you can fix. The malware got in because someone opened an attachment; why did that work? Because macros were allowed; why? Because nobody owned the policy. Fixing only the first answer leaves the real cause in place.'),
 
-    h('Work through an incident', { keep: 'At each moment, ask which phase you are in. Analyze before acting, isolate before cleaning, preserve evidence before eradicating, close the way in before restoring, and finish with lessons learned.' }),
+    h('Work through an incident', { objective: '4.8', keep: 'At each moment, ask which phase you are in. Analyze before acting, isolate before cleaning, preserve evidence before eradicating, close the way in before restoring, and finish with lessons learned.' }),
     p('Here is a ransomware incident at a small law firm, one decision at a time. Pick what you would do. A weaker choice explains what goes wrong; then try again.'),
     decide('Ransomware at a law firm', [
       step(
@@ -140,7 +140,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
       ),
     ], 'Six decisions, one per phase. Your choices are saved, so you can stop and come back.'),
 
-    h('Collecting evidence: digital forensics', { keep: 'Collect the most volatile evidence first: CPU and memory, then temporary files, the disk, remote logs, archives. Image disks through a write blocker, hash every copy, and record every hand-over in the chain of custody.' }),
+    h('Collecting evidence: digital forensics', { objective: '4.8', keep: 'Collect the most volatile evidence first: CPU and memory, then temporary files, the disk, remote logs, archives. Image disks through a write blocker, hash every copy, and record every hand-over in the chain of custody.' }),
     p('**Digital forensics** is collecting and examining evidence so that it stands up later, in court or with an insurer. Some evidence disappears in seconds and some lasts for years, so the **order of volatility** sets what to grab first:'),
     table(
       ['Order', 'Evidence', 'Why it goes first or last'],
@@ -165,7 +165,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
     exam('"What should the investigator do **first**?" with a running machine: capture **memory** (order of volatility). "How can the investigator **prove** the image was not altered?": compare **hashes**. "How can the company show who handled the drive?": the **chain of custody**.'),
     tip('Time stamps differ between devices and time zones. Investigators record each device\'s clock offset and work in one time zone (usually UTC) when building the timeline.'),
 
-    h('Practice: forensics and the response order', { keep: 'Chain of custody tracks who held evidence, a write blocker and a hash keep it unchanged and prove it, legal hold and e-Discovery serve the lawyers, and root cause analysis finds the real reason.' }),
+    h('Practice: forensics and the response order', { objective: '4.8', keep: 'Chain of custody tracks who held evidence, a write blocker and a hash keep it unchanged and prove it, legal hold and e-Discovery serve the lawyers, and root cause analysis finds the real reason.' }),
     pbq('Name the practice', FORENSICS_TERMS, { intro: 'Seven actions from the firm\'s investigation. Each practice is used once.' }),
     examPbqs('incident-response', 'These come from the practice exam: put evidence sources in order of volatility, and put a real incident\'s response actions in order. They load when you press Start.'),
   ],

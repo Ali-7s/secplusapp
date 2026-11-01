@@ -46,7 +46,7 @@ export const SIGN_IN: LessonBody = {
       ['Redirect', 'A website sending your browser on to another website, often carrying a message with it'],
     ),
 
-    h('Who are you, and what may you do?', { keep: 'Authentication proves who you are, authorization decides what you may do, and accounting records what you did (AAA). Single sign-on lets one sign-in at an identity provider open many services, which never see your password.' }),
+    h('Who are you, and what may you do?', { objective: '1.2', keep: 'Authentication proves who you are, authorization decides what you may do, and accounting records what you did (AAA). Single sign-on lets one sign-in at an identity provider open many services, which never see your password.' }),
     table(
       ['Step', 'The question', 'Example'],
       [
@@ -60,7 +60,7 @@ export const SIGN_IN: LessonBody = {
     p('When the identity provider and the service belong to different organizations, the trust between them is called **federation**: your company\'s IdP signs you in to a supplier\'s portal or a cloud app, using a trust set up once between the two.'),
     trap('SSO concentrates risk. If the identity provider is down, nobody can sign in to anything; if an attacker takes over someone\'s SSO account, every connected app opens. That is why the IdP gets the strongest protection: MFA for everyone, close monitoring, and a quick way to disable an account.'),
 
-    h('Directories: LDAP and LDAPS', { keep: 'A directory stores users, groups and their details. Apps query it with LDAP on port 389; LDAPS wraps the same queries in TLS on port 636 so passwords and data are encrypted.' }),
+    h('Directories: LDAP and LDAPS', { objective: '4.6', keep: 'A directory stores users, groups and their details. Apps query it with LDAP on port 389; LDAPS wraps the same queries in TLS on port 636 so passwords and data are encrypted.' }),
     p('Behind most sign-ins sits a **directory**: the company\'s list of users, groups, computers and their details (department, manager, phone). Microsoft\'s **Active Directory** is the best known. Applications look things up with **LDAP** (Lightweight Directory Access Protocol), naming each entry by its place in the tree:'),
     p('`CN=Ana Silva,OU=Finance,DC=corp,DC=example` means: the entry named Ana Silva, in the Finance department\'s folder (organizational unit), in the domain corp.example.'),
     table(
@@ -71,7 +71,7 @@ export const SIGN_IN: LessonBody = {
       ],
     ),
 
-    h('Kerberos: tickets inside the company network', { keep: 'Kerberos signs you in once to the key distribution center, which issues a ticket-granting ticket. You trade it for a service ticket for each server. The password never crosses the network, tickets expire, and clocks must agree within about five minutes.' }),
+    h('Kerberos: tickets inside the company network', { objective: '4.6', keep: 'Kerberos signs you in once to the key distribution center, which issues a ticket-granting ticket. You trade it for a service ticket for each server. The password never crosses the network, tickets expire, and clocks must agree within about five minutes.' }),
     p('**Kerberos** is how Windows domains (and many others) sign you in to file shares, printers and internal apps. The central server is the **key distribution center (KDC)**, which on Windows runs on every domain controller and listens on port **88**. It hands out **tickets**: encrypted, time-stamped proofs of who you are. Step through a morning sign-in:'),
     {
       type: 'sequence',
@@ -92,7 +92,7 @@ export const SIGN_IN: LessonBody = {
     ),
     exam('Kerberos clues: **tickets**, **TGT**, **KDC**, **port 88**, **time synchronization**, **domain**, and "without sending the password over the network".'),
 
-    h('SAML: sign in once, reach web apps', { keep: 'With SAML, the web app (service provider) sends your browser to the identity provider. You sign in there, and it signs an XML assertion saying who you are. The browser carries it back, and the app trusts the signature without ever seeing your password.' }),
+    h('SAML: sign in once, reach web apps', { objective: '4.6', keep: 'With SAML, the web app (service provider) sends your browser to the identity provider. You sign in there, and it signs an XML assertion saying who you are. The browser carries it back, and the app trusts the signature without ever seeing your password.' }),
     p('Kerberos works inside one company\'s network. For web applications, often run by other companies, the long-standing answer is **SAML** (Security Assertion Markup Language). The identity provider and the app swap certificates once when they set up the trust; after that, every sign-in goes through the browser:'),
     {
       type: 'sequence',
@@ -107,7 +107,7 @@ export const SIGN_IN: LessonBody = {
     },
     tip('Notice that the payroll site and the identity provider never talk directly. Your browser carries the messages both ways, which is why SAML works even when the two are run by different companies on different networks.'),
 
-    h('OAuth 2.0: letting an app act for you', { keep: 'OAuth is about authorization: you let one app use your data at another service, limited to certain scopes, without giving it your password. The app gets an access token that says what it may do, not who you are.' }),
+    h('OAuth 2.0: letting an app act for you', { objective: '4.6', keep: 'OAuth is about authorization: you let one app use your data at another service, limited to certain scopes, without giving it your password. The app gets an access token that says what it may do, not who you are.' }),
     p('**OAuth 2.0** answers a different question. Not "who are you?" but "may this app do something with my stuff?". A photo printing site wants to read your cloud photo album. You should not give it your cloud password, which would let it do anything, forever. Instead you grant it a limited **access token**:'),
     {
       type: 'sequence',
@@ -123,7 +123,7 @@ export const SIGN_IN: LessonBody = {
     },
     trap('An OAuth access token is like a **valet key**: it lets the holder do certain things, but it does not reliably say who the user is. Using a plain OAuth token as proof of identity is a classic mistake, and is what OpenID Connect was created to fix.'),
 
-    h('OpenID Connect: OAuth plus who you are', { keep: 'OpenID Connect adds sign-in to OAuth. Alongside the access token, the app gets an ID token: a signed JSON web token saying who the user is. "Sign in with..." buttons are OpenID Connect.' }),
+    h('OpenID Connect: OAuth plus who you are', { objective: '4.6', keep: 'OpenID Connect adds sign-in to OAuth. Alongside the access token, the app gets an ID token: a signed JSON web token saying who the user is. "Sign in with..." buttons are OpenID Connect.' }),
     p('**OpenID Connect (OIDC)** runs the same flow as OAuth with one addition: the app also receives an **ID token**, a small signed JSON document (a JSON web token, or JWT) that says who signed in. It is the protocol behind "Sign in with Google", "Sign in with Microsoft" and most modern single sign-on for web and mobile apps.'),
     p('An ID token\'s contents look like this: `iss` (who issued it, the identity provider), `sub` (a unique ID for the user), `aud` (which app it is for), `exp` (when it expires) and claims such as `email` and `name`. The app checks the signature, the audience and the expiry before trusting it.'),
     table(
@@ -136,7 +136,7 @@ export const SIGN_IN: LessonBody = {
       ],
     ),
 
-    h('Network and device logins: RADIUS and TACACS+', { keep: 'RADIUS checks logins for network access (VPN, Wi-Fi with 802.1X) over UDP and encrypts only the password. TACACS+ handles administrator logins to network devices over TCP 49, encrypts everything and can authorize each command.' }),
+    h('Network and device logins: RADIUS and TACACS+', { objective: '4.1', keep: 'RADIUS checks logins for network access (VPN, Wi-Fi with 802.1X) over UDP and encrypts only the password. TACACS+ handles administrator logins to network devices over TCP 49, encrypts everything and can authorize each command.' }),
     p('Two more AAA protocols sit between network equipment and the central user database. The device asking the question (an access point, a VPN gateway, a router) is the client; the AAA server answers.'),
     table(
       ['', 'RADIUS', 'TACACS+'],
@@ -150,7 +150,7 @@ export const SIGN_IN: LessonBody = {
     ),
     exam('**Per-command authorization**, **device administration** or "the whole session encrypted" means **TACACS+**. **802.1X**, **Wi-Fi**, **VPN** or **network access** means **RADIUS**.'),
 
-    h('Practice: which protocol is it?', { keep: 'Read the clues: tickets and port 88 are Kerberos, signed XML is SAML, a scoped bearer token is OAuth, an ID token is OpenID Connect, UDP 1812 is RADIUS, TCP 49 is TACACS+, port 636 is LDAPS.' }),
+    h('Practice: which protocol is it?', { objective: '4.6', keep: 'Read the clues: tickets and port 88 are Kerberos, signed XML is SAML, a scoped bearer token is OAuth, an ID token is OpenID Connect, UDP 1812 is RADIUS, TCP 49 is TACACS+, port 636 is LDAPS.' }),
     pbq('Which protocol is it?', SPOT_THE_PROTOCOL, { intro: 'Each line is a clue from a capture or a log. Seven lines, seven protocols, each used once.' }),
     examPbqs('sign-in', 'This one comes from the practice exam: the same protocols, but described as project requirements instead of clues. It loads when you press Start.'),
   ],

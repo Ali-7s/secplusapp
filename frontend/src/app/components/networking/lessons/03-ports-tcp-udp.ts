@@ -62,7 +62,7 @@ export const PORTS_TCP_UDP: LessonBody = {
     ),
     tip('If losing a piece breaks the whole thing (a file, a web page), use **TCP**. If a late piece is useless anyway (a live call, a game), use **UDP**. In a video call, resending a sound from two seconds ago would only make things worse.'),
 
-    h('The TCP three-way handshake', { keep: 'TCP opens a connection with SYN, SYN-ACK, ACK. A SYN flood sends masses of SYNs and never finishes, to wear the server out.' }),
+    h('The TCP three-way handshake', { objective: '2.4', keep: 'TCP opens a connection with SYN, SYN-ACK, ACK. A SYN flood sends masses of SYNs and never finishes, to wear the server out.' }),
     p('Before any data moves, TCP sets up the connection with three messages. Each message has **flags** in its header: short markers that say what kind of message it is. The three you need are **SYN** (synchronize: "let us start"), **ACK** (acknowledge: "got it") and **FIN** (finish: "I am done"). Step through it:'),
     {
       type: 'sequence',
@@ -92,7 +92,7 @@ export const PORTS_TCP_UDP: LessonBody = {
     },
     exam('A **SYN flood** is a denial of service (**DoS**) attack: an attempt to overwhelm a server so real users cannot use it. The attacker sends huge numbers of SYN packets, often with fake source addresses, and never sends the final ACK. The server keeps memory set aside for every half-open connection until it runs out, and real users cannot connect. Defenses: **SYN cookies** (a trick that lets the server avoid setting memory aside until the handshake completes), shorter timeouts, limiting how many new connections one source may open (**rate limiting**), and a firewall in front.'),
 
-    h('Open, closed and filtered', { keep: 'A port scan shows which ports answer. Every open port is attack surface, and moving a service to an odd port is obscurity, not security.' }),
+    h('Open, closed and filtered', { objective: '2.2', keep: 'A port scan shows which ports answer. Every open port is attack surface, and moving a service to an odd port is obscurity, not security.' }),
     p('A **port scan** knocks on a device\'s ports one by one to see which ones answer. Attackers do it to find targets, and defenders do it to check their own systems. The best-known scanning tool is **nmap**. Each port ends up in one of three states:'),
     table(
       ['State', 'Meaning', 'What the scanner sees'],
@@ -107,7 +107,7 @@ export const PORTS_TCP_UDP: LessonBody = {
 
     pbq('Try it: read a scan, pick a protocol', PORT_STATES),
 
-    hSecure('How to secure it: ports and services', { keep: 'Turn off services you do not need, block by default (implicit deny), and allow remote admin ports such as 22 and 3389 only from admin networks or a VPN.' }),
+    hSecure('How to secure it: ports and services', { objective: '2.5', keep: 'Turn off services you do not need, block by default (implicit deny), and allow remote admin ports such as 22 and 3389 only from admin networks or a VPN.' }),
     list(
       '**Close what you do not use.** Stop the service itself, not just block it. A program that is not running cannot be attacked.',
       '**Block by default.** Set firewalls to block everything and allow only what is needed, in both directions. The automatic "block anything not allowed" rule is called **implicit deny**.',

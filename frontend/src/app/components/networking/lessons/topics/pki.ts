@@ -63,7 +63,7 @@ export const PKI: LessonBody = {
       ['HSM', 'Hardware security module: a tamper-resistant device that stores keys and does cryptography inside itself'],
     ),
 
-    h('What a certificate is', { keep: 'A certificate binds a public key to a name, for a limited time, and is signed by a certificate authority. Its key fields are the subject and SAN names, the issuer, the validity dates, the public key and the signature.' }),
+    h('What a certificate is', { objective: '1.4', keep: 'A certificate binds a public key to a name, for a limited time, and is signed by a certificate authority. Its key fields are the subject and SAN names, the issuer, the validity dates, the public key and the signature.' }),
     p('Topic 1 left a gap. To send Bob a secret you lock it with Bob\'s public key, but if you download "Bob\'s public key" from the internet, how do you know it is really his? An attacker sitting in the middle could hand you **their** public key instead, read everything, and pass it on. This is a **man-in-the-middle** attack.'),
     p('A **certificate** closes the gap. It is a small document that says "this public key belongs to shop.example.com", and it is **digitally signed** by a **certificate authority (CA)** that checked the claim. If you trust the CA, and the signature checks out with the CA\'s public key, you can trust the binding. Certificates follow a standard format called **X.509**.'),
     analogy('A certificate is a **passport**. The government (the CA) checked who you are and signed the passport so it cannot be forged. A border officer (your browser) does not know you, but trusts the government\'s signature, checks your face (the name) and the expiry date.'),
@@ -82,7 +82,7 @@ export const PKI: LessonBody = {
     ),
     trap('A certificate holds the **public** key only. The private key is never in it, and never leaves the server. Anyone may have a copy of a certificate: your browser receives one from every HTTPS site.'),
 
-    h('The chain of trust', { keep: 'Your device trusts a short list of root CAs. A root signs intermediate CAs, and an intermediate signs site certificates. The browser follows the signatures up to a root it already trusts, so a site must send its intermediate too.' }),
+    h('The chain of trust', { objective: '1.4', keep: 'Your device trusts a short list of root CAs. A root signs intermediate CAs, and an intermediate signs site certificates. The browser follows the signatures up to a root it already trusts, so a site must send its intermediate too.' }),
     p('Your browser cannot know every CA in the world. Instead, your operating system or browser ships with a **trust store**: a list of a few hundred **root CA** certificates it trusts. Each root is the **root of trust** for everything below it. A root certificate is signed by its own key (it has nobody above it), which is fine because the device already trusts it.'),
     p('Roots almost never sign site certificates directly. They sign **intermediate** (issuing) CAs, and the intermediates sign sites. The result is a chain:'),
     {
@@ -104,7 +104,7 @@ export const PKI: LessonBody = {
     ),
     tip('A common real-world mistake: the server sends only its own certificate and forgets the intermediate. Some browsers can fetch the missing piece and some cannot, so the site works for some visitors and shows a warning for others.'),
 
-    h('Getting a certificate: the CSR', { keep: 'Generate the key pair where it will be used. Send the CA only a CSR (public key plus names, signed with the private key). The CA validates you and signs. Install the certificate with its intermediate chain, and track the expiry.' }),
+    h('Getting a certificate: the CSR', { objective: '1.4', keep: 'Generate the key pair where it will be used. Send the CA only a CSR (public key plus names, signed with the private key). The CA validates you and signs. Install the certificate with its intermediate chain, and track the expiry.' }),
     p('Here is how a web server gets its certificate, with the private key never leaving it. Step through it:'),
     {
       type: 'sequence',
@@ -127,7 +127,7 @@ export const PKI: LessonBody = {
       ],
     ),
 
-    h('Revocation: cancelling a certificate early', { keep: 'If a private key leaks or a certificate was issued wrongly, it is revoked before it expires. Browsers check a CRL (a downloaded list), ask OCSP about one certificate, or read an OCSP answer the server staples into the handshake.' }),
+    h('Revocation: cancelling a certificate early', { objective: '1.4', keep: 'If a private key leaks or a certificate was issued wrongly, it is revoked before it expires. Browsers check a CRL (a downloaded list), ask OCSP about one certificate, or read an OCSP answer the server staples into the handshake.' }),
     p('A certificate is valid until its expiry date, unless something goes wrong first: its private key leaks, the CA made a mistake, or the site closes. Then the CA **revokes** it. The hard part is telling every browser in the world. There are three ways:'),
     table(
       ['Method', 'How it works', 'Weak spots'],
@@ -147,7 +147,7 @@ export const PKI: LessonBody = {
       'Find out how the key leaked and fix that.',
     ),
 
-    h('Should the browser trust it?', { keep: 'Check four things: the address is in the SAN list, today is within the dates, the chain leads to a trusted root, and the certificate is not revoked. Any one failing means a warning. A wildcard covers exactly one level.' }),
+    h('Should the browser trust it?', { objective: '1.4', keep: 'Check four things: the address is in the SAN list, today is within the dates, the chain leads to a trusted root, and the certificate is not revoked. Any one failing means a warning. A wildcard covers exactly one level.' }),
     p('Time to be the browser. Each case shows the address being visited, today\'s date and the chain the server sent, root at the top. Work through the five checks from "The chain of trust" and pick a verdict.'),
     certs('Should the browser trust it?', VERDICTS, [
       {
@@ -190,7 +190,7 @@ export const PKI: LessonBody = {
       },
     ], 'Look at the chain, then pick one verdict per case. The outlined field after checking is the one that decides it.'),
 
-    h('Kinds of certificates', { keep: 'SAN lists several names, a wildcard covers one level under a domain, self-signed is trusted by nobody by default, an internal CA suits company-only systems, code signing proves software is unchanged, and pinning accepts only the expected certificate.' }),
+    h('Kinds of certificates', { objective: '1.4', keep: 'SAN lists several names, a wildcard covers one level under a domain, self-signed is trusted by nobody by default, an internal CA suits company-only systems, code signing proves software is unchanged, and pinning accepts only the expected certificate.' }),
     table(
       ['Type', 'What it is for', 'Watch out'],
       [
@@ -206,7 +206,7 @@ export const PKI: LessonBody = {
     ),
     p('**Certificate pinning** goes one step further than the chain checks. An app (often a mobile banking app) is built to accept only one specific certificate or public key for its server. Even a valid certificate from a trusted but compromised CA is refused. The cost: when the server\'s key changes, the app must be updated too.'),
 
-    h('Protecting private keys', { keep: 'Keep private keys in hardware where possible: an HSM for servers and CAs, a TPM or secure enclave in devices, a KMS in the cloud. Keep the root CA offline. Key escrow keeps a copy with a trusted party for recovery.' }),
+    h('Protecting private keys', { objective: '1.4', keep: 'Keep private keys in hardware where possible: an HSM for servers and CAs, a TPM or secure enclave in devices, a KMS in the cloud. Keep the root CA offline. Key escrow keeps a copy with a trusted party for recovery.' }),
     p('A certificate is only as safe as its private key. These are the places keys are kept, from strongest to most convenient:'),
     table(
       ['Where', 'What it is', 'Typical use'],
@@ -223,7 +223,7 @@ export const PKI: LessonBody = {
       '**Rotate** keys on a schedule and whenever someone with access leaves, and give certificates short lifetimes so a leaked key is useful for less time.',
     ),
 
-    h('Exam-level PBQs', { keep: 'The certificate PBQs test three things: choosing the certificate type or feature for each need, the order of requesting a certificate, and the order of responding to a leaked key.' }),
+    h('Exam-level PBQs', { objective: '1.4', keep: 'The certificate PBQs test three things: choosing the certificate type or feature for each need, the order of requesting a certificate, and the order of responding to a leaked key.' }),
     examPbqs('pki', 'These come from the practice exam: matching certificate types to needs, ordering a certificate request, and responding to a leaked private key. Everything they need is in this topic. They load when you press Start.'),
   ],
   check: [

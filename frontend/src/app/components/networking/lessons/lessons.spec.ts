@@ -1,9 +1,13 @@
 import { Block } from '../networking.model';
 import { mcq } from './dsl';
 import { LESSON_META, lessonBySlug, lessonsForCard, trackLessons } from './lesson-index';
-import { LESSON_BODIES, getLesson } from './lessons';
-import { lessonMinutes, lessonParts } from './parts';
+import { LESSON_BODIES, getLesson, lessonsByObjective } from './lessons';
+import { isHandsOn, lessonMinutes, lessonParts, partObjectives } from './parts';
+import { OBJECTIVE_OUTLINES } from '../../../content/objectives';
 import { decidePolicy } from '../blocks/policy-playground.component';
+import { CVSS_TASKS, cvssScore, severity, vectorString } from '../blocks/cvss-calc.component';
+import { CATEGORIES, CONTROLS, TYPES } from '../blocks/control-sorter.component';
+import { MAILS } from '../blocks/email-inspector.component';
 
 describe('mcq', () => {
   it('keeps the right answer pointing at the right option', () => {
@@ -90,6 +94,11 @@ describe('lesson list', () => {
     expect(first('acr', 'SIEM')).toBe('logs');
     expect(first('term', 'Password policy')).toBe('accounts');
     expect(first('acr', 'MDM')).toBe('endpoints');
+    expect(first('term', 'Compensating control')).toBe('controls');
+    expect(first('term', 'Policy Engine')).toBe('controls');
+    expect(first('acr', 'DMARC')).toBe('phishing');
+    expect(first('term', 'Business email compromise')).toBe('phishing');
+    expect(first('acr', 'CVSS')).toBe('vulnerabilities');
   });
 
   it('links only to flashcards that exist', async () => {
@@ -319,3 +328,77 @@ describe('lesson parts', () => {
     expect(wrong).toEqual([]);
   });
 });
+
+describe('lesson objectives', () => {
+  const ids = new Set(OBJECTIVE_OUTLINES.map(([id]) => id));
+
+  it('tags parts only with real SY0-701 objectives', () => {
+    const bad = Object.entries(LESSON_BODIES).flatMap(([slug, body]) =>
+      lessonParts(body).filter(p => p.objective && !ids.has(p.objective)).map(p => `${slug}: ${p.title} (${p.objective})`));
+    expect(bad).toEqual([]);
+  });
+
+  it('ties every hands-on topic part to its objective', () => {
+    const untagged = trackLessons('topics').flatMap(m =>
+      lessonParts(LESSON_BODIES[m.slug]).filter(p => !p.intro && isHandsOn(p) && !p.objective).map(p => `${m.slug}: ${p.title}`));
+    expect(untagged).toEqual([]);
+  });
+
+  it('lists each lesson\'s objectives as its parts teach them', () => {
+    for (const m of LESSON_META) {
+      expect(m.objectives).withContext(m.slug).toEqual(partObjectives(LESSON_BODIES[m.slug]));
+      if (m.track === 'topics') expect(m.objectives.length).withContext(m.slug).toBeGreaterThan(0);
+    }
+  });
+
+  it('links each objective to the parts that teach it', () => {
+    const map = lessonsByObjective();
+    expect(Object.keys(map).every(id => ids.has(id))).toBeTrue();
+    expect(map['4.9'].find(l => l.slug === 'logs')?.parts.some(p => p.handsOn)).toBeTrue();
+    for (const lessons of Object.values(map)) for (const l of lessons) expect(l.parts.length).withContext(l.slug).toBeGreaterThan(0);
+  });
+});
+
+describe('hands-on widgets for controls, phishing and vulnerabilities', () => {
+  const vec = (s: string) => Object.fromEntries(s.split('/').map(p => p.split(':'))) as Parameters<typeof cvssScore>[0];
+
+  it('computes CVSS 3.1 base scores as the specification does', () => {
+    const known: [string, number][] = [
+      ['AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H', 10], ['AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H', 9.8], ['AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H', 8.8],
+      ['AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H', 7.8], ['AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H', 7.5], ['AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H', 6.8],
+      ['AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N', 5.9], ['AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N', 5.4], ['AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N', 0],
+    ];
+    for (const [v, score] of known) expect(cvssScore(vec(v))).withContext(v).toBe(score);
+    expect(severity(9)).toBe('Critical');
+    expect(severity(6.9)).toBe('Medium');
+    expect(severity(0.1)).toBe('Low');
+    expect(vectorString(vec('AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'))).toBe('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H');
+  });
+
+  it('gives every CVSS task a distinct target and a reason for every metric', () => {
+    const targets = CVSS_TASKS.map(t => vectorString(t.target));
+    expect(new Set(targets).size).toBe(targets.length);
+    for (const t of CVSS_TASKS) for (const why of Object.values(t.why)) expect(why.split(/\s+/).length).withContext(t.name).toBeGreaterThanOrEqual(4);
+  });
+
+  it('sorts every control into a real category and types, and uses every type at least once', () => {
+    for (const c of CONTROLS) {
+      expect(CATEGORIES).withContext(c.control).toContain(c.category);
+      expect(c.types.length).withContext(c.control).toBeGreaterThan(0);
+      for (const t of c.types) expect(TYPES).withContext(c.control).toContain(t);
+    }
+    for (const t of TYPES) expect(CONTROLS.some(c => c.types[0] === t)).withContext(t).toBeTrue();
+    for (const cat of CATEGORIES) expect(CONTROLS.some(c => c.category === cat)).withContext(cat).toBeTrue();
+  });
+
+  it('marks every part of every message as a warning sign or fine, with phishing that has signs to find', () => {
+    for (const m of MAILS) {
+      for (const p of m.parts) expect(!!p.issue !== !!p.fine).withContext(`${m.list}: ${p.text}`).toBeTrue();
+      const issues = m.parts.filter(p => p.issue).length;
+      if (m.phish) expect(issues).withContext(m.list).toBeGreaterThanOrEqual(2);
+      else expect(issues).withContext(m.list).toBe(0);
+    }
+    expect(MAILS.some(m => !m.phish)).toBeTrue();
+  });
+});
+

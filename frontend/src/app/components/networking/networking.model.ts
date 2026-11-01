@@ -186,8 +186,9 @@ export type Block =
   /**
    * A heading starts a new part of the lesson. `keep` is the one or two lines worth remembering from the part,
    * shown in a "Remember this" box at its end; `optional` marks a part that can be skipped on a first pass, and why.
+   * `objective` is the SY0-701 objective the part teaches, such as "4.9", linked from the heading.
    */
-  | { type: 'h'; text: string; tone?: 'secure'; keep?: string; optional?: string }
+  | { type: 'h'; text: string; tone?: 'secure'; keep?: string; optional?: string; objective?: string }
   | { type: 'p'; md: string }
   | { type: 'list'; items: string[]; ordered?: boolean }
   | { type: 'callout'; kind: CalloutKind; title?: string; md: string }
@@ -227,7 +228,13 @@ export type Block =
   /** Set Linux file permissions with checkboxes or numbers, and match the tasks. */
   | { type: 'perms' }
   /** Configure MDM policies for three device groups and see how they handle a week of incidents. */
-  | { type: 'mdm' };
+  | { type: 'mdm' }
+  /** Sort security controls by category and type. */
+  | { type: 'controls' }
+  /** An inbox of messages to inspect for phishing warning signs. */
+  | { type: 'email' }
+  /** A CVSS 3.1 base score calculator with vulnerabilities to score. */
+  | { type: 'cvss' };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;
@@ -251,6 +258,8 @@ export interface LessonMeta {
   /** Flashcards that go with the lesson. The first `focus` of them are what the lesson is mainly about. */
   related: CardRef[];
   focus: number;
+  /** The SY0-701 objectives the lesson's parts teach, in order. A test keeps it in step with the parts. */
+  objectives: string[];
 }
 
 export interface LessonBody {

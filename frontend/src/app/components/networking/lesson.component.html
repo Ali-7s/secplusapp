@@ -18,6 +18,15 @@
             <span class="done"><mat-icon aria-hidden="true">check_circle</mat-icon> Completed · self-check {{ record?.check?.score }} of {{ record?.check?.total }}</span>
           }
         </div>
+        @if (l.objectives.length) {
+          <div class="objs">
+            <span class="objs-l">Exam objectives</span>
+            @for (o of l.objectives; track o) {
+              <a class="obj" routerLink="/objectives" [queryParams]="{ open: o }" [title]="'See objective ' + o + ' on the objectives page'">
+                <strong>{{ o }}</strong> {{ objectiveNames[o] }}</a>
+            }
+          </div>
+        }
       </header>
 
       @if (view === 'all' || step === 0) {
@@ -164,7 +173,11 @@
       @case ('h') {
         <h2 class="blk-h" [class.secure]="b.tone === 'secure'">
           @if (b.tone === 'secure') { <mat-icon aria-hidden="true">shield</mat-icon> }
-          {{ b.text }}
+          <span class="h-t">{{ b.text }}</span>
+          @if (b.objective) {
+            <a class="h-obj" routerLink="/objectives" [queryParams]="{ open: b.objective }" [title]="'Exam objective ' + b.objective + ': ' + objectiveNames[b.objective]"
+              [attr.aria-label]="'Exam objective ' + b.objective + ': ' + objectiveNames[b.objective]">{{ b.objective }}</a>
+          }
         </h2>
       }
       @case ('p') {
@@ -295,6 +308,15 @@
       @case ('mdm') {
         <app-mdm-console />
       }
+      @case ('controls') {
+        <app-control-sorter />
+      }
+      @case ('email') {
+        <app-email-inspector />
+      }
+      @case ('cvss') {
+        <app-cvss-calc />
+      }
       @case ('pbqs') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />
       }
@@ -315,7 +337,11 @@
   } @else {
     <h2 class="blk-h" [class.secure]="pt.tone === 'secure'">
       @if (pt.tone === 'secure') { <mat-icon aria-hidden="true">shield</mat-icon> }
-      {{ pt.title }}
+      <span class="h-t">{{ pt.title }}</span>
+      @if (pt.objective) {
+        <a class="h-obj" routerLink="/objectives" [queryParams]="{ open: pt.objective }" [title]="'Exam objective ' + pt.objective + ': ' + objectiveNames[pt.objective]"
+          [attr.aria-label]="'Exam objective ' + pt.objective + ': ' + objectiveNames[pt.objective]">{{ pt.objective }}</a>
+      }
     </h2>
     @if (pt.optional) {
       <aside class="optional-note">

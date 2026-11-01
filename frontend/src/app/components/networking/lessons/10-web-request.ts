@@ -36,7 +36,7 @@ export const WEB_REQUEST: LessonBody = {
     ),
     p('When the laptop joined the Wi-Fi earlier, **DHCP** already gave it an IP address, a subnet mask, a default gateway and a DNS server (lesson 8). So we start from there.'),
 
-    h('The request, step by step', { keep: 'Loading one page uses everything so far: DNS finds the address, ARP finds the gateway, TCP connects to port 443, TLS encrypts, and NAT swaps the address on the way out.' }),
+    h('The request, step by step', { objective: '3.2', keep: 'Loading one page uses everything so far: DNS finds the address, ARP finds the gateway, TCP connects to port 443, TLS encrypts, and NAT swaps the address on the way out.' }),
     {
       type: 'sequence',
       title: 'Loading https://www.example.com',
@@ -91,7 +91,7 @@ export const WEB_REQUEST: LessonBody = {
 
     pbq('Try it: the whole journey in order', WEB_ORDER, { intro: 'Without scrolling back up, put the whole journey in order, starting from joining the Wi-Fi.' }),
 
-    hSecure('Where could an attacker interfere, and what stops them?', { keep: 'Every step has an attack and a defense from an earlier lesson. Use this table as a revision sheet.' }),
+    hSecure('Where could an attacker interfere, and what stops them?', { objective: '2.4', keep: 'Every step has an attack and a defense from an earlier lesson. Use this table as a revision sheet.' }),
     p('Every step above is a chance for an attacker. This table lines them up with the defenses from earlier lessons. Each attack is described in plain words, with the lesson that covers it:'),
     table(
       ['Step', 'What an attacker could do', 'What stops it'],

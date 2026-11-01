@@ -110,7 +110,7 @@ export const LOGS: LessonBody = {
       ['False negative', 'An attack that raised no alert'],
     ),
 
-    h('Where the evidence comes from', { keep: 'Firewall, VPN, proxy and DNS logs show the network; Windows and Linux security logs show sign-ins and account changes; EDR shows what ran. NetFlow shows who talked to whom; packet captures show the actual contents.' }),
+    h('Where the evidence comes from', { objective: '4.9', keep: 'Firewall, VPN, proxy and DNS logs show the network; Windows and Linux security logs show sign-ins and account changes; EDR shows what ran. NetFlow shows who talked to whom; packet captures show the actual contents.' }),
     p('Each kind of log answers a different question, and an investigation joins them up. These are the data sources the exam names:'),
     table(
       ['Source', 'What it shows', 'Example'],
@@ -139,7 +139,7 @@ export const LOGS: LessonBody = {
       { caption: 'Windows security events worth knowing', mono: [0] },
     ),
 
-    h('What a SIEM does', { keep: 'A SIEM aggregates logs, normalizes them into one format, correlates related events, alerts on rules, keeps them for investigations, and shows dashboards. Tune alerts to cut false positives; SOAR automates the response.' }),
+    h('What a SIEM does', { objective: '4.4', keep: 'A SIEM aggregates logs, normalizes them into one format, correlates related events, alerts on rules, keeps them for investigations, and shows dashboards. Tune alerts to cut false positives; SOAR automates the response.' }),
     list(
       '**Aggregation**: logs arrive from every system, usually by **syslog** or an agent, so one search covers them all, and an attacker who wipes one machine\'s logs cannot wipe the copies.',
       '**Normalization**: different formats are turned into common fields (time, source, user, host, action), so you can search "user = m.lee" across all of them.',
@@ -149,7 +149,7 @@ export const LOGS: LessonBody = {
     ),
     tip('**SOAR** (security orchestration, automation and response) takes the next step: when an alert fires, a playbook can run automatically, for example disabling the account and isolating the device, while an analyst reviews it.'),
 
-    h('Hunt through a night of events', { keep: 'Investigate by pivoting: start from one clue, then search for the same address, user or host in every source. Regular timing means beaconing, large outbound transfers mean exfiltration, and a cleared log means someone is hiding something.' }),
+    h('Hunt through a night of events', { objective: '4.9', keep: 'Investigate by pivoting: start from one clue, then search for the same address, user or host in every source. Regular timing means beaconing, large outbound transfers mean exfiltration, and a cleared log means someone is hiding something.' }),
     p('Here is the SIEM for a small company, from 02:00 to 09:30 on a Monday. Work through the tasks: use the source filter and the search box, open events to read them, and pin the event each task asks for. Try searching for an address or user name you have just found; that is called **pivoting**, and it is how real investigations move.'),
     hunt('SIEM: Monday night', 'siem', ['#', 'Time', 'Source', 'Host', 'Event'], NIGHT, [
       { ask: 'The night began with **password spraying** against the VPN. Pin one of those events.', answer: ['2', '3', '4', '5', '6'],
@@ -178,7 +178,7 @@ export const LOGS: LessonBody = {
         why: 'PsExec on 40 hosts looks like an attacker spreading, but it is the patch account during an approved change. The alert fired on harmless activity.' },
     ], 'Eight tasks. Each pin is checked straight away, and your pins are saved.'),
 
-    h('Indicators to look for', { keep: 'Look for impossible travel, many failures then a success, account lockouts, new or elevated accounts, regular outbound check-ins, large transfers out, odd DNS names, and missing or cleared logs. Each is a reason to look closer, not proof.' }),
+    h('Indicators to look for', { objective: '2.4', keep: 'Look for impossible travel, many failures then a success, account lockouts, new or elevated accounts, regular outbound check-ins, large transfers out, odd DNS names, and missing or cleared logs. Each is a reason to look closer, not proof.' }),
     list(
       '**Impossible travel**: the same account signs in from two countries an hour apart.',
       '**Account lockouts** and **many failures followed by a success**: guessing or spraying that worked.',
@@ -191,7 +191,7 @@ export const LOGS: LessonBody = {
     ),
     trap('A single indicator is a reason to investigate, not proof of an attack. The PsExec alert above looked malicious and was not. Always check the context: the user, the time, approved changes, and what the other sources say.'),
 
-    h('Alerts: right and wrong', { keep: 'True positive: alert, real attack. False positive: alert, nothing wrong. True negative: no alert, nothing wrong. False negative: no alert, real attack (the worst). Signatures catch known attacks; anomaly detection catches the unusual, with more false positives.' }),
+    h('Alerts: right and wrong', { objective: '4.4', keep: 'True positive: alert, real attack. False positive: alert, nothing wrong. True negative: no alert, nothing wrong. False negative: no alert, real attack (the worst). Signatures catch known attacks; anomaly detection catches the unusual, with more false positives.' }),
     table(
       ['', 'There was an attack', 'There was no attack'],
       [
@@ -203,7 +203,7 @@ export const LOGS: LessonBody = {
     p('Detection works in two main ways. **Signature-based** detection matches known patterns, such as a byte sequence from a known piece of malware: few false positives, but it misses anything new. **Anomaly-based** (behavioral) detection learns a **baseline** of normal and flags what is far from it: it can catch new attacks, but raises more false positives.'),
     pbq('Classify the alerts', ALERT_OUTCOMES, { intro: 'Five results from the week. Decide whether each alert, or each silence, was right.' }),
 
-    h('Reading a packet capture', { keep: 'A capture shows every packet: addresses, ports, flags and, unless encrypted, the contents. Many SYNs to many ports is a scan; SYN-ACK means open; two MACs claiming one IP is ARP poisoning; FTP, Telnet and HTTP expose passwords; TLS hides contents.' }),
+    h('Reading a packet capture', { objective: '4.9', keep: 'A capture shows every packet: addresses, ports, flags and, unless encrypted, the contents. Many SYNs to many ports is a scan; SYN-ACK means open; two MACs claiming one IP is ARP poisoning; FTP, Telnet and HTTP expose passwords; TLS hides contents.' }),
     p('A **protocol analyzer** such as **Wireshark** (or **tcpdump** on the command line) records packets and decodes each layer. The packet list shows the time, source, destination, protocol and a one-line summary; opening a packet shows each layer\'s fields. A capture shows exactly what happened, but takes a lot of storage, so it is usually started for a specific investigation, while **NetFlow** records just the conversations all the time.'),
     list(
       'TCP flags tell the story of a connection: **SYN** asks to connect, **SYN, ACK** agrees (the port is open), **RST** refuses (the port is closed).',
@@ -232,7 +232,7 @@ export const LOGS: LessonBody = {
     ], 'Six tasks. Filter by protocol, open packets to see their layers, and pin your answers.'),
     exam('In log and capture questions, look for the pattern, not one line: many accounts from one address is **spraying**, many ports from one address is a **scan**, a regular interval is **beaconing**, and one IP with two MAC addresses is **ARP poisoning**.'),
 
-    h('Practice: logs from the practice exam', { keep: 'Read every excerpt for who, what, when and from where, then name the pattern. The same few patterns come up again and again.' }),
+    h('Practice: logs from the practice exam', { objective: '4.9', keep: 'Read every excerpt for who, what, when and from where, then name the pattern. The same few patterns come up again and again.' }),
     examPbqs('logs', 'These come from the practice exam: web server, sign-in, endpoint, DNS, cloud, proxy, Windows, Linux and IDS logs. They load when you press Start.'),
   ],
   check: [

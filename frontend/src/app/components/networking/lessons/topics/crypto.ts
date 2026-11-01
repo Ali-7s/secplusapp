@@ -48,7 +48,7 @@ export const CRYPTO: LessonBody = {
       ['HMAC', 'A hash mixed with a shared secret key: proves integrity between two key holders'],
     ),
 
-    h('The three jobs cryptography does', { keep: 'Encryption keeps data secret (confidentiality). Hashing proves it has not changed (integrity). A digital signature proves who sent it, and they cannot deny it (authenticity and non-repudiation).' }),
+    h('The three jobs cryptography does', { objective: '1.4', keep: 'Encryption keeps data secret (confidentiality). Hashing proves it has not changed (integrity). A digital signature proves who sent it, and they cannot deny it (authenticity and non-repudiation).' }),
     p('Cryptography sounds like one thing, but it does three different jobs. Most exam questions come down to spotting **which job** a scenario needs, then picking the tool that does that job.'),
     table(
       ['Job', 'The question it answers', 'Tool', 'Security word'],
@@ -62,7 +62,7 @@ export const CRYPTO: LessonBody = {
     p('**Encryption** turns readable **plaintext** into scrambled **ciphertext** using an **algorithm** (the recipe) and a **key** (the secret). Decryption reverses it with the right key. The algorithms are public and well studied; all the secrecy lives in the key. That is why a longer key, with more possible values to guess, is stronger.'),
     trap('Encoding is not encryption. **Base64** turns data into letters and digits so it can travel safely, but anyone can decode it: there is no key. If an exam question shows a "password" like `cGFzc3dvcmQ=` in a config file, it is only encoded, not protected.'),
 
-    h('Symmetric encryption: one shared key', { keep: 'Symmetric encryption uses the same key to lock and unlock. It is fast, so it encrypts the actual data (AES). Its weakness is getting that key to the other side safely.' }),
+    h('Symmetric encryption: one shared key', { objective: '1.4', keep: 'Symmetric encryption uses the same key to lock and unlock. It is fast, so it encrypts the actual data (AES). Its weakness is getting that key to the other side safely.' }),
     p('With **symmetric** encryption, the same key encrypts and decrypts. It is fast, even on huge amounts of data, so it does the heavy lifting everywhere: disk encryption, VPN traffic, Wi-Fi, and the data inside every HTTPS page.'),
     table(
       ['Algorithm', 'Status', 'Notes'],
@@ -79,7 +79,7 @@ export const CRYPTO: LessonBody = {
     p('The catch is **key distribution**. Both sides need the same key before they can talk, and sending that key over the network would let an eavesdropper copy it. It also scales badly: every pair of people needs its own key, so 100 people need 4,950 keys.'),
     analogy('Symmetric encryption is a **house key**. Fast and simple, but you have to get a copy to your friend somehow, and anyone who copies it on the way can let themselves in.'),
 
-    h('Asymmetric encryption: a key pair', { keep: 'Everyone has a key pair: a public key anyone may hold and a private key only they hold. What one key locks, only the other unlocks. To send a secret, lock it with the recipient\'s public key.' }),
+    h('Asymmetric encryption: a key pair', { objective: '1.4', keep: 'Everyone has a key pair: a public key anyone may hold and a private key only they hold. What one key locks, only the other unlocks. To send a secret, lock it with the recipient\'s public key.' }),
     p('**Asymmetric** encryption solves the key distribution problem with two mathematically linked keys, made together as a **key pair**:'),
     list(
       'The **public key** is shared with everyone: published on a website, sent in an email, put in a certificate. There is no harm in anyone having it.',
@@ -103,7 +103,7 @@ export const CRYPTO: LessonBody = {
     ),
     p('The downside: asymmetric encryption is **slow**, hundreds to thousands of times slower than AES. So it is never used to encrypt bulk data. It is used for small, important things: a symmetric key, or the hash inside a signature.'),
 
-    h('Hashing: a fingerprint of data', { keep: 'A hash is a fixed-length fingerprint. The same input always gives the same hash, any change gives a completely different one, and it cannot be reversed. MD5 and SHA-1 are broken; use SHA-256 or better.' }),
+    h('Hashing: a fingerprint of data', { objective: '1.4', keep: 'A hash is a fixed-length fingerprint. The same input always gives the same hash, any change gives a completely different one, and it cannot be reversed. MD5 and SHA-1 are broken; use SHA-256 or better.' }),
     p('A **hash function** takes any input, one word or a whole disk, and produces a short fixed-length **digest**. Four properties make it useful:'),
     list(
       '**Same input, same hash**, every time, on any computer.',
@@ -126,7 +126,7 @@ export const CRYPTO: LessonBody = {
     ),
     tip('A **blockchain** is built from hashes: each block stores the hash of the block before it, so changing an old entry would change every hash after it. When copies of the chain are kept by many people in the open, it is called an **open public ledger**.'),
 
-    h('Storing passwords: salting and key stretching', { keep: 'Store passwords as salted, stretched hashes. A unique random salt per user defeats rainbow tables; key stretching (bcrypt, PBKDF2) makes every guess slow.' }),
+    h('Storing passwords: salting and key stretching', { objective: '1.4', keep: 'Store passwords as salted, stretched hashes. A unique random salt per user defeats rainbow tables; key stretching (bcrypt, PBKDF2) makes every guess slow.' }),
     p('A website should never store your password, only its hash. At sign-in it hashes what you typed and compares. If the database is stolen, the attacker gets hashes, not passwords. But plain hashes have two problems:'),
     list(
       'Everyone with the same password gets the **same hash**, so cracking one cracks them all.',
@@ -137,7 +137,7 @@ export const CRYPTO: LessonBody = {
     p('**Key stretching** fixes the last problem: hashes are fast, so an attacker with a graphics card can still try billions of guesses a second. Stretching runs the hash thousands of times (or uses a deliberately slow, memory-hungry function) so each guess takes a noticeable fraction of a second. The names to know are **bcrypt**, **PBKDF2**, **scrypt** and **Argon2**.'),
     exam('If a question mentions **rainbow tables**, the answer is **salting**. If it mentions **brute force** or **GPU cracking** of a stolen password file, the answer is **key stretching** (bcrypt, PBKDF2).'),
 
-    h('Digital signatures: proving who sent it', { keep: 'To sign, hash the message and encrypt the hash with your own private key. Anyone verifies with your public key. Only you could have signed it: non-repudiation. A signature does not hide the message.' }),
+    h('Digital signatures: proving who sent it', { objective: '1.4', keep: 'To sign, hash the message and encrypt the hash with your own private key. Anyone verifies with your public key. Only you could have signed it: non-repudiation. A signature does not hide the message.' }),
     p('A digital signature combines hashing and asymmetric keys, but uses the keys the other way round. Here is what happens when Alice signs a contract:'),
     steps(
       'Alice hashes the contract.',
@@ -154,7 +154,7 @@ export const CRYPTO: LessonBody = {
     ], 'The rule: whoever must be the only one able to do something uses their own private key. Signing must be only Alice; reading must be only Bob.'),
     p('An **HMAC** (hash-based message authentication code) is a lighter alternative when both sides already share a secret key: the sender hashes the message mixed with the key, and the receiver does the same and compares. It proves the message is unchanged and came from someone who knows the key, but it gives **no non-repudiation**, because both sides hold the same key and either could have made it.'),
 
-    h('Putting it together: hybrid encryption in TLS', { keep: 'Real systems combine both: asymmetric cryptography to agree on a fresh symmetric session key, then fast symmetric encryption for the data. New keys every session give perfect forward secrecy.' }),
+    h('Putting it together: hybrid encryption in TLS', { objective: '1.4', keep: 'Real systems combine both: asymmetric cryptography to agree on a fresh symmetric session key, then fast symmetric encryption for the data. New keys every session give perfect forward secrecy.' }),
     p('Asymmetric encryption solves key distribution but is slow; symmetric encryption is fast but needs a shared key. **Hybrid encryption** uses each for what it is good at. TLS, which protects HTTPS, is the example to know. Step through a connection:'),
     {
       type: 'sequence',
@@ -170,10 +170,10 @@ export const CRYPTO: LessonBody = {
     analogy('Diffie-Hellman is like **mixing paint**. Alice and Bob agree in public on a common colour. Each adds a secret colour of their own and sends the mix across. Each then adds their secret colour to the mix they received, and both end up with the same final colour. An onlooker saw both mixes, but cannot unmix paint to find the secrets.'),
     exam('**DHE** and **ECDHE** (the extra E is for "ephemeral") are what give **perfect forward secrecy (PFS)**. Older TLS that sent the session key encrypted with the server\'s RSA key had no PFS: steal that one key and every recorded session opens.'),
 
-    h('Practice: which tool for the job?', { keep: 'Ask what the job needs: secrecy, proof of no change, proof of who sent it, a check between two key holders, password storage, or a shared key from scratch. Then pick the tool that does that one job.' }),
+    h('Practice: which tool for the job?', { objective: '1.4', keep: 'Ask what the job needs: secrecy, proof of no change, proof of who sent it, a check between two key holders, password storage, or a shared key from scratch. Then pick the tool that does that one job.' }),
     pbq('Which tool for the job?', CRYPTO_TOOLS, { intro: 'Seven jobs, seven tools. Each tool is used exactly once.' }),
 
-    h('Where encryption is applied, and hiding data without it', {
+    h('Where encryption is applied, and hiding data without it', { objective: '1.4',
       keep: 'Encryption can cover a whole disk, a partition or volume, a file, a database or a single record, or data on the move. Tokenization, masking and steganography hide data without encrypting it.',
       optional: 'This is a list of names to recognize rather than an idea to understand. Your course covers it, and the flashcards drill it.',
     }),
@@ -199,7 +199,7 @@ export const CRYPTO: LessonBody = {
       { caption: 'Obfuscation: hiding without encrypting' },
     ),
 
-    h('Practice: protect data in each state', { keep: 'Data at rest gets disk, database or file encryption; data in transit gets TLS or IPsec; keys belong in a key management service or HSM, never next to the data they protect.' }),
+    h('Practice: protect data in each state', { objective: '3.3', keep: 'Data at rest gets disk, database or file encryption; data in transit gets TLS or IPsec; keys belong in a key management service or HSM, never next to the data they protect.' }),
     examPbqs('crypto', 'These come from the practice exam: close the gaps for data at rest, in transit and in use, and configure encrypted cloud storage with managed keys. They load when you press Start.'),
   ],
   check: [
