@@ -1,4 +1,4 @@
-import { Block, CalloutKind, CertCase, DecideOption, DecideStep, KeyTask, PbqQuestion, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, CertCase, DecideOption, DecideStep, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -96,3 +96,13 @@ export const step = (s: Omit<DecideStep, 'options'>, best: Omit<DecideOption, 'b
 
 /** A scenario told one decision at a time. */
 export const decide = (title: string, steps: DecideStep[], intro?: string): Block => ({ type: 'decide', title, intro, steps });
+
+/** The risk calculator: SLE and ALE (`ale`) or availability (`availability`). */
+export const riskCalc = (show: 'ale' | 'availability'): Block => ({ type: 'riskcalc', show });
+
+/** An access policy playground with challenges to solve. */
+export const policy = (title: string, attributes: PolicyAttr[], rules: PolicyRule[], challenges: PolicyChallenge[], intro?: string): Block =>
+  ({ type: 'policy', title, intro, attributes, rules, challenges });
+
+/** The backup week simulator. */
+export const backupWeek = (): Block => ({ type: 'backups' });

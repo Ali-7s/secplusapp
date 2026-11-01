@@ -143,6 +143,28 @@ export interface DecideStep {
   options: DecideOption[];
 }
 
+/** A value a request can have in the policy playground, such as Department: Finance, HR, Sales. */
+export interface PolicyAttr {
+  name: string;
+  options: string[];
+}
+
+/** A policy statement: it matches when every listed attribute has one of the listed values. */
+export interface PolicyRule {
+  id: string;
+  effect: 'Allow' | 'Deny';
+  /** The statement as written, e.g. "Allow Finance to read Payroll". */
+  text: string;
+  when: Record<string, string[]>;
+}
+
+/** Something to make happen in the playground, e.g. a request allowed by rule R2. `by` is a rule id or "implicit". */
+export interface PolicyChallenge {
+  goal: string;
+  effect: 'Allow' | 'Deny';
+  by: string;
+}
+
 export type Block =
   /**
    * A heading starts a new part of the lesson. `keep` is the one or two lines worth remembering from the part,
@@ -174,7 +196,13 @@ export type Block =
   /** Look at certificate chains and decide whether the browser should trust each one. */
   | { type: 'certs'; title: string; intro?: string; options: string[]; cases: CertCase[] }
   /** A scenario told one decision at a time: pick what you would do, see why, then move on. */
-  | { type: 'decide'; title: string; intro?: string; steps: DecideStep[] };
+  | { type: 'decide'; title: string; intro?: string; steps: DecideStep[] }
+  /** Risk calculators: SLE and ALE with a control's yearly value (`ale`), or uptime from MTBF, SLAs and redundancy (`availability`). */
+  | { type: 'riskcalc'; show: 'ale' | 'availability' }
+  /** An access policy to experiment with: set the request, see which statements match and what decides. Deny overrides allow. */
+  | { type: 'policy'; title: string; intro?: string; attributes: PolicyAttr[]; rules: PolicyRule[]; challenges: PolicyChallenge[] }
+  /** A week of backups: pick full, incremental or differential and a failure day, see what has to be restored. */
+  | { type: 'backups' };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;

@@ -25,6 +25,9 @@ import { HashLabComponent } from './blocks/hash-lab.component';
 import { KeyPickerComponent } from './blocks/key-picker.component';
 import { CertCheckComponent } from './blocks/cert-check.component';
 import { DecideComponent } from './blocks/decide.component';
+import { RiskCalcComponent } from './blocks/risk-calc.component';
+import { PolicyPlaygroundComponent } from './blocks/policy-playground.component';
+import { BackupWeekComponent } from './blocks/backup-week.component';
 
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
@@ -50,7 +53,8 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   imports: [
     RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
-    HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent,
+    HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
+    BackupWeekComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',

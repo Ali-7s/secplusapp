@@ -133,6 +133,33 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
       ...term('Indicator of compromise', 'Quarantine'), ...acr('IoC', 'EDR', 'IRP', 'SIEM')],
     focus: 17,
   },
+  {
+    slug: 'risk', number: 5, minutes: 32, icon: 'calculate',
+    title: 'Risk calculations: SLE, ALE and availability',
+    summary: 'Price a risk with SLE, ARO and ALE, decide whether a control or insurance pays for itself, and work out uptime from MTBF, MTTR and the nines, with live calculators for both.',
+    related: [...acr('SLE', 'ALE', 'ARO', 'EF', 'BIA', 'RTO', 'RPO', 'MTBF', 'MTTR'),
+      ...term('Risk acceptance', 'Risk avoidance', 'Risk mitigation', 'Risk transference', 'Quantitative risk analysis', 'Qualitative risk analysis', 'Risk register', 'Risk appetite', 'Risk tolerance', 'Inherent risk', 'Residual risk', 'Key risk indicator', 'Heat map'),
+      ...term('Risk', 'Risk assessment', 'Risk management'), ...acr('SLA', 'MTTF')],
+    focus: 22,
+  },
+  {
+    slug: 'access-control', number: 6, minutes: 29, icon: 'admin_panel_settings',
+    title: 'Access control models and policies',
+    summary: 'Tell DAC, MAC, role-based, rule-based and attribute-based access control apart, then build requests against a storage policy and watch explicit and implicit denies decide them.',
+    related: [...term('Discretionary access control', 'Mandatory access control', 'Role-based access control', 'Rule-based access control', 'Attribute-based access control', 'Separation of duties', 'Need to know', 'Time-of-day restrictions', 'Just-in-time access', 'Password vaulting', 'Ephemeral credentials'),
+      ...acr('DAC', 'PAM', 'ACL'),
+      ...term('Least privilege', 'Implicit deny', 'Data classification', 'Account provisioning and deprovisioning', 'Privilege escalation'), ...acr('MAC', 'RBAC', 'IAM')],
+    focus: 14,
+  },
+  {
+    slug: 'backups', number: 7, minutes: 28, icon: 'backup',
+    title: 'Backups, recovery sites and high availability',
+    summary: 'Run a week of full, incremental and differential backups and see what a restore needs. Then snapshots and replication, the 3-2-1 rule, hot, warm and cold sites, failover and failback.',
+    related: [...term('Full backup', 'Incremental backup', 'Differential backup', 'Snapshot', 'Replication', 'Journaling', 'Hot site', 'Warm site', 'Cold site', 'Geographic dispersion', 'Failover', 'Backup power'),
+      ...acr('UPS', 'DRP', 'COOP'),
+      ...term('Backup', 'High availability', 'Load balancing', 'Platform diversity', 'Multi-cloud', 'Capacity planning', 'Disaster recovery', 'Business continuity', 'Resilience testing'), ...acr('HA', 'DR', 'BCP', 'PDU', 'RAID')],
+    focus: 15,
+  },
 ])];
 
 export function trackLessons(track: TrackId): LessonMeta[] {

@@ -15,6 +15,9 @@ import { CRYPTO } from './topics/crypto';
 import { PKI } from './topics/pki';
 import { SIGN_IN } from './topics/sign-in';
 import { INCIDENT_RESPONSE } from './topics/incident-response';
+import { RISK } from './topics/risk';
+import { ACCESS_CONTROL } from './topics/access-control';
+import { BACKUPS } from './topics/backups';
 
 /** Lesson text, keyed by slug. The list, titles and related cards live in lesson-index.ts. */
 export const LESSON_BODIES: Record<string, LessonBody> = {
@@ -33,6 +36,9 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   pki: PKI,
   'sign-in': SIGN_IN,
   'incident-response': INCIDENT_RESPONSE,
+  risk: RISK,
+  'access-control': ACCESS_CONTROL,
+  backups: BACKUPS,
 };
 
 export function getLesson(slug: string | null | undefined): Lesson | undefined {

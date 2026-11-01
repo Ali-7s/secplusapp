@@ -274,6 +274,15 @@
       @case ('decide') {
         <app-decide [title]="b.title" [intro]="b.intro ?? ''" [steps]="b.steps" />
       }
+      @case ('riskcalc') {
+        <app-risk-calc [show]="b.show" />
+      }
+      @case ('policy') {
+        <app-policy-playground [title]="b.title" [intro]="b.intro ?? ''" [attributes]="b.attributes" [rules]="b.rules" [challenges]="b.challenges" />
+      }
+      @case ('backups') {
+        <app-backup-week />
+      }
       @case ('pbqs') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />
       }

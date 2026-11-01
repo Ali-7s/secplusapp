@@ -1,0 +1,151 @@
+import { MatchQuestion } from '../../../../models/exam.model';
+import { LessonBody } from '../../networking.model';
+import { analogy, exam, examPbqs, h, list, mcq, p, pbq, policy, recap, table, tip, trap, words } from '../dsl';
+
+const NAME_THE_MODEL: MatchQuestion = {
+  id: 'topic-access-models', domain: 4, objective: '4.6', kind: 'match',
+  scenario: 'An auditor reviews how access is decided across a hospital group\'s systems.',
+  stem: 'Name the access control model or principle behind each finding.',
+  choices: ['Discretionary access control', 'Mandatory access control', 'Role-based access control', 'Rule-based access control', 'Attribute-based access control', 'Separation of duties', 'Least privilege'],
+  prompts: [
+    { label: 'A researcher shares her own project folder with two colleagues by editing its permissions herself', answer: 'Discretionary access control',
+      why: 'In discretionary access control the owner of a resource decides who else may use it, which is exactly what the researcher did.' },
+    { label: 'Patient records are labeled Confidential, and only staff cleared to Confidential or above, with a need to know, can open them. Users cannot change the labels', answer: 'Mandatory access control',
+      why: 'Mandatory access control compares a user\'s clearance with the data\'s label, and only administrators set the labels, never the users.' },
+    { label: 'Every new nurse gets the same set of permissions automatically because of the job title in the HR system', answer: 'Role-based access control',
+      why: 'Role-based access control grants permissions to a job role, and people get them by being assigned that role.' },
+    { label: 'The pharmacy system refuses all sign-ins between midnight and 05:00, whoever the user is', answer: 'Rule-based access control',
+      why: 'Rule-based access control applies an administrator\'s rule to everyone alike, here a time-of-day restriction, regardless of role.' },
+    { label: 'A doctor may open a record only if she works in the patient\'s ward, uses a hospital device, and is on shift', answer: 'Attribute-based access control',
+      why: 'Attribute-based access control combines attributes of the user, the resource and the situation into one decision.' },
+    { label: 'The person who adds a new supplier cannot also approve payments to that supplier', answer: 'Separation of duties',
+      why: 'Separation of duties splits a sensitive task between people so that no single person can commit and hide a fraud.' },
+    { label: 'Help desk staff can reset passwords but cannot change group memberships', answer: 'Least privilege',
+      why: 'Least privilege gives each person only the permissions their job needs, and resetting passwords does not need group changes.' },
+  ],
+  takeaway: 'The owner decides in DAC, labels and clearances decide in MAC, the job decides in role-based, a rule for everyone decides in rule-based, and a mix of attributes decides in ABAC.',
+};
+
+export const ACCESS_CONTROL: LessonBody = {
+  goals: [
+    'Tell the five access control models apart from a short description, and say who decides in each',
+    'Apply least privilege, need to know, separation of duties and implicit deny',
+    'Work out whether a cloud-style policy allows a request, when groups combine and an explicit deny applies',
+    'Explain how privileged access management protects admin accounts: just-in-time access, password vaulting and ephemeral credentials',
+  ],
+  blocks: [
+    recap('From topic 3: **authentication** proves who you are, and **authorization** decides what you may do. This topic is about authorization. From Networking lessons 3 and 9: a firewall rule list ends with an **implicit deny**, so anything not allowed is blocked. Access to files and data works the same way.'),
+    words(
+      ['Subject', 'Who or what asks for access: a user, a service, a device'],
+      ['Object', 'What is being accessed: a file, a folder, a database, a printer'],
+      ['Permission', 'What a subject may do with an object: read, write, delete, run'],
+      ['ACL', 'Access control list: the list on an object of who may do what with it'],
+      ['DAC', 'Discretionary access control: the owner decides'],
+      ['MAC', 'Mandatory access control: labels and clearances decide, set by administrators'],
+      ['Role-based access control', 'Permissions come with a job role'],
+      ['Rule-based access control', 'Rules set by administrators apply to everyone, such as time-of-day limits'],
+      ['ABAC', 'Attribute-based access control: a combination of user, resource and situation attributes decides'],
+      ['Least privilege', 'Only the permissions the job needs, and no more'],
+      ['Need to know', 'Access to information only if the job requires that particular information'],
+      ['Separation of duties', 'Splitting a sensitive task so no one person can do all of it'],
+      ['Implicit deny', 'Anything not explicitly allowed is blocked'],
+      ['Explicit deny', 'A rule that blocks something, and overrides any rule that allows it'],
+      ['PAM', 'Privileged access management: tools that control and watch admin accounts'],
+    ),
+
+    h('Who decides: the five models', { keep: 'DAC: the owner decides. MAC: labels and clearances decide, set by administrators. Role-based: the job role decides. Rule-based: a rule for everyone decides. ABAC: a combination of attributes decides. Look for who sets the permission.' }),
+    p('An **access control model** is the scheme that decides whether a subject may use an object. The fastest way to tell them apart is to ask **who sets the permission, and based on what**.'),
+    table(
+      ['Model', 'Who decides, based on what', 'Example', 'Clue in a question'],
+      [
+        ['Discretionary (DAC)', 'The **owner** of the object, at their discretion', 'You share your own folder with a colleague', '"The owner grants…", "the user shares…"'],
+        ['Mandatory (MAC)', 'The **system**, comparing the data\'s **label** with the user\'s **clearance**. Only administrators set labels', 'Secret files only for staff cleared to Secret', '"Labels", "classification", "clearance", military or government'],
+        ['Role-based', 'The **job role**. People get the permissions of the roles they are given', 'All nurses get the nurse permissions', '"Job function", "role", "group of employees"'],
+        ['Rule-based', 'Administrator **rules** that apply to everyone, whoever they are', 'No sign-ins after 22:00; only from the office network', '"Time of day", "rule", "regardless of user"'],
+        ['Attribute-based (ABAC)', 'A policy that combines **attributes** of the user, the resource and the situation', 'Managers in finance, on a company laptop, during working hours', '"Combination of", "device", "location", "department and…"'],
+      ],
+      { caption: 'Access control models' },
+    ),
+    trap('The acronym **RBAC** is used for both **role**-based and **rule**-based access control, so read the description, not the letters. Likewise **MAC** can mean mandatory access control or a media access control (hardware) address, depending on the topic.'),
+    analogy('DAC is a party at your home: you invite whoever you like. MAC is a government building: your badge\'s clearance must match the room\'s classification, and you cannot change either. Role-based is a hotel: staff key cards open the rooms their job needs. Rule-based is the building closing at 22:00 for everyone. ABAC is a club that checks your membership, your age and the time all at once.'),
+
+    h('Mandatory access control and labels', { keep: 'MAC labels data (for example Top Secret, Secret, Confidential) and gives users clearances. Access needs a clearance at or above the label, plus a need to know. Users can never change labels or share at their discretion.' }),
+    p('Under **mandatory access control**, every object gets a **label** (its classification) and every user a **clearance**. Government labels run **Top Secret, Secret, Confidential, Unclassified**; companies use their own, such as **Restricted, Confidential, Internal, Public**.'),
+    list(
+      'A user can open an object only if their **clearance is at or above** the object\'s label.',
+      'Clearance alone is not enough: they also need a **need to know**. A Secret clearance does not open every Secret file, only the ones their work requires.',
+      'Only administrators (or the security policy) set labels and clearances. A user **cannot** share a file or relabel it, which is what makes MAC "mandatory" rather than "discretionary".',
+    ),
+    exam('MAC is the strictest and least flexible model, used where confidentiality matters most. DAC is the most flexible and the weakest, because any owner can share anything, including by mistake.'),
+
+    h('Principles that apply to every model', { keep: 'Least privilege: only what the job needs. Separation of duties: no one person does a whole sensitive task. Implicit deny: nothing is allowed unless something allows it. Group permissions add up, and an explicit deny beats any allow.' }),
+    table(
+      ['Principle', 'Meaning', 'Example'],
+      [
+        ['Least privilege', 'Each account gets only the permissions its job needs', 'A web server\'s service account can read its own folder only'],
+        ['Need to know', 'Access to particular information only if the job requires it', 'An HR officer sees the files of her own department\'s staff'],
+        ['Separation of duties', 'A sensitive task is split so no one person can do all of it', 'One person raises a payment, another approves it'],
+        ['Implicit deny', 'Anything not explicitly allowed is blocked', 'A new user can do nothing until given a role'],
+        ['Time-of-day restrictions', 'Access only in certain hours', 'Contractors may sign in 08:00 to 18:00 on weekdays'],
+      ],
+    ),
+    p('Two rules decide what happens when permissions overlap. **Permissions add up**: a user in two groups gets the allows of both. And an **explicit deny overrides any allow**: if any rule that applies says deny, the answer is deny, whichever group gave the allow. If no rule allows a request, the **implicit deny** blocks it.'),
+    trap('Cloud access policies, such as those for storage buckets, are **not first match** like a firewall rule list. Every statement that applies is considered at once: any deny wins, then any allow, otherwise the implicit deny. The order they are written in does not matter.'),
+
+    h('Try it: a cloud storage policy', { keep: 'Check every statement that applies. Any matching deny wins, even if an allow matches too. Otherwise a matching allow permits the request. If nothing allows it, the implicit deny blocks it. Joining another group can add a deny.' }),
+    p('Here is a policy for a company\'s shared storage. It mixes groups with an attribute of the device, which makes it attribute-based. Set up the request on the left and watch which statements apply, then work through the challenges.'),
+    policy('Shared storage policy',
+      [
+        { name: 'Groups', options: ['Sales', 'Finance', 'Sales and Finance', 'Contractors'] },
+        { name: 'Action', options: ['Read', 'Write', 'Delete'] },
+        { name: 'Folder', options: ['shared/', 'finance/', 'uploads/'] },
+        { name: 'Device', options: ['Company laptop', 'Personal phone'] },
+      ],
+      [
+        { id: 'P1', effect: 'Allow', text: 'Sales and Finance members may read shared/', when: { Groups: ['Sales', 'Finance', 'Sales and Finance'], Action: ['Read'], Folder: ['shared/'] } },
+        { id: 'P2', effect: 'Allow', text: 'Finance members may read and write finance/', when: { Groups: ['Finance', 'Sales and Finance'], Action: ['Read', 'Write'], Folder: ['finance/'] } },
+        { id: 'P3', effect: 'Allow', text: 'Everyone may write to uploads/', when: { Action: ['Write'], Folder: ['uploads/'] } },
+        { id: 'P4', effect: 'Deny', text: 'Sales members may do nothing in finance/', when: { Groups: ['Sales', 'Sales and Finance'], Folder: ['finance/'] } },
+        { id: 'P5', effect: 'Deny', text: 'Nothing in finance/ from a personal phone', when: { Device: ['Personal phone'], Folder: ['finance/'] } },
+      ],
+      [
+        { goal: '**allowed by P1**: someone reading the shared folder', effect: 'Allow', by: 'P1' },
+        { goal: '**allowed by P2**: a Finance member working on finance files', effect: 'Allow', by: 'P2' },
+        { goal: '**allowed by P3**: even a contractor can do this', effect: 'Allow', by: 'P3' },
+        { goal: '**denied by P4**: try a member of both groups, so P2 allows it too and you can see the deny win', effect: 'Deny', by: 'P4' },
+        { goal: '**denied by P5**: a Finance member who would otherwise be allowed', effect: 'Deny', by: 'P5' },
+        { goal: '**denied by the implicit deny**: no statement mentions it, but none allows it either', effect: 'Deny', by: 'implicit' },
+      ],
+      'Your request and the challenges you complete are saved.',
+    ),
+    exam('In a policy question, go request by request: list the statements that apply, look for a deny first, then an allow. Watch for users in **two groups**: they get both groups\' allows **and** both groups\' denies.'),
+
+    h('Protecting admin accounts: privileged access management', { keep: 'PAM protects powerful accounts: just-in-time access grants admin rights only when needed, password vaulting keeps admin passwords in a vault that checks them out, and ephemeral credentials expire after one use or a short time.' }),
+    p('Administrator accounts can do anything, so they are what attackers want most. **Privileged access management (PAM)** tools control and record how they are used:'),
+    list(
+      '**Just-in-time access**: nobody holds admin rights permanently. An admin requests them for a task, gets them (often after approval) for a limited time, and loses them automatically afterwards.',
+      '**Password vaulting**: admin passwords live in a vault. People check a password out, every use is logged, and the vault changes the password afterwards, so nobody knows it for long.',
+      '**Ephemeral credentials**: credentials created for one session or task that expire on their own, so a stolen one is soon useless.',
+      '**Separate admin accounts**: admins use an ordinary account for email and browsing, and a separate privileged one only for admin work.',
+    ),
+    tip('Access also changes over time. **Provisioning** gives a new joiner the right access, changes follow when people move jobs (to stop "permission creep"), and **deprovisioning** removes everything on the day they leave. Regular **access reviews** catch what was missed.'),
+
+    h('Practice: name the model', { keep: 'Ask who sets the permission. Owner: DAC. Labels and clearance: MAC. Job title: role-based. A rule for everyone: rule-based. Several attributes together: ABAC. Splitting a task: separation of duties. Only what is needed: least privilege.' }),
+    pbq('Name the model', NAME_THE_MODEL, { intro: 'Seven findings from the audit. Each answer is used once.' }),
+    examPbqs('access-control', 'This one comes from the practice exam: trace requests through a storage bucket\'s policy, including a user in two groups. It loads when you press Start.'),
+  ],
+  check: [
+    mcq('Documents are labeled Secret or Top Secret, users have clearances, and users cannot change who may read a file. Which model is this?',
+      'Mandatory access control', ['Discretionary access control', 'Role-based access control', 'Rule-based access control'],
+      'Labels compared with clearances, set by administrators and not by users, is mandatory access control.'),
+    mcq('A user belongs to two groups. One group\'s policy allows reading a folder, and the other group\'s policy explicitly denies it. What happens?',
+      'The read is denied, because an explicit deny overrides any allow', ['The read is allowed, because one group allows it', 'Whichever statement is listed first wins', 'The user is asked which group to act as'],
+      'Permissions from groups add up, but an explicit deny always beats an allow, whichever group it comes from.'),
+    mcq('Access to a file share is granted only to finance staff using a managed laptop from the office network during working hours. Which model is this?',
+      'Attribute-based access control', ['Role-based access control', 'Discretionary access control', 'Mandatory access control'],
+      'The decision combines several attributes: the department, the device, the location and the time. That combination is attribute-based access control.'),
+    mcq('Admins have no standing admin rights. They request them for a task and lose them automatically two hours later. What is this called?',
+      'Just-in-time access', ['Password vaulting', 'Separation of duties', 'Implicit deny'],
+      'Granting privileges only when needed and for a limited time is just-in-time access, part of privileged access management.'),
+  ],
+};

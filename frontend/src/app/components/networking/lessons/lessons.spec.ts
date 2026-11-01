@@ -3,6 +3,7 @@ import { mcq } from './dsl';
 import { LESSON_META, lessonBySlug, lessonsForCard, trackLessons } from './lesson-index';
 import { LESSON_BODIES, getLesson } from './lessons';
 import { lessonMinutes, lessonParts } from './parts';
+import { decidePolicy } from '../blocks/policy-playground.component';
 
 describe('mcq', () => {
   it('keeps the right answer pointing at the right option', () => {
@@ -83,6 +84,9 @@ describe('lesson list', () => {
     expect(first('acr', 'OCSP')).toBe('pki');
     expect(first('acr', 'SAML')).toBe('sign-in');
     expect(first('term', 'Order of volatility')).toBe('incident-response');
+    expect(first('acr', 'ALE')).toBe('risk');
+    expect(first('term', 'Attribute-based access control')).toBe('access-control');
+    expect(first('term', 'Differential backup')).toBe('backups');
   });
 
   it('links only to flashcards that exist', async () => {
@@ -175,7 +179,7 @@ describe('lesson content', () => {
     expect(LESSON_BODIES['security-devices'].blocks.some(b => b.type === 'pbq' && b.question.kind === 'firewall')).toBeTrue();
   });
 
-  it('gives every key, certificate and scenario exercise a sound answer key', () => {
+  it('gives every key, certificate, scenario and policy exercise a sound answer key', () => {
     const words = (t: string) => t.trim().split(/\s+/).length;
     eachBlock((slug, b) => {
       if (b.type === 'keys') {
@@ -206,6 +210,22 @@ describe('lesson content', () => {
         }
         expect(b.steps.some(s => s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
         expect(b.steps.some(s => !s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
+      }
+      if (b.type === 'policy') {
+        const names = b.attributes.map(a => a.name);
+        for (const r of b.rules) {
+          for (const [attr, values] of Object.entries(r.when)) {
+            expect(names).withContext(`${slug} ${r.id}`).toContain(attr);
+            for (const v of values) expect(b.attributes.find(a => a.name === attr)?.options).withContext(`${slug} ${r.id}`).toContain(v);
+          }
+        }
+        // Every request the widget can build, so each challenge is known to be reachable.
+        let picks: Record<string, string>[] = [{}];
+        for (const a of b.attributes) picks = picks.flatMap(pk => a.options.map(o => ({ ...pk, [a.name]: o })));
+        const outcomes = new Set(picks.map(pk => { const d = decidePolicy(b.rules, pk); return d.effect + ':' + d.by; }));
+        for (const c of b.challenges) expect(outcomes).withContext(`${slug}: ${c.goal}`).toContain(c.effect + ':' + c.by);
+        expect(b.challenges.some(c => c.by === 'implicit')).withContext(`${slug} teaches the implicit deny`).toBeTrue();
+        expect(b.rules.some(r => r.effect === 'Deny')).withContext(`${slug} has an explicit deny`).toBeTrue();
       }
     });
   });
