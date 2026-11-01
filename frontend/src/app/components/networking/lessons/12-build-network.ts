@@ -55,6 +55,7 @@ export const BUILD_NETWORK: LessonBody = {
     h('Try it: build the network', { objective: '3.2', keep: 'Each scenario is graded stage by stage, then by traffic: business flows must work, and every attack must be stopped or alerted to the SIEM.' }),
     networkLab(),
     tip('Start with **Ports and protocols** if port numbers do not stick yet: everything but the firewall is already built, and every requirement makes you turn a program or protocol into its port. Stuck on the rules anywhere? Run the traffic: every blocked flow names the protocol it needs, and a rule on the wrong port says what that port really is.'),
+    tip('Once a scenario is built, switch it to **From scratch**: you start with only the internet, add every switch and security device yourself, place the servers and PCs, and cable them however you like. The traffic follows your cables, so a firewall in the wrong place really does let attacks through.'),
 
     h('Rules and detection that hold up', { objective: '4.5', keep: 'Allow only the services needed, from the smallest source to the smallest destination, specific rules first. Signatures catch known attacks, anomaly detection catches new ones, and alerts are useless unless they reach the SIEM.' }),
     list(

@@ -4,10 +4,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LessonWork } from '../../lesson-work.service';
 import {
-  AddrMode, DEVICES, Detect, DeviceKind, FlowResult, Hop, LabFlow, LabHost, LabRule, LabScenario, LabSlot, LabWork, LabZone, PortRow,
-  PORT_CHOICES, START_DETECT, SERVICES, addressedHosts, emptyWork, externalById, gradeAddr, gradePort, gradeSlot, hostById, hostZone,
-  parsePortRule, portRuleLabel, runFlow, serviceLabel, startWork, toPortRule, zoneById,
+  AddrMode, Canvas, DEVICES, Detect, DeviceKind, FlowResult, Hop, LabFlow, LabHost, LabRule, LabScenario, LabSlot, LabWork, LabZone, PortRow,
+  PORT_CHOICES, START_DETECT, SERVICES, addressedHosts, blankCanvas, chainCanvas, emptyWork, externalById, gradeAddr, gradeDesign, gradePort,
+  gradeSlot, hostById, hostZone, parsePortRule, portRuleLabel, runFlow, serviceLabel, startWork, toPortRule, zoneById,
 } from './lab';
+import { LabCanvasComponent } from './lab-canvas.component';
 import { SCENARIOS } from './scenarios';
 
 type Stage = 'place' | 'segment' | 'address' | 'rules' | 'detect' | 'run';
@@ -37,12 +38,15 @@ interface Saved {
   works: Record<string, Partial<LabWork>>;
   checked: Record<string, Stage[]>;
   ran: Record<string, boolean>;
+  /** Scenarios being built from scratch rather than on the outline. */
+  modes?: Record<string, 'scratch'>;
 }
 
 /** Everything wrong with the parts of a network that are graded directly, rather than by running traffic. */
 function problems(sc: LabScenario, w: LabWork) {
+  const design = w.canvas && gradeDesign(sc, w);
   return {
-    place: sc.slots.filter(s => !gradeSlot(s, w.slots[s.id]).ok).length,
+    place: design ? design.checks.filter(c => !c.ok).length + design.findings.length : sc.slots.filter(s => !gradeSlot(s, w.slots[s.id]).ok).length,
     segment: sc.ports.filter(r => gradePort(sc, w, r).length).length,
     address: addressedHosts(sc).filter(h => gradeAddr(sc, w, h).length).length,
   };
@@ -56,7 +60,7 @@ function problems(sc: LabScenario, w: LabWork) {
 @Component({
   selector: 'app-network-lab',
   standalone: true,
-  imports: [MatIconModule, NgTemplateOutlet, RouterLink],
+  imports: [LabCanvasComponent, MatIconModule, NgTemplateOutlet, RouterLink],
   templateUrl: './network-lab.component.html',
   styleUrl: './network-lab.component.scss',
 })
@@ -79,11 +83,15 @@ export class NetworkLabComponent implements OnInit {
   works: Record<string, LabWork> = {};
   checked: Record<string, Stage[]> = {};
   ran: Record<string, boolean> = {};
+  buildModes: Record<string, 'scratch'> = {};
   /** The device picked from the palette, waiting to be placed. */
   picked: DeviceKind | null = null;
   /** A flow whose hops are shown. */
   openFlow: string | null = null;
   showSolution = false;
+  /** The worked example of a diagram, shown on request. */
+  showDesign = false;
+  private example?: { sc: string; canvas: Canvas };
   draft: LabRule = { from: 'internet', to: 'any', service: 'any', action: 'allow' };
 
   ngOnInit() {
@@ -108,18 +116,37 @@ export class NetworkLabComponent implements OnInit {
     }
     this.checked = saved.checked ?? {};
     this.ran = saved.ran ?? {};
+    this.buildModes = saved.modes ?? {};
   }
 
   get sc(): LabScenario { return SCENARIOS[this.active]; }
-  get w(): LabWork { return this.works[this.sc.id] ??= startWork(this.sc); }
-  workFor(sc: LabScenario): LabWork { return this.works[sc.id] ?? startWork(sc); }
+  /** Built from scratch, on a blank diagram, instead of on the scenario's outline. A ports scenario is always set up. */
+  get scratch(): boolean { return this.buildModes[this.sc.id] === 'scratch' && !this.sc.portsOnly; }
+  /** Each way of building a scenario keeps its own work, so switching never loses either. */
+  private keyFor(sc: LabScenario, scratch: boolean) { return scratch ? `${sc.id}@scratch` : sc.id; }
+  get key(): string { return this.keyFor(this.sc, this.scratch); }
+  private fresh(sc: LabScenario, scratch: boolean): LabWork { return scratch ? { ...emptyWork(), canvas: blankCanvas() } : startWork(sc); }
+  get w(): LabWork { return this.works[this.key] ??= this.fresh(this.sc, this.scratch); }
 
-  /** A network is built when every flow behaves and nothing graded directly is wrong. */
+  /** A network is built, either way, when every flow behaves and nothing graded directly is wrong. */
   built(sc: LabScenario): boolean {
-    const w = this.workFor(sc);
-    const p = problems(sc, w);
-    return !!this.ran[sc.id] && !p.place && !p.segment && !p.address && sc.flows.every(f => runFlow(sc, w, f).ok);
+    return [false, true].some(scratch => {
+      const key = this.keyFor(sc, scratch);
+      const w = this.works[key];
+      if (!w || !this.ran[key]) return false;
+      const p = problems(sc, w);
+      return !p.place && !p.segment && !p.address && sc.flows.every(f => runFlow(sc, w, f).ok);
+    });
   }
+  setMode(scratch: boolean) {
+    if (scratch) this.buildModes[this.sc.id] = 'scratch';
+    else delete this.buildModes[this.sc.id];
+    this.picked = null;
+    this.showDesign = false;
+    this.save();
+  }
+  stageName(s: (typeof STAGES)[number]) { return s.id === 'place' && this.scratch ? 'Design' : s.name; }
+  stageIcon(s: (typeof STAGES)[number]) { return s.id === 'place' && this.scratch ? 'draw' : s.icon; }
   get builtCount() { return SCENARIOS.filter(s => this.built(s)).length; }
 
   pickScenario(i: number) {
@@ -129,6 +156,7 @@ export class NetworkLabComponent implements OnInit {
     this.picked = null;
     this.openFlow = null;
     this.showSolution = false;
+    this.showDesign = false;
     this.save();
   }
   goStage(s: Stage) {
@@ -136,21 +164,21 @@ export class NetworkLabComponent implements OnInit {
     this.picked = null;
     this.save();
   }
-  isChecked(s: Stage) { return !!this.checked[this.sc.id]?.includes(s); }
+  isChecked(s: Stage) { return !!this.checked[this.key]?.includes(s); }
   check(s: Stage) {
-    this.checked[this.sc.id] = [...(this.checked[this.sc.id] ?? []).filter(x => x !== s), s];
+    this.checked[this.key] = [...(this.checked[this.key] ?? []).filter(x => x !== s), s];
     this.save();
   }
   /** A stage's tab gets a tick once it has been checked and is right. */
   stageDone(s: Stage): boolean {
     const p = problems(this.sc, this.w);
     if (s === 'place' || s === 'segment' || s === 'address') return this.isChecked(s) && !p[s];
-    if (s === 'run') return this.built(this.sc);
+    if (s === 'run') return this.ranNow && !p.place && !p.segment && !p.address && this.results.every(x => x.r.ok);
     return false;
   }
   private edited(s: Stage) {
-    this.checked[this.sc.id] = (this.checked[this.sc.id] ?? []).filter(x => x !== s);
-    this.ran[this.sc.id] = false;
+    this.checked[this.key] = (this.checked[this.key] ?? []).filter(x => x !== s);
+    this.ran[this.key] = false;
     this.save();
   }
 
@@ -170,6 +198,21 @@ export class NetworkLabComponent implements OnInit {
   }
   slotGrade(slot: LabSlot) { return gradeSlot(slot, this.w.slots[slot.id]); }
   get placeWrong() { return problems(this.sc, this.w).place; }
+
+  // ── Design (from scratch) ──
+  get design() { return gradeDesign(this.sc, this.w); }
+  designEdited() { this.edited('place'); }
+  get exampleCanvas(): Canvas {
+    if (this.example?.sc !== this.sc.id) this.example = { sc: this.sc.id, canvas: chainCanvas(this.sc) };
+    return this.example.canvas;
+  }
+  /** Replace the diagram with the worked example, to study or adapt. */
+  useExample() {
+    const c = chainCanvas(this.sc);
+    this.w.canvas = c;
+    this.showDesign = false;
+    this.edited('place');
+  }
 
   // ── Segment ──
   get vlanZones(): LabZone[] { return this.sc.zones.filter(z => !z.virtual); }
@@ -258,15 +301,15 @@ export class NetworkLabComponent implements OnInit {
     this.edited('detect');
   }
   toggleDetect(k: (typeof DETECT_OPTS)[number]['k']) { this.setDetect({ [k]: !this.w.detect[k] }); }
-  placed(kind: DeviceKind) { return Object.values(this.w.slots).includes(kind); }
+  placed(kind: DeviceKind) { return this.w.canvas ? this.w.canvas.nodes.some(n => n.kind === kind) : Object.values(this.w.slots).includes(kind); }
 
   // ── Run ──
   get results(): { flow: LabFlow; r: FlowResult }[] { return this.sc.flows.map(flow => ({ flow, r: runFlow(this.sc, this.w, flow) })); }
   get passing() { return this.results.filter(x => x.r.ok).length; }
-  get ranNow() { return !!this.ran[this.sc.id]; }
+  get ranNow() { return !!this.ran[this.key]; }
   get leftovers() { return problems(this.sc, this.w); }
   run() {
-    this.ran[this.sc.id] = true;
+    this.ran[this.key] = true;
     this.openFlow = null;
     this.save();
   }
@@ -290,17 +333,18 @@ export class NetworkLabComponent implements OnInit {
   }
 
   startOver() {
-    this.works[this.sc.id] = startWork(this.sc);
-    this.checked[this.sc.id] = [];
-    this.ran[this.sc.id] = false;
+    this.works[this.key] = this.fresh(this.sc, this.scratch);
+    this.checked[this.key] = [];
+    this.ran[this.key] = false;
     this.picked = null;
     this.openFlow = null;
     this.showSolution = false;
+    this.showDesign = false;
     this.stage = this.sc.portsOnly ? 'rules' : 'place';
     this.save();
   }
 
   private save() {
-    this.store?.set('netlab', { sc: this.sc.id, stage: this.stage, works: this.works, checked: this.checked, ran: this.ran } satisfies Saved);
+    this.store?.set('netlab', { sc: this.sc.id, stage: this.stage, works: this.works, checked: this.checked, ran: this.ran, modes: this.buildModes } satisfies Saved);
   }
 }

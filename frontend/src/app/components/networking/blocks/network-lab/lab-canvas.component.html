@@ -1,0 +1,78 @@
+@if (!readonly) {
+  <div class="tools">
+    <div class="tool-row" role="group" aria-label="Add a device">
+      <span class="tool-label">Add</span>
+      @for (k of kinds; track k) {
+        <button type="button" class="chip" (click)="add(k)"><mat-icon aria-hidden="true">{{ kindIcon(k) }}</mat-icon>{{ kindName(k) }}</button>
+      }
+    </div>
+    @if (unplaced.length) {
+      <div class="tool-row" role="group" aria-label="Place a system">
+        <span class="tool-label">Place</span>
+        @for (h of unplaced; track h.id) {
+          <button type="button" class="chip host" (click)="place(h)"><mat-icon aria-hidden="true">{{ h.icon }}</mat-icon>{{ h.name }}</button>
+        }
+      </div>
+    }
+    <div class="tool-row">
+      <button type="button" class="chip mode" [class.on]="cabling" [attr.aria-pressed]="cabling" (click)="cabling = !cabling">
+        <mat-icon aria-hidden="true">cable</mat-icon>Cable mode {{ cabling ? 'on' : 'off' }}
+      </button>
+      <span class="hint" aria-live="polite">
+        @if (cabling) {
+          {{ sel ? 'Tap any box to cable it to ' + label(sel.id) + ', or tap a cabled one to unplug it.' : 'Tap the box to cable from.' }}
+        } @else {
+          {{ sel ? 'Drag ' + label(sel.id) + ', or tap an empty spot to move it there.' : 'Tap a box to select it; drag boxes to move them.' }}
+        }
+      </span>
+    </div>
+  </div>
+}
+
+<div class="scroll">
+  <div class="board" [class.ro]="readonly" [style.width.px]="width" [style.height.px]="height" (click)="tapSpace($event)">
+    <svg class="wires" [attr.width]="width" [attr.height]="height" aria-hidden="true">
+      @for (l of lines; track l.key) {
+        <line [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2" [class.mirror]="l.mirror" [class.on]="l.on" />
+      }
+    </svg>
+    @for (n of canvas.nodes; track n.id) {
+      <button type="button" class="nd" [attr.data-id]="n.id" [attr.data-kind]="n.kind" [attr.data-tone]="tone(n)" [class.sel]="selected === n.id"
+        [style.left.px]="n.x" [style.top.px]="n.y" [style.width.px]="w" [style.height.px]="h" [disabled]="readonly"
+        [attr.aria-pressed]="readonly ? null : selected === n.id" [attr.aria-label]="label(n.id) + (cables(n.id).length ? ', cabled to ' + cables(n.id).length : ', no cables')"
+        (click)="tapNode(n.id)" (pointerdown)="down(n, $event)" (pointermove)="move(n, $event)" (pointerup)="up()" (pointercancel)="up()" (keydown)="key(n, $event)">
+        <mat-icon aria-hidden="true">{{ icon(n) }}</mat-icon><span class="nl">{{ label(n.id) }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+@if (!readonly && sel; as n) {
+  <div class="panel">
+    <div class="p-head"><mat-icon aria-hidden="true">{{ icon(n) }}</mat-icon><strong>{{ label(n.id) }}</strong>
+      <span class="spacer"></span>
+      @if (n.kind !== 'internet') {
+        <button type="button" class="chip danger" (click)="remove(n.id)"><mat-icon aria-hidden="true">delete</mat-icon>Remove</button>
+      }
+      <button type="button" class="icon" (click)="selected = null" aria-label="Close"><mat-icon aria-hidden="true">close</mat-icon></button>
+    </div>
+    <p class="p-about">{{ about(n) }}</p>
+    <div class="p-cables">
+      @for (id of cables(n.id); track id) {
+        <span class="cable"><mat-icon aria-hidden="true">cable</mat-icon>{{ label(id) }}
+          <button type="button" class="icon sm" (click)="toggleLink(n.id, id)" [attr.aria-label]="'Unplug the cable to ' + label(id)"><mat-icon aria-hidden="true">close</mat-icon></button>
+        </span>
+      } @empty {
+        <span class="hint">No cables yet.</span>
+      }
+    </div>
+    @if (others.length) {
+      <label class="field">Cable it to
+        <select (change)="connectFrom($event)">
+          <option value="" selected>Choose a box…</option>
+          @for (o of others; track o.id) { <option [value]="o.id">{{ label(o.id) }}</option> }
+        </select>
+      </label>
+    }
+  </div>
+}

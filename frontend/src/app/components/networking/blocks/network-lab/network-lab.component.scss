@@ -38,6 +38,7 @@
   &.done .n { background: var(--c-success); color: var(--c-on-accent); }
 }
 
+.seg.mode { margin: 0 0 10px; button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; mat-icon { font-size: 18px; width: 18px; height: 18px; } } }
 .lead { margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: var(--c-text); }
 .hint { font-size: 12.5px; line-height: 1.45; color: var(--c-text-2); }
 .note { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--c-surface-2);

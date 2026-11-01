@@ -1,6 +1,7 @@
 import {
-  LabScenario, LabWork, PORT_CHOICES, SERVICES, addrFaults, addressedHosts, emptyWork, gradeAddr, gradePort, gradeSlot, hostById, identifyPort,
-  ipToNum, parsePortRule, referenceWork, runFlow, serviceMatches, startWork, subnetOf, toPortRule, zoneById,
+  Canvas, LabScenario, LabWork, PORT_CHOICES, SERVICES, addrFaults, addressedHosts, blankCanvas, chainCanvas, emptyWork, gradeAddr, gradeDesign,
+  gradePort, gradeSlot, hostById, identifyPort, ipToNum, parsePortRule, referenceWork, runFlow, serviceMatches, startWork, subnetOf, toPortRule,
+  zoneById,
 } from './lab';
 import { SCENARIOS } from './scenarios';
 
@@ -117,6 +118,49 @@ describe('network lab scenarios', () => {
           if (h.addr === 'reserved') expect(z.pool).withContext(`${h.id} needs DHCP`).toBeDefined();
         }
         for (const h of sc.hosts.filter(x => x.addr === 'dhcp')) expect(zoneById(sc, h.zone)!.pool).withContext(h.id).toBeDefined();
+      });
+
+      it('can be built from scratch: the outline drawn as a diagram does every job and passes every flow', () => {
+        const w = { ...reference(sc), canvas: chainCanvas(sc) };
+        const { checks, findings } = gradeDesign(sc, w);
+        expect(findings).toEqual([]);
+        expect(checks.filter(c => !c.ok).map(c => `${c.slot.id}: ${c.text}`)).toEqual([]);
+        expect(failing(sc, w)).toEqual([]);
+        // Laid out so no two boxes overlap and all fit the board's 720 px width.
+        const c = w.canvas;
+        for (const n of c.nodes) expect(n.x + 124).withContext(n.id).toBeLessThanOrEqual(720);
+        const overlaps = c.nodes.flatMap((n, i) => c.nodes.slice(i + 1).filter(o => Math.abs(n.x - o.x) < 124 && Math.abs(n.y - o.y) < 52).map(o => `${n.id}/${o.id}`));
+        expect(overlaps).toEqual([]);
+      });
+
+      it('from scratch, a flat network behind one firewall misses jobs and lets something through', () => {
+        const flat: Canvas = { ...blankCanvas(), links: [{ a: 'internet', b: 'firewall-1' }, { a: 'firewall-1', b: 'switch-1' }] };
+        flat.nodes.push({ id: 'firewall-1', kind: 'firewall', x: 0, y: 0 }, { id: 'switch-1', kind: 'switch', x: 0, y: 0 });
+        for (const h of sc.hosts.filter(x => !x.via)) {
+          flat.nodes.push({ id: h.id, kind: 'host', x: 0, y: 0 });
+          flat.links.push({ a: 'switch-1', b: h.id });
+        }
+        const w = { ...reference(sc), canvas: flat };
+        expect(gradeDesign(sc, w).checks.some(c => !c.ok)).toBeTrue();
+        expect(failing(sc, w).length).toBeGreaterThan(0);
+      });
+
+      it('from scratch, needs every security device in the drawn outline', () => {
+        const full = chainCanvas(sc);
+        for (const n of full.nodes.filter(x => !['host', 'internet', 'switch', 'vpn'].includes(x.kind))) {
+          const tap = full.links.filter(l => l.a === n.id || l.b === n.id).length === 1;
+          // An inline device becomes a plain router, which keeps the cables working; a sensor on a mirror port is unplugged.
+          const canvas: Canvas = tap
+            ? { nodes: full.nodes.filter(x => x !== n), links: full.links.filter(l => l.a !== n.id && l.b !== n.id) }
+            : { nodes: full.nodes.map(x => x === n ? { ...x, kind: 'router' as const } : x), links: full.links };
+          const checks = gradeDesign(sc, { ...reference(sc), canvas }).checks;
+          expect(checks.some(c => !c.ok)).withContext(n.id).toBeTrue();
+        }
+      });
+
+      it('from scratch, delivers nothing while the diagram is empty', () => {
+        const w = { ...reference(sc), canvas: blankCanvas() };
+        expect(sc.flows.filter(f => runFlow(sc, w, f).delivered).map(f => f.id)).toEqual([]);
       });
 
       it('tests every kind of outcome', () => {

@@ -3,7 +3,7 @@
     <div class="title"><mat-icon aria-hidden="true">hub</mat-icon> Network lab</div>
     <div class="count" aria-live="polite">{{ builtCount }} of {{ scenarios.length }} networks built</div>
   </header>
-  <p class="intro">Pick a scenario and build its network in six stages: place the devices, segment the switch, give everything an address, write the firewall rules, set up detection, then run real traffic and attacks through it. Everything is saved as you go.</p>
+  <p class="intro">Pick a scenario and build its network in six stages: place the devices, segment the switch, give everything an address, write the firewall rules, set up detection, then run real traffic and attacks through it. Follow the guided outline, or draw the whole network yourself from scratch. Everything is saved as you go.</p>
 
   <div class="tasks" role="tablist" aria-label="Scenario">
     @for (s of scenarios; track s.id) {
@@ -21,10 +21,17 @@
     </ul>
   </div>
 
+  @if (!sc.portsOnly) {
+    <div class="seg mode" role="group" aria-label="How to build it">
+      <button type="button" [class.on]="!scratch" [attr.aria-pressed]="!scratch" (click)="setMode(false)"><mat-icon aria-hidden="true">account_tree</mat-icon>Guided outline</button>
+      <button type="button" [class.on]="scratch" [attr.aria-pressed]="scratch" (click)="setMode(true)"><mat-icon aria-hidden="true">draw</mat-icon>From scratch</button>
+    </div>
+  }
+
   <nav class="stages" aria-label="Stage">
     @for (s of stages; track s.id; let n = $index) {
       <button type="button" [class.on]="stage === s.id" [class.done]="stageDone(s.id)" [attr.aria-current]="stage === s.id ? 'step' : null" (click)="goStage(s.id)">
-        <span class="n">@if (stageDone(s.id)) { <mat-icon aria-hidden="true">check</mat-icon> } @else { {{ n + 1 }} }</span>{{ s.name }}
+        <span class="n">@if (stageDone(s.id)) { <mat-icon aria-hidden="true">check</mat-icon> } @else { {{ n + 1 }} }</span>{{ stageName(s) }}
       </button>
     }
   </nav>
@@ -60,8 +67,39 @@
     </div>
   </ng-template>
 
+  <!-- ── Stage 1, from scratch: design the network ── -->
+  @if (stage === 'place' && scratch && w.canvas) {
+    <p class="lead">Start from a blank diagram, as a network designer would. <strong>Add</strong> the switches and security devices you need, <strong>place</strong> every server, PC and access point, and <strong>cable</strong> them together. Traffic follows your cables: inside one VLAN it stays on the switches, and between VLANs it goes through the nearest router or firewall, its default gateway. An IDS cabled only to a switch sits on that switch's mirror port.</p>
+    <app-lab-canvas [sc]="sc" [canvas]="w.canvas" (changed)="designEdited()" />
+
+    @if (isChecked('place')) {
+      @for (f of design.findings; track $index) { <div class="why bad">{{ f }}</div> }
+      @for (c of design.checks; track c.slot.id) {
+        <div class="why" [class.good]="c.ok" [class.bad]="!c.ok"><strong>{{ c.slot.where }}</strong> {{ c.text }}</div>
+      }
+    }
+    <div class="controls">
+      <button type="button" class="btn primary" (click)="check('place')"><mat-icon aria-hidden="true">fact_check</mat-icon> Check design</button>
+      @if (isChecked('place')) { <span class="tally" [class.ok]="!placeWrong">{{ placeWrong ? placeWrong + (placeWrong === 1 ? ' thing' : ' things') + ' to fix' : 'The design does every job' }}</span> }
+      <span class="spacer"></span>
+      <button type="button" class="btn" (click)="goStage('segment')">Next: segment <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    </div>
+    <div class="controls">
+      <button type="button" class="btn ghost" (click)="showDesign = !showDesign" [attr.aria-expanded]="showDesign">
+        <mat-icon aria-hidden="true">{{ showDesign ? 'visibility_off' : 'visibility' }}</mat-icon> {{ showDesign ? 'Hide' : 'Show' }} a working design
+      </button>
+    </div>
+    @if (showDesign) {
+      <p class="hint">One design that does every job. Yours can differ: what matters is what the traffic passes on its way.</p>
+      <app-lab-canvas [sc]="sc" [canvas]="exampleCanvas" [readonly]="true" />
+      <div class="controls">
+        <button type="button" class="btn" (click)="useExample()"><mat-icon aria-hidden="true">content_copy</mat-icon> Replace my diagram with this one</button>
+      </div>
+    }
+  }
+
   <!-- ── Stage 1: place the devices ── -->
-  @if (stage === 'place') {
+  @if (stage === 'place' && !scratch) {
     @if (sc.portsOnly) {
       <p class="note"><mat-icon aria-hidden="true">check_circle</mat-icon><span>This scenario is about ports, so this stage is already set up. Have a look, then <button type="button" class="link" (click)="goStage('rules')">go to the rules</button>.</span></p>
     }
@@ -410,14 +448,14 @@
       </ul>
       @if (leftovers.place || leftovers.segment || leftovers.address) {
         <p class="note"><mat-icon aria-hidden="true">build</mat-icon><span>Some settings are still not right, even where the traffic gets by:
-          @if (leftovers.place) { <button type="button" class="link" (click)="goStage('place'); check('place')">placement ({{ leftovers.place }})</button> }
+          @if (leftovers.place) { <button type="button" class="link" (click)="goStage('place'); check('place')">{{ scratch ? 'design' : 'placement' }} ({{ leftovers.place }})</button> }
           @if (leftovers.segment) { <button type="button" class="link" (click)="goStage('segment'); check('segment')">ports ({{ leftovers.segment }})</button> }
           @if (leftovers.address) { <button type="button" class="link" (click)="goStage('address'); check('address')">addresses ({{ leftovers.address }})</button> }
         </span></p>
       }
       @if (built(sc)) {
         <div class="result" role="status"><mat-icon aria-hidden="true">emoji_events</mat-icon>
-          <span><strong>{{ sc.name }} built.</strong> Every device is in the right place, every port and address is right, and all {{ sc.flows.length }} flows behave: the business works and the attacks are stopped or seen.</span></div>
+          <span><strong>{{ sc.name }} built.</strong> {{ scratch ? 'Your own design does every job' : 'Every device is in the right place' }}, every port and address is right, and all {{ sc.flows.length }} flows behave: the business works and the attacks are stopped or seen.</span></div>
       }
     }
 

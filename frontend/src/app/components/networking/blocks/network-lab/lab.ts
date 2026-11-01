@@ -231,7 +231,15 @@ export interface LabWork {
   detect: Detect;
   /** Rules are written as a protocol and port number ("tcp:443") instead of a service name. */
   portMode?: boolean;
+  /** Built from scratch: the learner's own diagram, which traffic follows instead of the scenario's outline. */
+  canvas?: Canvas;
 }
+
+export type NodeKind = DeviceKind | 'switch' | 'internet' | 'host';
+/** A box on the diagram. A host's id is the host's own id; the internet is "internet"; devices are "<kind>-<n>". */
+export interface CanvasNode { id: string; kind: NodeKind; x: number; y: number }
+export interface CanvasLink { a: string; b: string }
+export interface Canvas { nodes: CanvasNode[]; links: CanvasLink[] }
 
 export const START_DETECT: Detect = { ipsMode: 'detect', signatures: true, anomaly: false, reputation: false, siem: false };
 
@@ -383,6 +391,271 @@ const THREAT_NAME: Record<Threat, string> = {
   sqli: 'SQL injection', exploit: 'a known exploit', zeroday: 'a brand-new exploit', scan: 'a port scan', c2: 'malware calling its command-and-control server', bruteforce: 'password guessing',
 };
 
+// ── Diagrams built from scratch ──────────────────────────────────────────
+
+const L3: NodeKind[] = ['firewall', 'ngfw', 'router'];
+const L2: NodeKind[] = ['switch', 'hub'];
+
+export const blankCanvas = (): Canvas => ({ nodes: [{ id: 'internet', kind: 'internet', x: 300, y: 16 }], links: [] });
+
+export const neighbours = (c: Canvas, id: string): string[] =>
+  c.links.flatMap(l => l.a === id ? [l.b] : l.b === id ? [l.a] : []);
+const nodeOf = (c: Canvas, id: string) => c.nodes.find(n => n.id === id);
+
+/** An IDS or IPS whose only cable goes to a switch sits on the switch's mirror port: it gets a copy of the traffic. */
+export function isTap(c: Canvas, n: CanvasNode): boolean {
+  if (n.kind !== 'ids' && n.kind !== 'ips') return false;
+  const nb = neighbours(c, n.id);
+  return nb.length === 1 && L2.includes(nodeOf(c, nb[0])?.kind as NodeKind);
+}
+
+/** "Firewall", or "Firewall 2" when there are several. */
+export function nodeLabel(sc: LabScenario, c: Canvas, id: string): string {
+  if (id === 'internet') return 'Internet';
+  const n = nodeOf(c, id);
+  if (!n || n.kind === 'host') return nameOf(sc, id);
+  const base = n.kind === 'switch' ? 'Switch' : DEVICES[n.kind as DeviceKind].name;
+  const same = c.nodes.filter(o => o.kind === n.kind);
+  return same.length > 1 ? `${base} ${same.indexOf(n) + 1}` : base;
+}
+
+/** Shortest cable path. Traffic never passes through a computer, the internet or a mirror-port sensor on the way. */
+function bfs(c: Canvas, from: string, to: (id: string) => boolean, through: (n: CanvasNode) => boolean = () => true): string[] | null {
+  const prev = new Map<string, string | null>([[from, null]]);
+  const queue = [from];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (id !== from && to(id)) {
+      const path = [id];
+      for (let p = prev.get(id); p != null; p = prev.get(p)) path.unshift(p);
+      return path;
+    }
+    if (id !== from) {
+      const n = nodeOf(c, id);
+      if (!n || n.kind === 'host' || n.kind === 'internet' || isTap(c, n) || !through(n)) continue;
+    }
+    for (const nb of neighbours(c, id)) if (!prev.has(nb)) { prev.set(nb, id); queue.push(nb); }
+  }
+  return null;
+}
+
+/** One device the traffic meets, in order: inline, or a sensor on a switch's mirror port. */
+interface Step { at: string; dev?: DeviceKind; tap: boolean }
+
+/**
+ * The way a flow takes through a diagram. Inside one VLAN it stays on the switches. Between VLANs it goes to the
+ * nearest router or firewall (its default gateway) and on from there, so whatever does the routing is what filters.
+ */
+function graphRoute(sc: LabScenario, c: Canvas, srcNode: string, src: string, dstNode: string, dst: string): { steps: Step[] } | { at: string; error: string } {
+  for (const id of [srcNode, dstNode]) {
+    const at = nodeLabel(sc, c, id);
+    if (!nodeOf(c, id)) return { at, error: `${at} is not on the diagram yet.` };
+    if (!neighbours(c, id).length) return { at, error: `${at} has no cable.` };
+  }
+  const name = (id: string) => nodeLabel(sc, c, id);
+  if (srcNode === dstNode) return { steps: [] };
+  let nodes: string[] | null;
+  if (src === dst) {
+    nodes = bfs(c, srcNode, id => id === dstNode, n => !L3.includes(n.kind));
+    if (!nodes) return { at: name(srcNode), error: `Both ends are in ${where(sc, src)}, but no switches connect them without a router or firewall in between, so they cannot reach each other in one VLAN.` };
+  } else if (srcNode === 'internet') {
+    nodes = bfs(c, srcNode, id => id === dstNode);
+  } else {
+    // Its default gateway is a router or firewall on its own side of the network; where there are several, the one
+    // that leads to the destination, as a network designer would set it.
+    const local = c.nodes.filter(n => L3.includes(n.kind))
+      .map(n => bfs(c, srcNode, id => id === n.id, x => !L3.includes(x.kind)))
+      .filter((p): p is string[] => !!p);
+    if (!local.length) return { at: name(srcNode), error: `To reach another network it needs a default gateway, but no router or firewall is cabled to its side of the network.` };
+    nodes = null;
+    for (const toGw of local) {
+      const onward = bfs(c, toGw[toGw.length - 1], id => id === dstNode);
+      if (onward && (!nodes || toGw.length + onward.length - 1 < nodes.length)) nodes = [...toGw, ...onward.slice(1)];
+    }
+  }
+  if (!nodes) return { at: name(srcNode), error: `No cables lead from ${name(srcNode)} to ${name(dstNode)}.` };
+  const steps: Step[] = [];
+  const seen = new Set<string>();
+  // A laptop in a spare port starts at a switch, which counts; any other starting box is the sender itself.
+  for (const [i, id] of nodes.slice(0, -1).entries()) {
+    const n = nodeOf(c, id)!;
+    if (i === 0 && !L2.includes(n.kind)) continue;
+    if (L2.includes(n.kind)) {
+      if (n.kind === 'hub') steps.push({ at: name(id), dev: 'hub', tap: false });
+      for (const t of neighbours(c, id).map(x => nodeOf(c, x)!).filter(x => isTap(c, x) && !seen.has(x.id))) {
+        seen.add(t.id);
+        steps.push({ at: `${name(t.id)} (mirror port)`, dev: t.kind as DeviceKind, tap: true });
+      }
+    } else {
+      steps.push({ at: name(id), dev: n.kind as DeviceKind, tap: false });
+    }
+  }
+  return { steps };
+}
+
+/** The VPN concentrator remote workers arrive through: one the internet can reach. */
+function vpnNode(c: Canvas): string | undefined {
+  return c.nodes.find(n => n.kind === 'vpn' && bfs(c, 'internet', id => id === n.id))?.id;
+}
+
+/** Where a laptop in a spare port joins the diagram: the switch its neighbouring ports' devices are cabled to. */
+function spareSwitch(sc: LabScenario, c: Canvas, portId: string): string | undefined {
+  const i = sc.ports.findIndex(p => p.id === portId);
+  const rows = [...sc.ports.slice(0, i).reverse(), ...sc.ports.slice(i + 1)];
+  for (const r of rows) {
+    if (!r.host) continue;
+    const sw = neighbours(c, r.host).find(id => L2.includes(nodeOf(c, id)?.kind as NodeKind));
+    if (sw) return sw;
+  }
+  return c.nodes.find(n => n.kind === 'switch')?.id;
+}
+
+export interface DesignCheck { slot: LabSlot; ok: boolean; text: string }
+
+/**
+ * Review a diagram built from scratch against the scenario's jobs: each spot of the guided outline becomes a job
+ * ("all traffic from the internet passes an IPS") that the learner's own layout must do somewhere.
+ */
+export function gradeDesign(sc: LabScenario, w: LabWork): { checks: DesignCheck[]; findings: string[] } {
+  const c = w.canvas ?? blankCanvas();
+  const findings: string[] = [];
+  const unplaced = sc.hosts.filter(h => !h.via && !nodeOf(c, h.id));
+  if (unplaced.length) findings.push(`Still to place: ${unplaced.map(h => h.name).join(', ')}.`);
+  const loose = c.nodes.filter(n => !neighbours(c, n.id).length);
+  if (loose.length) findings.push(`Not cabled yet: ${loose.map(n => nodeLabel(sc, c, n.id)).join(', ')}.`);
+  if (c.nodes.some(n => n.kind === 'hub')) findings.push('A hub repeats every frame out of every port, so any device on it can capture the others\' traffic. Use a switch.');
+
+  // Each flow between real systems, with the zones the scenario intends, so the review does not depend on the VLAN settings.
+  const vpn = vpnNode(c);
+  const ends = sc.flows.flatMap(f => {
+    if (f.from.startsWith('port:') || f.from.startsWith('swap:')) return [];
+    const at = (id: string) => {
+      if (id === 'internet' || externalById(sc, id)) return { node: 'internet', zone: 'internet', host: externalById(sc, id) ? id : undefined };
+      const h = hostById(sc, id)!;
+      return { node: h.via ?? h.id, zone: h.zone, host: h.id };
+    };
+    const to = at(f.to);
+    if (f.from === 'remote') {
+      const zone = sc.zones.find(z => z.virtual)!.id;
+      return [{ f, remote: true, srcNode: vpn ?? 'internet', src: vpn ? zone : 'internet', ctxSrc: zone, ...to }];
+    }
+    const from = at(f.from);
+    return [{ f, remote: false, srcNode: from.node, src: from.zone, ctxSrc: from.zone, ...to }];
+  });
+
+  const checks = sc.slots.map((slot): DesignCheck => {
+    if (slot.vpn) {
+      return vpn ? { slot, ok: true, text: slot.why } : { slot, ok: false, text: `Nothing lets remote workers in: no VPN concentrator the internet can reach. ${slot.why}` };
+    }
+    const covered = ends.filter(e => slot.on({ src: e.ctxSrc, dst: e.zone, dstHost: e.host }));
+    const routes = covered.map(e => ({ e, r: graphRoute(sc, c, e.srcNode, e.src, e.node, e.zone) }));
+    if (routes.some(x => 'error' in x.r)) return { slot, ok: false, text: 'Some of the traffic this job covers cannot get through at all yet, so finish placing and cabling first.' };
+    const stepsOf = (x: (typeof routes)[number]) => (x.r as { steps: Step[] }).steps;
+    let ok: boolean;
+    if (slot.mode === 'inline') {
+      ok = routes.every(x => stepsOf(x).some(s => !s.tap && !!s.dev && slot.answer.includes(s.dev)));
+    } else {
+      const seen = (x: (typeof routes)[number]) => stepsOf(x).some(s => s.tap && !!s.dev && slot.answer.includes(s.dev));
+      const detected = routes.filter(x => x.e.f.expect === 'detected');
+      ok = detected.length ? detected.every(seen) : routes.some(seen);
+    }
+    if (ok) return { slot, ok, text: slot.why };
+    const wrong = routes.flatMap(stepsOf).map(s => s.dev).find(d => !!d && !!slot.wrong?.[d] && (slot.mode === 'tap') === routes.flatMap(stepsOf).some(s => s.dev === d && s.tap));
+    return { slot, ok, text: `${wrong ? slot.wrong![wrong] : 'Nothing does this job yet.'} ${slot.why}` };
+  });
+  return { checks, findings };
+}
+
+/**
+ * The scenario's outline drawn as a diagram: one way to build it from scratch, shown on request and used by the spec
+ * to prove the routing works.
+ */
+export function chainCanvas(sc: LabScenario): Canvas {
+  const nodes: CanvasNode[] = [];
+  const links: CanvasLink[] = [];
+  const count: Partial<Record<NodeKind, number>> = {};
+  const add = (kind: NodeKind, x: number, y: number, id?: string) => {
+    count[kind] = (count[kind] ?? 0) + 1;
+    const n = { id: id ?? `${kind}-${count[kind]}`, kind, x, y };
+    nodes.push(n);
+    return n.id;
+  };
+  const link = (a: string, b: string) => links.push({ a, b });
+  let y = 16;
+  const COL = 300;
+  // Hang a switch's zones under it: hosts in rows, with any spot drawn inside a zone (a WAF, a VPN) in front.
+  // Hang a switch's zones under it: any spot drawn inside a zone (a WAF, a VPN) on the first row, cabled to the switch,
+  // with the servers it guards straight below it; every other system on the rows below, cabled to the switch. While
+  // more of the outline follows, the middle column stays clear for the cable down to it.
+  const hang = (sw: string, zones: string[], spine: boolean) => {
+    const cols = spine ? [0, 1, 3, 4] : [0, 1, 2, 3, 4];
+    const guards: { kind: NodeKind; hosts: string[] }[] = [];
+    const hosts: string[] = [];
+    for (const zid of zones) {
+      const inZone = sc.hosts.filter(h => h.zone === zid && !h.via);
+      for (const sid of zoneById(sc, zid)!.slots ?? []) {
+        const slot = sc.slots.find(s => s.id === sid)!;
+        guards.push({ kind: slot.answer[0], hosts: slot.vpn ? [] : inZone.filter(h => slot.on({ src: 'internet', dst: zid, dstHost: h.id })).map(h => h.id) });
+      }
+      hosts.push(...inZone.map(h => h.id));
+    }
+    const top = y + 76;
+    const taken = new Set<string>();
+    const at = (row: number, col: number) => { taken.add(`${row}:${col}`); return { x: 16 + cols[col] * 140, y: top + row * 76 }; };
+    const rows = guards.length ? 1 : 0;
+    const guarded = new Set<string>();
+    guards.forEach((g, col) => {
+      const p = at(0, col);
+      const gid = add(g.kind, p.x, p.y);
+      link(sw, gid);
+      g.hosts.forEach((h, k) => {
+        const q = at(rows + k, col);
+        add('host', q.x, q.y, h);
+        link(gid, h);
+        guarded.add(h);
+      });
+    });
+    let last = rows - 1;
+    for (const h of hosts.filter(x => !guarded.has(x))) {
+      let cell = 0;
+      const n = cols.length;
+      while (taken.has(`${rows + Math.floor(cell / n)}:${cell % n}`)) cell++;
+      const row = rows + Math.floor(cell / n);
+      const p = at(row, cell % n);
+      add('host', p.x, p.y, h);
+      link(sw, h);
+      last = Math.max(last, row);
+    }
+    for (const t of taken) last = Math.max(last, Number(t.split(':')[0]));
+    y = top + last * 76;
+  };
+  let prev: string | null = null;
+  for (const [i, n] of sc.chain.entries()) {
+    const spine = i < sc.chain.length - 1;
+    let id: string;
+    if (n.kind === 'cloud') id = add('internet', COL, y, 'internet');
+    else if (n.kind === 'slot') {
+      id = add(sc.slots.find(s => s.id === n.slot)!.answer[0], COL, y);
+      if (prev) link(prev, id);
+      if (n.zones?.length) {
+        const sw = add('switch', COL + 180, y);
+        link(id, sw);
+        hang(sw, n.zones, spine);
+      }
+    } else {
+      id = add('switch', COL, y);
+      if (prev) link(prev, id);
+      if (n.tap) link(id, add(sc.slots.find(s => s.id === n.tap)!.answer[0], COL + 180, y));
+      if (n.zones?.length) hang(id, n.zones, spine);
+    }
+    prev = id;
+    y += 76;
+  }
+  return { nodes, links };
+}
+
+// ── Running traffic ──────────────────────────────────────────────────────
+
 export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult {
   const hops: Hop[] = [];
   const done = (delivered: boolean, blocked: boolean, alerted: boolean): FlowResult => {
@@ -390,9 +663,10 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     return { hops, delivered, blocked, alerted, ok };
   };
 
-  // Where it starts.
+  // Where it starts: a zone, and in a diagram built from scratch, the box it leaves from.
   let src: string;
   let srcHost: string | undefined;
+  let srcNode = 'internet';
   if (flow.from === 'internet') {
     src = 'internet';
     hops.push({ at: 'Internet', result: 'info', text: 'It arrives from the internet.' });
@@ -402,8 +676,10 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     hops.push({ at: nameOf(sc, flow.from), result: 'info', text: 'It arrives from the internet.' });
   } else if (flow.from === 'remote') {
     const spot = sc.slots.find(s => s.vpn);
-    if (spot && w.slots[spot.id] === 'vpn') {
+    const vpn = w.canvas ? vpnNode(w.canvas) : spot && w.slots[spot.id] === 'vpn' ? 'vpn' : undefined;
+    if (vpn) {
       src = sc.zones.find(z => z.virtual)!.id;
+      srcNode = vpn;
       hops.push({ at: DEVICES.vpn.name, result: 'pass', text: `The VPN concentrator checks the user's sign-in, ends the encrypted tunnel and gives the laptop an address in ${where(sc, src)}.` });
     } else {
       src = 'internet';
@@ -430,6 +706,14 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     }
     src = z.id;
     hops.push({ at: row.label, result: 'fail', text: `It lands in ${z.name} (VLAN ${z.vlan}) and DHCP gives it an address.` });
+    if (w.canvas) {
+      const at = swap ? flow.from.slice(5) : spareSwitch(sc, w.canvas, portId);
+      if (!at) {
+        hops.push({ at: row.label, result: 'info', text: 'There is no switch on the diagram yet for it to plug into.' });
+        return done(false, false, false);
+      }
+      srcNode = at;
+    }
   } else {
     const host = hostById(sc, flow.from)!;
     const faults = addrFaults(sc, w, host);
@@ -439,12 +723,14 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     }
     src = hostZone(sc, w, host)!.id;
     srcHost = host.id;
+    srcNode = host.via ?? host.id;
     hops.push({ at: host.name, result: 'info', text: `It starts in ${where(sc, src)}.` });
   }
 
   // Where it is going.
   let dst: string;
   let dstHost: string | undefined;
+  let dstNode = 'internet';
   if (flow.to === 'internet') dst = 'internet';
   else if (externalById(sc, flow.to)) {
     dst = 'internet';
@@ -460,10 +746,26 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     }
     dst = hostZone(sc, w, host)!.id;
     dstHost = host.id;
+    dstNode = host.via ?? host.id;
   }
 
-  const ctx: PathCtx = { src, dst, dstHost };
-  const path = sc.slots.filter(s => !s.vpn && s.on(ctx));
+  // What it meets on the way: the outline's spots, or whatever the learner cabled into their own diagram.
+  let steps: Step[];
+  if (w.canvas) {
+    const route = graphRoute(sc, w.canvas, srcNode, src, dstNode, dst);
+    if ('error' in route) {
+      hops.push({ at: route.at, result: 'fail', text: route.error });
+      return done(false, false, false);
+    }
+    steps = route.steps;
+  } else {
+    const ctx: PathCtx = { src, dst, dstHost };
+    // Inside one VLAN the switch delivers directly, so only what watches the switch sees it.
+    steps = sc.slots.filter(s => !s.vpn && s.on(ctx) && (s.mode === 'tap' || src !== dst)).map(slot => {
+      const dev = w.slots[slot.id];
+      return { at: dev ? `${DEVICES[dev].name} (${slot.label})` : slot.label, dev, tap: slot.mode === 'tap' };
+    });
+  }
   const d = w.detect;
   let alerted = false;
   const alert = (at: string, how: string) => {
@@ -475,17 +777,14 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
     hops.push({ at: 'Switch', result: 'info', text: `Both ends are in ${where(sc, src)}, the same VLAN, so the switch delivers it directly. No firewall sits in between.` });
   }
   let filtered = false;
-  for (const slot of path) {
-    const dev = w.slots[slot.id];
-    const at = dev ? `${DEVICES[dev].name} (${slot.label})` : slot.label;
-    if (slot.mode === 'tap') {
+  for (const { at, dev, tap } of steps) {
+    if (tap) {
       if (dev === 'ids' || dev === 'ips') {
         const how = detects(d, flow.threat);
         if (how) alert(at, dev === 'ips' ? `${how}, but on a mirror port it only gets a copy, so it cannot drop anything` : how);
       }
       continue;
     }
-    if (src === dst) continue;
     if (!dev) {
       hops.push({ at, result: 'info', text: 'This spot is empty, so the traffic passes straight through.' });
       continue;
@@ -546,7 +845,7 @@ export function runFlow(sc: LabScenario, w: LabWork, flow: LabFlow): FlowResult 
         hops.push({ at, result: 'pass', text: 'Reputation filtering is off, so the proxy fetches whatever is asked for.' });
         continue;
       }
-      hops.push({ at, result: 'pass', text: 'It fetches the site for the user.' });
+      hops.push({ at, result: 'pass', text: dst === 'internet' ? 'It fetches the site for the user.' : 'A forward proxy handles users\' requests out to the internet; it passes this through.' });
       continue;
     }
     hops.push({ at, result: 'info', text: { router: 'A router just forwards it; nothing here applies the security rules.', hub: 'A hub repeats it to every port, so anyone plugged in can capture it.', honeypot: 'A honeypot is a decoy, not a filter: it does nothing to traffic passing through.', lb: 'A load balancer forwards it to a server without inspecting it.', vpn: 'A VPN concentrator only handles tunnels; it passes this through.' }[dev as 'router' | 'hub' | 'honeypot' | 'lb' | 'vpn'] });

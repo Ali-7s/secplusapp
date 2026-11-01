@@ -1,0 +1,66 @@
+:host { display: block; }
+
+.tools { display: grid; gap: 6px; margin-bottom: 8px; }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tool-label { min-width: 44px; font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--c-text-2); }
+.hint { flex: 1 1 220px; font-size: 12.5px; line-height: 1.45; color: var(--c-text-2); }
+.spacer { flex: 1; }
+
+.chip {
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px 5px 7px; border-radius: 8px; border: 2px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+  mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; color: var(--c-text-2); }
+  &:hover { border-color: var(--c-accent); }
+  &.host { border-style: dashed; }
+  &.mode.on { border-color: var(--c-accent-solid); background: var(--c-accent-solid); color: var(--c-on-accent); mat-icon { color: inherit; } }
+  &.danger:hover { border-color: var(--c-error); }
+}
+.icon { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; cursor: pointer; border: 0; border-radius: 8px; background: none; color: var(--c-text-2);
+  &:hover { background: var(--c-surface-3); color: var(--c-text); }
+  mat-icon { font-size: 19px; width: 19px; height: 19px; }
+  &.sm { width: 24px; height: 24px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+}
+
+// The board scrolls sideways on a narrow screen; boxes keep their places.
+.scroll { overflow: auto; max-height: 75vh; border-radius: 10px; border: 2px solid var(--c-border); background: var(--c-surface-2); }
+.board { position: relative; cursor: crosshair;
+  background-image: radial-gradient(var(--c-border) 1px, transparent 1px); background-size: 20px 20px;
+  &.ro { cursor: default; }
+}
+.wires { position: absolute; inset: 0; pointer-events: none;
+  line { stroke: var(--wire); stroke-width: 3; stroke-linecap: round; }
+  line.mirror { stroke-dasharray: 6 6; }
+  line.on { stroke: var(--c-accent); }
+}
+
+.nd { position: absolute; display: flex; align-items: center; gap: 6px; padding: 4px 8px; font: inherit; text-align: left; cursor: grab;
+  touch-action: none; user-select: none; border-radius: 10px; border: 2px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+  mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; color: var(--c-accent); }
+  &:disabled { cursor: default; opacity: 1; }
+  &:focus-visible { outline: 3px solid var(--c-accent); outline-offset: 2px; }
+  &.sel { border-color: var(--c-accent-solid); box-shadow: 0 0 0 3px var(--c-accent-light); }
+  // Tints are translucent, so each sits on a solid surface to hide the wires behind it.
+  &[data-kind='internet'] { background: linear-gradient(var(--cloud-fill), var(--cloud-fill)), var(--c-surface); border-color: var(--cloud-stroke); color: var(--cloud-text); mat-icon { color: inherit; } }
+  &[data-kind='switch'] { background: var(--c-surface-3); }
+}
+.nl { min-width: 0; font-size: 12px; font-weight: 700; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@for $t from 0 through 3 {
+  .nd[data-tone='#{$t}'] { border-color: var(--z#{$t}-stroke); background: linear-gradient(var(--z#{$t}-fill), var(--z#{$t}-fill)), var(--c-surface); }
+  .nd[data-tone='#{$t}'].sel { border-color: var(--c-accent-solid); }
+}
+
+.panel { margin-top: 8px; padding: 8px 12px 10px; border-radius: 10px; border: 2px solid var(--c-accent-solid); background: var(--c-surface);
+  .p-head { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--c-text); mat-icon { color: var(--c-accent); } }
+  .p-about { margin: 4px 0 8px; font-size: 13px; line-height: 1.5; color: var(--c-text-2); }
+}
+.p-cables { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.cable { display: inline-flex; align-items: center; gap: 4px; padding: 2px 2px 2px 8px; border-radius: 8px; background: var(--c-surface-3);
+  font-size: 12.5px; font-weight: 700; color: var(--c-text);
+  > mat-icon { font-size: 15px; width: 15px; height: 15px; color: var(--c-text-2); }
+}
+.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--c-text-2);
+  select { font: inherit; font-size: 14px; font-weight: 500; padding: 6px 8px; border-radius: 8px; max-width: 100%;
+    border: 2px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+    &:focus { outline: none; border-color: var(--c-accent); }
+  }
+}
