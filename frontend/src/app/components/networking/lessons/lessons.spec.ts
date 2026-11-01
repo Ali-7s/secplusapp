@@ -87,6 +87,9 @@ describe('lesson list', () => {
     expect(first('acr', 'ALE')).toBe('risk');
     expect(first('term', 'Attribute-based access control')).toBe('access-control');
     expect(first('term', 'Differential backup')).toBe('backups');
+    expect(first('acr', 'SIEM')).toBe('logs');
+    expect(first('term', 'Password policy')).toBe('accounts');
+    expect(first('acr', 'MDM')).toBe('endpoints');
   });
 
   it('links only to flashcards that exist', async () => {
@@ -179,7 +182,7 @@ describe('lesson content', () => {
     expect(LESSON_BODIES['security-devices'].blocks.some(b => b.type === 'pbq' && b.question.kind === 'firewall')).toBeTrue();
   });
 
-  it('gives every key, certificate, scenario and policy exercise a sound answer key', () => {
+  it('gives every key, certificate, scenario, policy and hunt exercise a sound answer key', () => {
     const words = (t: string) => t.trim().split(/\s+/).length;
     eachBlock((slug, b) => {
       if (b.type === 'keys') {
@@ -210,6 +213,18 @@ describe('lesson content', () => {
         }
         expect(b.steps.some(s => s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
         expect(b.steps.some(s => !s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
+      }
+      if (b.type === 'hunt') {
+        const ids = new Set(b.rows.map(r => r.id));
+        expect(ids.size).withContext(`${slug} ${b.title} row ids`).toBe(b.rows.length);
+        for (const r of b.rows) expect(r.cells.length).withContext(`${slug} ${b.title} #${r.id}`).toBe(b.columns.length);
+        expect(b.tasks.length).withContext(`${slug} ${b.title}`).toBeGreaterThanOrEqual(3);
+        for (const t of b.tasks) {
+          expect(t.answer.length).withContext(`${slug}: ${t.ask}`).toBeGreaterThan(0);
+          for (const id of t.answer) expect(ids).withContext(`${slug}: ${t.ask}`).toContain(id);
+          expect(words(t.why)).withContext(`${slug}: ${t.ask}`).toBeGreaterThanOrEqual(10);
+          expect(words(t.hint)).withContext(`${slug}: ${t.ask}`).toBeGreaterThanOrEqual(6);
+        }
       }
       if (b.type === 'policy') {
         const names = b.attributes.map(a => a.name);

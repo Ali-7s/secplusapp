@@ -283,6 +283,18 @@
       @case ('backups') {
         <app-backup-week />
       }
+      @case ('hunt') {
+        <app-evidence-hunt [title]="b.title" [intro]="b.intro ?? ''" [look]="b.look" [columns]="b.columns" [rows]="b.rows" [tasks]="b.tasks" />
+      }
+      @case ('pwpolicy') {
+        <app-password-policy />
+      }
+      @case ('perms') {
+        <app-perms-lab />
+      }
+      @case ('mdm') {
+        <app-mdm-console />
+      }
       @case ('pbqs') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />
       }

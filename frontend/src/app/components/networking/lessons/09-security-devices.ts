@@ -1,6 +1,6 @@
 import { LessonBody } from '../networking.model';
 import { analogy, exam, examPbqs, h, hSecure, list, mcq, p, pbq, recap, table, tip, trap, words } from './dsl';
-import { FIREWALL_GUIDED, FIREWALL_PLACEMENT, FIREWALL_TRACE } from './practice';
+import { FIREWALL_GUIDED, FIREWALL_PLACEMENT, FIREWALL_TRACE, WIFI_SETUP } from './practice';
 
 export const SECURITY_DEVICES: LessonBody = {
   goals: [
@@ -247,6 +247,7 @@ export const SECURITY_DEVICES: LessonBody = {
       '**WPS attack**: guessing the short PIN of the "push button" setup feature (WPS) found on many routers.',
     ),
     exam('"Which control stops an attacker setting up an access point with your company\'s network name?" A **wireless intrusion prevention system (WIPS)**, plus 802.1X with certificate checking. "Which Wi-Fi mode gives each user their own login?" Enterprise mode (802.1X with RADIUS).'),
+    pbq('Try it: set up three wireless networks', WIFI_SETUP, { intro: 'Staff, guests and smart devices each need something different.' }),
 
     pbq('Try it: place the servers, pick the firewall', FIREWALL_PLACEMENT),
 

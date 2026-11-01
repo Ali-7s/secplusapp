@@ -410,3 +410,28 @@ export const START_LABELS: MatchQuestion = {
   ],
   takeaway: 'IP address: which device anywhere. MAC address: which device on this network. Port: which program. The side that asks is the client; the side that listens and answers is the server.',
 };
+
+export const WIFI_SETUP: MatchQuestion = {
+  id: 'lesson-wifi-setup', domain: 3, objective: '3.3', kind: 'match',
+  scenario: 'A small office is setting up three wireless networks: one for staff laptops, which are company managed and in the directory; one for visitors; and one for printers and smart thermostats, which cannot do 802.1X logins.',
+  stem: 'Choose the setting for each item.',
+  prompts: [
+    { group: 'Staff network', label: 'Security mode', choices: ['WPA3-Enterprise', 'WPA3-Personal', 'WPA2-Personal with TKIP', 'Open'], answer: 'WPA3-Enterprise',
+      why: 'Enterprise mode gives every person their own login, so one leaver can be removed without changing a password for everyone.' },
+    { group: 'Staff network', label: 'How staff prove who they are', choices: ['Their own directory login, checked by RADIUS through 802.1X', 'One shared passphrase for the office', 'Their laptop\'s MAC address on an allow list', 'Nothing: the network name is hidden'], answer: 'Their own directory login, checked by RADIUS through 802.1X',
+      why: '802.1X passes each login to a RADIUS server that checks it against the directory, which is what Enterprise mode means.' },
+    { group: 'Guest network', label: 'How guests join', choices: ['A captive portal to accept the terms, with Enhanced Open encryption', 'The staff network\'s passphrase', 'WEP with the key printed at reception', 'The WPS button on the access point'], answer: 'A captive portal to accept the terms, with Enhanced Open encryption',
+      why: 'Guests need no password, but Enhanced Open still encrypts each guest\'s traffic, and the portal records that they accepted the terms.' },
+    { group: 'Guest network', label: 'Where guest traffic goes', choices: ['Its own VLAN with internet access only, and client isolation', 'The staff VLAN, under a separate network name', 'The same VLAN as the printers'], answer: 'Its own VLAN with internet access only, and client isolation',
+      why: 'A separate VLAN keeps guests off the internal network, and client isolation stops guest devices from reaching each other.' },
+    { group: 'Printers and thermostats', label: 'Security mode', choices: ['WPA3-Personal with a long, unique passphrase', 'Open, with MAC filtering', 'WEP', 'WPA2-Enterprise'], answer: 'WPA3-Personal with a long, unique passphrase',
+      why: 'Devices that cannot do 802.1X need Personal mode, and WPA3\'s SAE stops offline guessing of the passphrase.' },
+    { group: 'Printers and thermostats', label: 'Where these devices go', choices: ['Their own IoT VLAN, allowed to reach only the servers they need', 'The staff VLAN, so staff can print easily', 'The guest VLAN'], answer: 'Their own IoT VLAN, allowed to reach only the servers they need',
+      why: 'Smart devices are rarely patched, so they get their own segment, and firewall rules limit what they can reach.' },
+    { group: 'Other suggestions', label: 'The landlord suggests MAC filtering instead of passwords. Is that enough?', choices: ['No: MAC addresses travel unencrypted and are easy to copy', 'Yes: a MAC address cannot be changed', 'Yes, if the network name is also hidden'], answer: 'No: MAC addresses travel unencrypted and are easy to copy',
+      why: 'Anyone listening can see an allowed MAC address and set their own device to use it, so MAC filtering is not access control.' },
+    { group: 'Other suggestions', label: 'The signal reaches the car park. What helps?', choices: ['A site survey, then lower the power and move the access points', 'Hide the network name', 'Turn on WPS', 'Switch the staff network to WEP'], answer: 'A site survey, then lower the power and move the access points',
+      why: 'A site survey maps where the signal reaches, so power and placement can keep it inside the building. Hiding the name does nothing.' },
+  ],
+  takeaway: 'Enterprise mode with 802.1X for people, WPA3-Personal for devices that cannot log in, captive portal and Enhanced Open for guests, a VLAN for each, and no trust in MAC filtering or hidden names.',
+};

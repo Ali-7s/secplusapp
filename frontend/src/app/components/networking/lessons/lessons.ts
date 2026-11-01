@@ -18,6 +18,9 @@ import { INCIDENT_RESPONSE } from './topics/incident-response';
 import { RISK } from './topics/risk';
 import { ACCESS_CONTROL } from './topics/access-control';
 import { BACKUPS } from './topics/backups';
+import { LOGS } from './topics/logs';
+import { ACCOUNTS } from './topics/accounts';
+import { ENDPOINTS } from './topics/endpoints';
 
 /** Lesson text, keyed by slug. The list, titles and related cards live in lesson-index.ts. */
 export const LESSON_BODIES: Record<string, LessonBody> = {
@@ -39,6 +42,9 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   risk: RISK,
   'access-control': ACCESS_CONTROL,
   backups: BACKUPS,
+  logs: LOGS,
+  accounts: ACCOUNTS,
+  endpoints: ENDPOINTS,
 };
 
 export function getLesson(slug: string | null | undefined): Lesson | undefined {

@@ -1,6 +1,6 @@
 import { MatchQuestion } from '../../../../models/exam.model';
 import { LessonBody } from '../../networking.model';
-import { analogy, exam, h, hashLab, keys, list, mcq, p, pbq, recap, steps, table, tip, trap, words } from '../dsl';
+import { analogy, exam, examPbqs, h, hashLab, keys, list, mcq, p, pbq, recap, steps, table, tip, trap, words } from '../dsl';
 
 const CRYPTO_TOOLS: MatchQuestion = {
   id: 'topic-crypto-tools', domain: 1, objective: '1.4', kind: 'match',
@@ -198,6 +198,9 @@ export const CRYPTO: LessonBody = {
       ],
       { caption: 'Obfuscation: hiding without encrypting' },
     ),
+
+    h('Practice: protect data in each state', { keep: 'Data at rest gets disk, database or file encryption; data in transit gets TLS or IPsec; keys belong in a key management service or HSM, never next to the data they protect.' }),
+    examPbqs('crypto', 'These come from the practice exam: close the gaps for data at rest, in transit and in use, and configure encrypted cloud storage with managed keys. They load when you press Start.'),
   ],
   check: [
     mcq('Bob wants to send Alice a confidential message using asymmetric encryption. Which key should he encrypt it with?',

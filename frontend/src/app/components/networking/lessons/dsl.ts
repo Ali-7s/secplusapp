@@ -1,4 +1,4 @@
-import { Block, CalloutKind, CertCase, DecideOption, DecideStep, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, CertCase, DecideOption, DecideStep, HuntRow, HuntTask, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -106,3 +106,16 @@ export const policy = (title: string, attributes: PolicyAttr[], rules: PolicyRul
 
 /** The backup week simulator. */
 export const backupWeek = (): Block => ({ type: 'backups' });
+
+/** An evidence hunt through SIEM events or a packet capture. */
+export const hunt = (title: string, look: 'siem' | 'pcap', columns: string[], rows: HuntRow[], tasks: HuntTask[], intro?: string): Block =>
+  ({ type: 'hunt', title, intro, look, columns, rows, tasks });
+
+/** The password policy builder. */
+export const passwordPolicy = (): Block => ({ type: 'pwpolicy' });
+
+/** The Linux permissions lab. */
+export const permsLab = (): Block => ({ type: 'perms' });
+
+/** The MDM policy console. */
+export const mdmConsole = (): Block => ({ type: 'mdm' });

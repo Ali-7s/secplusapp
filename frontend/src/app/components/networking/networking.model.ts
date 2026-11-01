@@ -165,6 +165,23 @@ export interface PolicyChallenge {
   by: string;
 }
 
+/** One line of evidence in a hunt: a log event or a captured packet. `detail` is shown when the row is opened. */
+export interface HuntRow {
+  id: string;
+  cells: string[];
+  /** Which log source the event came from, for the source filter (SIEM view only). */
+  source?: string;
+  detail?: string[];
+}
+
+/** Something to find: pin the row that shows it. Any id in `answer` is right; `hint` steers a wrong pick. */
+export interface HuntTask {
+  ask: string;
+  answer: string[];
+  why: string;
+  hint: string;
+}
+
 export type Block =
   /**
    * A heading starts a new part of the lesson. `keep` is the one or two lines worth remembering from the part,
@@ -202,7 +219,15 @@ export type Block =
   /** An access policy to experiment with: set the request, see which statements match and what decides. Deny overrides allow. */
   | { type: 'policy'; title: string; intro?: string; attributes: PolicyAttr[]; rules: PolicyRule[]; challenges: PolicyChallenge[] }
   /** A week of backups: pick full, incremental or differential and a failure day, see what has to be restored. */
-  | { type: 'backups' };
+  | { type: 'backups' }
+  /** Search and filter a SIEM's events (`siem`) or a packet capture (`pcap`), and pin the evidence each task asks for. */
+  | { type: 'hunt'; title: string; intro?: string; look: 'siem' | 'pcap'; columns: string[]; rows: HuntRow[]; tasks: HuntTask[] }
+  /** Set a password and lockout policy and see which attacks it stops and which problems it causes. */
+  | { type: 'pwpolicy' }
+  /** Set Linux file permissions with checkboxes or numbers, and match the tasks. */
+  | { type: 'perms' }
+  /** Configure MDM policies for three device groups and see how they handle a week of incidents. */
+  | { type: 'mdm' };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;

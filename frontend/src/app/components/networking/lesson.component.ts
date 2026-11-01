@@ -28,6 +28,10 @@ import { DecideComponent } from './blocks/decide.component';
 import { RiskCalcComponent } from './blocks/risk-calc.component';
 import { PolicyPlaygroundComponent } from './blocks/policy-playground.component';
 import { BackupWeekComponent } from './blocks/backup-week.component';
+import { EvidenceHuntComponent } from './blocks/evidence-hunt.component';
+import { PasswordPolicyComponent } from './blocks/password-policy.component';
+import { PermsLabComponent } from './blocks/perms-lab.component';
+import { MdmConsoleComponent } from './blocks/mdm-console.component';
 
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
@@ -54,7 +58,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
     RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
     HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
-    BackupWeekComponent,
+    BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',

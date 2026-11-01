@@ -76,7 +76,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 15,
   },
   {
-    slug: 'security-devices', number: 9, minutes: 63, icon: 'security',
+    slug: 'security-devices', number: 9, minutes: 68, icon: 'security',
     title: 'Firewalls, zones, VPNs and Wi-Fi',
     summary: 'How firewall rules are read, where firewalls and the screened subnet sit, what proxies and load balancers do, and the basics of VPNs and Wi-Fi security, with hardening for each.',
     related: [...term('Firewall', 'Screened subnet', 'Proxy server', 'Load balancing', 'Implicit deny', 'Packet filtering', 'Stateful inspection'), ...acr('NGFW', 'WAF', 'UTM', 'SWG', 'DMZ', 'VPN', 'IPSec', 'WPA2', 'WPA3'), ...term('Evil twin', 'Rogue access point', 'Web filter', 'Jump server')],
@@ -99,7 +99,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
   },
 ]), ...inTrack('topics', [
   {
-    slug: 'crypto', number: 1, minutes: 40, optionalMinutes: 1, icon: 'key',
+    slug: 'crypto', number: 1, minutes: 46, optionalMinutes: 1, icon: 'key',
     title: 'Encryption, hashing and signatures',
     summary: 'Hash some text and watch it change, salt a password, and pick which of Alice\'s and Bob\'s keys locks, unlocks, signs and verifies. Then see how TLS combines them all.',
     related: [...term('Symmetric encryption', 'Asymmetric encryption', 'Hashing', 'Salting', 'Key stretching', 'Digital signature', 'Non-repudiation', 'Hybrid encryption', 'Key exchange', 'Public key', 'Private key', 'Plaintext and ciphertext', 'Rainbow table', 'Perfect forward secrecy', 'Session key'),
@@ -159,6 +159,30 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
       ...acr('UPS', 'DRP', 'COOP'),
       ...term('Backup', 'High availability', 'Load balancing', 'Platform diversity', 'Multi-cloud', 'Capacity planning', 'Disaster recovery', 'Business continuity', 'Resilience testing'), ...acr('HA', 'DR', 'BCP', 'PDU', 'RAID')],
     focus: 15,
+  },
+  {
+    slug: 'logs', number: 8, minutes: 47, icon: 'manage_search',
+    title: 'Logs, alerts and packet captures',
+    summary: 'Hunt through a night of SIEM events from the first sprayed password to the cleared log, sort alerts into true and false positives, then read a packet capture for a scan, cleartext passwords and ARP poisoning.',
+    related: [...acr('SIEM', 'SOAR', 'NetFlow', 'IoC'), ...term('Log aggregation', 'Alert tuning', 'False positive', 'False negative', 'Impossible travel', 'Out-of-cycle logging', 'Missing logs', 'Concurrent session usage', 'Syslog', 'Command and control', 'Exfiltration', 'Lateral movement', 'Persistence', 'ARP poisoning'),
+      ...term('Indicator of compromise', 'Account lockout', 'Password spraying', 'Brute force attack', 'Privilege escalation', 'Man-in-the-middle attack', 'Vulnerability scanning'), ...acr('IDS', 'IPS', 'EDR', 'XDR', 'UEBA')],
+    focus: 18,
+  },
+  {
+    slug: 'accounts', number: 9, minutes: 34, icon: 'manage_accounts',
+    title: 'Accounts, passwords and permissions',
+    summary: 'Bring an old password policy up to date and watch which attacks it stops, sort authentication factors, set Linux permissions with chmod, and work out effective NTFS and share permissions.',
+    related: [...term('Password policy', 'Password spraying', 'Credential stuffing', 'Account lockout', 'Password manager', 'Passwordless authentication', 'Multifactor authentication', 'Security key', 'Biometrics'), ...acr('MFA', 'TOTP', 'HOTP', 'NTFS', 'GPO'),
+      ...term('Account provisioning and deprovisioning', 'Authentication token', 'Brute force attack', 'Least privilege', 'Federation'), ...acr('AD', 'LDAP', 'SSO')],
+    focus: 14,
+  },
+  {
+    slug: 'endpoints', number: 10, minutes: 28, icon: 'devices',
+    title: 'Hardening endpoints and mobile devices',
+    summary: 'Work through a hardening checklist, find what should not be listening on a web server, compare BYOD, COPE and CYOD, then run an MDM console through a week of lost phones and wandering tablets.',
+    related: [...acr('MDM', 'BYOD', 'COPE', 'CYOD', 'UEM', 'MAM', 'HIPS', 'FDE'), ...term('Containerization', 'Geofencing', 'Jailbreaking', 'Side loading', 'Mobile connection methods', 'Application allow list'),
+      ...term('Hardening', 'Attack surface', 'Patch management', 'Secure baseline', 'Decommissioning', 'Default credentials'), ...acr('EDR', 'HIDS', 'TPM', 'SED')],
+    focus: 14,
   },
 ])];
 

@@ -21,7 +21,7 @@ export interface LessonPart {
 const WORDS_PER_MINUTE = 110;
 
 /** Extra minutes for blocks you work through rather than read. */
-const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, decide: 4, riskcalc: 3, policy: 4, backups: 3 };
+const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, decide: 4, riskcalc: 3, policy: 4, backups: 3, hunt: 5, pwpolicy: 4, perms: 3, mdm: 4 };
 
 function words(value: unknown): number {
   if (typeof value === 'string') return value.split(/\s+/).filter(Boolean).length;
