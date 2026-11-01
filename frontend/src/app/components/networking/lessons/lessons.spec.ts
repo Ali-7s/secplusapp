@@ -108,10 +108,11 @@ describe('lesson list', () => {
     expect(missing).toEqual([]);
   });
 
-  it('never lets the capstone outrank the lesson a card belongs to', () => {
-    for (const l of LESSON_META.filter(m => m.slug !== 'web-request')) {
+  it('never lets a capstone outrank the lesson a card belongs to', () => {
+    const capstones = ['web-request', 'build-network'];
+    for (const l of LESSON_META.filter(m => !capstones.includes(m.slug))) {
       for (const card of l.related.slice(0, l.focus)) {
-        expect(lessonsForCard(card.kind, card.name)[0].slug).withContext(`${card.name} in ${l.slug}`).not.toBe('web-request');
+        expect(capstones).withContext(`${card.name} in ${l.slug}`).not.toContain(lessonsForCard(card.kind, card.name)[0].slug);
       }
     }
   });

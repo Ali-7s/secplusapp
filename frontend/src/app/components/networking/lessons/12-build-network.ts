@@ -1,0 +1,109 @@
+import { LessonBody } from '../networking.model';
+import { analogy, exam, h, list, mcq, networkLab, p, recap, steps, table, tip, trap, words } from './dsl';
+
+export const BUILD_NETWORK: LessonBody = {
+  goals: [
+    'Place firewalls, an IPS, an IDS, a WAF, a proxy and a VPN concentrator where each one works',
+    'Segment a switch with VLANs, port security and shut-down spare ports',
+    'Address devices with static IPs, DHCP and DHCP reservations, inside the right subnet',
+    'Write a least-privilege firewall rule set and tune intrusion detection, then prove it with traffic',
+    'Isolate special networks: industrial control, card payments, medical devices, phones and cameras',
+  ],
+  blocks: [
+    recap('This lesson puts the whole course together. Subnets, masks and gateways come from lesson 2, switches and port security from lesson 6, VLANs and segmentation from lesson 7, DHCP from lesson 8, and firewalls, the screened subnet, IDS, IPS, WAF, proxies and VPNs from lesson 9.'),
+    words(
+      ['Inline', 'Placed in the path, so all traffic passes through the device and it can block'],
+      ['Mirror port (SPAN)', 'A switch port that receives a copy of other ports\' traffic, for a monitoring device'],
+      ['Implicit deny', 'The unwritten last firewall rule: anything not allowed is dropped'],
+      ['DHCP reservation', 'A DHCP setting that always gives one MAC address the same IP address'],
+      ['Jump box', 'A hardened server that administrators connect to first, and manage other systems from'],
+      ['OT', 'Operational technology: systems that run physical equipment, such as pumps and valves'],
+      ['PLC', 'Programmable logic controller: a small computer that drives machinery'],
+      ['HMI', 'Human-machine interface: the screen operators use to watch and steer the process'],
+      ['Historian', 'A server that records readings from the plant over time'],
+      ['Anomaly detection', 'Flagging traffic that differs from what is normal, instead of matching known attacks'],
+    ),
+
+    h('Where each device goes', { objective: '3.2', keep: 'Firewalls at the edge and between zones; an IPS inline behind the firewall; an IDS on a mirror port; a WAF in front of the web app; a proxy between users and the internet; a VPN concentrator in the screened subnet.' }),
+    p('Placing a security device is mostly about two questions: **does it need to block**, and **what traffic does it need to see**? Anything that blocks must be **inline**. Anything that only watches can sit on a **mirror port** or a **network tap**, where it slows nothing down and cannot break anything if it fails.'),
+    table(
+      ['Device', 'Where it goes', 'Why there'],
+      [
+        ['Firewall or NGFW', 'At the edge, and between zones', 'Every packet between zones passes it, so it can enforce the rules and deny the rest'],
+        ['IPS', 'Inline, usually just behind the edge firewall', 'It must be in the path to drop attacks that use ports the firewall allows'],
+        ['IDS', 'On a mirror port or tap', 'It sees a copy of everything, including traffic inside a VLAN, without any risk to it'],
+        ['WAF', 'Directly in front of the web application', 'Only it reads HTTP requests closely enough to stop SQL injection and cross-site scripting'],
+        ['Forward proxy', 'Between users and the internet', 'It fetches sites for users, filtering by category and reputation'],
+        ['VPN concentrator', 'In the screened subnet', 'Remote users arrive from the internet, then the firewall controls what they reach inside'],
+        ['Jump box', 'In a management zone or an OT DMZ', 'Administrators reach servers only through it, so one hardened, logged system is the way in'],
+      ],
+      { caption: 'Security device placement' },
+    ),
+    exam('An inline device that fails can **fail open** (traffic keeps flowing, unprotected) or **fail closed** (traffic stops, protected). Security devices usually fail closed; where uptime matters more, as in a plant, the choice is made deliberately. Passive monitoring on a tap avoids the problem entirely.'),
+
+    h('Building a network in six stages', { objective: '3.2', keep: 'Place the devices, segment the switch, address everything, write the firewall rules, tune detection, then run real traffic and attacks through it to prove it works.' }),
+    steps(
+      '**Place** the security devices: inline where they must block, on a mirror port where they only watch.',
+      '**Segment**: put each switch port in its zone\'s VLAN, turn on port security, and shut down spare ports.',
+      '**Address**: servers and network devices get static addresses outside the DHCP pool; PCs use DHCP; printers and similar devices get DHCP reservations.',
+      '**Rules**: allow only what the requirements need, most specific first. The implicit deny does the rest.',
+      '**Detect**: choose signatures, anomaly detection and reputation filtering, decide whether the IPS prevents or only detects, and send alerts to the SIEM.',
+      '**Test**: run normal traffic and attacks through it, and fix whatever does not behave.',
+    ),
+    analogy('Fitting out a new office building: decide where the guards and cameras go (placement), which floors each badge opens (VLANs and port security), give every room a number (addresses), write the guards\' instructions (rules), aim the cameras and decide who watches them (detection), then run a fire drill (the test).'),
+
+    h('Try it: build the network', { objective: '3.2', keep: 'Each scenario is graded stage by stage, then by traffic: business flows must work, and every attack must be stopped or alerted to the SIEM.' }),
+    networkLab(),
+    tip('Stuck on the rules? Run the traffic first. Every flow that should work but is blocked names the rule it needs, and every attack that gets through shows which device or setting is missing.'),
+
+    h('Rules and detection that hold up', { objective: '4.5', keep: 'Allow only the services needed, from the smallest source to the smallest destination, specific rules first. Signatures catch known attacks, anomaly detection catches new ones, and alerts are useless unless they reach the SIEM.' }),
+    list(
+      '**First match wins**: a broad rule above a specific one makes the specific one dead. Put narrow rules first.',
+      '**Least privilege**: name the device, not the zone, when only one device needs access; name one service, never "any".',
+      '**Stateful**: allow the connection in the direction it starts; the firewall lets replies back automatically.',
+      '**Traffic inside a VLAN never reaches the firewall**, so only something watching the switch, such as an IDS on a mirror port, sees an attack between two PCs in the same zone.',
+      '**Signatures** match known attacks precisely; **anomaly** detection catches the new and strange, with more false positives. Use both.',
+      '**Detect mode** finds false positives safely before switching an IPS to **prevent** mode.',
+    ),
+    trap('Allowing a port is not the same as allowing an attack, but it does let one through. The firewall must allow HTTPS to the web shop, so an exploit sent over HTTPS passes it. That is exactly why an IPS and a WAF sit behind the firewall.'),
+
+    h('Networks that need their own rules', { objective: '3.1', keep: 'Industrial, card payment, medical, voice and camera networks each get their own segment. Allow only the few flows each one needs, block the internet where it has no business, and log everything.' }),
+    p('Some systems are too fragile, too valuable or too regulated to share a network with ordinary PCs. Each gets its own segment and a short list of allowed flows. The lab has a scenario for each:'),
+    table(
+      ['Network', 'What is in it', 'The usual rule'],
+      [
+        ['Industrial (OT, ICS, SCADA)', 'PLCs that drive machinery, the operators\' HMI screens, and a historian of process data. Protocols such as Modbus have no security of their own.', 'Isolate it completely. Only one engineering workstation may program the controllers, and only the data flows needed cross into an OT DMZ.'],
+        ['Card payments (CDE)', 'The cardholder data environment: every system that stores or handles card numbers. PCI DSS requires it to be isolated.', 'Only the payment application reaches the card store, and it talks only to the payment processor.'],
+        ['Medical devices', 'Monitors, pumps and scanners, often on old systems that cannot be patched.', 'Isolate them, allow only their specific data flows, block the internet, and log everything.'],
+        ['Voice (VoIP)', 'Phones. SIP sets up calls (TCP 5060, or 5061 with TLS); RTP carries the audio on a range of UDP ports, and SRTP is RTP encrypted.', 'Phones reach only the call manager, the provisioning server and the time server; the audio flows between phones.'],
+        ['Cameras (IoT)', 'IP cameras streaming to a network video recorder (NVR).', 'Cameras stream to the recorder and nothing else, never the internet.'],
+      ],
+      { caption: 'Special networks and their usual rule' },
+    ),
+    p('**Industrial systems** deserve a closer look. They run pumps, valves and power, so **availability and safety come first**: a controller that stops can flood a street. That changes how they are protected:'),
+    list(
+      'Office (IT) and control (OT) networks never talk directly. They meet only in an **OT DMZ**, which holds the **historian** and a **jump box**.',
+      'Controllers sit in the deepest zone, reachable only from the control zone, and never reach the internet.',
+      'Monitoring is **passive**: an IDS on a mirror port sees every control message, with no chance of delaying or dropping one.',
+      'The most sensitive systems may be **air-gapped**: no network connection to anything else at all.',
+    ),
+    exam('Questions about ICS, SCADA, medical devices or IoT usually point to **segmentation**, isolation or an air gap as the answer, because patching such systems is often impossible or too risky. For card data, the answer is a segmented **CDE**: it shrinks what PCI DSS applies to.'),
+  ],
+  check: [
+    mcq('An attacker sends an exploit to a web server over HTTPS, which the firewall must allow. Which device placed inline behind the firewall can drop it?',
+      'An IPS', ['An IDS on a mirror port', 'A second firewall with the same rules', 'A load balancer'],
+      'An IPS inspects the contents of allowed traffic and drops what matches an attack. An IDS on a mirror port only sees a copy, so it can alert but never block.'),
+    mcq('Malware on one office PC scans another PC in the same VLAN. Which control can see it?',
+      'An IDS fed by the switch\'s mirror port', ['The edge firewall', 'The IPS on the internet link', 'The WAF in front of the web server'],
+      'Traffic between two devices in one VLAN is switched directly and never passes the firewall, IPS or WAF. Only something watching the switch itself sees it.'),
+    mcq('A printer must always have the same address, and the team wants every address managed from one place. What should they use?',
+      'A DHCP reservation for the printer\'s MAC address', ['A static address inside the DHCP pool', 'DHCP with a short lease', 'A static address on the printer\'s gateway'],
+      'A reservation ties one address to one MAC address and keeps it in the DHCP server. A static address inside the pool could be handed to another device too.'),
+    mcq('Office staff need to see readings from a water plant\'s control system. Where should they read them?',
+      'On a historian in an OT DMZ between the office and control networks', ['Directly on the HMI in the control network', 'On the PLC, through a firewall rule from the office', 'On a copy of the data sent over the internet'],
+      'The OT DMZ is the only place IT and OT meet. Staff read the historian there, and nothing from the office ever reaches the control network.'),
+    mcq('A retailer wants as few systems as possible to fall under PCI DSS. What should it do?',
+      'Segment the cardholder data environment so only systems that handle card data are inside it', ['Encrypt the office PCs\' hard drives', 'Put the tills on the guest Wi-Fi', 'Allow the CDE to reach any internet site over HTTPS'],
+      'PCI DSS applies to the CDE and anything that can reach it. A firewall that isolates the CDE keeps the office and Wi-Fi out of scope, and limits the CDE to the payment processor.'),
+  ],
+};

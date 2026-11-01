@@ -234,7 +234,9 @@ export type Block =
   /** An inbox of messages to inspect for phishing warning signs. */
   | { type: 'email' }
   /** A CVSS 3.1 base score calculator with vulnerabilities to score. */
-  | { type: 'cvss' };
+  | { type: 'cvss' }
+  /** Build a network from a scenario: place devices, set VLANs and addresses, write rules, then run traffic. */
+  | { type: 'netlab' };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;

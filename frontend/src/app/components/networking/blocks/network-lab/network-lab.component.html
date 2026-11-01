@@ -1,0 +1,425 @@
+<section class="w" aria-label="Network lab">
+  <header class="head">
+    <div class="title"><mat-icon aria-hidden="true">hub</mat-icon> Network lab</div>
+    <div class="count" aria-live="polite">{{ builtCount }} of {{ scenarios.length }} networks built</div>
+  </header>
+  <p class="intro">Pick a scenario and build its network in six stages: place the devices, segment the switch, give everything an address, write the firewall rules, set up detection, then run real traffic and attacks through it. Everything is saved as you go.</p>
+
+  <div class="tasks" role="tablist" aria-label="Scenario">
+    @for (s of scenarios; track s.id) {
+      <button type="button" role="tab" [attr.aria-selected]="active === $index" [class.on]="active === $index" [class.done]="built(s)" (click)="pickScenario($index)">
+        <mat-icon aria-hidden="true">{{ built(s) ? 'check_circle' : s.icon }}</mat-icon>{{ s.name }}
+      </button>
+    }
+  </div>
+
+  <div class="brief">
+    <p class="story">{{ sc.story }}</p>
+    <div class="reqs-title">Requirements</div>
+    <ul class="reqs">
+      @for (r of sc.requirements; track $index) { <li>{{ r }}</li> }
+    </ul>
+  </div>
+
+  <nav class="stages" aria-label="Stage">
+    @for (s of stages; track s.id; let n = $index) {
+      <button type="button" [class.on]="stage === s.id" [class.done]="stageDone(s.id)" [attr.aria-current]="stage === s.id ? 'step' : null" (click)="goStage(s.id)">
+        <span class="n">@if (stageDone(s.id)) { <mat-icon aria-hidden="true">check</mat-icon> } @else { {{ n + 1 }} }</span>{{ s.name }}
+      </button>
+    }
+  </nav>
+
+  <ng-template #slotBtn let-id>
+    @let s = slot(id);
+    @let dev = w.slots[id];
+    <div class="slot" [class.tap]="s.mode === 'tap'" [class.filled]="!!dev" [class.ready]="!!picked"
+      [class.right]="isChecked('place') && slotGrade(s).ok" [class.wrong]="isChecked('place') && !slotGrade(s).ok">
+      <button type="button" class="slot-main" (click)="tapSlot(s)" [attr.aria-label]="s.label + ': ' + (dev ? devices[dev].name : 'empty') + (picked ? '. Place the ' + devices[picked].name + ' here' : '')">
+        <span class="slot-label">{{ s.label }}</span>
+        @if (dev) {
+          <span class="slot-dev"><mat-icon aria-hidden="true">{{ devices[dev].icon }}</mat-icon>{{ devices[dev].name }}</span>
+        } @else {
+          <span class="slot-empty">{{ picked ? 'Tap to place here' : 'Empty' }}</span>
+        }
+        <span class="slot-where">{{ s.where }}</span>
+      </button>
+      @if (dev) {
+        <button type="button" class="slot-x" (click)="clearSlot(s)" [attr.aria-label]="'Remove the ' + devices[dev].name + ' from ' + s.label"><mat-icon aria-hidden="true">close</mat-icon></button>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template #zoneBox let-id>
+    @let z = zone(id);
+    <div class="zone" [attr.data-tone]="z.tone">
+      <div class="z-name">{{ z.name }}</div>
+      <div class="z-note">{{ z.note }}</div>
+      @for (sid of z.slots ?? []; track sid) {
+        <ng-container [ngTemplateOutlet]="slotBtn" [ngTemplateOutletContext]="{ $implicit: sid }" />
+      }
+    </div>
+  </ng-template>
+
+  <!-- ── Stage 1: place the devices ── -->
+  @if (stage === 'place') {
+    <p class="lead">Tap a device, then tap the spot where it belongs. Dashed spots on a switch get a <strong>copy</strong> of the traffic from a mirror port; the others sit <strong>inline</strong>, so traffic passes through them.</p>
+    <div class="palette" role="group" aria-label="Devices">
+      @for (k of sc.palette; track k) {
+        <button type="button" [class.on]="picked === k" [attr.aria-pressed]="picked === k" (click)="pick(k)">
+          <mat-icon aria-hidden="true">{{ devices[k].icon }}</mat-icon>{{ devices[k].name }}
+        </button>
+      }
+    </div>
+    <p class="does" aria-live="polite">
+      @if (picked) { <strong>{{ devices[picked].name }}:</strong> {{ devices[picked].does }}. Now tap a spot. }
+      @else { Tap a device to see what it does. }
+    </p>
+
+    <ol class="diagram">
+      @for (n of sc.chain; track $index) {
+        <li class="node">
+          @switch (n.kind) {
+            @case ('cloud') {
+              <div class="box cloud"><mat-icon aria-hidden="true">cloud</mat-icon>{{ n.name }}</div>
+            }
+            @case ('slot') {
+              <div class="row">
+                <ng-container [ngTemplateOutlet]="slotBtn" [ngTemplateOutletContext]="{ $implicit: n.slot }" />
+              </div>
+              @if (n.note) { <div class="node-note">{{ n.note }}</div> }
+            }
+            @case ('switch') {
+              <div class="row">
+                <div class="box switch"><mat-icon aria-hidden="true">lan</mat-icon><span><strong>{{ n.name }}</strong><small>{{ n.note }}</small></span></div>
+                @if (n.tap) { <ng-container [ngTemplateOutlet]="slotBtn" [ngTemplateOutletContext]="{ $implicit: n.tap }" /> }
+              </div>
+            }
+          }
+          @if (n.zones?.length) {
+            <div class="zones">
+              @for (zid of n.zones; track zid) { <ng-container [ngTemplateOutlet]="zoneBox" [ngTemplateOutletContext]="{ $implicit: zid }" /> }
+            </div>
+          }
+        </li>
+      }
+    </ol>
+
+    @if (isChecked('place')) {
+      @for (s of sc.slots; track s.id) {
+        <div class="why" [class.good]="slotGrade(s).ok" [class.bad]="!slotGrade(s).ok"><strong>{{ s.label }}:</strong> {{ slotGrade(s).text }}</div>
+      }
+    }
+    <div class="controls">
+      <button type="button" class="btn primary" (click)="check('place')"><mat-icon aria-hidden="true">fact_check</mat-icon> Check placement</button>
+      @if (isChecked('place')) { <span class="tally" [class.ok]="!placeWrong">{{ placeWrong ? placeWrong + (placeWrong === 1 ? ' spot' : ' spots') + ' to fix' : 'All placed right' }}</span> }
+      <span class="spacer"></span>
+      <button type="button" class="btn" (click)="goStage('segment')">Next: segment <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    </div>
+  }
+
+  <!-- ── Stage 2: VLANs and port security ── -->
+  @if (stage === 'segment') {
+    <p class="lead">Every switch port starts in the default <strong>VLAN 1</strong>. Put each device's port in its zone's VLAN, turn on <strong>port security</strong> so only that device's MAC address may use the port, and <strong>shut down</strong> ports with nothing plugged in.</p>
+    <div class="table-wrap">
+      <table class="ztable">
+        <caption>Zones</caption>
+        <thead><tr><th scope="col">VLAN</th><th scope="col">Zone</th><th scope="col">Holds</th></tr></thead>
+        <tbody>
+          @for (z of vlanZones; track z.id) {
+            <tr><td class="mono">{{ z.vlan }}</td><td><span class="dot" [attr.data-tone]="z.tone"></span>{{ z.name }}</td><td>{{ z.note }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ports">
+      @for (row of sc.ports; track row.id) {
+        @let p = port(row);
+        @let probs = portProblems(row);
+        <div class="port" [class.wrong]="isChecked('segment') && probs.length" [class.right]="isChecked('segment') && !probs.length" [class.off]="p.shut">
+          <div class="port-head">
+            <span class="port-name">{{ row.label }}</span>
+            @if (row.host) {
+              @let h = host(row.host);
+              <span class="port-host"><mat-icon aria-hidden="true">{{ h.icon }}</mat-icon>{{ h.name }}</span>
+              <span class="mac mono" title="MAC address">{{ h.mac }}</span>
+            } @else {
+              <span class="port-host empty">Nothing plugged in</span>
+            }
+          </div>
+          <div class="port-set">
+            <label class="field">VLAN
+              <select (change)="setPort(row, { vlan: vlanFrom($event) })" [attr.aria-label]="row.label + ' VLAN'">
+                <option [value]="1" [selected]="(p.vlan ?? 1) === 1">1 (default)</option>
+                @for (z of vlanZones; track z.id) { <option [value]="z.vlan" [selected]="p.vlan === z.vlan">{{ z.vlan }} · {{ z.name }}</option> }
+              </select>
+            </label>
+            <button type="button" class="toggle" [class.on]="!!p.secure" [attr.aria-pressed]="!!p.secure" (click)="setPort(row, { secure: !p.secure })">
+              <mat-icon aria-hidden="true">{{ p.secure ? 'lock' : 'lock_open' }}</mat-icon>Port security
+            </button>
+            <button type="button" class="toggle" [class.on]="!!p.shut" [attr.aria-pressed]="!!p.shut" (click)="setPort(row, { shut: !p.shut })">
+              <mat-icon aria-hidden="true">power_settings_new</mat-icon>{{ p.shut ? 'Shut down' : 'Port up' }}
+            </button>
+          </div>
+          @if (isChecked('segment') && probs.length) {
+            @for (t of probs; track $index) { <div class="why bad">{{ t }}</div> }
+          }
+        </div>
+      }
+    </div>
+    @for (h of wireless; track h.id) {
+      <p class="note"><mat-icon aria-hidden="true">wifi</mat-icon><span><strong>{{ h.name }}</strong> ({{ h.mac }}) joins over Wi-Fi through the {{ host(h.via!).name.toLowerCase() }}, so it lands in whatever VLAN that access point's port is in.</span></p>
+    }
+    <div class="controls">
+      <button type="button" class="btn primary" (click)="check('segment')"><mat-icon aria-hidden="true">fact_check</mat-icon> Check ports</button>
+      @if (isChecked('segment')) { <span class="tally" [class.ok]="!segmentWrong">{{ segmentWrong ? segmentWrong + (segmentWrong === 1 ? ' port' : ' ports') + ' to fix' : 'Every port is right' }}</span> }
+      <span class="spacer"></span>
+      <button type="button" class="btn" (click)="goStage('address')">Next: address <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    </div>
+  }
+
+  <!-- ── Stage 3: addresses ── -->
+  @if (stage === 'address') {
+    <p class="lead">Choose how each device gets its address. A <strong>static</strong> address is typed in with its mask and gateway; <strong>DHCP</strong> hands one out from the zone's pool; a <strong>DHCP reservation</strong> makes DHCP always give the same address to one MAC address. Each zone's gateway is the firewall's address in that VLAN.</p>
+    <div class="table-wrap">
+      <table class="ztable">
+        <caption>Subnets</caption>
+        <thead><tr><th scope="col">Zone</th><th scope="col">Subnet</th><th scope="col">Gateway</th><th scope="col">DHCP pool</th></tr></thead>
+        <tbody>
+          @for (z of sc.zones; track z.id) {
+            <tr>
+              <td><span class="dot" [attr.data-tone]="z.tone"></span>{{ z.name }}</td>
+              <td class="mono">{{ z.subnet }}</td><td class="mono">{{ z.gateway }}</td><td class="mono">{{ z.virtual ? 'Set on the VPN' : pool(z) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hosts">
+      @for (h of addrHosts; track h.id) {
+        @let a = addr(h);
+        @let z = zoneOf(h);
+        @let probs = addrProblems(h);
+        <div class="hostcard" [class.wrong]="isChecked('address') && probs.length" [class.right]="isChecked('address') && !probs.length">
+          <div class="port-head">
+            <span class="port-host"><mat-icon aria-hidden="true">{{ h.icon }}</mat-icon>{{ h.name }}</span>
+            <span class="mac mono" title="MAC address">{{ h.mac }}</span>
+            <span class="in" [class.none]="!z">@if (z) { <span class="dot" [attr.data-tone]="z.tone"></span>{{ z.name }} } @else { VLAN 1: set its port first }</span>
+          </div>
+          <div class="seg" role="group" [attr.aria-label]="h.name + ' address method'">
+            @for (m of modes; track m.v) {
+              <button type="button" [class.on]="a.mode === m.v" [attr.aria-pressed]="a.mode === m.v" (click)="setAddr(h, { mode: m.v })">{{ m.l }}</button>
+            }
+          </div>
+          @if (a.mode === 'static') {
+            <div class="addr-set">
+              <label class="field">IP address<input class="mono" inputmode="decimal" autocomplete="off" spellcheck="false" [value]="a.ip ?? ''" (input)="setAddr(h, { ip: text($event) })" placeholder="e.g. 10.0.0.10"></label>
+              <label class="field">Mask
+                <select (change)="setAddr(h, { prefix: vlanFrom($event) })" [attr.aria-label]="h.name + ' subnet mask'">
+                  <option [value]="0" [selected]="!a.prefix" disabled>Choose</option>
+                  @for (pf of prefixes; track pf) { <option [value]="pf" [selected]="a.prefix === pf">/{{ pf }}</option> }
+                </select>
+              </label>
+              <label class="field">Gateway<input class="mono" inputmode="decimal" autocomplete="off" spellcheck="false" [value]="a.gw ?? ''" (input)="setAddr(h, { gw: text($event) })" placeholder="e.g. 10.0.0.1"></label>
+            </div>
+          } @else if (a.mode === 'reserved') {
+            <div class="addr-set">
+              <label class="field">Reserved IP<input class="mono" inputmode="decimal" autocomplete="off" spellcheck="false" [value]="a.ip ?? ''" (input)="setAddr(h, { ip: text($event) })" placeholder="e.g. 10.0.0.50"></label>
+              <span class="hint">DHCP will always give this address to {{ h.mac }}, along with the mask and gateway.</span>
+            </div>
+          }
+          @if (isChecked('address') && probs.length) {
+            @for (t of probs; track $index) { <div class="why bad">{{ t }}</div> }
+          }
+        </div>
+      }
+    </div>
+    @for (h of wireless; track h.id) {
+      <p class="note"><mat-icon aria-hidden="true">wifi</mat-icon><span><strong>{{ h.name }}</strong> gets its address by DHCP once it joins the Wi-Fi.</span></p>
+    }
+    <div class="controls">
+      <button type="button" class="btn primary" (click)="check('address')"><mat-icon aria-hidden="true">fact_check</mat-icon> Check addresses</button>
+      @if (isChecked('address')) { <span class="tally" [class.ok]="!addressWrong">{{ addressWrong ? addressWrong + (addressWrong === 1 ? ' device' : ' devices') + ' to fix' : 'Every address is right' }}</span> }
+      <span class="spacer"></span>
+      <button type="button" class="btn" (click)="goStage('rules')">Next: rules <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    </div>
+  }
+
+  <!-- ── Stage 4: firewall rules ── -->
+  @if (stage === 'rules') {
+    <p class="lead">The firewall checks rules from the top and acts on the <strong>first match</strong>; anything no rule allows is dropped by the <strong>implicit deny</strong> at the end. A rule can name a whole zone or one device. Allow only what the requirements need. Replies to an allowed connection are let back in automatically, because the firewall is stateful.</p>
+
+    <ol class="rules">
+      @for (r of w.rules; track $index; let i = $index) {
+        @let note = ruleNote(r, i);
+        <li class="rule" [class.deny]="r.action === 'deny'">
+          <span class="rn">{{ i + 1 }}</span>
+          <span class="rt">
+            <span class="act" [class.deny]="r.action === 'deny'">{{ r.action === 'allow' ? 'Allow' : 'Deny' }}</span>
+            <strong>{{ label(r.from) }}</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>{{ label(r.to) }}</strong>
+            <span class="svc">{{ service(r.service) }}</span>
+            @if (note) { <span class="rnote">{{ note }}</span> }
+          </span>
+          <span class="rbtns">
+            <button type="button" class="icon" [disabled]="i === 0" (click)="moveRule(i, -1)" [attr.aria-label]="'Move rule ' + (i + 1) + ' up'"><mat-icon aria-hidden="true">arrow_upward</mat-icon></button>
+            <button type="button" class="icon" [disabled]="i === w.rules.length - 1" (click)="moveRule(i, 1)" [attr.aria-label]="'Move rule ' + (i + 1) + ' down'"><mat-icon aria-hidden="true">arrow_downward</mat-icon></button>
+            <button type="button" class="icon" (click)="removeRule(i)" [attr.aria-label]="'Delete rule ' + (i + 1)"><mat-icon aria-hidden="true">delete</mat-icon></button>
+          </span>
+        </li>
+      }
+      <li class="rule implicit">
+        <span class="rn">{{ w.rules.length + 1 }}</span>
+        <span class="rt"><span class="act deny">Deny</span> <strong>Any</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>Any</strong> <span class="svc">Any service</span><span class="rnote">The implicit deny: always last, cannot be removed.</span></span>
+      </li>
+    </ol>
+
+    <div class="newrule">
+      <div class="nr-title">Add a rule</div>
+      <div class="nr-fields">
+        <label class="field">From
+          <select (change)="setDraft('from', $event)">
+            <option value="any" [selected]="draft.from === 'any'">Any</option>
+            <option value="internet" [selected]="draft.from === 'internet'">Internet</option>
+            <optgroup label="Zones">@for (z of endpoints.zones; track z.id) { <option [value]="z.id" [selected]="draft.from === z.id">{{ z.name }}</option> }</optgroup>
+            <optgroup label="Devices">@for (h of endpoints.hosts; track h.id) { <option [value]="h.id" [selected]="draft.from === h.id">{{ h.name }}</option> }</optgroup>
+            @if (endpoints.externals.length) {
+              <optgroup label="On the internet">@for (e of endpoints.externals; track e.id) { <option [value]="e.id" [selected]="draft.from === e.id">{{ e.name }}</option> }</optgroup>
+            }
+          </select>
+        </label>
+        <label class="field">To
+          <select (change)="setDraft('to', $event)">
+            <option value="any" [selected]="draft.to === 'any'">Any</option>
+            <option value="internet" [selected]="draft.to === 'internet'">Internet</option>
+            <optgroup label="Zones">@for (z of endpoints.zones; track z.id) { <option [value]="z.id" [selected]="draft.to === z.id">{{ z.name }}</option> }</optgroup>
+            <optgroup label="Devices">@for (h of endpoints.hosts; track h.id) { <option [value]="h.id" [selected]="draft.to === h.id">{{ h.name }}</option> }</optgroup>
+            @if (endpoints.externals.length) {
+              <optgroup label="On the internet">@for (e of endpoints.externals; track e.id) { <option [value]="e.id" [selected]="draft.to === e.id">{{ e.name }}</option> }</optgroup>
+            }
+          </select>
+        </label>
+        <label class="field">Service
+          <select (change)="setDraft('service', $event)">
+            <option value="any" [selected]="draft.service === 'any'">Any service</option>
+            @for (s of sc.services; track s) { <option [value]="s" [selected]="draft.service === s">{{ service(s) }}</option> }
+          </select>
+        </label>
+        <label class="field">Action
+          <select (change)="setDraft('action', $event)">
+            <option value="allow" [selected]="draft.action === 'allow'">Allow</option>
+            <option value="deny" [selected]="draft.action === 'deny'">Deny</option>
+          </select>
+        </label>
+      </div>
+      <button type="button" class="btn" (click)="addRule()"><mat-icon aria-hidden="true">add</mat-icon> Add rule</button>
+    </div>
+
+    <div class="controls">
+      <span class="hint">Rules are tested by running traffic through them.</span>
+      <span class="spacer"></span>
+      <button type="button" class="btn" (click)="goStage('detect')">Next: detect <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    </div>
+  }
+
+  <!-- ── Stage 5: detection ── -->
+  @if (stage === 'detect') {
+    <p class="lead">Set up the intrusion detection and prevention you placed. These settings apply to every IDS, IPS and proxy in this network.</p>
+    @if (!placed('ips') && !placed('ids') && !placed('proxy')) {
+      <p class="note"><mat-icon aria-hidden="true">info</mat-icon><span>No IDS, IPS or proxy is placed yet, so these settings have nothing to act on. Place them first.</span></p>
+    }
+    <div class="opts">
+      <div class="opt">
+        <div class="opt-title">IPS mode</div>
+        <div class="seg" role="group" aria-label="IPS mode">
+          <button type="button" [class.on]="w.detect.ipsMode === 'detect'" [attr.aria-pressed]="w.detect.ipsMode === 'detect'" (click)="setDetect({ ipsMode: 'detect' })">Detect only</button>
+          <button type="button" [class.on]="w.detect.ipsMode === 'prevent'" [attr.aria-pressed]="w.detect.ipsMode === 'prevent'" (click)="setDetect({ ipsMode: 'prevent' })">Prevent</button>
+        </div>
+        <p>Inline, an IPS can drop what it recognizes (prevent) or only alert (detect). New deployments often start in detect mode to find false positives first.</p>
+      </div>
+      @for (o of detectOpts; track o.k) {
+        @let on = w.detect[o.k];
+        <div class="opt">
+          <button type="button" class="toggle wide" [class.on]="on" [attr.aria-pressed]="on" (click)="toggleDetect(o.k)">
+            <mat-icon aria-hidden="true">{{ on ? 'toggle_on' : 'toggle_off' }}</mat-icon>{{ o.t }}
+          </button>
+          <p>{{ o.d }}</p>
+        </div>
+      }
+    </div>
+    <div class="controls">
+      <span class="spacer"></span>
+      <button type="button" class="btn primary" (click)="goStage('run'); run()"><mat-icon aria-hidden="true">play_arrow</mat-icon> Run the traffic</button>
+    </div>
+  }
+
+  <!-- ── Stage 6: run traffic ── -->
+  @if (stage === 'run') {
+    <p class="lead">Each line is real traffic or an attack, sent through the network exactly as you built it. Tap one to follow it hop by hop.</p>
+    @if (!ranNow) {
+      <div class="controls">
+        <button type="button" class="btn primary" (click)="run()"><mat-icon aria-hidden="true">play_arrow</mat-icon> Run the traffic</button>
+        <span class="hint">You changed something since the last run.</span>
+      </div>
+    } @else {
+      <div class="summary" [class.ok]="passing === sc.flows.length" aria-live="polite">
+        <strong>{{ passing }} of {{ sc.flows.length }}</strong> behave as required.
+      </div>
+      <ul class="flows">
+        @for (x of results; track x.flow.id) {
+          <li class="flow" [class.ok]="x.r.ok" [class.bad]="!x.r.ok">
+            <button type="button" class="flow-head" (click)="toggleFlow(x.flow.id)" [attr.aria-expanded]="openFlow === x.flow.id">
+              <mat-icon class="st" aria-hidden="true">{{ x.r.ok ? 'check_circle' : 'cancel' }}</mat-icon>
+              <span class="ft">
+                <span class="fname">{{ x.flow.name }}</span>
+                <span class="fmeta">{{ endName(x.flow.from) }} → {{ endName(x.flow.to) }} · {{ flowService(x.flow) }}</span>
+                <span class="fres"><span class="exp" [attr.data-e]="x.flow.expect">{{ expectText[x.flow.expect] }}</span> {{ outcome(x.r) }}</span>
+              </span>
+              <mat-icon class="chev" aria-hidden="true">{{ openFlow === x.flow.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+            @if (openFlow === x.flow.id) {
+              <ol class="hops">
+                @for (hop of x.r.hops; track $index) {
+                  <li [attr.data-r]="hop.result"><mat-icon aria-hidden="true">{{ hopIcon[hop.result] }}</mat-icon><span><strong>{{ hop.at }}</strong> {{ hop.text }}</span></li>
+                }
+              </ol>
+            }
+          </li>
+        }
+      </ul>
+      @if (leftovers.place || leftovers.segment || leftovers.address) {
+        <p class="note"><mat-icon aria-hidden="true">build</mat-icon><span>Some settings are still not right, even where the traffic gets by:
+          @if (leftovers.place) { <button type="button" class="link" (click)="goStage('place'); check('place')">placement ({{ leftovers.place }})</button> }
+          @if (leftovers.segment) { <button type="button" class="link" (click)="goStage('segment'); check('segment')">ports ({{ leftovers.segment }})</button> }
+          @if (leftovers.address) { <button type="button" class="link" (click)="goStage('address'); check('address')">addresses ({{ leftovers.address }})</button> }
+        </span></p>
+      }
+      @if (built(sc)) {
+        <div class="result" role="status"><mat-icon aria-hidden="true">emoji_events</mat-icon>
+          <span><strong>{{ sc.name }} built.</strong> Every device is in the right place, every port and address is right, and all {{ sc.flows.length }} flows behave: the business works and the attacks are stopped or seen.</span></div>
+      }
+    }
+
+    <div class="controls">
+      <button type="button" class="btn ghost" (click)="showSolution = !showSolution" [attr.aria-expanded]="showSolution">
+        <mat-icon aria-hidden="true">{{ showSolution ? 'visibility_off' : 'visibility' }}</mat-icon> {{ showSolution ? 'Hide' : 'Show' }} a working rule set
+      </button>
+    </div>
+    @if (showSolution) {
+      <div class="solution">
+        <ol class="rules">
+          @for (r of sc.solution.rules; track $index) {
+            <li class="rule"><span class="rn">{{ $index + 1 }}</span><span class="rt"><span class="act">Allow</span> <strong>{{ label(r.from) }}</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>{{ label(r.to) }}</strong> <span class="svc">{{ service(r.service) }}</span></span></li>
+          }
+          <li class="rule implicit"><span class="rn">{{ sc.solution.rules.length + 1 }}</span><span class="rt"><span class="act deny">Deny</span> <strong>Any</strong> <mat-icon aria-hidden="true">arrow_forward</mat-icon> <strong>Any</strong> <span class="svc">Any service</span></span></li>
+        </ol>
+        <p class="hint">Detection: IPS in {{ sc.solution.detect.ipsMode === 'prevent' ? 'prevent' : 'detect-only' }} mode{{ sc.solution.detect.signatures ? ', signatures' : '' }}{{ sc.solution.detect.anomaly ? ', anomaly detection' : '' }}{{ sc.solution.detect.reputation ? ', reputation filtering' : '' }}{{ sc.solution.detect.siem ? ', alerts to the SIEM' : '' }}.</p>
+      </div>
+    }
+  }
+
+  <div class="controls foot">
+    <span class="spacer"></span>
+    <button type="button" class="btn ghost" (click)="startOver()"><mat-icon aria-hidden="true">restart_alt</mat-icon> Start this network over</button>
+  </div>
+</section>

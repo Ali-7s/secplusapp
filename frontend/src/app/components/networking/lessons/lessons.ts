@@ -12,6 +12,7 @@ import { HELPERS } from './08-helpers';
 import { SECURITY_DEVICES } from './09-security-devices';
 import { WEB_REQUEST } from './10-web-request';
 import { HARDENING } from './11-hardening';
+import { BUILD_NETWORK } from './12-build-network';
 import { CRYPTO } from './topics/crypto';
 import { PKI } from './topics/pki';
 import { SIGN_IN } from './topics/sign-in';
@@ -39,6 +40,7 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   'security-devices': SECURITY_DEVICES,
   'web-request': WEB_REQUEST,
   hardening: HARDENING,
+  'build-network': BUILD_NETWORK,
   crypto: CRYPTO,
   pki: PKI,
   'sign-in': SIGN_IN,
