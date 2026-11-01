@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { ProgressService } from './progress.service';
 import { BrainDumpStore } from './brain-dump-store.service';
 import { SYNC_CONFIG } from '../sync-config';
@@ -55,6 +55,16 @@ export class SyncService {
     });
     const saved = this.readCode();
     if (saved) void this.start(saved);
+    // Another tab turned sync on or off, or forgot this device: follow it, so this tab neither keeps syncing nor
+    // brings forgotten progress back down from the cloud.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== SYNC_KEY && e.key !== null) return;
+      const code = this.readCode();
+      if (!code) { if (this.code()) this.stop(); }
+      else if (formatSyncCode(code) !== this.code()) void this.start(code);
+    };
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
   }
 
   get configured(): boolean { return !!SYNC_CONFIG.apiKey && !!SYNC_CONFIG.projectId; }

@@ -1,7 +1,8 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, noNewToday, parseProgress, recordQuestion } from '../utils/progress';
 import { Rating, answerOutsideQueue, dayKey, schedule } from '../utils/srs';
 import { ScrollSpot, sameSpot } from '../utils/scroll-spot';
+import { mergeProgress, stableStringify } from '../utils/sync';
 
 const KEY = 'sp-progress';
 
@@ -11,6 +12,9 @@ export const cardKey = (kind: CardKind, name: string) => `${kind}:${name}`;
 /**
  * The app's memory. Progress lives in this browser's localStorage under "sp-progress", so studying works offline
  * and every answer saves instantly. With sync on (SyncService) an encrypted copy keeps every device alike.
+ *
+ * Each open tab holds its own copy and writes the whole of it back on every change, so two tabs would overwrite each
+ * other's work. Instead, when another tab saves, this one combines that copy with its own, by the same rules sync uses.
  */
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
@@ -23,6 +27,12 @@ export class ProgressService {
   private askedToPersist = false;
   /** Counts changes made on this device, so sync knows when there is something to send. */
   readonly changes = signal(0);
+
+  constructor() {
+    const onStorage = (e: StorageEvent) => this.fromOtherTab(e);
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+  }
 
   // ── Recording ─────────────────────────────────────────────────────────
 
@@ -199,6 +209,27 @@ export class ProgressService {
   replaceFromSync(data: ProgressData) {
     this.state.set(data);
     this.write(KEY, JSON.stringify(data));
+  }
+
+  // ── Other tabs ────────────────────────────────────────────────────────
+
+  /**
+   * Another tab of the app changed the stored progress. The browser tells every tab except the one that wrote, so
+   * this never answers its own writes. Changes made in the other tab were counted there, so they are not counted here.
+   */
+  private fromOtherTab(e: StorageEvent) {
+    if (e.key !== KEY && e.key !== null) return;
+    if (e.newValue === null || e.key === null) {
+      // The other tab forgot this device (or storage was cleared). Follow it, or the next save here would bring the data back.
+      if (this.read(KEY) === null) this.state.set(parseProgress(null));
+      return;
+    }
+    const theirs = parseProgress(e.newValue);
+    const merged = mergeProgress(this.state(), theirs);
+    const text = stableStringify(merged);
+    if (text !== stableStringify(this.state())) this.state.set(merged);
+    // This tab had something the other did not: store the combination. The other tab then finds nothing new, so it stops there.
+    if (text !== stableStringify(theirs)) this.write(KEY, JSON.stringify(merged));
   }
 
   // ── Internals ─────────────────────────────────────────────────────────
