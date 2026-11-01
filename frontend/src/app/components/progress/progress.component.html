@@ -126,7 +126,7 @@
       <mat-icon aria-hidden="true">trending_up</mat-icon>
       <h2>Nothing here yet</h2>
       <p>Your progress fills in as you study: take a <a routerLink="/exam">practice exam</a>, rate some
-        <a routerLink="/acronyms">flashcards</a>, or finish a <a routerLink="/networking">Networking Basics</a> lesson.
+        <a routerLink="/acronyms">flashcards</a>, or finish a <a routerLink="/lessons">lesson</a>.
         Studied on another device? Enter your sync code below.</p>
     </section>
     <ng-container *ngTemplateOutlet="syncCard" />
@@ -249,14 +249,15 @@
   </section>
 
   <!-- ── Lessons ───────────────────────────────────────────────────────── -->
+  @for (t of tracks; track t.id) {
   <section class="card">
-    <h2><mat-icon aria-hidden="true">lan</mat-icon> Networking Basics <span class="sub">{{ lessonsDone() }} of {{ lessons.length }} done</span></h2>
+    <h2><mat-icon aria-hidden="true">{{ t.icon }}</mat-icon> {{ t.title }} <span class="sub">{{ lessonsDoneIn(t.lessons) }} of {{ t.lessons.length }} done</span></h2>
     <ol class="lesson-list">
-      @for (l of lessons; track l.slug) {
+      @for (l of t.lessons; track l.slug) {
         @let r = lessonRecord(l.slug);
         <li [class.done]="r?.completedAt">
           <mat-icon aria-hidden="true">{{ r?.completedAt ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-          <a [routerLink]="['/networking', l.slug]">{{ l.number }}. {{ l.title }}</a>
+          <a [routerLink]="['/lessons', l.slug]">{{ l.number }}. {{ l.title }}</a>
           <span class="lesson-meta">
             @if (r?.check) { Self-check {{ r?.check?.score }} of {{ r?.check?.total }} }
             @if (pbqCount(l.slug)) { · {{ pbqCount(l.slug) }} PBQ{{ pbqCount(l.slug) === 1 ? '' : 's' }} done }
@@ -265,6 +266,7 @@
       }
     </ol>
   </section>
+  }
 
   @if (progress.hasProgress()) {
     <ng-container *ngTemplateOutlet="syncCard" />

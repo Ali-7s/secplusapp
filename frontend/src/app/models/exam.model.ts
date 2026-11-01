@@ -103,7 +103,7 @@ interface ExamQuestionBase {
   blocks?: ExhibitBlock[];
   /** The one-line lesson, shown after the per-option reasons. */
   takeaway: string;
-  /** Slug of the Networking Basics lesson that teaches the background; such questions make up the networking drill. */
+  /** Slug of the lesson that teaches the background. Questions tagged with a Networking Basics lesson make up the networking drill. */
   lesson?: string;
 }
 

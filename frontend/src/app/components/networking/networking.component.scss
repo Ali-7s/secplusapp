@@ -10,6 +10,25 @@
   @media (max-width: 600px) { gap: 10px; mat-icon { font-size: 28px; } h1 { font-size: 20px; } }
 }
 
+.jump {
+  display: flex; flex-wrap: wrap; gap: 10px; margin: -8px 0 26px;
+  a {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: var(--r-md); text-decoration: none;
+    font-size: 14px; font-weight: 700; color: var(--c-text); background: var(--c-surface); border: 1px solid var(--c-border);
+    mat-icon { color: var(--c-accent); font-size: 20px; width: 20px; height: 20px; }
+    span { font-size: 12px; font-weight: 600; color: var(--c-text-2); }
+    &:hover { border-color: var(--c-accent); background: var(--c-accent-light); }
+  }
+}
+
+.track-head {
+  display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 14px; scroll-margin-top: 76px; // clear of the sticky toolbar
+  h2 {
+    display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; font-weight: 800; color: var(--c-primary);
+    mat-icon { color: var(--c-accent); }
+  }
+}
+
 .count-badge {
   margin-left: auto; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px;
   background: var(--c-accent-light); color: var(--c-primary);

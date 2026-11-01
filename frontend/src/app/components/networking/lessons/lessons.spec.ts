@@ -1,6 +1,6 @@
 import { Block } from '../networking.model';
 import { mcq } from './dsl';
-import { LESSON_META, lessonBySlug, lessonsForCard } from './lesson-index';
+import { LESSON_META, lessonBySlug, lessonsForCard, trackLessons } from './lesson-index';
 import { LESSON_BODIES, getLesson } from './lessons';
 import { lessonMinutes, lessonParts } from './parts';
 
@@ -25,8 +25,12 @@ describe('mcq', () => {
 });
 
 describe('lesson list', () => {
-  it('numbers the lessons 1..n in order with unique slugs', () => {
-    expect(LESSON_META.map(l => l.number)).toEqual(LESSON_META.map((_, i) => i + 1));
+  it('numbers each section\'s lessons 1..n in order, with slugs unique across both', () => {
+    for (const track of ['networking', 'topics'] as const) {
+      const list = trackLessons(track);
+      expect(list.length).withContext(track).toBeGreaterThan(0);
+      expect(list.map(l => l.number)).withContext(track).toEqual(list.map((_, i) => i + 1));
+    }
     expect(new Set(LESSON_META.map(l => l.slug)).size).toBe(LESSON_META.length);
   });
 
@@ -71,6 +75,21 @@ describe('lesson list', () => {
     expect(first('term', 'Network segmentation')).toBe('vlans');
     expect(first('acr', 'NAC')).toBe('vlans');
     expect(lessonsForCard('acr', 'TLS').map(l => l.slug)).toContain('web-request');
+  });
+
+  it('points cards a topic is about at that topic', () => {
+    const first = (kind: 'acr' | 'term', name: string) => lessonsForCard(kind, name)[0]?.slug;
+    expect(first('term', 'Hashing')).toBe('crypto');
+    expect(first('acr', 'OCSP')).toBe('pki');
+    expect(first('acr', 'SAML')).toBe('sign-in');
+    expect(first('term', 'Order of volatility')).toBe('incident-response');
+  });
+
+  it('links only to flashcards that exist', async () => {
+    const [acronyms, terms] = await Promise.all(['acronyms', 'terms'].map(async f => (await fetch(`/data/${f}.json`)).json()));
+    const names = new Set([...acronyms.map((a: { acronym: string }) => 'acr:' + a.acronym), ...terms.map((t: { term: string }) => 'term:' + t.term)]);
+    const missing = LESSON_META.flatMap(l => l.related.filter(r => !names.has(r.kind + ':' + r.name)).map(r => `${l.slug}: ${r.name}`));
+    expect(missing).toEqual([]);
   });
 
   it('never lets the capstone outrank the lesson a card belongs to', () => {
@@ -154,6 +173,41 @@ describe('lesson content', () => {
 
   it('gives the firewall lesson a guided rule table to fill in', () => {
     expect(LESSON_BODIES['security-devices'].blocks.some(b => b.type === 'pbq' && b.question.kind === 'firewall')).toBeTrue();
+  });
+
+  it('gives every key, certificate and scenario exercise a sound answer key', () => {
+    const words = (t: string) => t.trim().split(/\s+/).length;
+    eachBlock((slug, b) => {
+      if (b.type === 'keys') {
+        expect(b.tasks.length).withContext(slug).toBeGreaterThanOrEqual(2);
+        for (const t of b.tasks) expect(words(t.why)).withContext(`${slug}: ${t.goal}`).toBeGreaterThanOrEqual(8);
+      }
+      if (b.type === 'certs') {
+        expect(new Set(b.cases.map(c => c.answer)).size).withContext(`${slug} uses several verdicts`).toBeGreaterThan(2);
+        for (const c of b.cases) {
+          expect(b.options).withContext(`${slug} ${c.name}`).toContain(c.answer);
+          expect(c.chain.length).withContext(`${slug} ${c.name}`).toBeGreaterThan(0);
+          expect(words(c.why)).withContext(`${slug} ${c.name}`).toBeGreaterThanOrEqual(12);
+          if (c.clue) {
+            const cert = c.chain[c.clue.cert];
+            const fields = ['Subject', 'Issuer', 'Valid from', 'Valid to', ...(cert?.fields ?? []).map(f => f.name), ...(cert?.trusted !== undefined ? ['Trust store'] : [])];
+            expect(fields).withContext(`${slug} ${c.name} clue`).toContain(c.clue.field);
+          }
+          // Each certificate is issued by the one above it in the chain.
+          c.chain.slice(0, -1).forEach((cert, i) => expect(cert.issuer).withContext(`${slug} ${c.name}`).toBe(c.chain[i + 1].subject));
+        }
+      }
+      if (b.type === 'decide') {
+        expect(b.steps.length).withContext(slug).toBeGreaterThanOrEqual(3);
+        for (const s of b.steps) {
+          expect(s.options.filter(o => o.best).length).withContext(`${slug}: ${s.question}`).toBe(1);
+          expect(s.options.length).withContext(`${slug}: ${s.question}`).toBeGreaterThanOrEqual(3);
+          for (const o of s.options) expect(words(o.feedback)).withContext(`${slug}: ${o.text}`).toBeGreaterThanOrEqual(10);
+        }
+        expect(b.steps.some(s => s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
+        expect(b.steps.some(s => !s.options[0].best)).withContext(`${slug}: best answers are not always first`).toBeTrue();
+      }
+    });
   });
 
   it('spreads the correct answers over the options', () => {

@@ -58,8 +58,9 @@ describe('practice exam pool', () => {
 
   it('has enough networking questions for the drill, each linked to a real lesson', () => {
     const slugs = new Set(LESSON_META.map(l => l.slug));
-    const linked = pool.filter(q => q.lesson);
-    expect(linked.filter(q => !slugs.has(q.lesson!)).map(q => q.id)).toEqual([]);
+    expect(pool.filter(q => q.lesson && !slugs.has(q.lesson)).map(q => q.id)).toEqual([]);
+    const networking = new Set(LESSON_META.filter(l => l.track === 'networking').map(l => l.slug));
+    const linked = pool.filter(q => q.lesson && networking.has(q.lesson));
     expect(linked.filter(q => !isPbq(q)).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.choices);
     expect(linked.filter(isPbq).length).toBeGreaterThanOrEqual(EXAM_SPECS.network.pbqs);
     expect(linked.some(q => q.kind === 'firewall')).toBeTrue();

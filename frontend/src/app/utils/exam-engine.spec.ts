@@ -63,9 +63,10 @@ describe('exam engine', () => {
     expect(buildExam(p, 'quick', 7)).not.toEqual(buildExam(p, 'quick', 8));
   });
 
-  it('builds the networking drill only from questions linked to a lesson', () => {
+  it('builds the networking drill only from questions linked to a Networking Basics lesson', () => {
     const p = pool();
     for (let i = 0; i < 30; i++) p.push({ ...single(`net-${i}`, 3), lesson: 'vlans' });
+    for (let i = 0; i < 30; i++) p.push({ ...single(`topic-${i}`, 1), lesson: 'crypto' });
     p.push({ ...firewall, id: 'net-fw', lesson: 'security-devices' }, { ...match, id: 'net-match', lesson: 'helpers' });
     const items = buildExam(p, 'network', 3);
     expect(items.length).toBe(examSize('network'));

@@ -32,7 +32,8 @@ export interface PlanInput {
   examDate?: string;
   decks: DeckState[];
   newPerDay: number;
-  nextLesson?: { slug: string; number: number; title: string };
+  /** The next lesson to do, with its label ("Lesson 3", "Topic 1") and the name of its section. */
+  nextLesson?: { slug: string; label: string; section: string; title: string };
   exams: ExamRecord[];
   /** Objectives scoring under 75%, weakest first. */
   weakObjectives: string[];
@@ -210,9 +211,9 @@ export function planTasks(input: PlanInput, phase: Phase, daysLeft: number | nul
     const l = input.nextLesson;
     tasks.push({
       id: 'lesson', icon: 'lan', done: false,
-      title: `Lesson ${l.number}: ${l.title}`,
-      detail: 'The next Networking Basics lesson. Finishing its self-check marks it complete.',
-      links: [{ label: 'Open the lesson', path: `/networking/${l.slug}` }],
+      title: `${l.label}: ${l.title}`,
+      detail: `The next ${l.section} lesson. Finishing its self-check marks it complete.`,
+      links: [{ label: 'Open the lesson', path: `/lessons/${l.slug}` }],
     });
   }
 

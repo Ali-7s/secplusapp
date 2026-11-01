@@ -365,9 +365,9 @@
     }
     <p class="takeaway"><mat-icon aria-hidden="true">lightbulb</mat-icon> <span>{{ q.takeaway }}</span></p>
     @if (lessonFor(q); as lesson) {
-      <a class="lesson-link" [routerLink]="['/networking', lesson.slug]">
+      <a class="lesson-link" [routerLink]="['/lessons', lesson.slug]">
         <mat-icon aria-hidden="true">school</mat-icon>
-        <span>Review the background: Networking Basics lesson {{ lesson.number }}, {{ lesson.title }}</span>
+        <span>Review the background: {{ trackTitle(lesson) }} {{ lesson.number }}, {{ lesson.title }}</span>
         <mat-icon aria-hidden="true">chevron_right</mat-icon>
       </a>
     }

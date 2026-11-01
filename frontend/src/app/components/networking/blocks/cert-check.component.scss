@@ -1,0 +1,73 @@
+@use 'widget';
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tabs button {
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px; border-radius: 16px; border: 2px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  &.right mat-icon { color: var(--c-success); }
+  &.wrong mat-icon { color: var(--c-error); }
+  &.on { border-color: var(--c-accent-solid); background: var(--c-accent-light); }
+}
+
+.browser { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 12px; }
+.bar {
+  flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 20px;
+  background: var(--c-surface-3); border: 1px solid var(--c-border);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--c-text-2); flex: none; }
+}
+.url { font-size: 13.5px; color: var(--c-text); overflow-wrap: anywhere; }
+.today { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--c-text-2);
+  mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+
+.chain { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.cert {
+  border: 1px solid var(--c-border-dark); border-radius: var(--r-md); background: var(--c-surface-2); padding: 10px 12px; min-width: 0;
+  &.leaf { border-color: var(--c-accent); background: var(--c-accent-light); }
+}
+.link {
+  display: flex; align-items: center; gap: 4px; padding: 4px 0 4px 18px; font-size: 12px; font-weight: 600; color: var(--c-text-2);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--c-muted); }
+}
+.c-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin-bottom: 6px; }
+.role { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: var(--c-text);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--c-text-2); } }
+.store {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 700;
+  color: var(--c-text); background: var(--c-error-light); border: 2px solid transparent;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  &.yes { background: var(--c-success-light); }
+}
+
+dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); }
+.f { display: contents; }
+dt, dd { padding: 3px 0; border-top: 1px solid var(--c-border); }
+.f:first-child dt, .f:first-child dd { border-top: 0; }
+dt { font-size: 12px; font-weight: 700; color: var(--c-text-2); padding-right: 12px; }
+dd { margin: 0; font-size: 12.5px; color: var(--c-text); overflow-wrap: anywhere; }
+.f.clue dt, .f.clue dd { background: var(--c-warning-light); }
+.f.clue dd { box-shadow: inset -3px 0 0 var(--c-warning); }
+.f.clue dt { box-shadow: inset 3px 0 0 var(--c-warning); padding-left: 6px; }
+.store.clue { border-color: var(--c-warning); }
+
+.ask { margin-top: 14px; display: grid; gap: 6px; }
+.q { font-size: 14.5px; font-weight: 800; color: var(--c-text); }
+.opt {
+  font: inherit; font-size: 14px; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 8px; border: 2px solid var(--c-border); background: var(--c-surface-2); color: var(--c-text);
+  mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; color: var(--c-text-2); }
+  &:hover { border-color: var(--c-accent); }
+  &.on { border-color: var(--c-accent-solid); background: var(--c-accent-light); mat-icon { color: var(--c-accent); } }
+  &.correct { border-color: var(--c-success); background: var(--c-success-light); mat-icon { color: var(--c-success); } }
+  &.miss { border-color: var(--c-error); background: var(--c-error-light); mat-icon { color: var(--c-error); } }
+  &[aria-disabled='true'] { cursor: default; }
+}
+.hint { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--c-text-2);
+  mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+
+@media (max-width: 600px) {
+  dl { grid-template-columns: 1fr; }
+  dt { padding-bottom: 0; }
+  dd { border-top: 0; padding-top: 0; padding-bottom: 5px; }
+  .f.clue dd { box-shadow: inset 3px 0 0 var(--c-warning); padding-left: 6px; }
+}

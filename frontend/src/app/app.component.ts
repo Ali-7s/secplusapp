@@ -39,7 +39,7 @@ export class AppComponent {
 
   /** `short` is the label in the top bar on wide screens, where all six must fit; the side menu uses `label`. */
   navItems = [
-    { path: '/networking', icon: 'lan', label: 'Networking Basics', short: 'Networking' },
+    { path: '/lessons', icon: 'school', label: 'Lessons', short: 'Lessons' },
     { path: '/acronyms', icon: 'abc', label: 'Acronym Glossary', short: 'Acronyms' },
     { path: '/terms', icon: 'menu_book', label: 'Key Terms', short: 'Key Terms' },
     { path: '/objectives', icon: 'checklist', label: 'Exam Objectives', short: 'Objectives' },

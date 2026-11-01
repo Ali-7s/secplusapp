@@ -7,7 +7,12 @@ describe('routes', () => {
     expect(routes.find(r => r.path === 'progress')?.redirectTo).toBe('/today');
   });
 
-  it('has the study pages, the networking lessons and the practice exam', () => {
-    expect(routes.map(r => r.path)).toEqual(['', 'networking', 'networking/:slug', 'acronyms', 'terms', 'exam', 'objectives', 'today', 'progress', 'reference', '**']);
+  it('sends the old networking lesson links to the lessons page', () => {
+    expect(routes.find(r => r.path === 'networking')?.redirectTo).toBe('/lessons');
+    expect(routes.find(r => r.path === 'networking/:slug')?.redirectTo).toBe('/lessons/:slug');
+  });
+
+  it('has the study pages, the lessons and the practice exam', () => {
+    expect(routes.map(r => r.path)).toEqual(['', 'lessons', 'lessons/:slug', 'networking', 'networking/:slug', 'acronyms', 'terms', 'exam', 'objectives', 'today', 'progress', 'reference', '**']);
   });
 });

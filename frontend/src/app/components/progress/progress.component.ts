@@ -15,7 +15,7 @@ import { CardRecord, ExamRecord, objectiveScores } from '../../utils/progress';
 import { isDueCard, isLearning, isMature } from '../../utils/srs';
 import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
-import { LESSON_META } from '../networking/lessons/lesson-index';
+import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
 import { DeckId } from '../../utils/brain-dump';
 
@@ -43,6 +43,8 @@ export class ProgressComponent implements OnInit {
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
   readonly domainNames = DOMAIN_NAMES;
   readonly lessons = LESSON_META;
+  /** The lesson sections, each listed with its own progress. */
+  readonly tracks = (['networking', 'topics'] as const).map(id => ({ id, ...TRACKS[id], lessons: trackLessons(id) }));
 
   private pool = signal<ExamQuestion[]>([]);
   private acronymNames = signal<string[]>([]);
@@ -101,7 +103,7 @@ export class ProgressComponent implements OnInit {
         this.deckState('ref', this.refIds, 'Reference', '/reference'),
       ],
       newPerDay: d.review.newPerDay,
-      nextLesson: next && { slug: next.slug, number: next.number, title: next.title },
+      nextLesson: next && { slug: next.slug, label: lessonLabel(next), section: TRACKS[next.track].title, title: next.title },
       exams: d.exams,
       weakObjectives: this.weakObjectives().map(o => o.objective),
       untestedObjectives: this.untestedObjectives(),
@@ -211,6 +213,9 @@ export class ProgressComponent implements OnInit {
   // ── Lessons ───────────────────────────────────────────────────────────
 
   lessonRecord(slug: string) { return this.progress.lessonRecord(slug); }
+  lessonsDoneIn(lessons: readonly { slug: string }[]): number {
+    return lessons.filter(l => this.progress.lessonRecord(l.slug)?.completedAt).length;
+  }
   readonly lessonsDone = computed(() => {
     this.progress.data();
     return this.lessons.filter(l => this.progress.lessonRecord(l.slug)?.completedAt).length;

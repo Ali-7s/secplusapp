@@ -18,7 +18,7 @@ import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossar
 import { ClozeSpan, answerSpans, isAcronymClozeCorrect, maskAnswer, otherCardNamed } from '../../utils/cloze';
 import { DumpCard, acronymToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
-import { lessonsForCard } from '../networking/lessons/lesson-index';
+import { lessonHint, lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
@@ -395,6 +395,8 @@ export class AcronymsComponent implements OnInit, DoCheck {
   }
 
   /** Networking lessons that explain this acronym, so a card can say "new to this? start here". */
+  readonly lessonHint = lessonHint;
+
   lessonsFor(acronym: string): LessonMeta[] {
     return lessonsForCard('acr', acronym).slice(0, 2);
   }

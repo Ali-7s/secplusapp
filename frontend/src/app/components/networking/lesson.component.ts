@@ -8,7 +8,7 @@ import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { ScrollSpot, readSpot, sameSpot, scrollToSpot } from '../../utils/scroll-spot';
 import { Block, CalloutKind, CardRef, Lesson } from './networking.model';
-import { LESSON_META } from './lessons/lesson-index';
+import { TRACKS, trackLessons } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
 import { LessonPart, checkMinutes, lessonParts } from './lessons/parts';
 import { MdPipe } from './blocks/md.pipe';
@@ -21,6 +21,10 @@ import { HardenListComponent } from './blocks/harden-list.component';
 import { SpotIssuesComponent } from './blocks/spot-issues.component';
 import { PbqPracticeComponent } from './blocks/pbq-practice.component';
 import { FlowComponent, NestedBoxesComponent, PortStripComponent } from './blocks/visuals.component';
+import { HashLabComponent } from './blocks/hash-lab.component';
+import { KeyPickerComponent } from './blocks/key-picker.component';
+import { CertCheckComponent } from './blocks/cert-check.component';
+import { DecideComponent } from './blocks/decide.component';
 
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
@@ -46,6 +50,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   imports: [
     RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
+    HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',
@@ -68,7 +73,6 @@ export class LessonComponent {
   private hideTimer?: ReturnType<typeof setTimeout>;
 
   lesson: Lesson | undefined;
-  readonly total = LESSON_META.length;
   readonly calloutIcons = CALLOUT_ICONS;
 
   /** The lesson split at its headings; the self-check comes after the last part. */
@@ -221,12 +225,21 @@ export class LessonComponent {
     try { return localStorage.getItem(VIEW_KEY) === 'all' ? 'all' : 'steps'; } catch { return 'steps'; }
   }
 
+  /** The lessons in the same section as this one, which the pager steps through. */
+  private get siblings() { return this.lesson ? trackLessons(this.lesson.track) : []; }
+
+  /** "Networking Basics · Lesson 3 of 11". */
+  get kicker(): string {
+    const l = this.lesson;
+    return l ? `${TRACKS[l.track].title} · ${TRACKS[l.track].unit} ${l.number} of ${this.siblings.length}` : '';
+  }
+
   get previous() {
-    return this.lesson ? LESSON_META.find(l => l.number === this.lesson!.number - 1) : undefined;
+    return this.siblings.find(l => l.number === this.lesson!.number - 1);
   }
 
   get next() {
-    return this.lesson ? LESSON_META.find(l => l.number === this.lesson!.number + 1) : undefined;
+    return this.siblings.find(l => l.number === this.lesson!.number + 1);
   }
 
   /** True when the lesson teaches how to secure something, so the list and header can say so. */

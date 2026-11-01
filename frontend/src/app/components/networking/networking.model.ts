@@ -89,6 +89,60 @@ export interface NestedLayer {
   note?: string;
 }
 
+/** One of the four keys in a public-key exercise: each person has a public key and a private key. */
+export type KeyName = 'alice-public' | 'alice-private' | 'bob-public' | 'bob-private';
+
+export interface KeyTask {
+  /** What Alice or Bob wants to achieve, e.g. "Alice sends Bob a message only Bob can read". */
+  goal: string;
+  /** The two actions to fill in, e.g. ["Encrypt with", "Decrypt with"] or ["Sign with", "Verify with"]. */
+  verbs: [string, string];
+  answer: [KeyName, KeyName];
+  why: string;
+}
+
+/** A certificate as a browser sees it. `trusted` is set on a root that is (or is not) in the device's trust store. */
+export interface CertInfo {
+  role: string;
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  /** Other fields worth showing: names it covers, key usage, revocation status... */
+  fields?: { name: string; value: string }[];
+  trusted?: boolean;
+}
+
+/** One certificate check: the site being visited, the chain it sent, and what the browser should decide. */
+export interface CertCase {
+  name: string;
+  /** The address typed in the browser. */
+  site: string;
+  today: string;
+  /** Leaf first, then each issuer up to the root. */
+  chain: CertInfo[];
+  answer: string;
+  why: string;
+  /** The field that gives it away, highlighted after checking: the certificate's index in `chain` and the field name. */
+  clue?: { cert: number; field: string };
+}
+
+export interface DecideOption {
+  text: string;
+  best?: boolean;
+  feedback: string;
+}
+
+/** One moment in a scenario: what is happening, and what you would do next. */
+export interface DecideStep {
+  /** A label for the phase or stage, shown once the step is answered ("Containment"). */
+  phase?: string;
+  situation: string;
+  question: string;
+  /** Already in display order. */
+  options: DecideOption[];
+}
+
 export type Block =
   /**
    * A heading starts a new part of the lesson. `keep` is the one or two lines worth remembering from the part,
@@ -112,14 +166,27 @@ export type Block =
   /** A guided PBQ written for this lesson. `given` pre-fills (and locks) that many firewall rows as a worked example. */
   | { type: 'pbq'; title: string; intro?: string; question: PbqQuestion; given?: number }
   /** The practice exam's PBQs tagged with this lesson, one at a time. */
-  | { type: 'pbqs'; title: string; intro?: string; lesson: string };
+  | { type: 'pbqs'; title: string; intro?: string; lesson: string }
+  /** The hash lab: type text and watch its hash change (`digest`), or see what a salt does to stored passwords (`salt`). */
+  | { type: 'hashlab'; show: 'digest' | 'salt' }
+  /** Pick which of Alice's and Bob's keys each step uses. */
+  | { type: 'keys'; title: string; intro?: string; tasks: KeyTask[] }
+  /** Look at certificate chains and decide whether the browser should trust each one. */
+  | { type: 'certs'; title: string; intro?: string; options: string[]; cases: CertCase[] }
+  /** A scenario told one decision at a time: pick what you would do, see why, then move on. */
+  | { type: 'decide'; title: string; intro?: string; steps: DecideStep[] };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;
 
+/** Networking Basics, the guided path from zero, or the hands-on topics that follow it. */
+export type TrackId = 'networking' | 'topics';
+
 /** What the lesson list and the glossary cards need, without the lesson text itself. */
 export interface LessonMeta {
   slug: string;
+  track: TrackId;
+  /** Position within its track, from 1. */
   number: number;
   title: string;
   summary: string;

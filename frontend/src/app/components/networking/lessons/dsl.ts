@@ -1,4 +1,4 @@
-import { Block, CalloutKind, PbqQuestion, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, CertCase, DecideOption, DecideStep, KeyTask, PbqQuestion, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -68,3 +68,31 @@ export function mcq(question: string, correct: string, wrong: [string, string, s
   }
   return { question, options, answer: options.indexOf(correct), explanation };
 }
+
+/** Shuffles a copy of a list the same way on every load, seeded by some text. */
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  const random = seededRandom(seed);
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** The hash lab: change a character and watch the hash (`digest`), or watch a salt at work (`salt`). */
+export const hashLab = (show: 'digest' | 'salt'): Block => ({ type: 'hashlab', show });
+
+/** A "which key?" exercise with Alice's and Bob's key pairs. */
+export const keys = (title: string, tasks: KeyTask[], intro?: string): Block => ({ type: 'keys', title, intro, tasks });
+
+/** Certificate chains to judge, each with one verdict from `options`. */
+export const certs = (title: string, options: string[], cases: CertCase[], intro?: string): Block =>
+  ({ type: 'certs', title, intro, options, cases });
+
+/** One step of a scenario. List the best option first; the options are shuffled the same way on every load. */
+export const step = (s: Omit<DecideStep, 'options'>, best: Omit<DecideOption, 'best'>, ...others: Omit<DecideOption, 'best'>[]): DecideStep =>
+  ({ ...s, options: seededShuffle([{ ...best, best: true }, ...others], s.question + s.situation) });
+
+/** A scenario told one decision at a time. */
+export const decide = (title: string, steps: DecideStep[], intro?: string): Block => ({ type: 'decide', title, intro, steps });

@@ -1,4 +1,5 @@
 import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
+import { lessonBySlug } from '../components/networking/lessons/lesson-index';
 
 export interface ExamSpec {
   label: string;
@@ -118,7 +119,7 @@ export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, see
   const rand = seededRandom(seed);
   // Random order, then a stable sort by times seen: unseen first, ties stay random.
   const freshFirst = (list: ExamQuestion[]) => shuffled(list, rand).sort((a, b) => (seen[a.id] ?? 0) - (seen[b.id] ?? 0));
-  if (spec.networking) pool = pool.filter(q => !!q.lesson);
+  if (spec.networking) pool = pool.filter(q => lessonBySlug(q.lesson)?.track === 'networking');
   // Every exam gets at least one firewall rule table, the PBQ type learners most need practice on.
   const allPbqs = freshFirst(pool.filter(isPbq));
   const firewall = allPbqs.find(q => q.kind === 'firewall');

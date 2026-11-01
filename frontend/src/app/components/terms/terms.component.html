@@ -255,9 +255,9 @@
               }
 
               @for (l of lessonsFor(t.term); track l.slug) {
-                <a class="lesson-link" [routerLink]="['/networking', l.slug]" (click)="$event.stopPropagation()">
+                <a class="lesson-link" [routerLink]="['/lessons', l.slug]" (click)="$event.stopPropagation()">
                   <mat-icon aria-hidden="true">{{ l.icon }}</mat-icon>
-                  <span><small>New to this? Start with lesson {{ l.number }}</small>{{ l.title }}</span>
+                  <span><small>{{ lessonHint(l) }}</small>{{ l.title }}</span>
                 </a>
               }
 

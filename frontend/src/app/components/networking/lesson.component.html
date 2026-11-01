@@ -2,11 +2,11 @@
   <div class="page-container">
     <article class="lesson">
       <nav class="crumbs" aria-label="Breadcrumb">
-        <a routerLink="/networking"><mat-icon aria-hidden="true">chevron_left</mat-icon> All lessons</a>
+        <a routerLink="/lessons"><mat-icon aria-hidden="true">chevron_left</mat-icon> All lessons</a>
       </nav>
 
       <header class="lesson-head">
-        <div class="kicker">Lesson {{ l.number }} of {{ total }}</div>
+        <div class="kicker">{{ kicker }}</div>
         <h1>{{ l.title }}</h1>
         <div class="meta">
           <span><mat-icon aria-hidden="true">schedule</mat-icon> About {{ l.minutes }} minutes{{ l.optionalMinutes ? ', plus ' + l.optionalMinutes + ' optional' : '' }}</span>
@@ -125,7 +125,7 @@
 
       <nav class="pager" aria-label="Lesson navigation">
         @if (previous; as prev) {
-          <a class="pager-link prev" [routerLink]="['/networking', prev.slug]">
+          <a class="pager-link prev" [routerLink]="['/lessons', prev.slug]">
             <mat-icon aria-hidden="true">chevron_left</mat-icon>
             <span><small>Previous</small>{{ prev.title }}</span>
           </a>
@@ -133,12 +133,12 @@
           <span></span>
         }
         @if (next; as nxt) {
-          <a class="pager-link next" [routerLink]="['/networking', nxt.slug]">
+          <a class="pager-link next" [routerLink]="['/lessons', nxt.slug]">
             <span><small>Next lesson</small>{{ nxt.title }}</span>
             <mat-icon aria-hidden="true">chevron_right</mat-icon>
           </a>
         } @else {
-          <a class="pager-link next" routerLink="/networking">
+          <a class="pager-link next" routerLink="/lessons">
             <span><small>All done</small>Back to the lesson list</span>
             <mat-icon aria-hidden="true">checklist</mat-icon>
           </a>
@@ -153,7 +153,7 @@
       <mat-icon aria-hidden="true">search_off</mat-icon>
       <h1>Lesson not found</h1>
       <p>That lesson does not exist (yet).</p>
-      <a class="back" routerLink="/networking">Back to all lessons</a>
+      <a class="back" routerLink="/lessons">Back to all lessons</a>
     </div>
   </div>
 }
@@ -261,6 +261,18 @@
       }
       @case ('pbq') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [questions]="[b.question]" [given]="b.given ?? 0" (checkedResult)="pbqChecked($event)" />
+      }
+      @case ('hashlab') {
+        <app-hash-lab [show]="b.show" />
+      }
+      @case ('keys') {
+        <app-key-picker [title]="b.title" [intro]="b.intro ?? ''" [tasks]="b.tasks" />
+      }
+      @case ('certs') {
+        <app-cert-check [title]="b.title" [intro]="b.intro ?? ''" [options]="b.options" [cases]="b.cases" />
+      }
+      @case ('decide') {
+        <app-decide [title]="b.title" [intro]="b.intro ?? ''" [steps]="b.steps" />
       }
       @case ('pbqs') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />

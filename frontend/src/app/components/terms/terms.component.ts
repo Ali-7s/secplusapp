@@ -17,7 +17,7 @@ import { Term, TermDetail, variantsSearchText } from '../../models/glossary.mode
 import { ClozeSpan, answerSpans, maskAnswer, otherCardNamed } from '../../utils/cloze';
 import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
-import { lessonsForCard } from '../networking/lessons/lesson-index';
+import { lessonHint, lessonsForCard } from '../networking/lessons/lesson-index';
 import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
@@ -270,6 +270,8 @@ export class TermsComponent implements OnInit, DoCheck {
   }
 
   /** Networking lessons that explain this term, so a card can say "new to this? start here". */
+  readonly lessonHint = lessonHint;
+
   lessonsFor(term: string): LessonMeta[] {
     return lessonsForCard('term', term).slice(0, 2);
   }

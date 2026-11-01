@@ -8,6 +8,7 @@ import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
+import { LessonMeta } from '../networking/networking.model';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
 import { ExhibitComponent } from './exhibit.component';
 import {
@@ -183,8 +184,10 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(this.seen)); } catch { /* storage unavailable */ }
   }
 
-  /** The Networking Basics lesson behind a question, for the "review the lesson" link in feedback. */
+  /** The lesson behind a question, for the "review the lesson" link in feedback. */
   lessonFor(q: ExamQuestion) { return lessonBySlug(q.lesson); }
+  /** "Networking Basics lesson" or "Hands-on topic". */
+  trackTitle(l: LessonMeta) { return l.track === 'networking' ? 'Networking Basics lesson' : 'Hands-on topic'; }
 
   start() {
     const seed = Math.floor(Math.random() * 2 ** 31);

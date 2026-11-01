@@ -11,6 +11,10 @@ import { HELPERS } from './08-helpers';
 import { SECURITY_DEVICES } from './09-security-devices';
 import { WEB_REQUEST } from './10-web-request';
 import { HARDENING } from './11-hardening';
+import { CRYPTO } from './topics/crypto';
+import { PKI } from './topics/pki';
+import { SIGN_IN } from './topics/sign-in';
+import { INCIDENT_RESPONSE } from './topics/incident-response';
 
 /** Lesson text, keyed by slug. The list, titles and related cards live in lesson-index.ts. */
 export const LESSON_BODIES: Record<string, LessonBody> = {
@@ -25,6 +29,10 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   'security-devices': SECURITY_DEVICES,
   'web-request': WEB_REQUEST,
   hardening: HARDENING,
+  crypto: CRYPTO,
+  pki: PKI,
+  'sign-in': SIGN_IN,
+  'incident-response': INCIDENT_RESPONSE,
 };
 
 export function getLesson(slug: string | null | undefined): Lesson | undefined {
