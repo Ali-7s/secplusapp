@@ -27,6 +27,12 @@ export interface ExamRecord {
   objective?: string;
 }
 
+/**
+ * Full exams and quick sets draw from every domain in the real exam's proportions, so only their scaled scores
+ * predict the real one. Drills cover one objective, networking or weak spots: their scores count as practice only.
+ */
+export const isBenchmark = (e: Pick<ExamRecord, 'length'>) => e.length === 'full' || e.length === 'quick';
+
 /** How one practice exam question has gone over time. */
 export interface QuestionRecord {
   seen: number;

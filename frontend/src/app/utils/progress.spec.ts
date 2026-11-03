@@ -1,5 +1,5 @@
 import {
-  CardRecord, DEFAULT_NEW_PER_DAY, emptyProgress, objectiveScores, parseProgress, recordQuestion,
+  CardRecord, DEFAULT_NEW_PER_DAY, emptyProgress, isBenchmark, objectiveScores, parseProgress, recordQuestion,
   smartOrder, weakQuestionIds,
 } from './progress';
 
@@ -66,5 +66,12 @@ describe('weak spots', () => {
     const q = { a: recordQuestion(undefined, false, NOW), c: recordQuestion(undefined, true, NOW) };
     const pool = [{ id: 'a', objective: '2.4' }, { id: 'b', objective: '2.4' }, { id: 'c', objective: '4.5' }, { id: 'd', objective: '1.4' }];
     expect(weakQuestionIds(q, pool, ['2.4'])).toEqual(['a', 'b']);
+  });
+});
+
+describe('exam scores', () => {
+  it('counts only full exams and quick sets as exam scores, never drills', () => {
+    expect(['full', 'quick'].every(length => isBenchmark({ length }))).toBeTrue();
+    expect(['objective', 'network', 'weak'].some(length => isBenchmark({ length }))).toBeFalse();
   });
 });

@@ -3,7 +3,7 @@
  * and an honest readiness estimate. Pure functions over numbers the page gathers, so they can be unit tested.
  */
 
-import { ExamRecord } from './progress';
+import { ExamRecord, isBenchmark } from './progress';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -136,8 +136,6 @@ export function pace(decks: DeckState[], daysLeft: number | null, newPerDay: num
   const neededPerDay = Math.max(0, ...decks.map(d => Math.ceil((d.total - d.studied) / learnDays)));
   return { unseen, learnDays, neededPerDay, onTrack: neededPerDay <= newPerDay };
 }
-
-const isBenchmark = (e: ExamRecord) => e.length === 'full' || e.length === 'quick';
 
 export function readiness(input: Pick<PlanInput, 'exams' | 'decks'>, testedObjectives: number, totalObjectives: number): Readiness {
   const recent = input.exams.filter(isBenchmark).slice(-3);

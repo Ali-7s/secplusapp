@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
-import { objectiveScores, weakQuestionIds } from '../../utils/progress';
+import { isBenchmark, objectiveScores, weakQuestionIds } from '../../utils/progress';
 import { lessonBySlug } from '../networking/lessons/lesson-index';
 import { LessonMeta } from '../networking/networking.model';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
@@ -161,6 +161,10 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   lengthLabel(length: string): string {
     return length in this.specs ? this.specs[length as ExamLength].label.toLowerCase() : 'practice exam';
   }
+
+  readonly isBenchmark = isBenchmark;
+  /** A full exam or quick set, whose scaled score estimates the real one; anything else is a drill. */
+  get benchmark(): boolean { return isBenchmark({ length: this.length }); }
 
   get lastExam() {
     const exams = this.progress.data().exams;

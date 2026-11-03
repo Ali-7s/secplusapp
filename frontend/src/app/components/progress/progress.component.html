@@ -133,12 +133,15 @@
   }
 
   <!-- ── Exams ─────────────────────────────────────────────────────────── -->
-  @if (exams().length) {
+  @if (attempts().length) {
     <section class="card">
       <h2><mat-icon aria-hidden="true">assignment</mat-icon> Practice exams</h2>
+      @if (!exams().length) {
+        <p class="note">No full exam or quick set yet. Only those two are built like the real exam, with every domain in its real share, so only their scores count toward your best, your average and the chart. Drills are listed below and feed your weak spots.</p>
+      } @else {
       <div class="stats">
-        <div class="stat"><span class="v">{{ exams().length }}</span><span class="l">exams graded</span></div>
-        <div class="stat" [class.pass]="recentAverage() >= passing"><span class="v">{{ recentAverage() }}</span><span class="l">average of the last 3</span></div>
+        <div class="stat"><span class="v">{{ exams().length }}</span><span class="l">{{ exams().length === 1 ? 'exam' : 'exams' }} graded</span></div>
+        <div class="stat" [class.pass]="recentAverage() >= passing"><span class="v">{{ recentAverage() }}</span><span class="l">{{ exams().length === 1 ? 'your only score' : 'average of the last ' + (exams().length < 3 ? exams().length : 3) }}</span></div>
         <div class="stat" [class.pass]="bestScore() >= passing"><span class="v">{{ bestScore() }}</span><span class="l">best score</span></div>
         <div class="stat"><span class="v">{{ passing }}</span><span class="l">needed to pass</span></div>
       </div>
@@ -155,10 +158,10 @@
             </circle>
           }
         </svg>
-        <figcaption>Scaled score of each graded exam, oldest on the left (last 20 shown).</figcaption>
+        <figcaption>Scaled score of each full exam and quick set, oldest on the left (last 20 shown). Drills are left out: they cover one part of the exam, so their scores do not predict the real one.</figcaption>
       </figure>
 
-      <h3>By domain <span class="sub">(average of your last five exams)</span></h3>
+      <h3>By domain <span class="sub">(average of your last five full exams or quick sets)</span></h3>
       <div class="bars">
         @for (d of domainAverages(); track d.domain) {
           <div class="bar-row">
@@ -168,8 +171,9 @@
           </div>
         }
       </div>
+      }
 
-      <h3>Recent exams</h3>
+      <h3>Recent exams and drills</h3>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th>Score</th><th class="wide-only">Fully correct</th></tr></thead>
@@ -179,8 +183,12 @@
                 <td>{{ e.at | date: 'MMM d, h:mm a' }}</td>
                 <td>{{ lengthLabel(e) }}{{ e.mode === 'study' ? ' (study)' : '' }}</td>
                 <td>
-                  <span class="score" [class.pass]="e.scaled >= passing">{{ e.scaled }}</span>
-                  @if (e.guessedRight) { <span class="guess-note">{{ e.knownScaled }} without {{ e.guessedRight }} guess{{ e.guessedRight === 1 ? '' : 'es' }}</span> }
+                  @if (isBenchmark(e)) {
+                    <span class="score" [class.pass]="e.scaled >= passing">{{ e.scaled }}</span>
+                    @if (e.guessedRight) { <span class="guess-note">{{ e.knownScaled }} without {{ e.guessedRight }} guess{{ e.guessedRight === 1 ? '' : 'es' }}</span> }
+                  } @else {
+                    <span class="score drill" title="A drill's score is shown as a percentage: it is not an exam score">{{ e.percent }}%</span>
+                  }
                 </td>
                 <td class="wide-only">{{ e.correct }} of {{ e.total }}</td>
               </tr>

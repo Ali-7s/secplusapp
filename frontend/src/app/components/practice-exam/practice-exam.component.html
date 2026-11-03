@@ -33,7 +33,7 @@
       @if (lastExam; as last) {
         <a class="last-score" routerLink="/today">
           <mat-icon aria-hidden="true">insights</mat-icon>
-          <span>Last result: <strong>{{ last.scaled }}</strong> on a {{ lengthLabel(last.length) }} ({{ last.at | date: 'MMM d' }}). See your progress</span>
+          <span>Last result: <strong>{{ isBenchmark(last) ? last.scaled : last.percent + '%' }}</strong> on a {{ lengthLabel(last.length) }} ({{ last.at | date: 'MMM d' }}). See your progress</span>
           <mat-icon aria-hidden="true">chevron_right</mat-icon>
         </a>
       }
@@ -252,15 +252,21 @@
   @if (state === 'result' && grade) {
     <section class="result">
       <div class="score" [class.pass]="grade.passed">
-        <div class="scaled">{{ grade.scaled }}<small>/900</small></div>
-        <div class="verdict">{{ grade.passed ? 'Passing estimate' : 'Below the passing mark' }} (750)</div>
+        @if (benchmark) {
+          <div class="scaled">{{ grade.scaled }}<small>/900</small></div>
+          <div class="verdict">{{ grade.passed ? 'Passing estimate' : 'Below the passing mark' }} (750)</div>
+        } @else {
+          <div class="scaled">{{ grade.percent | number: '1.0-0' }}<small>%</small></div>
+          <div class="verdict">A drill covers one part of the exam, so this is not an exam score and does not count toward your best or average.</div>
+        }
         <div class="stats">
-          <span>{{ grade.percent | number: '1.0-0' }}% of points</span>
+          @if (benchmark) { <span>{{ grade.percent | number: '1.0-0' }}% of points</span> }
           <span>{{ grade.correctCount }} of {{ items.length }} fully correct</span>
         </div>
         @if (guessedRight) {
           <div class="known">
-            Without your {{ guessedRight }} lucky guess{{ guessedRight === 1 ? '' : 'es' }}: <strong>{{ knownScaled }}</strong>.
+            @if (benchmark) { Without your {{ guessedRight }} lucky guess{{ guessedRight === 1 ? '' : 'es' }}: <strong>{{ knownScaled }}</strong>. }
+            @else { {{ guessedRight }} right answer{{ guessedRight === 1 ? ' was a guess' : 's were guesses' }}. }
             {{ guessedRight === 1 ? 'It counts' : 'They count' }} as not known yet, so {{ guessedRight === 1 ? 'it stays' : 'they stay' }} in your weak spots.
           </div>
         }

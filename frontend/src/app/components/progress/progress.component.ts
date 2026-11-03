@@ -11,7 +11,7 @@ import { BrainDumpStore } from '../../services/brain-dump-store.service';
 import { SyncService } from '../../services/sync.service';
 import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../models/exam.model';
 import { EXAM_SPECS, ExamLength, PASSING_SCALED } from '../../utils/exam-engine';
-import { CardRecord, ExamRecord, objectiveScores } from '../../utils/progress';
+import { CardRecord, ExamRecord, isBenchmark, objectiveScores } from '../../utils/progress';
 import { isDueCard, isLearning, isMature } from '../../utils/srs';
 import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
@@ -127,8 +127,12 @@ export class ProgressComponent implements OnInit {
 
   // ── Exams ─────────────────────────────────────────────────────────────
 
-  readonly exams = computed(() => this.progress.data().exams);
-  readonly recentExams = computed(() => [...this.exams()].reverse().slice(0, 10));
+  /** Every graded attempt, drills included, for the history table. */
+  readonly attempts = computed(() => this.progress.data().exams);
+  readonly recentExams = computed(() => [...this.attempts()].reverse().slice(0, 10));
+  /** Only full exams and quick sets: a drill's score says nothing about the whole exam. */
+  readonly exams = computed(() => this.attempts().filter(isBenchmark));
+  readonly isBenchmark = isBenchmark;
   readonly bestScore = computed(() => Math.max(0, ...this.exams().map(e => e.scaled)));
   /** Average of the last three scores, the best single guide to readiness. */
   readonly recentAverage = computed(() => {
@@ -136,7 +140,7 @@ export class ProgressComponent implements OnInit {
     return last.length ? Math.round(last.reduce((s, e) => s + e.scaled, 0) / last.length) : 0;
   });
 
-  /** Per-domain percent averaged over the last five exams that included that domain. */
+  /** Per-domain percent averaged over the last five full exams or quick sets. */
   readonly domainAverages = computed(() => this.domains.map(d => {
     const values = this.exams().map(e => e.byDomain[d]).filter((v): v is number => v !== null && v !== undefined).slice(-5);
     return { domain: d, name: this.domainNames[d], value: values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null };
