@@ -161,9 +161,12 @@
   }
 }
 
+// The badges wrap under a long name; the chevron keeps the top right corner, so nothing pokes out of the card.
 .term-header {
-  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;
-  .expand-chevron { margin-left: auto; color: var(--c-muted); font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+  position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 8px; margin-bottom: 8px; padding-right: 26px;
+  .term-name { min-width: 0; overflow-wrap: anywhere; }
+  .variants-badge { white-space: nowrap; }
+  .expand-chevron { position: absolute; top: 0; right: 0; color: var(--c-muted); font-size: 20px; width: 20px; height: 20px; }
 }
 
 .term-name {
@@ -220,6 +223,12 @@
     border-radius: 6px; padding: 2px 8px; cursor: pointer; transition: all .15s;
     &:hover { background: #059669; color: white; }
 
+    // An acronym: blue, with the glossary's "abc" mark, and it opens the Acronym Glossary.
+    &.acr {
+      color: #1d4ed8; background: #dbeafe; border-color: rgba(29,78,216,.25); text-decoration: none;
+      mat-icon { font-size: 16px; width: 16px; height: 13px; line-height: 13px; overflow: hidden; }
+      &:hover { background: #1d4ed8; color: white; }
+    }
     &.no-card {
       color: var(--c-muted); background: var(--c-surface-2);
       border-color: var(--c-border); cursor: default;
@@ -366,6 +375,7 @@
   .rel-chip {
     background: rgba(5,150,105,.15); border-color: rgba(5,150,105,.3); color: #34d399;
     &:hover { background: #059669; color: white; }
+    &.acr { background: rgba(96,165,250,.15); border-color: rgba(96,165,250,.35); color: #93c5fd; &:hover { background: #60a5fa; color: #0f172a; } }
     &.no-card { background: var(--c-surface-2); border-color: var(--c-border); color: var(--c-muted); &:hover { background: var(--c-surface-2); color: var(--c-muted); } }
     &.generating { background: rgba(5,150,105,.08); border-color: rgba(5,150,105,.2); color: #34d399; &:hover { background: rgba(5,150,105,.08); } }
   }

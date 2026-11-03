@@ -279,9 +279,13 @@
                 <div class="related-chips">
                   <span class="related-label">Related:</span>
                   @for (rel of getRelatedList(t.relatedTerms); track rel) {
+                    @let acr = acronymFor(rel);
                     @if (hasCard(rel)) {
                       <span class="rel-chip" (click)="navigateToTerm(rel, $event)"
                         [matTooltip]="'Jump to ' + rel">{{ rel }}</span>
+                    } @else if (acr) {
+                      <a class="rel-chip acr" [routerLink]="['/acronyms']" [queryParams]="{ q: acr }" (click)="$event.stopPropagation()"
+                        [matTooltip]="'Open ' + acr + ' in the Acronym Glossary'"><mat-icon aria-hidden="true">abc</mat-icon>{{ rel }}</a>
                     } @else {
                       <span class="rel-chip no-card" [matTooltip]="rel">{{ rel }}</span>
                     }

@@ -106,6 +106,13 @@ export class TermsComponent implements OnInit, DoCheck {
 
   load() {
     this.loading = true;
+    this.contentService.getAcronyms().subscribe({
+      next: list => {
+        this.acronyms = new Map(list.map(a => [a.acronym.toLowerCase(), a.acronym]));
+        this.cdr.markForCheck();
+      },
+      error: () => { /* related acronyms simply stay unlinked */ },
+    });
     this.contentService.getTerms().subscribe({
       next: t => {
         this.allTerms = t.sort((a, b) => a.term.localeCompare(b.term));
@@ -267,6 +274,13 @@ export class TermsComponent implements OnInit, DoCheck {
   /** Returns true if this related-term name has a card to link to. */
   hasCard(name: string): boolean {
     return this.allTerms.some(t => t.term.toLowerCase() === name.toLowerCase());
+  }
+
+  /** Acronyms by lower-case name, so a related name with no term card can link to its acronym card instead. */
+  private acronyms = new Map<string, string>();
+  /** The acronym card's own spelling for a related name, if there is one. */
+  acronymFor(name: string): string | undefined {
+    return this.acronyms.get(name.toLowerCase());
   }
 
   /** Networking lessons that explain this term, so a card can say "new to this? start here". */
