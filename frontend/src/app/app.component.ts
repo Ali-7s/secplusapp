@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavContent, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
-import { ThemeService } from './services/theme.service';
+import { THEMES, ThemeService } from './services/theme.service';
 import { SyncService } from './services/sync.service';
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
@@ -22,6 +22,7 @@ import { BackToTopComponent } from './components/back-to-top/back-to-top.compone
 })
 export class AppComponent {
   theme = inject(ThemeService);
+  readonly themes = THEMES;
   private content = viewChild(MatSidenavContent);
 
   constructor() {

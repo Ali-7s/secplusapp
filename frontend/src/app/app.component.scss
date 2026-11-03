@@ -48,6 +48,13 @@
       // the label text lives in .mdc-list-item__primary-text, driven by this token
       --mdc-list-list-item-label-text-color: var(--c-text);
       --mdc-list-list-item-leading-icon-color: var(--c-text-2);
+      // Material's own focus and hover colours are for a light background: in the dark themes the item the menu
+      // focuses when it opens turned near-black.
+      --mdc-list-list-item-focus-label-text-color: var(--c-text);
+      --mdc-list-list-item-hover-label-text-color: var(--c-text);
+      --mdc-list-list-item-hover-leading-icon-color: var(--c-text-2);
+      --mdc-list-list-item-focus-state-layer-color: var(--c-accent);
+      --mdc-list-list-item-hover-state-layer-color: var(--c-accent);
       transition: background .15s;
       &:hover { background: var(--c-accent-light) !important; }
     }
@@ -67,11 +74,14 @@
     a { color: var(--c-warning); font-weight: 700; margin-left: auto; }
   }
 
-  .theme-toggle-side {
-    width: 100%; justify-content: flex-start; padding: 8px 12px;
-    border-radius: 10px !important; color: var(--c-muted); margin-bottom: 4px;
-    mat-icon { margin-right: 8px; font-size: 18px; }
-    &:hover { background: var(--c-accent-light) !important; color: var(--c-accent) !important; }
+  .theme-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px; padding: 3px;
+    border-radius: 10px; background: var(--c-surface-3);
+    button { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 4px; border: 0; border-radius: 8px; background: none; color: var(--c-text-2);
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      &:hover { color: var(--c-text); }
+      &.on { background: var(--c-surface); color: var(--c-accent); box-shadow: var(--shadow-sm); }
+    }
   }
 
   .logout-btn {
@@ -101,6 +111,9 @@
   background: linear-gradient(135deg, #1e3a8a 0%, #2d52b0 100%) !important;
   box-shadow: 0 2px 12px rgba(30,58,138,.35);
   height: 60px;
+
+  // The black theme keeps the bar black too, set off by a hairline.
+  :host-context([data-shade='black']) & { background: #000 !important; box-shadow: none; border-bottom: 1px solid var(--c-border); }
 
   .menu-btn { margin-right: 2px; }
 

@@ -20,11 +20,13 @@
     </mat-nav-list>
 
     <div class="sidenav-bottom">
-      <button mat-button class="theme-toggle-side" (click)="theme.toggle()"
-        [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
-        <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
-        <span>{{ theme.dark() ? 'Light Mode' : 'Dark Mode' }}</span>
-      </button>
+      <div class="theme-pick" role="group" aria-label="Theme">
+        @for (t of themes; track t.mode) {
+          <button type="button" [class.on]="theme.mode() === t.mode" [attr.aria-pressed]="theme.mode() === t.mode" (click)="theme.set(t.mode)">
+            <mat-icon aria-hidden="true">{{ t.icon }}</mat-icon>{{ t.label }}
+          </button>
+        }
+      </div>
     </div>
   </mat-sidenav>
 
@@ -47,9 +49,9 @@
         }
       </nav>
 
-      <button mat-icon-button class="theme-btn" (click)="theme.toggle()"
-        [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'">
-        <mat-icon aria-hidden="true">{{ theme.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      <button mat-icon-button class="theme-btn" (click)="theme.cycle()"
+        [attr.aria-label]="'Theme: ' + theme.current().label + '. Switch to ' + theme.next().label" [attr.title]="'Switch to ' + theme.next().label + ' theme'">
+        <mat-icon aria-hidden="true">{{ theme.current().icon }}</mat-icon>
       </button>
     </mat-toolbar>
 
