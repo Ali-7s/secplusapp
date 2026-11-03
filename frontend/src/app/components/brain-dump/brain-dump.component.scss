@@ -233,3 +233,5 @@ mark {
 @media (prefers-reduced-motion: reduce) {
   .bd-point, .bd-icon { transition: none; }
 }
+
+:host-context([data-shade="black"]) .bd-banner { background: linear-gradient(135deg, #27272a 0%, #18181b 100%); border-bottom: 1px solid #3f3f46; }

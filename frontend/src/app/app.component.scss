@@ -12,6 +12,7 @@
     padding: 22px 20px 18px;
     background: linear-gradient(135deg, #1e3a8a 0%, #2d52b0 100%);
     color: white;
+    :host-context([data-shade='black']) & { background: #000; border-bottom: 1px solid var(--c-border); }
     .logo-icon  { font-size: 34px; width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
     .logo-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
     .logo-sub   { font-size: 11px; opacity: .7; margin-top: 1px; }
@@ -23,6 +24,7 @@
     .user-avatar-sm {
       width: 36px; height: 36px; border-radius: 50%;
       background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white;
+      :host-context([data-shade='black']) & { background: #3f3f46; }
       display: flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 700; flex-shrink: 0;
     }
@@ -193,6 +195,7 @@
 .skip-link {
   position: absolute; top: -60px; left: 16px;
   background: #1e3a8a; color: white;
+  :host-context([data-shade='black']) & { background: #27272a; }
   padding: 8px 16px; border-radius: 0 0 8px 8px;
   font-size: 14px; font-weight: 600; text-decoration: none;
   z-index: 9999; transition: top .2s;

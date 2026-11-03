@@ -50,9 +50,26 @@ html {
   color-scheme: light;
 }
 
-// ── Black theme: the dark theme on true black, in neutral greys ──
-// It sets data-theme="dark" as well, so every dark-mode style applies; only the surfaces and greys change.
+// ── Black theme: the dark theme on true black, in neutral greys with no blue ──
+// It sets data-theme="dark" as well, so every dark-mode style applies; only the surfaces, greys and accent change.
+// Emphasis is white and light grey; green, amber and red stay because they mean right, careful and wrong.
 [data-theme="dark"][data-shade="black"] {
+  --c-primary:        #fafafa;
+  --c-primary-mid:    #d4d4d8;
+  --c-accent:         #e4e4e7;
+  --c-accent-light:   rgba(255,255,255,.08);
+  --c-accent-solid:   #e4e4e7;
+  --c-on-accent:      #09090b;
+  // Angular Material's own colours (buttons, spinners, toggles), from its azure palette otherwise.
+  --mat-sys-primary:              #e4e4e7;
+  --mat-sys-on-primary:           #09090b;
+  --mat-sys-primary-container:    #27272a;
+  --mat-sys-on-primary-container: #fafafa;
+  --mat-sys-secondary-container:  #27272a;
+  --mat-sys-on-secondary-container: #fafafa;
+  --mat-sys-tertiary:             #d4d4d8;
+  --mat-sys-surface-tint:         #a1a1aa;
+  --mat-sys-inverse-primary:      #52525b;
   --c-surface:        #121214;
   --c-surface-2:      #0b0b0d;
   --c-surface-3:      #000000;
@@ -182,6 +199,14 @@ html {
   // Buttons
   .mat-mdc-outlined-button { --mdc-outlined-button-outline-color: var(--c-border); color: var(--c-text) !important; }
   .mat-mdc-button           { color: var(--c-text) !important; }
+  // Raised and flat buttons with no colour kept Material's near-white light-theme fill.
+  .mat-mdc-raised-button.mat-unthemed, .mat-mdc-unelevated-button.mat-unthemed {
+    --mdc-protected-button-container-color: var(--c-surface-2);
+    --mdc-protected-button-label-text-color: var(--c-text);
+    --mdc-filled-button-container-color: var(--c-surface-2);
+    --mdc-filled-button-label-text-color: var(--c-text);
+    border: 1px solid var(--c-border-dark);
+  }
 
   // Icon buttons in dark context
   .mat-mdc-icon-button { color: var(--c-text) !important; }

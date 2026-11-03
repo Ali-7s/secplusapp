@@ -2,6 +2,7 @@
 
 :host { display: block; margin: 0 0 12px; @include net-tones.tones; }
 :host-context([data-theme='dark']) { @include net-tones.dark-tones; }
+:host-context([data-shade='black']) { @include net-tones.black-tones; }
 
 .net { margin: 0; }
 .frame {
