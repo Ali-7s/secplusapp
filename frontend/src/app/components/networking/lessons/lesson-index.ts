@@ -131,7 +131,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 10,
   },
   {
-    slug: 'controls', number: 2, minutes: 30, icon: 'category',
+    slug: 'controls', number: 2, minutes: 38, icon: 'category',
     objectives: ['1.1', '1.2'],
     cia: { goals: ['C', 'I', 'A'], how: 'Controls are how the goals get protected, and each category and type can serve any of them. Zero trust guards confidentiality and integrity by checking every request.' },
     title: 'Security control categories and types, and zero trust',

@@ -1,5 +1,35 @@
+import { MatchQuestion } from '../../../../models/exam.model';
 import { LessonBody } from '../../networking.model';
-import { analogy, controlSorter, exam, examPbqs, h, list, mcq, p, recap, table, tip, trap, words } from '../dsl';
+import { analogy, controlSorter, exam, examPbqs, h, list, mcq, p, pbq, recap, table, tip, trap, words } from '../dsl';
+
+/** Which plane each part of a zero trust request belongs to, grouped as the SY0-701 outline groups them. */
+const ZT_PLANES: MatchQuestion = {
+  id: 'topic-zt-planes', domain: 1, objective: '1.2', kind: 'match',
+  scenario: 'Dana, a finance analyst, opens the payroll app from a hotel abroad. The company uses a zero trust architecture.',
+  stem: 'Which plane does each part of her request belong to?',
+  choices: ['Control plane', 'Data plane'],
+  prompts: [
+    { label: 'Dana, on her company laptop, asks to open the payroll app (the subject and system)', answer: 'Data plane',
+      why: 'The subject and the system it uses are where traffic starts. They sit in the data plane and only send and receive; they decide nothing about access.' },
+    { label: 'The policy engine weighs her role, the laptop\'s patch level and threat intelligence, and decides to grant access', answer: 'Control plane',
+      why: 'Making the access decision is the core job of the control plane, and the policy engine is the part that makes it.' },
+    { label: 'Because the sign-in comes from a new country at 3 a.m., she is asked for a stronger MFA step (adaptive identity)', answer: 'Control plane',
+      why: 'Adaptive identity changes how much proof is needed based on context. That is part of deciding access, so the outline puts it in the control plane.' },
+    { label: 'The gateway in front of the payroll app holds her connection until it is told to let it through (the policy enforcement point)', answer: 'Data plane',
+      why: 'The enforcement point sits in the traffic path and acts on a decision made elsewhere. It enforces, but it does not decide, so it belongs to the data plane.' },
+    { label: 'The policy administrator creates a short-lived session token and tells the gateway to open the session', answer: 'Control plane',
+      why: 'The policy administrator turns the engine\'s decision into a session. Together they form the policy decision point, the heart of the control plane.' },
+    { label: 'She is granted the payroll app only, not the whole finance network (threat scope reduction)', answer: 'Control plane',
+      why: 'Choosing to grant as little as possible is a decision about access, so threat scope reduction is listed under the control plane.' },
+    { label: 'Access is written as policy: finance staff, on a managed device, may use payroll (policy-driven access control)', answer: 'Control plane',
+      why: 'The written policy is what the policy engine evaluates. Policy-driven access control is how the control plane makes consistent decisions.' },
+    { label: 'Behind the gateway, the payroll servers sit in a small segment where they trust each other (an implicit trust zone)', answer: 'Data plane',
+      why: 'An implicit trust zone is an area of the network where traffic flows without further checks. It is about where data travels, so it is in the data plane.' },
+    { label: 'Her payroll data travels between the laptop and the app over the approved session', answer: 'Data plane',
+      why: 'The actual traffic is exactly what the data plane carries, only along the paths the control plane has allowed.' },
+  ],
+  takeaway: 'Deciding and setting up access is the control plane; carrying the traffic is the data plane. The enforcement point stands in the traffic, so it is data plane, even though it enforces.',
+};
 
 export const CONTROLS: LessonBody = {
   goals: [
@@ -7,7 +37,8 @@ export const CONTROLS: LessonBody = {
     'Sort it by type: preventive, deterrent, detective, corrective, compensating or directive',
     'Tell apart the look-alike pairs that cause most wrong answers, such as deterrent and preventive, or corrective and compensating',
     'Follow a request through a zero trust architecture: subject, policy engine, policy administrator and enforcement point',
-    'Tell the control plane from the data plane, and explain adaptive identity and threat scope reduction',
+    'Place every zero trust component in the control plane or the data plane, as the exam outline does',
+    'Explain adaptive identity, threat scope reduction, policy-driven access control and implicit trust zones',
   ],
   blocks: [
     recap('From topic 1: every control exists to protect **confidentiality, integrity or availability**. From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 8: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
@@ -98,13 +129,20 @@ export const CONTROLS: LessonBody = {
     table(
       ['Plane', 'Components', 'Job'],
       [
-        ['Control plane', 'Policy engine, policy administrator (together the policy decision point)', 'Decides and sets up access'],
-        ['Data plane', 'Subject and system, policy enforcement point, the resource', 'Carries the traffic, but only as the control plane allows'],
+        ['Control plane', 'Policy engine and policy administrator (together the policy decision point), plus adaptive identity, threat scope reduction and policy-driven access control', 'Decides who gets what access, and sets it up'],
+        ['Data plane', 'Subject and system, policy enforcement point, implicit trust zones, and the resources themselves', 'Carries the traffic, but only as the control plane allows'],
       ],
-      { caption: 'The two planes of zero trust' },
+      { caption: 'The two planes of zero trust, grouped as the exam outline groups them' },
     ),
     tip('**ZTNA** (zero trust network access) products replace the VPN in exactly this way, and **SASE** (secure access service edge) delivers it, with other security services, from the cloud.'),
     exam('Match the job to the part: **decides** is the policy engine, **creates the session or token** is the policy administrator, **allows or blocks the connection** is the policy enforcement point. "Context changes how hard sign-in is" is **adaptive identity**.'),
+
+    h('Control plane or data plane?', { objective: '1.2', keep: 'The control plane decides: policy engine, policy administrator, adaptive identity, threat scope reduction, policy-driven access control. The data plane carries: subject and system, policy enforcement point, implicit trust zones. The enforcement point enforces but does not decide, so it is data plane.' }),
+    p('The exam outline splits zero trust into two planes and lists what belongs to each. The test is simple: does it **decide** about access, or does it **carry or sit in** the traffic?'),
+    analogy('An airport. The **control tower** decides who may take off and land: that is the control plane. The **runways and aircraft** carry the passengers: the data plane. The **gate agent** checking boarding passes stands in the passengers\' path and acts on decisions made elsewhere: the policy enforcement point, which is why it belongs to the data plane.'),
+    trap('The **policy enforcement point** is the classic trick. It enforces access, so it sounds like control, but it sits in the traffic path and only carries out the decision. It is **data plane**. The **policy administrator**, which sets up the session, is control plane.'),
+    pbq('Which plane?', ZT_PLANES, { intro: 'Nine moments from one request. Answers repeat: there are only two planes.' }),
+    tip('The same split appears in networking. A router\'s **control plane** builds the routing table (deciding where traffic should go); its **data plane** forwards each packet (carrying it). Software-defined networking separates the two the same way.'),
 
     h('Practice: zero trust components', { objective: '1.2', keep: 'Subject and system request; the policy engine decides; the policy administrator sets up the session; the policy enforcement point allows or blocks; adaptive identity and threat scope reduction make each grant small and context-aware.' }),
     examPbqs('controls', 'This comes from the practice exam: follow a traveling analyst\'s request through a zero trust architecture and name each component. It loads when you press Start.'),
@@ -122,5 +160,8 @@ export const CONTROLS: LessonBody = {
     mcq('A user signing in from a new country is asked for an extra verification step that the same user is not asked for in the office. What is this?',
       'Adaptive identity', ['Threat scope reduction', 'An implicit trust zone', 'Separation of duties'],
       'Adaptive identity raises or lowers the authentication required based on context such as location, time and device.'),
+    mcq('In a zero trust architecture, which of these belongs to the data plane?',
+      'Policy enforcement point', ['Policy engine', 'Policy administrator', 'Adaptive identity'],
+      'The policy enforcement point sits in the traffic path and carries out decisions, so it is data plane. The policy engine, policy administrator and adaptive identity all decide or set up access, which is the control plane.'),
   ],
 };
