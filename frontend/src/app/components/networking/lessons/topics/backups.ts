@@ -35,7 +35,7 @@ export const BACKUPS: LessonBody = {
     'Explain how clustering, load balancing and power protection keep systems available',
   ],
   blocks: [
-    recap('From topic 6: the **RTO** is how long a system may be down, and the **RPO** is how much recent data may be lost. From topic 5: the **recovery** phase restores from a backup you know is clean, and ransomware tries to encrypt the backups too. This topic is how you make sure those backups exist and work.'),
+    recap('From topic 7: the **RTO** is how long a system may be down, and the **RPO** is how much recent data may be lost. From topic 6: the **recovery** phase restores from a backup you know is clean, and ransomware tries to encrypt the backups too. This topic is how you make sure those backups exist and work.'),
     words(
       ['Full backup', 'A copy of everything selected'],
       ['Incremental backup', 'A copy of what changed since the last backup of any kind'],

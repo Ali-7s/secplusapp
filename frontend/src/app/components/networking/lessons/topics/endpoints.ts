@@ -9,7 +9,7 @@ export const ENDPOINTS: LessonBody = {
     'Configure MDM policies: containerization, full and selective wipe, geofencing, app control and compliance checks',
   ],
   blocks: [
-    recap('From Networking lesson 11: **hardening** means reducing the **attack surface**: change defaults, remove what you do not use, patch, and allow only encrypted management. That lesson hardened network devices; this one does the same for servers, laptops and phones. From topic 10: least privilege and MFA for the accounts on them.'),
+    recap('From Networking lesson 11: **hardening** means reducing the **attack surface**: change defaults, remove what you do not use, patch, and allow only encrypted management. That lesson hardened network devices; this one does the same for servers, laptops and phones. From topic 11: least privilege and MFA for the accounts on them.'),
     words(
       ['Endpoint', 'A device people or services use: a laptop, a server, a phone, a tablet'],
       ['Attack surface', 'Every way in: open ports, running services, installed software, accounts'],

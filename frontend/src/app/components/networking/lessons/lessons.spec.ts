@@ -6,7 +6,7 @@ import { isHandsOn, lessonMinutes, lessonParts, partObjectives } from './parts';
 import { OBJECTIVE_OUTLINES } from '../../../content/objectives';
 import { decidePolicy } from '../blocks/policy-playground.component';
 import { CVSS_TASKS, cvssScore, severity, vectorString } from '../blocks/cvss-calc.component';
-import { CATEGORIES, CONTROLS, TYPES } from '../blocks/control-sorter.component';
+import { CATEGORIES, CONTROLS, TRICKY_CONTROLS, TYPES } from '../blocks/control-sorter.component';
 import { MAILS } from '../blocks/email-inspector.component';
 import { CIA_ATTACKS, CIA_CONTROLS, PILLARS, isRight } from '../blocks/cia-sorter.component';
 
@@ -383,14 +383,18 @@ describe('hands-on widgets for controls, phishing and vulnerabilities', () => {
     for (const t of CVSS_TASKS) for (const why of Object.values(t.why)) expect(why.split(/\s+/).length).withContext(t.name).toBeGreaterThanOrEqual(4);
   });
 
-  it('sorts every control into a real category and types, and uses every type at least once', () => {
-    for (const c of CONTROLS) {
-      expect(CATEGORIES).withContext(c.control).toContain(c.category);
-      expect(c.types.length).withContext(c.control).toBeGreaterThan(0);
-      for (const t of c.types) expect(TYPES).withContext(c.control).toContain(t);
+  it('sorts every control into a real category and types, and uses every type at least once, in both rounds', () => {
+    for (const set of [CONTROLS, TRICKY_CONTROLS]) {
+      for (const c of set) {
+        expect(CATEGORIES).withContext(c.control).toContain(c.category);
+        expect(c.types.length).withContext(c.control).toBeGreaterThan(0);
+        expect(new Set(c.types).size).withContext(c.control).toBe(c.types.length);
+        for (const t of c.types) expect(TYPES).withContext(c.control).toContain(t);
+        expect(c.why.split(/\s+/).length).withContext(c.control).toBeGreaterThanOrEqual(10);
+      }
+      for (const t of TYPES) expect(set.some(c => c.types[0] === t)).withContext(t).toBeTrue();
+      for (const cat of CATEGORIES) expect(set.some(c => c.category === cat)).withContext(cat).toBeTrue();
     }
-    for (const t of TYPES) expect(CONTROLS.some(c => c.types[0] === t)).withContext(t).toBeTrue();
-    for (const cat of CATEGORIES) expect(CONTROLS.some(c => c.category === cat)).withContext(cat).toBeTrue();
   });
 
   it('marks every part of every message as a warning sign or fine, with phishing that has signs to find', () => {
@@ -429,5 +433,15 @@ describe('the CIA triad sorter', () => {
     expect(isRight(c, ['A'])).toBeFalse();
     expect(isRight(c, ['I', 'C'])).toBeFalse();
     expect(isRight({ text: '', why: '', hits: ['C', 'I'] }, ['C'])).toBeFalse();
+  });
+});
+
+describe('the CIA triad on every topic', () => {
+  it('says which goals each hands-on topic protects, and how', () => {
+    for (const l of trackLessons('topics')) {
+      expect(l.cia?.goals.length).withContext(l.slug).toBeGreaterThan(0);
+      expect(new Set(l.cia!.goals).size).withContext(l.slug).toBe(l.cia!.goals.length);
+      expect(l.cia!.how.split(/\s+/).length).withContext(l.slug).toBeGreaterThanOrEqual(10);
+    }
   });
 });

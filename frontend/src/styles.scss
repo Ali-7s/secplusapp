@@ -465,6 +465,8 @@ a.lesson-link {
 // ── Utilities ─────────────────────────────────────────────────
 .text-muted    { color: var(--c-muted); }
 .text-success  { color: var(--c-success); }
+// Read by screen readers, not shown.
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .text-danger   { color: var(--c-error); }
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }

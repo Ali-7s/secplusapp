@@ -71,6 +71,11 @@
     mat-icon { font-size: 15px; width: 15px; height: 15px; }
   }
   .go { flex: none; align-self: center; color: var(--c-muted); }
+  // The CIA goals a topic protects: lit letters for the ones it does.
+  .meta .cia { gap: 2px; padding: 2px 5px;
+    b { width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 10.5px; font-weight: 800; color: var(--c-muted); border: 1px solid var(--c-border-dark); }
+    b.on { background: var(--c-accent-solid); border-color: var(--c-accent-solid); color: var(--c-on-accent); }
+  }
 }
 
 .after {

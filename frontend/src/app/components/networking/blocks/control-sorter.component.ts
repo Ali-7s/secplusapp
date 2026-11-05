@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { LessonWork } from '../lesson-work.service';
 
@@ -42,6 +42,34 @@ export const CONTROLS: SortItem[] = [
     why: 'Run by people for people (operational). Trained staff report and ignore phishing, which prevents incidents.' },
 ];
 
+/** The harder round: look-alike pairs, where the same kind of control changes type with what it is doing. */
+export const TRICKY_CONTROLS: SortItem[] = [
+  { control: 'Applying the monthly operating system patches to every server', category: 'Technical', types: ['Preventive'],
+    why: 'The flaws are fixed before anyone uses them, so the patches stop incidents from happening. Compare the next one: same action, different timing.' },
+  { control: 'Emergency-patching the web server after attackers used the flaw to get in', category: 'Technical', types: ['Corrective'],
+    why: 'The incident has already happened, and the patch puts things right so it cannot happen again. Patching after an incident is corrective; before it, preventive.' },
+  { control: 'An IPS that drops packets matching a known exploit', category: 'Technical', types: ['Preventive'],
+    why: 'An IPS sits inline and blocks the attack before it reaches the server: preventive. The P in IPS is for prevention.' },
+  { control: 'An IDS that raises an alert when it sees the same exploit', category: 'Technical', types: ['Detective'],
+    why: 'An IDS only watches a copy of the traffic and reports what it sees; the attack still gets through. Finding without stopping is detective.' },
+  { control: 'A sign on the fence: "Trespassers will be prosecuted"', category: 'Physical', types: ['Deterrent', 'Directive'],
+    why: 'It warns of consequences to discourage people, so deterrent. It is an object in the real world, so physical, even though it is "only" a sign.' },
+  { control: 'A sign on the data center door: "Authorized personnel only"', category: 'Physical', types: ['Directive', 'Deterrent'],
+    why: 'It tells people what to do rather than threatening a consequence, so directive. Compare the fence sign: warning is deterrent, instructing is directive.' },
+  { control: 'Visible cameras in the lobby with a "CCTV in operation" notice', category: 'Physical', types: ['Deterrent', 'Detective'],
+    why: 'Being seen is the point: people behave because they know they are watched, which is deterrent. The recording can also detect, so that is a fair answer.' },
+  { control: 'A guard reviews the recorded camera footage after a laptop goes missing', category: 'Operational', types: ['Detective'],
+    why: 'Here the camera system is used to find out what happened, after the fact: detective. A person does the work, so operational.' },
+  { control: 'The server room cannot have a badge reader fitted yet, so a guard checks IDs at its door', category: 'Operational', types: ['Compensating', 'Preventive'],
+    why: 'The guard stands in for the control you cannot have yet, which is what compensating means. Guards are people doing a job, so operational, not physical.' },
+  { control: 'Bollards in front of the main entrance', category: 'Physical', types: ['Preventive'],
+    why: 'They physically stop a vehicle reaching the building. They cannot be ignored, so they prevent rather than deter.' },
+  { control: 'Antivirus quarantines a malicious attachment that was already saved to disk', category: 'Technical', types: ['Corrective', 'Detective'],
+    why: 'The file is already on the computer; quarantining it removes the problem, which is corrective. Antivirus also detects, but here it is fixing.' },
+  { control: 'An employee handbook procedure: report a lost laptop to the help desk within one hour', category: 'Managerial', types: ['Directive'],
+    why: 'A procedure set by management that tells staff what to do: managerial and directive. Directive controls instruct; they do not stop or find anything themselves.' },
+];
+
 /** Long names for the hints next to each choice. */
 const CATEGORY_HINT: Record<Category, string> = {
   Technical: 'Enforced by systems: hardware, software, firmware',
@@ -61,10 +89,13 @@ const CATEGORY_HINT: Record<Category, string> = {
   template: `
     <section class="w" aria-label="Control sorter">
       <header class="head">
-        <div class="title"><mat-icon aria-hidden="true">category</mat-icon> Sort the controls</div>
+        <div class="title"><mat-icon aria-hidden="true">{{ set === 'tricky' ? 'compare_arrows' : 'category' }}</mat-icon> {{ set === 'tricky' ? 'Tricky round: look-alike pairs' : 'Sort the controls' }}</div>
         <div class="count" aria-live="polite">{{ rightCount }} of {{ items.length }} sorted right</div>
       </header>
-      <p class="intro">Each control has a <strong>category</strong> (how it is put in place) and a <strong>type</strong> (what it does). Pick one of each; the answer appears once you have both.</p>
+      <p class="intro">
+        @if (set === 'tricky') { These come in pairs that look alike: the same kind of control, doing a different job. Read what it is doing <strong>in this situation</strong>, then pick a category and a type. }
+        @else { Each control has a <strong>category</strong> (how it is put in place) and a <strong>type</strong> (what it does). Pick one of each; the answer appears once you have both. }
+      </p>
 
       <ol class="list" aria-label="Controls">
         @for (c of items; track $index) {
@@ -117,28 +148,34 @@ const CATEGORY_HINT: Record<Category, string> = {
   styleUrl: './control-sorter.component.scss',
 })
 export class ControlSorterComponent implements OnInit {
+  @Input() set: 'basic' | 'tricky' = 'basic';
   private work = inject(LessonWork, { optional: true });
-  readonly items = CONTROLS;
+  items = CONTROLS;
   readonly categories = CATEGORIES;
   readonly types = TYPES;
   readonly hint = CATEGORY_HINT;
 
   active = 0;
-  picks: { category?: Category; type?: ControlType }[] = CONTROLS.map(() => ({}));
+  picks: { category?: Category; type?: ControlType }[] = [];
+
+  /** The first round keeps its original save key, so earlier answers are still there. */
+  private get key() { return this.set === 'tricky' ? 'controls-tricky' : 'controls'; }
 
   ngOnInit() {
-    const saved = this.work?.get<{ active: number; picks: { category?: Category; type?: ControlType }[] }>('controls');
+    this.items = this.set === 'tricky' ? TRICKY_CONTROLS : CONTROLS;
+    this.picks = this.items.map(() => ({}));
+    const saved = this.work?.get<{ active: number; picks: { category?: Category; type?: ControlType }[] }>(this.key);
     if (!saved) return;
-    if (saved.active >= 0 && saved.active < CONTROLS.length) this.active = saved.active;
-    this.picks = CONTROLS.map((_, i) => ({ ...saved.picks?.[i] }));
+    if (saved.active >= 0 && saved.active < this.items.length) this.active = saved.active;
+    this.picks = this.items.map((_, i) => ({ ...saved.picks?.[i] }));
   }
 
-  get item() { return CONTROLS[this.active]; }
+  get item() { return this.items[this.active]; }
   get pick() { return this.picks[this.active]; }
   get answered(): boolean { return !!(this.pick.category && this.pick.type); }
 
   state(i: number): 'ok' | 'bad' | null {
-    const p = this.picks[i], c = CONTROLS[i];
+    const p = this.picks[i], c = this.items[i];
     if (!p.category || !p.type) return null;
     return p.category === c.category && c.types.includes(p.type) ? 'ok' : 'bad';
   }
@@ -146,10 +183,10 @@ export class ControlSorterComponent implements OnInit {
     const s = this.state(i);
     return s === 'ok' ? ', sorted right' : s === 'bad' ? ', not right yet' : '';
   }
-  get rightCount(): number { return CONTROLS.filter((_, i) => this.state(i) === 'ok').length; }
+  get rightCount(): number { return this.items.filter((_, i) => this.state(i) === 'ok').length; }
 
   go(i: number) {
-    if (i < 0 || i >= CONTROLS.length) return;
+    if (i < 0 || i >= this.items.length) return;
     this.active = i;
     this.save();
   }
@@ -158,9 +195,9 @@ export class ControlSorterComponent implements OnInit {
     this.save();
   }
   reset() {
-    this.picks = CONTROLS.map(() => ({}));
+    this.picks = this.items.map(() => ({}));
     this.active = 0;
-    this.work?.clear('controls');
+    this.work?.clear(this.key);
   }
-  private save() { this.work?.set('controls', { active: this.active, picks: this.picks }); }
+  private save() { this.work?.set(this.key, { active: this.active, picks: this.picks }); }
 }

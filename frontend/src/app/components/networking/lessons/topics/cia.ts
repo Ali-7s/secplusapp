@@ -1,5 +1,10 @@
-import { LessonBody } from '../../networking.model';
+import { CIA_NAME, LessonBody } from '../../networking.model';
+import { trackLessons } from '../lesson-index';
 import { analogy, ciaSorter, decide, exam, h, mcq, p, recap, step, table, tip, trap, words } from '../dsl';
+
+/** Every other topic and the goals it protects, from the same data as the badges on the topic cards. */
+const TOPIC_ROWS = trackLessons('topics').filter(l => l.cia && l.slug !== 'cia')
+  .map(l => [`Topic ${l.number}: ${l.title}`, l.cia!.goals.map(g => CIA_NAME[g]).join(', '), l.cia!.how]);
 
 export const CIA: LessonBody = {
   goals: [
@@ -119,6 +124,11 @@ export const CIA: LessonBody = {
       { caption: 'A gap analysis, step by step' },
     ),
     exam('A question about comparing current security with a standard, or finding what is needed to meet a new requirement, is describing a **gap analysis**. It produces a plan; it does not fix anything by itself.'),
+
+    h('Where the other topics fit', { objective: '1.2', keep: 'Every topic protects at least one goal. When a control or attack confuses you, ask which goal it is about: reading (confidentiality), changing (integrity) or using (availability).' }),
+    p('Every other hands-on topic protects one or more of the three goals. Each topic\'s card shows them as lit letters, and its header says how. Here is the whole map:'),
+    table(['Topic', 'Protects', 'How'], TOPIC_ROWS, { caption: 'The hands-on topics and the CIA triad' }),
+    tip('Topic 2, on control categories and types, is the natural next step: this topic is **what** security protects, and that one is **how** controls protect it.'),
   ],
   check: [
     mcq('An attacker on the same network changes the bank account number in a payment file while it is being uploaded. Which goal is broken?',

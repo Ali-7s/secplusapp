@@ -5,11 +5,12 @@ export const CONTROLS: LessonBody = {
   goals: [
     'Sort any security control by category: technical, managerial, operational or physical',
     'Sort it by type: preventive, deterrent, detective, corrective, compensating or directive',
+    'Tell apart the look-alike pairs that cause most wrong answers, such as deterrent and preventive, or corrective and compensating',
     'Follow a request through a zero trust architecture: subject, policy engine, policy administrator and enforcement point',
     'Tell the control plane from the data plane, and explain adaptive identity and threat scope reduction',
   ],
   blocks: [
-    recap('From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 7: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
+    recap('From topic 1: every control exists to protect **confidentiality, integrity or availability**. From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 8: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
     words(
       ['Security control', 'Anything that reduces a risk: a device, a setting, a policy, a person\'s job, a lock'],
       ['Control category', 'How a control is put in place: technical, managerial, operational or physical'],
@@ -54,6 +55,24 @@ export const CONTROLS: LessonBody = {
     h('Try it: sort twelve controls', { objective: '1.1', keep: 'Ask two questions: who or what puts it in place (category), and does it stop, discourage, find, fix, stand in for or tell (type)? Some controls fit two types; pick the best.' }),
     controlSorter(),
     exam('Questions often describe a control and ask for its type. Look for the verb: **stops** is preventive, **discourages** is deterrent, **alerts** or **reveals** is detective, **restores** is corrective, **instead of** is compensating, **requires** or **instructs** is directive.'),
+
+    h('The pairs that trip people up', { objective: '1.1', keep: 'Can a determined attacker ignore it? Deterrent, else preventive. Warn or instruct? Deterrent or directive. Find or fix? Detective or corrective. After an incident or instead of a control? Corrective or compensating. Policy or daily work? Managerial or operational.' }),
+    p('Most wrong answers come from a handful of look-alike pairs. For each pair there is one question that settles it:'),
+    table(
+      ['Pair', 'Ask', 'Example'],
+      [
+        ['Preventive or deterrent', 'Could a determined attacker simply ignore it? Then it only deters.', 'A locked gate prevents; a "Trespassers will be prosecuted" sign deters'],
+        ['Deterrent or directive', 'Does it warn of a consequence, or tell people what to do?', '"Trespassers will be prosecuted" deters; "Authorized personnel only" directs'],
+        ['Detective or corrective', 'Does it find the problem, or fix it?', 'An IDS alert detects; restoring from backup corrects'],
+        ['Corrective or compensating', 'Is it fixing things after an incident, or standing in for a control you cannot have?', 'Patching after a break-in corrects; isolating a server that cannot be patched compensates'],
+        ['Preventive or corrective', 'Before the incident, or after it? The same action can be either.', 'Monthly patching prevents; an emergency patch after an exploit corrects'],
+        ['Managerial or operational', 'Is it a decision or document from management, or work people do every day?', 'A security policy is managerial; guards and awareness training are operational'],
+        ['Physical or technical', 'Can you touch it, or does a system enforce it?', 'Bollards, fences and signs are physical; firewall rules and MFA are technical'],
+      ],
+      { caption: 'Look-alike pairs and the question that separates them' },
+    ),
+    trap('One control can be several types depending on what it is doing. A visible camera **deters**; reviewing its recording after a theft **detects**. Antivirus that blocks a download **prevents**; antivirus that quarantines a file already on disk **corrects**. Read what the control does in the scenario.'),
+    controlSorter('tricky'),
 
     h('Zero trust: check every request', { objective: '1.2', keep: 'Zero trust never trusts a request because of its network location. Every request is checked against identity, device health and context, and only the smallest necessary access is granted, then rechecked.' }),
     p('Old networks had a hard shell and a soft middle: once you were inside, on the office network or the VPN, you were trusted. That inside area is an **implicit trust zone**, and attackers love it, because one phished laptop can reach everything. **Zero trust** removes it:'),

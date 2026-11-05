@@ -51,6 +51,12 @@
             <span class="meta">
               <span><mat-icon aria-hidden="true">{{ l.icon }}</mat-icon> {{ l.minutes }} min</span>
               @if (l.objectives.length) { <span class="objs" [title]="'Exam objectives ' + l.objectives.join(', ')">Obj {{ l.objectives.join(' · ') }}</span> }
+              @if (l.cia; as c) {
+                <span class="cia" [title]="'CIA triad: protects ' + ciaLabel(c.goals)">
+                  <span class="sr-only">Protects {{ ciaLabel(c.goals) }}</span>
+                  @for (g of ciaGoals; track g) { <b aria-hidden="true" [class.on]="c.goals.includes(g)">{{ g }}</b> }
+                </span>
+              }
               @if (done(l.slug)) { <span class="done-chip">Completed</span> }
             </span>
           </span>
@@ -75,6 +81,7 @@
     </p>
     <ul>
       <li><strong>Do them in any order</strong>, whenever a topic is up in your course. Each says what it builds on.</li>
+      <li><strong>Each card shows its link to the CIA triad:</strong> the lit letters are the goals that topic protects, confidentiality, integrity or availability. Topic 1 explains the triad.</li>
       <li><strong>Same format as the networking lessons:</strong> short parts, a <strong>Remember this</strong> box in each, and a check at the end.</li>
     </ul>
   </section>

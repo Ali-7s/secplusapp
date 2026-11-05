@@ -41,7 +41,7 @@ export const PHISHING: LessonBody = {
     'Recommend controls against phishing: email gateways, awareness training and reporting',
   ],
   blocks: [
-    recap('From Networking lesson 8: DNS turns names into addresses and can hold text (TXT) records. From topic 2: a **digital signature** proves who signed and that nothing changed. Email authentication puts both together: rules and public keys in DNS, signatures on each message.'),
+    recap('From Networking lesson 8: DNS turns names into addresses and can hold text (TXT) records. From topic 3: a **digital signature** proves who signed and that nothing changed. Email authentication puts both together: rules and public keys in DNS, signatures on each message.'),
     words(
       ['Social engineering', 'Tricking people, rather than computers, into giving access or information'],
       ['Phishing', 'A fake message, usually email, that gets you to click, sign in, pay or open something'],

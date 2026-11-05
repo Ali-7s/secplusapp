@@ -121,7 +121,7 @@ export const permsLab = (): Block => ({ type: 'perms' });
 export const mdmConsole = (): Block => ({ type: 'mdm' });
 
 /** Sort controls by category and type. */
-export const controlSorter = (): Block => ({ type: 'controls' });
+export const controlSorter = (set: 'basic' | 'tricky' = 'basic'): Block => set === 'tricky' ? { type: 'controls', set } : { type: 'controls' };
 
 /** Which of confidentiality, integrity and availability each attack breaks (`attacks`) or each control protects (`controls`). */
 export const ciaSorter = (show: 'attacks' | 'controls'): Block => ({ type: 'cia', show });

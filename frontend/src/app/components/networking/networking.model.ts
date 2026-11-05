@@ -230,7 +230,7 @@ export type Block =
   /** Configure MDM policies for three device groups and see how they handle a week of incidents. */
   | { type: 'mdm' }
   /** Sort security controls by category and type. */
-  | { type: 'controls' }
+  | { type: 'controls'; set?: 'tricky' }
   /** Pick which of confidentiality, integrity and availability each attack breaks or each control protects. */
   | { type: 'cia'; show: 'attacks' | 'controls' }
   /** An inbox of messages to inspect for phishing warning signs. */
@@ -264,7 +264,14 @@ export interface LessonMeta {
   focus: number;
   /** The SY0-701 objectives the lesson's parts teach, in order. A test keeps it in step with the parts. */
   objectives: string[];
+  /** Hands-on topics: which of the CIA goals the topic protects, and how, shown on its card and header. */
+  cia?: { goals: CiaGoal[]; how: string };
 }
+
+/** Confidentiality, integrity and availability. */
+export type CiaGoal = 'C' | 'I' | 'A';
+export const CIA_GOALS: CiaGoal[] = ['C', 'I', 'A'];
+export const CIA_NAME: Record<CiaGoal, string> = { C: 'Confidentiality', I: 'Integrity', A: 'Availability' };
 
 export interface LessonBody {
   goals: string[];

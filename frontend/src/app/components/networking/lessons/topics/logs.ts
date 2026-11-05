@@ -92,7 +92,7 @@ export const LOGS: LessonBody = {
     'Read a packet capture: a port scan, cleartext passwords, ARP poisoning, DNS tunneling and encrypted traffic',
   ],
   blocks: [
-    recap('From Networking lesson 9: an **IDS** watches traffic and raises alerts, an **IPS** can block it, and a **SIEM** collects logs from everything in one place. From topic 5: an **indicator of compromise (IoC)** is a clue that an attack happened, and responders work from evidence. This topic is where that evidence comes from and how to read it.'),
+    recap('From Networking lesson 9: an **IDS** watches traffic and raises alerts, an **IPS** can block it, and a **SIEM** collects logs from everything in one place. From topic 6: an **indicator of compromise (IoC)** is a clue that an attack happened, and responders work from evidence. This topic is where that evidence comes from and how to read it.'),
     words(
       ['Log', 'A record of events a system writes as it runs: sign-ins, connections, errors'],
       ['SIEM', 'Security information and event management: collects, correlates and alerts on logs from everywhere'],

@@ -8,7 +8,7 @@ import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { OBJECTIVE_NAMES } from '../../models/exam.model';
 import { ScrollSpot, readSpot, sameSpot, scrollToSpot } from '../../utils/scroll-spot';
-import { Block, CalloutKind, CardRef, Lesson } from './networking.model';
+import { Block, CIA_GOALS, CIA_NAME, CalloutKind, CardRef, Lesson } from './networking.model';
 import { TRACKS, trackLessons } from './lessons/lesson-index';
 import { getLesson } from './lessons/lessons';
 import { LessonPart, checkMinutes, lessonParts } from './lessons/parts';
@@ -90,6 +90,8 @@ export class LessonComponent {
   lesson: Lesson | undefined;
   readonly calloutIcons = CALLOUT_ICONS;
   readonly objectiveNames = OBJECTIVE_NAMES;
+  readonly ciaGoals = CIA_GOALS;
+  readonly ciaName = CIA_NAME;
 
   /** The lesson split at its headings; the self-check comes after the last part. */
   parts: LessonPart[] = [];

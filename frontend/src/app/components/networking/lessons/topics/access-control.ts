@@ -34,7 +34,7 @@ export const ACCESS_CONTROL: LessonBody = {
     'Explain how privileged access management protects admin accounts: just-in-time access, password vaulting and ephemeral credentials',
   ],
   blocks: [
-    recap('From topic 4: **authentication** proves who you are, and **authorization** decides what you may do. This topic is about authorization. From Networking lessons 3 and 9: a firewall rule list ends with an **implicit deny**, so anything not allowed is blocked. Access to files and data works the same way.'),
+    recap('From topic 5: **authentication** proves who you are, and **authorization** decides what you may do. This topic is about authorization. From Networking lessons 3 and 9: a firewall rule list ends with an **implicit deny**, so anything not allowed is blocked. Access to files and data works the same way.'),
     words(
       ['Subject', 'Who or what asks for access: a user, a service, a device'],
       ['Object', 'What is being accessed: a file, a folder, a database, a printer'],

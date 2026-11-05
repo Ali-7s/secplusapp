@@ -3,7 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { TRACKS, trackLessons } from './lessons/lesson-index';
-import { LessonMeta } from './networking.model';
+import { CIA_GOALS, CIA_NAME, CiaGoal, LessonMeta } from './networking.model';
 import { ProgressService } from '../../services/progress.service';
 
 /**
@@ -21,6 +21,8 @@ export class NetworkingComponent {
   readonly networking = trackLessons('networking');
   readonly topics = trackLessons('topics');
   readonly tracks = TRACKS;
+  readonly ciaGoals = CIA_GOALS;
+  ciaLabel(goals: CiaGoal[]) { return goals.map(g => CIA_NAME[g].toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1'); }
   private progress = inject(ProgressService);
 
   /** Template outlets pass untyped context; this restores the type. */

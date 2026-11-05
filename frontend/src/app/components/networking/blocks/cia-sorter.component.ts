@@ -1,10 +1,11 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { LessonWork } from '../lesson-work.service';
+import { CIA_GOALS, CIA_NAME, CiaGoal } from '../networking.model';
 
-export const PILLARS = ['C', 'I', 'A'] as const;
-export type Pillar = typeof PILLARS[number];
-export const PILLAR_NAME: Record<Pillar, string> = { C: 'Confidentiality', I: 'Integrity', A: 'Availability' };
+export const PILLARS = CIA_GOALS;
+export type Pillar = CiaGoal;
+export const PILLAR_NAME = CIA_NAME;
 
 export interface CiaItem {
   text: string;

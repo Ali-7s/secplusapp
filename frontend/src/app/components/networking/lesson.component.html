@@ -27,6 +27,19 @@
             }
           </div>
         }
+        @if (l.cia; as c) {
+          <div class="cia-tie">
+            <span class="objs-l">Ties to the CIA triad</span>
+            <span class="cia-goals">
+              @for (g of ciaGoals; track g) {
+                <span class="goal" [class.on]="c.goals.includes(g)">
+                  <b aria-hidden="true">{{ g }}</b>{{ ciaName[g] }}<span class="sr-only">{{ c.goals.includes(g) ? ': protected' : ': not the focus' }}</span>
+                </span>
+              }
+            </span>
+            <p>{{ c.how }}@if (l.slug !== 'cia') { <a routerLink="/lessons/cia">What is the CIA triad?</a> }</p>
+          </div>
+        }
       </header>
 
       @if (view === 'all' || step === 0) {
@@ -309,7 +322,7 @@
         <app-mdm-console />
       }
       @case ('controls') {
-        <app-control-sorter />
+        <app-control-sorter [set]="b.set ?? 'basic'" />
       }
       @case ('cia') {
         <app-cia-sorter [show]="b.show" />
