@@ -7,6 +7,17 @@ const COVER_ICON = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#5f6368" stroke-width="2.4"/><path d="M15 15l6 6" stroke="#5f6368" stroke-width="2.6" stroke-linecap="round"/></svg>');
 const SHORTCUTS = ['News', 'Weather', 'Maps', 'Recipes', 'Translate'];
 
+/** Original illustrated doodles in place of a logo, one a day, each linking to a search about its theme. */
+const DOODLES = [
+  { id: 'autumn', title: 'Celebrating autumn', query: 'autumn+leaves' },
+  { id: 'night', title: 'Celebrating the night sky', query: 'meteor+shower+tonight' },
+  { id: 'sea', title: 'Celebrating the world\'s oceans', query: 'world+oceans' },
+  { id: 'balloons', title: 'Celebrating the first hot air balloon flight', query: 'first+hot+air+balloon+flight' },
+] as const;
+/** Stars for the night doodle: x, y, radius and twinkle delay. */
+const STARS = [[30, 30, 1.6, 0], [92, 70, 1.2, 1.1], [150, 26, 1.8, 0.5], [196, 58, 1.2, 1.6], [236, 20, 1.5, 0.8], [282, 72, 1.1, 0.2],
+  [384, 26, 1.7, 1.3], [400, 76, 1.2, 0.6], [128, 92, 1, 1.9], [20, 88, 1.2, 1.4]];
+
 /**
  * The emergency screen. Escape covers the app with a plain search start page and swaps the tab's title and icon;
  * Escape again brings the app back exactly as it was. Searching opens a real web search in a new tab.
@@ -15,41 +26,7 @@ const SHORTCUTS = ['News', 'Weather', 'Maps', 'Recipes', 'Translate'];
 @Component({
   selector: 'app-cover',
   standalone: true,
-  template: `
-    @if (on()) {
-      <div class="cover" role="search">
-        <header class="top">
-          <a href="https://mail.google.com" target="_blank" rel="noopener">Mail</a>
-          <a href="https://www.google.com/imghp" target="_blank" rel="noopener">Images</a>
-          <span class="apps" aria-hidden="true">
-            @for (i of dots; track i) { <i></i> }
-          </span>
-          <span class="avatar" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
-          </span>
-        </header>
-
-        <main class="middle">
-          <div class="mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
-            <span>Search</span>
-          </div>
-          <form class="box-form" action="https://www.google.com/search" method="get" target="_blank" (submit)="searched()">
-            <label class="box">
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
-              <input #q name="q" type="search" autocomplete="off" aria-label="Search the web" placeholder="Search the web or type a URL" />
-              <svg class="mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
-            </label>
-          </form>
-          <ul class="tiles" aria-hidden="true">
-            @for (s of shortcuts; track s) {
-              <li><span class="tile">{{ s[0] }}</span><span class="tl">{{ s }}</span></li>
-            }
-          </ul>
-        </main>
-      </div>
-    }
-  `,
+  templateUrl: './cover.component.html',
   styleUrl: './cover.component.scss',
 })
 export class CoverComponent implements OnInit {
@@ -57,6 +34,9 @@ export class CoverComponent implements OnInit {
   readonly on = signal(false);
   readonly dots = Array.from({ length: 9 }, (_, i) => i);
   readonly shortcuts = SHORTCUTS;
+  readonly stars = STARS;
+  /** Today's doodle, so it changes from day to day like the real thing. */
+  readonly doodle = DOODLES[Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000) % DOODLES.length];
   @ViewChild('q') private input?: ElementRef<HTMLInputElement>;
   private saved: { title: string; icons: [HTMLLinkElement, string | null][] } | null = null;
 

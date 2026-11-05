@@ -1,0 +1,87 @@
+@if (on()) {
+  <div class="cover" role="search">
+    <header class="top">
+      <a href="https://mail.google.com" target="_blank" rel="noopener">Mail</a>
+      <a href="https://www.google.com/imghp" target="_blank" rel="noopener">Images</a>
+      <span class="apps" aria-hidden="true">
+        @for (i of dots; track i) { <i></i> }
+      </span>
+      <span class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+      </span>
+    </header>
+
+    <main class="middle">
+      @let d = doodle;
+      <a class="doodle" [href]="'https://www.google.com/search?q=' + d.query" target="_blank" rel="noopener" [title]="d.title" [attr.aria-label]="d.title">
+        @switch (d.id) {
+          @case ('autumn') {
+            <svg viewBox="0 0 420 150" aria-hidden="true">
+              <defs><linearGradient id="cv-au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd59e"/><stop offset="1" stop-color="#fff3df"/></linearGradient></defs>
+              <rect width="420" height="150" rx="20" fill="url(#cv-au)"/>
+              <circle class="sun" cx="336" cy="44" r="24" fill="#f9a825"/>
+              <path d="M0 112 Q70 70 150 100 T300 92 T420 96 V150 H0Z" fill="#e8893a"/>
+              <path d="M0 128 Q90 100 190 122 T420 116 V150 H0Z" fill="#b5541c"/>
+              <g class="tree"><rect x="76" y="78" width="7" height="34" rx="2" fill="#6d3a17"/><circle cx="80" cy="70" r="20" fill="#d84315"/><circle cx="66" cy="78" r="12" fill="#ef6c00"/><circle cx="94" cy="80" r="13" fill="#f4511e"/></g>
+              <g class="tree"><rect x="226" y="72" width="7" height="40" rx="2" fill="#6d3a17"/><circle cx="230" cy="62" r="22" fill="#fbc02d"/><circle cx="214" cy="72" r="13" fill="#f9a825"/><circle cx="246" cy="72" r="14" fill="#ffb300"/></g>
+              <g class="tree"><rect x="356" y="86" width="6" height="28" rx="2" fill="#6d3a17"/><circle cx="359" cy="80" r="16" fill="#c62828"/><circle cx="348" cy="88" r="10" fill="#e53935"/></g>
+              <g transform="translate(120 20)"><path class="leaf l1" d="M0 0 C6 -8 14 -4 14 4 C8 8 2 6 0 0Z" fill="#e65100"/></g>
+              <g transform="translate(180 10)"><path class="leaf l2" d="M0 0 C6 -8 14 -4 14 4 C8 8 2 6 0 0Z" fill="#f9a825"/></g>
+              <g transform="translate(290 24)"><path class="leaf l3" d="M0 0 C6 -8 14 -4 14 4 C8 8 2 6 0 0Z" fill="#c62828"/></g>
+              <g transform="translate(40 30)"><path class="leaf l4" d="M0 0 C6 -8 14 -4 14 4 C8 8 2 6 0 0Z" fill="#ef6c00"/></g>
+            </svg>
+          }
+          @case ('night') {
+            <svg viewBox="0 0 420 150" aria-hidden="true">
+              <defs><linearGradient id="cv-ni" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141b46"/><stop offset="1" stop-color="#3d3f92"/></linearGradient></defs>
+              <rect width="420" height="150" rx="20" fill="url(#cv-ni)"/>
+              @for (st of stars; track $index) { <circle class="star" [attr.cx]="st[0]" [attr.cy]="st[1]" [attr.r]="st[2]" fill="#fff8d6" [style.animation-delay.s]="st[3]"/> }
+              <circle cx="330" cy="46" r="24" fill="#fff3c4"/><circle cx="342" cy="38" r="22" fill="#232a62"/>
+              <line class="shoot" x1="60" y1="22" x2="110" y2="44" stroke="#fff8d6" stroke-width="3" stroke-linecap="round"/>
+              <path d="M0 120 Q60 96 120 116 T250 108 T420 112 V150 H0Z" fill="#232758"/>
+              <path d="M0 134 Q100 118 210 132 T420 128 V150 H0Z" fill="#12153a"/>
+              <g transform="translate(250 96)"><rect x="-4" y="10" width="4" height="22" fill="#5c5f9e" transform="rotate(14)"/><rect x="8" y="10" width="4" height="22" fill="#5c5f9e" transform="rotate(-14 10 10)"/><rect x="-6" y="-2" width="34" height="11" rx="4" fill="#ffca28" transform="rotate(-24)"/></g>
+            </svg>
+          }
+          @case ('sea') {
+            <svg viewBox="0 0 420 150" aria-hidden="true">
+              <defs><linearGradient id="cv-se" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fdcff"/><stop offset="1" stop-color="#e3f6ff"/></linearGradient></defs>
+              <rect width="420" height="150" rx="20" fill="url(#cv-se)"/>
+              <circle class="sun" cx="70" cy="44" r="22" fill="#ffca28"/>
+              <path class="gull" d="M250 34 q8 -8 14 0 q6 -8 14 0" fill="none" stroke="#37474f" stroke-width="2.5" stroke-linecap="round"/>
+              <path class="gull g2" d="M300 22 q6 -6 11 0 q5 -6 11 0" fill="none" stroke="#37474f" stroke-width="2.2" stroke-linecap="round"/>
+              <g class="boat"><path d="M180 98 h70 l-12 16 h-46z" fill="#d84315"/><rect x="213" y="48" width="4" height="50" fill="#5d4037"/><path d="M217 52 l30 40 h-30z" fill="#fff"/><path d="M213 58 l-24 34 h24z" fill="#ffe082"/></g>
+              <g class="waves"><path d="M-40 110 q20 -10 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 V150 H-40Z" fill="#4aa3e8"/></g>
+              <g class="waves w2"><path d="M-40 124 q20 -10 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 V150 H-40Z" fill="#1e6fc0"/></g>
+            </svg>
+          }
+          @default {
+            <svg viewBox="0 0 420 150" aria-hidden="true">
+              <defs><linearGradient id="cv-ba" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe9fb"/><stop offset="1" stop-color="#f1fbff"/></linearGradient></defs>
+              <rect width="420" height="150" rx="20" fill="url(#cv-ba)"/>
+              <g class="cloud"><ellipse cx="90" cy="40" rx="30" ry="12" fill="#fff"/><ellipse cx="110" cy="32" rx="20" ry="12" fill="#fff"/></g>
+              <g class="cloud c2"><ellipse cx="320" cy="30" rx="26" ry="10" fill="#fff"/><ellipse cx="336" cy="24" rx="16" ry="10" fill="#fff"/></g>
+              <path d="M0 150 L70 92 L120 128 L190 76 L270 140 L330 100 L420 150Z" fill="#7cb342"/>
+              <path d="M170 92 L190 76 L208 90 L196 96Z" fill="#fff"/>
+              <g class="balloon b1"><path d="M132.0 62.7 L168.0 62.7 L157.7 86.5 L142.3 86.5Z" fill="#e53935"/><ellipse cx="150" cy="46" rx="24" ry="27" fill="#e53935"/><ellipse cx="150" cy="46" rx="8.0" ry="27" fill="#ffca28"/><path d="M142.3 86.5 L143.1 99.0 M157.7 86.5 L156.9 99.0" stroke="#6d4c41" stroke-width="1.4"/><rect x="141.6" y="99.0" width="16.9" height="13.4" rx="2" fill="#8d6e63"/></g>
+              <g class="balloon b2"><path d="M248.5 65.0 L275.5 65.0 L267.8 83.5 L256.2 83.5Z" fill="#1e88e5"/><ellipse cx="262" cy="52" rx="18" ry="21" fill="#1e88e5"/><ellipse cx="262" cy="52" rx="6.0" ry="21" fill="#e3f2fd"/><path d="M256.2 83.5 L256.8 92.9 M267.8 83.5 L267.2 92.9" stroke="#6d4c41" stroke-width="1.4"/><rect x="255.7" y="92.9" width="12.7" height="10.1" rx="2" fill="#8d6e63"/></g>
+              <g class="balloon b3"><path d="M346.2 75.3 L365.8 75.3 L360.2 88.5 L351.8 88.5Z" fill="#8e24aa"/><ellipse cx="356" cy="66" rx="13" ry="15" fill="#8e24aa"/><ellipse cx="356" cy="66" rx="4.3" ry="15" fill="#ffca28"/><path d="M351.8 88.5 L352.3 95.3 M360.2 88.5 L359.7 95.3" stroke="#6d4c41" stroke-width="1.4"/><rect x="351.4" y="95.3" width="9.2" height="7.3" rx="2" fill="#8d6e63"/></g>
+            </svg>
+          }
+        }
+      </a>
+      <form class="box-form" action="https://www.google.com/search" method="get" target="_blank" (submit)="searched()">
+        <label class="box">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
+          <input #q name="q" type="search" autocomplete="off" aria-label="Search the web" placeholder="Search the web or type a URL" />
+          <svg class="mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+        </label>
+      </form>
+      <ul class="tiles" aria-hidden="true">
+        @for (s of shortcuts; track s) {
+          <li><span class="tile">{{ s[0] }}</span><span class="tl">{{ s }}</span></li>
+        }
+      </ul>
+    </main>
+  </div>
+}

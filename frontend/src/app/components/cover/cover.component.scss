@@ -24,10 +24,46 @@
 }
 
 .middle { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12vh 16px 40px; }
-.mark { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; color: var(--cv-soft);
-  svg { width: 52px; height: 52px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
-  span { font-size: clamp(40px, 9vw, 64px); letter-spacing: -2px; font-weight: 400; }
+.doodle { display: block; width: min(420px, 100%); margin-bottom: 26px; border-radius: 20px; line-height: 0;
+  svg { width: 100%; height: auto; overflow: hidden; border-radius: 20px; }
+  &:focus-visible { outline: 2px solid var(--cv-soft) !important; outline-offset: 4px; }
 }
+
+// Gentle motion, as doodles have. Off for anyone who prefers reduced motion.
+@media (prefers-reduced-motion: no-preference) {
+  .doodle {
+    .leaf { animation: cv-fall 7s linear infinite; transform-box: fill-box; transform-origin: center; }
+    .l2 { animation-delay: -2s; animation-duration: 8s; }
+    .l3 { animation-delay: -4s; animation-duration: 6.5s; }
+    .l4 { animation-delay: -5.5s; animation-duration: 9s; }
+    .sun { animation: cv-glow 4s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+    .star { animation: cv-twinkle 2.4s ease-in-out infinite alternate; }
+    .shoot { stroke-dasharray: 60; animation: cv-shoot 5s ease-in infinite; }
+    .boat { animation: cv-bob 3s ease-in-out infinite alternate; }
+    .waves { animation: cv-wave 6s linear infinite; }
+    .w2 { animation-duration: 4s; animation-direction: reverse; }
+    .gull { animation: cv-bob 2.5s ease-in-out infinite alternate; }
+    .g2 { animation-delay: -1s; }
+    .cloud { animation: cv-drift 14s ease-in-out infinite alternate; }
+    .c2 { animation-duration: 18s; animation-direction: alternate-reverse; }
+    .balloon { animation: cv-float 5s ease-in-out infinite alternate; }
+    .b2 { animation-delay: -1.7s; animation-duration: 6s; }
+    .b3 { animation-delay: -3s; animation-duration: 4.4s; }
+  }
+}
+@keyframes cv-fall {
+  from { transform: translate(0, -10px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translate(40px, 110px) rotate(300deg); opacity: 0; }
+}
+@keyframes cv-glow { to { scale: 1.08; } }
+@keyframes cv-twinkle { from { opacity: 1; } to { opacity: .25; } }
+@keyframes cv-shoot { 0%, 70% { stroke-dashoffset: 60; opacity: 0; } 75% { opacity: 1; } 100% { stroke-dashoffset: -60; opacity: 0; } }
+@keyframes cv-bob { from { translate: 0 0; } to { translate: 0 -4px; } }
+@keyframes cv-wave { from { translate: 0 0; } to { translate: 40px 0; } }
+@keyframes cv-drift { from { translate: -10px 0; } to { translate: 14px 0; } }
+@keyframes cv-float { from { translate: 0 4px; } to { translate: 0 -8px; } }
 
 .box-form { width: 100%; max-width: 584px; }
 .box {
