@@ -231,6 +231,8 @@ export type Block =
   | { type: 'mdm' }
   /** Sort security controls by category and type. */
   | { type: 'controls' }
+  /** Pick which of confidentiality, integrity and availability each attack breaks or each control protects. */
+  | { type: 'cia'; show: 'attacks' | 'controls' }
   /** An inbox of messages to inspect for phishing warning signs. */
   | { type: 'email' }
   /** A CVSS 3.1 base score calculator with vulnerabilities to score. */

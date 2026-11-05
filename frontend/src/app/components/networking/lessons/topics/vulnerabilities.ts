@@ -42,7 +42,7 @@ export const VULNERABILITIES: LessonBody = {
     'Choose a response, from patching to a documented exception, and validate that it worked',
   ],
   blocks: [
-    recap('From topic 5: risk is likelihood times impact, and you can mitigate, transfer, avoid or accept it. From topic 10: patching on a schedule is part of hardening. Vulnerability management is the loop that finds what needs patching and decides what comes first.'),
+    recap('From topic 6: risk is likelihood times impact, and you can mitigate, transfer, avoid or accept it. From topic 11: patching on a schedule is part of hardening. Vulnerability management is the loop that finds what needs patching and decides what comes first.'),
     words(
       ['Vulnerability', 'A weakness that could be exploited, such as a software bug or a misconfiguration'],
       ['Exploit', 'Code or a technique that takes advantage of a vulnerability'],

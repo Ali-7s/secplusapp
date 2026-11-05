@@ -123,6 +123,9 @@ export const mdmConsole = (): Block => ({ type: 'mdm' });
 /** Sort controls by category and type. */
 export const controlSorter = (): Block => ({ type: 'controls' });
 
+/** Which of confidentiality, integrity and availability each attack breaks (`attacks`) or each control protects (`controls`). */
+export const ciaSorter = (show: 'attacks' | 'controls'): Block => ({ type: 'cia', show });
+
 /** Inspect four messages for phishing warning signs. */
 export const emailInspector = (): Block => ({ type: 'email' });
 

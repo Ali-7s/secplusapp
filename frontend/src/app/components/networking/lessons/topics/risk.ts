@@ -31,7 +31,7 @@ export const RISK: LessonBody = {
     'Use RTO, RPO, MTBF and MTTR correctly, and work out availability for chains and redundant pairs',
   ],
   blocks: [
-    recap('From topic 4: an incident costs money, downtime and reputation, and **recovery** restores systems from clean backups. From Networking lesson 11: **hardening** and other safeguards, called **controls**, reduce how likely or how damaging an attack is. Controls cost money too, which is where this topic starts.'),
+    recap('From topic 5: an incident costs money, downtime and reputation, and **recovery** restores systems from clean backups. From Networking lesson 11: **hardening** and other safeguards, called **controls**, reduce how likely or how damaging an attack is. Controls cost money too, which is where this topic starts.'),
     words(
       ['Risk', 'The chance that a threat harms something you value, and how badly'],
       ['Threat', 'Anything that could cause harm: an attacker, a flood, a careless employee'],

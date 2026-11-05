@@ -120,7 +120,17 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
   },
 ]), ...inTrack('topics', [
   {
-    slug: 'crypto', number: 1, minutes: 46, optionalMinutes: 1, icon: 'key',
+    slug: 'cia', number: 1, minutes: 32, icon: 'change_history',
+    objectives: ['1.2'],
+    title: 'The CIA triad: what security protects',
+    summary: 'Name what each attack breaks and each control protects across confidentiality, integrity and availability, balance them at a clinic, then see what non-repudiation, AAA and a gap analysis add.',
+    related: [...term('CIA triad', 'Confidentiality', 'Integrity', 'Availability', 'Non-repudiation', 'Authentication', 'Authorization', 'Gap analysis'), ...acr('CIA', 'AAA'),
+      ...term('Hashing', 'Digital signature', 'Encryption', 'Data masking', 'High availability', 'Redundancy', 'Fault tolerance', 'Least privilege', 'Change management'),
+      ...acr('HMAC', 'RADIUS', 'DDoS', 'TLS')],
+    focus: 10,
+  },
+  {
+    slug: 'crypto', number: 2, minutes: 46, optionalMinutes: 1, icon: 'key',
     objectives: ['1.4', '3.3'],
     title: 'Encryption, hashing and signatures',
     summary: 'Hash some text and watch it change, salt a password, and pick which of Alice\'s and Bob\'s keys locks, unlocks, signs and verifies. Then see how TLS combines them all.',
@@ -131,7 +141,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 23,
   },
   {
-    slug: 'pki', number: 2, minutes: 36, icon: 'verified',
+    slug: 'pki', number: 3, minutes: 36, icon: 'verified',
     objectives: ['1.4'],
     title: 'Certificates and PKI: should the browser trust it?',
     summary: 'Read a certificate, follow the chain of trust to a root, request one with a CSR and revoke it with OCSP. Then judge six real-looking certificate chains the way a browser does.',
@@ -141,7 +151,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 18,
   },
   {
-    slug: 'sign-in', number: 3, minutes: 36, icon: 'login',
+    slug: 'sign-in', number: 4, minutes: 36, icon: 'login',
     objectives: ['1.2', '4.6', '4.1'],
     title: 'Sign-in protocols: Kerberos, SAML, OAuth and more',
     summary: 'Step through a Kerberos sign-in, a SAML login and an OAuth consent, see what OpenID Connect adds, and compare RADIUS with TACACS+. Then identify each protocol from what it looks like on the wire.',
@@ -150,7 +160,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 15,
   },
   {
-    slug: 'incident-response', number: 4, minutes: 38, icon: 'emergency',
+    slug: 'incident-response', number: 5, minutes: 38, icon: 'emergency',
     objectives: ['4.8'],
     title: 'Incident response and forensics, step by step',
     summary: 'The response phases in order, then a ransomware incident told one decision at a time. Finish with evidence handling: order of volatility, write blockers, hashes, chain of custody and legal hold.',
@@ -159,7 +169,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 17,
   },
   {
-    slug: 'risk', number: 5, minutes: 32, icon: 'calculate',
+    slug: 'risk', number: 6, minutes: 32, icon: 'calculate',
     objectives: ['5.2'],
     title: 'Risk calculations: SLE, ALE and availability',
     summary: 'Price a risk with SLE, ARO and ALE, decide whether a control or insurance pays for itself, and work out uptime from MTBF, MTTR and the nines, with live calculators for both.',
@@ -169,7 +179,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 22,
   },
   {
-    slug: 'access-control', number: 6, minutes: 29, icon: 'admin_panel_settings',
+    slug: 'access-control', number: 7, minutes: 29, icon: 'admin_panel_settings',
     objectives: ['4.6'],
     title: 'Access control models and policies',
     summary: 'Tell DAC, MAC, role-based, rule-based and attribute-based access control apart, then build requests against a storage policy and watch explicit and implicit denies decide them.',
@@ -179,7 +189,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 14,
   },
   {
-    slug: 'backups', number: 7, minutes: 28, icon: 'backup',
+    slug: 'backups', number: 8, minutes: 28, icon: 'backup',
     objectives: ['3.4'],
     title: 'Backups, recovery sites and high availability',
     summary: 'Run a week of full, incremental and differential backups and see what a restore needs. Then snapshots and replication, the 3-2-1 rule, hot, warm and cold sites, failover and failback.',
@@ -189,7 +199,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 15,
   },
   {
-    slug: 'logs', number: 8, minutes: 47, icon: 'manage_search',
+    slug: 'logs', number: 9, minutes: 47, icon: 'manage_search',
     objectives: ['4.9', '4.4', '2.4'],
     title: 'Logs, alerts and packet captures',
     summary: 'Hunt through a night of SIEM events from the first sprayed password to the cleared log, sort alerts into true and false positives, then read a packet capture for a scan, cleartext passwords and ARP poisoning.',
@@ -198,7 +208,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 18,
   },
   {
-    slug: 'accounts', number: 9, minutes: 34, icon: 'manage_accounts',
+    slug: 'accounts', number: 10, minutes: 34, icon: 'manage_accounts',
     objectives: ['4.6'],
     title: 'Accounts, passwords and permissions',
     summary: 'Bring an old password policy up to date and watch which attacks it stops, sort authentication factors, set Linux permissions with chmod, and work out effective NTFS and share permissions.',
@@ -207,7 +217,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 14,
   },
   {
-    slug: 'endpoints', number: 10, minutes: 28, icon: 'devices',
+    slug: 'endpoints', number: 11, minutes: 28, icon: 'devices',
     objectives: ['2.5', '4.1'],
     title: 'Hardening endpoints and mobile devices',
     summary: 'Work through a hardening checklist, find what should not be listening on a web server, compare BYOD, COPE and CYOD, then run an MDM console through a week of lost phones and wandering tablets.',
@@ -216,7 +226,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 14,
   },
   {
-    slug: 'controls', number: 11, minutes: 24, icon: 'category',
+    slug: 'controls', number: 12, minutes: 24, icon: 'category',
     objectives: ['1.1', '1.2'],
     title: 'Security controls and zero trust',
     summary: 'Sort twelve controls by category and type, from firewall rules to fire extinguishers, then follow one request through a zero trust architecture: subject, policy engine, policy administrator and enforcement point.',
@@ -226,7 +236,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 21,
   },
   {
-    slug: 'phishing', number: 12, minutes: 25, icon: 'phishing',
+    slug: 'phishing', number: 13, minutes: 25, icon: 'phishing',
     objectives: ['2.2', '4.5'],
     title: 'Phishing and email security',
     summary: 'Inspect an inbox for warning signs, from lookalike domains to double extensions and hijacked supplier mailboxes, then read SPF, DKIM and DMARC records and work out which messages get delivered.',
@@ -235,7 +245,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 16,
   },
   {
-    slug: 'vulnerabilities', number: 13, minutes: 24, icon: 'bug_report',
+    slug: 'vulnerabilities', number: 14, minutes: 24, icon: 'bug_report',
     objectives: ['4.3'],
     title: 'Vulnerability management and CVSS',
     summary: 'Score five real-world style vulnerabilities with a working CVSS 3.1 calculator, then prioritize a week of scan findings by exposure and exploitation, close a false positive and document an exception.',

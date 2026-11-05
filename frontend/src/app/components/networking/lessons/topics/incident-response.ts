@@ -28,7 +28,7 @@ export const INCIDENT_RESPONSE: LessonBody = {
     'Use legal hold, e-Discovery and root cause analysis correctly',
   ],
   blocks: [
-    recap('From topic 1: a **hash** is a fingerprint that changes completely if even one bit of the data changes. From Networking lesson 9: security devices such as an **IDS** and the **SIEM** (the central log collector) raise alerts. **EDR** is security software on each computer that watches for and can block attacks.'),
+    recap('From topic 2: a **hash** is a fingerprint that changes completely if even one bit of the data changes. From Networking lesson 9: security devices such as an **IDS** and the **SIEM** (the central log collector) raise alerts. **EDR** is security software on each computer that watches for and can block attacks.'),
     words(
       ['Event', 'Anything that happens on a system: a sign-in, a file opened. Most are harmless'],
       ['Incident', 'An event that harms or threatens security: malware, a breach, stolen data'],

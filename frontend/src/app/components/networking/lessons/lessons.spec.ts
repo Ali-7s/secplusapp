@@ -8,6 +8,7 @@ import { decidePolicy } from '../blocks/policy-playground.component';
 import { CVSS_TASKS, cvssScore, severity, vectorString } from '../blocks/cvss-calc.component';
 import { CATEGORIES, CONTROLS, TYPES } from '../blocks/control-sorter.component';
 import { MAILS } from '../blocks/email-inspector.component';
+import { CIA_ATTACKS, CIA_CONTROLS, PILLARS, isRight } from '../blocks/cia-sorter.component';
 
 describe('mcq', () => {
   it('keeps the right answer pointing at the right option', () => {
@@ -403,3 +404,30 @@ describe('hands-on widgets for controls, phishing and vulnerabilities', () => {
   });
 });
 
+
+describe('the CIA triad sorter', () => {
+  const sets = { attacks: CIA_ATTACKS, controls: CIA_CONTROLS };
+
+  it('gives every item real goals, a reason, and no goal both needed and extra', () => {
+    for (const [name, items] of Object.entries(sets)) {
+      for (const c of items) {
+        expect(c.hits.length).withContext(c.text).toBeGreaterThan(0);
+        for (const g of [...c.hits, ...(c.also ?? [])]) expect(PILLARS).withContext(c.text).toContain(g);
+        for (const g of c.also ?? []) expect(c.hits).withContext(c.text).not.toContain(g);
+        expect(c.why.split(/\s+/).length).withContext(c.text).toBeGreaterThanOrEqual(12);
+      }
+      // Each goal is the whole answer at least once, and some items need two.
+      for (const g of PILLARS) expect(items.some(c => c.hits.length === 1 && c.hits[0] === g)).withContext(`${name} ${g}`).toBeTrue();
+      expect(items.some(c => c.hits.length > 1)).withContext(name).toBeTrue();
+    }
+  });
+
+  it('marks a pick right only with every needed goal and nothing beyond the fair extras', () => {
+    const c = { text: '', why: '', hits: ['I' as const], also: ['A' as const] };
+    expect(isRight(c, ['I'])).toBeTrue();
+    expect(isRight(c, ['I', 'A'])).toBeTrue();
+    expect(isRight(c, ['A'])).toBeFalse();
+    expect(isRight(c, ['I', 'C'])).toBeFalse();
+    expect(isRight({ text: '', why: '', hits: ['C', 'I'] }, ['C'])).toBeFalse();
+  });
+});

@@ -58,7 +58,7 @@ export const ACCOUNTS: LessonBody = {
     'Work out effective NTFS and share permissions on Windows',
   ],
   blocks: [
-    recap('From topic 6: **least privilege**, **groups** whose permissions add up, and an **explicit deny** that beats any allow. From topic 3: **LDAP** reads a directory, **Kerberos** signs users in to Windows domains, and **SSO** lets one sign-in cover many systems. From topic 1: passwords are stored as salted **hashes**.'),
+    recap('From topic 7: **least privilege**, **groups** whose permissions add up, and an **explicit deny** that beats any allow. From topic 4: **LDAP** reads a directory, **Kerberos** signs users in to Windows domains, and **SSO** lets one sign-in cover many systems. From topic 2: passwords are stored as salted **hashes**.'),
     words(
       ['Service account', 'An account used by software rather than a person, such as a backup service'],
       ['Shared account', 'One account used by several people. Nobody can tell who did what'],

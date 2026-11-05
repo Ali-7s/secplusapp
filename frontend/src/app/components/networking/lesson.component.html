@@ -311,6 +311,9 @@
       @case ('controls') {
         <app-control-sorter />
       }
+      @case ('cia') {
+        <app-cia-sorter [show]="b.show" />
+      }
       @case ('email') {
         <app-email-inspector />
       }

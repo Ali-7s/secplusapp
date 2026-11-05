@@ -34,6 +34,7 @@ import { PasswordPolicyComponent } from './blocks/password-policy.component';
 import { PermsLabComponent } from './blocks/perms-lab.component';
 import { MdmConsoleComponent } from './blocks/mdm-console.component';
 import { ControlSorterComponent } from './blocks/control-sorter.component';
+import { CiaSorterComponent } from './blocks/cia-sorter.component';
 import { EmailInspectorComponent } from './blocks/email-inspector.component';
 import { CvssCalcComponent } from './blocks/cvss-calc.component';
 import { NetworkLabComponent } from './blocks/network-lab/network-lab.component';
@@ -64,7 +65,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
     HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
     BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
-    ControlSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent,
+    ControlSorterComponent, CiaSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',

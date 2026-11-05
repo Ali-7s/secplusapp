@@ -44,7 +44,7 @@ export const PKI: LessonBody = {
     'Choose the right certificate type, and the right place to keep a private key',
   ],
   blocks: [
-    recap('From topic 1: a **public key** can be shared with anyone, a **private key** never leaves its owner, and a **digital signature** is made with a private key and checked with the matching public key. A **hash** is a fixed-length fingerprint of data.'),
+    recap('From topic 2: a **public key** can be shared with anyone, a **private key** never leaves its owner, and a **digital signature** is made with a private key and checked with the matching public key. A **hash** is a fixed-length fingerprint of data.'),
     words(
       ['Certificate', 'A signed document that says "this public key belongs to this name", valid for a set time'],
       ['Certificate authority (CA)', 'An organization trusted to check identities and sign certificates'],
@@ -64,7 +64,7 @@ export const PKI: LessonBody = {
     ),
 
     h('What a certificate is', { objective: '1.4', keep: 'A certificate binds a public key to a name, for a limited time, and is signed by a certificate authority. Its key fields are the subject and SAN names, the issuer, the validity dates, the public key and the signature.' }),
-    p('Topic 1 left a gap. To send Bob a secret you lock it with Bob\'s public key, but if you download "Bob\'s public key" from the internet, how do you know it is really his? An attacker sitting in the middle could hand you **their** public key instead, read everything, and pass it on. This is a **man-in-the-middle** attack.'),
+    p('Topic 2 left a gap. To send Bob a secret you lock it with Bob\'s public key, but if you download "Bob\'s public key" from the internet, how do you know it is really his? An attacker sitting in the middle could hand you **their** public key instead, read everything, and pass it on. This is a **man-in-the-middle** attack.'),
     p('A **certificate** closes the gap. It is a small document that says "this public key belongs to shop.example.com", and it is **digitally signed** by a **certificate authority (CA)** that checked the claim. If you trust the CA, and the signature checks out with the CA\'s public key, you can trust the binding. Certificates follow a standard format called **X.509**.'),
     analogy('A certificate is a **passport**. The government (the CA) checked who you are and signed the passport so it cannot be forged. A border officer (your browser) does not know you, but trusts the government\'s signature, checks your face (the name) and the expiry date.'),
     table(

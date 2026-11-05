@@ -9,7 +9,7 @@ export const CONTROLS: LessonBody = {
     'Tell the control plane from the data plane, and explain adaptive identity and threat scope reduction',
   ],
   blocks: [
-    recap('From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 6: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
+    recap('From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 7: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
     words(
       ['Security control', 'Anything that reduces a risk: a device, a setting, a policy, a person\'s job, a lock'],
       ['Control category', 'How a control is put in place: technical, managerial, operational or physical'],
