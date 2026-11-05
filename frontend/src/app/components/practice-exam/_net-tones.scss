@@ -12,14 +12,6 @@
   --z3-fill: #f0fdf4; --z3-stroke: #86efac; --z3-title: #15803d;
 }
 
-// The black theme, laid over dark-tones: no blue or violet. Zones 0 and 1 become a dimmer and a brighter grey.
-@mixin black-tones {
-  --cloud-fill: #27272a; --cloud-stroke: #a1a1aa; --cloud-text: #fafafa;
-  --icon-line: #27272a; --icon-screen: #a1a1aa;
-  --z0-fill: rgba(255, 255, 255, .03); --z0-stroke: #52525b; --z0-title: #d4d4d8;
-  --z1-fill: rgba(255, 255, 255, .08); --z1-stroke: #a1a1aa; --z1-title: #fafafa;
-}
-
 @mixin dark-tones {
   --wire: #fb923c;
   --brick: #c2410c; --brick-2: #ef4444; --mortar: #431407; --flame: #fb923c;

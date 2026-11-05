@@ -9,13 +9,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavContent, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { THEMES, ThemeService } from './services/theme.service';
+import { CoverComponent } from './components/cover/cover.component';
 import { SyncService } from './services/sync.service';
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, BackToTopComponent,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, BackToTopComponent, CoverComponent,
     MatToolbarModule, MatButtonModule, MatIconModule, MatSidenavModule, MatListModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

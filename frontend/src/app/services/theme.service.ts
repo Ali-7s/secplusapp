@@ -1,18 +1,16 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-/** Black is the dark theme on true black: it sets data-theme="dark" too, so every dark-mode style applies. */
-export type ThemeMode = 'light' | 'dark' | 'black';
+export type ThemeMode = 'light' | 'dark';
 
 export const THEMES: { mode: ThemeMode; label: string; icon: string }[] = [
   { mode: 'light', label: 'Light', icon: 'light_mode' },
   { mode: 'dark', label: 'Dark', icon: 'dark_mode' },
-  { mode: 'black', label: 'Black', icon: 'contrast' },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   readonly mode = signal<ThemeMode>('light');
-  readonly dark = computed(() => this.mode() !== 'light');
+  readonly dark = computed(() => this.mode() === 'dark');
   readonly current = computed(() => THEMES.find(t => t.mode === this.mode())!);
   /** The theme the toolbar button switches to next. */
   readonly next = computed(() => THEMES[(THEMES.findIndex(t => t.mode === this.mode()) + 1) % THEMES.length]);
@@ -20,6 +18,8 @@ export class ThemeService {
   constructor() {
     let saved: string | null = null;
     try { saved = localStorage.getItem('sp-theme'); } catch { /* storage unavailable */ }
+    // The black theme was removed; anyone who had it gets dark.
+    if (saved === 'black') saved = 'dark';
     const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
     this.set(THEMES.some(t => t.mode === saved) ? saved as ThemeMode : prefersDark ? 'dark' : 'light');
   }
@@ -30,11 +30,7 @@ export class ThemeService {
 
   set(mode: ThemeMode): void {
     this.mode.set(mode);
-    const root = document.documentElement;
-    root.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
-    if (mode === 'black') root.setAttribute('data-shade', 'black');
-    else root.removeAttribute('data-shade');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mode === 'black' ? '#000000' : '#1d4ed8');
+    document.documentElement.setAttribute('data-theme', mode);
     try { localStorage.setItem('sp-theme', mode); } catch { /* storage unavailable */ }
   }
 }

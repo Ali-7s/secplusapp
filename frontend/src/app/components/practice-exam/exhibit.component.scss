@@ -2,7 +2,6 @@
 
 :host { display: block; margin: 0 0 12px; container-type: inline-size; @include net-tones.tones; }
 :host-context([data-theme='dark']) { @include net-tones.dark-tones; }
-:host-context([data-shade='black']) { @include net-tones.black-tones; }
 
 figure { margin: 0; }
 .topo, .topo * { box-sizing: border-box; }
@@ -12,7 +11,6 @@ code, .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
 
 :host { --log-time: #0369a1; --log-key: #64748b; }
 :host-context([data-theme='dark']) { --log-time: #7dd3fc; --log-key: #94a3b8; }
-:host-context([data-shade='black']) { --log-time: #d4d4d8; --log-key: #a1a1aa; }
 
 figure + figure { margin-top: 10px; }
 

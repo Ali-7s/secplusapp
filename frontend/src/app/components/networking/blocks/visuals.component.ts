@@ -72,7 +72,6 @@ export class FlowComponent {
   styles: [`
     :host { display: block; margin: 18px 0; --g4: #7c3aed; }
     :host-context([data-theme="dark"]) { --g4: #a78bfa; }
-    :host-context([data-shade="black"]) { --g4: #a1a1aa; }
     .ports { margin: 0; padding: 16px; border: 1px solid var(--c-border); border-radius: var(--r-lg); background: var(--c-surface); }
     .faceplate {
       display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border-radius: 10px;

@@ -444,20 +444,3 @@
   mat-icon { font-size: 16px; width: 16px; height: 16px; }
   &:hover { border-color: var(--c-accent); }
   &:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; } }
-
-// ── Black theme: greys in place of the blue and violet ─────
-:host-context([data-shade="black"]) {
-  --variant-accent: #d4d4d8;
-  .page-header mat-icon, .count-badge, .acr-category { background: rgba(255,255,255,.08); color: #d4d4d8; }
-  .mode-toggle.active { background: rgba(255,255,255,.1); }
-  .acronym-card {
-    &:hover { border-color: #52525b !important; }
-    &.expanded { box-shadow: 0 8px 28px rgba(0,0,0,.6) !important; }
-  }
-  .flashcard .fc-front { background: linear-gradient(135deg, #27272a 0%, #18181b 100%); border: 1px solid #3f3f46; }
-  .rel-chip { background: rgba(255,255,255,.08); border-color: #3f3f46; color: var(--c-text);
-    &:hover { background: var(--c-accent); color: var(--c-on-accent); } }
-  .cloze-card { border-color: #3f3f46; }
-  .cloze-category { color: #a1a1aa; }
-  .cloze-input-row .cloze-input { border-color: #3f3f46; &:focus { border-color: #a1a1aa; box-shadow: none; } }
-}

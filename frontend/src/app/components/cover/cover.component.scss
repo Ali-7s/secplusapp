@@ -1,0 +1,58 @@
+// The cover is meant to look like a plain search start page, not like this app, so it has its own neutral palette
+// instead of the app's tokens. It still follows light and dark.
+.cover {
+  --cv-bg: #ffffff; --cv-text: #202124; --cv-soft: #5f6368; --cv-line: #dfe1e5; --cv-box: #ffffff;
+  --cv-tile: #f1f3f4; --cv-hover: rgba(60, 64, 67, .08); --cv-shadow: 0 1px 6px rgba(32, 33, 36, .28);
+  position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; overflow: auto;
+  background: var(--cv-bg); color: var(--cv-text);
+  font-family: Arial, Helvetica, sans-serif; font-size: 14px;
+}
+:host-context([data-theme='dark']) .cover {
+  --cv-bg: #202124; --cv-text: #e8eaed; --cv-soft: #9aa0a6; --cv-line: #5f6368; --cv-box: #303134;
+  --cv-tile: #303134; --cv-hover: rgba(232, 234, 237, .08); --cv-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+}
+
+.top {
+  display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 6px 14px; min-height: 60px; box-sizing: border-box;
+  a { color: var(--cv-text); text-decoration: none; font-size: 13px; &:hover { text-decoration: underline; } }
+}
+.apps { display: grid; grid-template-columns: repeat(3, 4px); gap: 3px; padding: 12px; border-radius: 50%;
+  i { width: 4px; height: 4px; border-radius: 50%; background: var(--cv-soft); }
+}
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--cv-tile);
+  svg { width: 22px; height: 22px; fill: none; stroke: var(--cv-soft); stroke-width: 1.8; }
+}
+
+.middle { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12vh 16px 40px; }
+.mark { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; color: var(--cv-soft);
+  svg { width: 52px; height: 52px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  span { font-size: clamp(40px, 9vw, 64px); letter-spacing: -2px; font-weight: 400; }
+}
+
+.box-form { width: 100%; max-width: 584px; }
+.box {
+  display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; box-sizing: border-box; cursor: text;
+  border-radius: 24px; border: 1px solid var(--cv-line); background: var(--cv-box);
+  &:hover, &:focus-within { box-shadow: var(--cv-shadow); border-color: transparent; }
+  svg { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--cv-soft); stroke-width: 2; stroke-linecap: round; }
+  input {
+    flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--cv-text);
+    font: inherit; font-size: 16px;
+    &::placeholder { color: var(--cv-soft); }
+    // The app's focus ring would give it away; the box's shadow shows focus instead.
+    &:focus, &:focus-visible { outline: none !important; box-shadow: none !important; }
+    &::-webkit-search-cancel-button { -webkit-appearance: none; }
+  }
+}
+
+.tiles { list-style: none; margin: 32px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 584px;
+  li { width: 112px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 0 10px; border-radius: 8px;
+    &:hover { background: var(--cv-hover); } }
+  .tile { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--cv-tile);
+    font-size: 18px; color: var(--cv-soft); }
+  .tl { font-size: 13px; color: var(--cv-text); }
+}
+
+@media (max-width: 600px) {
+  .tiles li { width: 92px; }
+}
