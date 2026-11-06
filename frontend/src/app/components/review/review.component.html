@@ -62,7 +62,7 @@
     <div class="card" #card tabindex="-1" [attr.aria-label]="'Flashcard: ' + c.name">
       <div class="front">
         <span class="category">{{ c.category }}</span>
-        <div class="name">{{ c.name }}</div>
+        <div class="name" [class.long]="c.name.length > 48">{{ c.name }}</div>
         <p class="prompt">{{ prompt() }}</p>
         @if (cardQueue() === 'new') { <span class="badge">New {{ noun() }}</span> }
       </div>

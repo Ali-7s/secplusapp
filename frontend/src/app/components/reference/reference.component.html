@@ -44,84 +44,8 @@
     </button>
   </div>
   <p class="deck-note">Review mode turns ports (both ways), RAID, backups, recovery metrics, risk formulas, site types,
-    incident response order, legacy replacements, Wi-Fi security, cloud models and data labels into
-    {{ allRefCards.length }} spaced repetition cards.</p>
-
-  @if (drillActive) {
-    <div class="drill-container">
-      <div class="drill-header">
-        <div class="drill-meta">
-          <mat-icon>fitness_center</mat-icon>
-          <span class="drill-title">Recall Drill — {{ drillLabel }}</span>
-          <span class="drill-score">{{ drillScore }} / {{ drillItems.length }} correct</span>
-        </div>
-        <button mat-button (click)="exitDrill()">
-          <mat-icon>close</mat-icon> Exit Drill
-        </button>
-      </div>
-
-      <mat-progress-bar mode="determinate" [value]="drillProgress" class="drill-progress"></mat-progress-bar>
-
-      @if (drillFinished) {
-        <div class="drill-finished">
-          <mat-icon>{{ drillScore === drillItems.length ? 'emoji_events' : 'check_circle' }}</mat-icon>
-          <div>
-            <strong>Drill complete!</strong>
-            <span>{{ drillScore }} / {{ drillItems.length }} correct ({{ (drillScore / drillItems.length * 100) | number:'1.0-0' }}%)</span>
-          </div>
-          <div class="drill-finish-actions">
-            <button mat-raised-button color="primary" (click)="restartDrill()">
-              <mat-icon>refresh</mat-icon> Drill Again
-            </button>
-            <button mat-stroked-button (click)="exitDrill()">Back to Table</button>
-          </div>
-        </div>
-      } @else {
-        <div class="drill-card">
-          <div class="drill-q-label">What is the answer for:</div>
-          <div class="drill-question">{{ drillItem.question }}</div>
-          <div class="drill-hint">{{ drillItem.hint }}</div>
-
-          @if (!drillChecked) {
-            <div class="drill-input-row">
-              <input
-                class="drill-input"
-                type="text"
-                [(ngModel)]="drillInput"
-                placeholder="Type your answer and press Enter..."
-                (keydown.enter)="submitDrill()"
-                autofocus>
-              <button mat-raised-button color="primary" (click)="submitDrill()" [disabled]="!drillInput.trim()">
-                Check
-              </button>
-            </div>
-          } @else {
-            <div class="drill-result" [class.correct]="drillCorrect" [class.wrong]="!drillCorrect">
-              <div class="drill-result-header">
-                <mat-icon>{{ drillCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-                <strong>{{ drillCorrect ? 'Correct!' : 'Not quite' }}</strong>
-                @if (!drillCorrect) {
-                  <span class="drill-your-answer">You wrote: "{{ drillInput }}"</span>
-                }
-              </div>
-              <div class="drill-answer-row">
-                <span class="drill-answer-label">Answer:</span>
-                <span class="drill-answer-value">{{ drillItem.answer }}</span>
-              </div>
-              <div class="drill-explanation">{{ drillItem.explanation }}</div>
-            </div>
-            <div class="drill-next-row">
-              <span class="drill-counter">{{ drillIdx + 1 }} / {{ drillItems.length }}</span>
-              <button mat-raised-button color="primary" (click)="nextDrill()">
-                {{ drillIdx < drillItems.length - 1 ? 'Next' : 'See Results' }}
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
-            </div>
-          }
-        </div>
-      }
-    </div>
-  } @else {
+    incident response order, legacy replacements, Wi-Fi security, cloud models, data labels, access control models,
+    authentication factors and attack frameworks into {{ allRefCards.length }} spaced repetition cards.</p>
 
   <!-- Section picker: a grouped dropdown, so every section is visible and you always know how many there are -->
   <nav class="section-picker" aria-label="Reference sections">
@@ -158,12 +82,7 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
-          <span class="drill-btns">
-            <a mat-flat-button class="drill-btn" routerLink="/ports"><mat-icon>settings_ethernet</mat-icon> Ports trainer</a>
-            <button mat-stroked-button class="drill-btn" (click)="startDrill('ports', 'Network Ports')">
-              <mat-icon>fitness_center</mat-icon> Recall Drill
-            </button>
-          </span>
+          <a mat-flat-button class="drill-btn" routerLink="/ports"><mat-icon>settings_ethernet</mat-icon> Ports trainer</a>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -210,9 +129,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredVpn.length }} protocols · know tunnel vs transport mode and which provide forward secrecy</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('vpn', 'VPN & Tunneling')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -249,9 +165,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredWireless.length }} standards · know WPA2 vs WPA3 differences and what WPS vulnerability is</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('wireless', 'Wireless Security')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -288,9 +201,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredReplacements.length }} replacements · the exam frequently asks "which protocol/port REPLACED X?" — this tab answers exactly that</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('legacy', 'Legacy → Modern')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
 
         @if (filteredReplacements.length === 0) {
@@ -337,9 +247,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('ciphers', 'Encryption Ciphers')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -378,9 +285,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('hashes', 'Hashing & MACs')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -417,9 +321,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredPkiReference.length }} concepts · know the difference between CRL (a list) and OCSP (a real-time check)</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('pki', 'PKI & Certificates')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -454,9 +355,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('auth', 'Auth Protocols')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -493,9 +391,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredMfaFactors.length }} factors · true MFA combines factors from DIFFERENT categories, not two of the same type</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('mfa-factors', 'MFA Factors')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -530,9 +425,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredAccessModels.length }} models · DAC = owner decides, MAC = labels, RBAC = role, ABAC = attributes</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('access-models', 'Access Models')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -567,9 +459,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredThreatActors.length }} actor types · know the motivation and sophistication level that distinguishes each one</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('threat-actors', 'Threat Actors')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -606,9 +495,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredAttackFrameworks.length }} frameworks · ATT&amp;CK catalogs TTPs, the Kill Chain models attack stages, Diamond Model links campaigns</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('attack-frameworks', 'Attack Frameworks')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -641,9 +527,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredIrPhases.length }} phases · memorize the order — containment comes before eradication, which comes before recovery</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('ir-phases', 'IR Phases')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -678,9 +561,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredBcdrMetrics.length }} metrics · RTO/RPO are frequently confused — RTO is about TIME, RPO is about DATA LOSS</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('bcdr-metrics', 'BCP/DR Metrics')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -715,9 +595,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredBackupTypes.length }} backup concepts · know the restore-speed vs storage-cost tradeoff for each type</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('backup-types', 'Backup Types')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -752,9 +629,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredRaidLevels.length }} levels · know minimum disks and fault tolerance for 0, 1, 5, 6, and 10</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('raid', 'RAID Levels')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -791,9 +665,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredSiteTypes.length }} site types · recovery speed and cost move in opposite directions — hot is fastest and priciest, cold is slowest and cheapest</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('site-types', 'DR Site Types')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -828,9 +699,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredCloudModels.length }} models · IaaS/PaaS/SaaS are service models; public/private/hybrid/community are deployment models</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('cloud-models', 'Cloud Models')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
 
         @if (filteredCloudModels.length === 0) {
@@ -872,9 +740,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredRiskFormulas.length }} formulas · know SLE, ALE, ARO, and EF cold — risk-math questions are common</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('risk-formulas', 'Risk Formulas')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -909,9 +774,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredComplianceFrameworks.length }} frameworks · know which industry each one applies to</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('compliance', 'Compliance Frameworks')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -944,9 +806,6 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredDataClassifications.length }} levels · ordered from least to most sensitive</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('data-classifications', 'Data Classification')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -977,8 +836,6 @@
     </mat-tab>
 
   </mat-tab-group>
-
-  } <!-- end @else (drill inactive) -->
 
   } <!-- end @else (not reviewing) -->
 

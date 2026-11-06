@@ -102,5 +102,53 @@ describe('Reference deck', () => {
       expect(mark('cloud:PaaS', 'platform as a service')).toBeTrue();
       expect(byId('cloud:Hybrid Cloud').check).toBeUndefined();
     });
+
+    it('names the access control model a situation describes, and only that one', () => {
+      expect(mark('access:DAC (Discretionary Access Control)', 'DAC')).toBeTrue();
+      expect(mark('access:DAC (Discretionary Access Control)', 'discretionary access control')).toBeTrue();
+      expect(mark('access:DAC (Discretionary Access Control)', 'MAC')).toBeFalse();
+      expect(byId('access:DAC (Discretionary Access Control)').check!('mandatory').note).toContain('MAC');
+      expect(mark('access:DAC (Discretionary Access Control)', 'DAC or MAC')).toBeFalse();
+      expect(mark('access:RBAC (Role-Based Access Control)', 'role-based')).toBeTrue();
+      expect(mark('access:ABAC (Attribute-Based Access Control)', 'ABAC')).toBeTrue();
+      // RBAC means role-based, but a full "rule-based" wins over the letters.
+      expect(mark('access:Rule-Based Access Control', 'rule-based (RBAC)')).toBeTrue();
+      expect(mark('access:Rule-Based Access Control', 'RBAC')).toBeFalse();
+    });
+
+    it('names the authentication factor from its examples', () => {
+      expect(mark('mfa:Something You Are', 'something you are')).toBeTrue();
+      expect(mark('mfa:Something You Are', 'biometric')).toBeTrue();
+      expect(mark('mfa:Something You Are', 'something you have')).toBeFalse();
+      expect(mark('mfa:Somewhere You Are', 'location')).toBeTrue();
+      expect(mark('mfa:Somewhere You Are', 'something you are')).toBeFalse();
+      expect(mark('mfa:Something You Have', 'possession factor')).toBeTrue();
+    });
+
+    it('checks the kill chain in order and the diamond model\'s four points in any order', () => {
+      const chain = 'recon, weaponization, delivery, exploitation, installation, C2, actions on objectives';
+      expect(mark('framework:Cyber Kill Chain', chain)).toBeTrue();
+      expect(mark('framework:Cyber Kill Chain', chain.replace('delivery, exploitation', 'exploitation, delivery'))).toBeFalse();
+      expect(mark('framework:Cyber Kill Chain', chain.replace('installation, ', ''))).toBeFalse();
+      expect(mark('framework:Diamond Model', 'victim, capability, infrastructure and adversary')).toBeTrue();
+      expect(mark('framework:Diamond Model', 'adversary, capability, victim')).toBeFalse();
+      expect(mark('framework-name:MITRE ATT&CK', 'MITRE ATT&CK')).toBeTrue();
+      expect(mark('framework-name:Cyber Kill Chain', 'the Lockheed kill chain')).toBeTrue();
+      expect(mark('framework-name:Cyber Kill Chain', 'diamond model')).toBeFalse();
+    });
+
+    it('never gives the answer away on the front of a "which one is it?" card', () => {
+      for (const c of cards.filter(x => /^(access|mfa|framework-name):/.test(x.id))) {
+        expect(c.check!(c.name).right).withContext(c.id).toBeFalse();
+      }
+    });
+  });
+
+  it('links each twin card to one that links back', () => {
+    for (const c of cards.filter(x => x.sibling)) {
+      const twin = cards.find(x => x.id === c.sibling);
+      expect(twin).withContext(c.id).toBeDefined();
+      expect(twin?.sibling).withContext(c.id).toBe(c.id);
+    }
   });
 });

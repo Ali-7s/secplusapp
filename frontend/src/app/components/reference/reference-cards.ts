@@ -7,10 +7,10 @@
  */
 
 import { DumpCard } from '../../utils/brain-dump';
-import { AnswerCheck, Verdict, expansionCheck, mentionAt, mentions, mentionsAny, numbersIn } from '../../utils/typed-answer';
+import { AnswerCheck, expansionCheck, mentionAt, mentions, mentionsAny, numbersIn } from '../../utils/typed-answer';
 import {
-  BACKUP_TYPES, BCDR_METRICS, CLOUD_MODELS, DATA_CLASSIFICATIONS, IR_PHASES, PORTS, RAID_LEVELS, REPLACEMENTS,
-  RISK_FORMULAS, SITE_TYPES, WIRELESS,
+  ACCESS_MODELS, ATTACK_FRAMEWORKS, BACKUP_TYPES, BCDR_METRICS, CLOUD_MODELS, DATA_CLASSIFICATIONS, IR_PHASES, MFA_FACTORS, PORTS,
+  RAID_LEVELS, REPLACEMENTS, RISK_FORMULAS, SITE_TYPES, WIRELESS,
 } from './reference-data';
 
 /** The Reference sections the deck covers, by the key and label the Reference page uses for them. */
@@ -26,6 +26,9 @@ export const REFERENCE_DECK_SECTIONS: ReadonlyArray<{ key: string; label: string
   { key: 'cloud', label: 'Cloud Models' },
   { key: 'risk', label: 'Risk Formulas' },
   { key: 'data', label: 'Data Classification' },
+  { key: 'access', label: 'Access Models' },
+  { key: 'mfa', label: 'MFA Factors' },
+  { key: 'frameworks', label: 'Attack Frameworks' },
 ];
 
 const label = (key: string) => REFERENCE_DECK_SECTIONS.find(s => s.key === key)!.label;
@@ -164,14 +167,17 @@ const IR_WORDS = [
   ['lessons learned', 'lessons', 'post incident', 'post-incident'],
 ];
 
-function irOrderCheck(typed: string): Verdict {
-  const at = IR_WORDS.map(names => Math.min(...names.map(n => mentionAt(typed, n)).filter(i => i >= 0)));
-  const missing = at.map((i, k) => (Number.isFinite(i) ? null : IR_WORDS[k][0])).filter(Boolean);
+/** Right when every step is named (by any of its words) and they come in order. */
+const orderCheck = (steps: string[][]): AnswerCheck => typed => {
+  const at = steps.map(names => Math.min(...names.map(n => mentionAt(typed, n)).filter(i => i >= 0)));
+  const missing = at.map((i, k) => (Number.isFinite(i) ? null : steps[k][0])).filter(Boolean);
   if (missing.length) return { right: false, note: `Missing: ${missing.join(', ')}.` };
   const outOfOrder = at.findIndex((i, k) => k > 0 && i < at[k - 1]);
-  if (outOfOrder > 0) return { right: false, note: `${IR_WORDS[outOfOrder][0]} comes after ${IR_WORDS[outOfOrder - 1][0]}.` };
+  if (outOfOrder > 0) return { right: false, note: `${steps[outOfOrder][0]} comes after ${steps[outOfOrder - 1][0]}.` };
   return { right: true };
-}
+};
+
+const irOrderCheck = orderCheck(IR_WORDS);
 
 const irStepCheck = (order: number, total: number): AnswerCheck => typed => {
   const steps = numbersIn(typed, true).filter(n => n >= 1 && n <= total);
@@ -369,6 +375,134 @@ const dataCards = () => DATA_CLASSIFICATIONS.map(d => card({
 }));
 
 /**
+ * "Which one is it?" among a few look-alikes: right when the answer names this one and no other. Full names are
+ * read first, so "rule-based (RBAC)" counts as rule-based even though RBAC usually means role-based.
+ */
+function oneOfCheck(options: Record<string, { names: string[]; short?: string[] }>, own: string): AnswerCheck {
+  return typed => {
+    for (const field of ['names', 'short'] as const) {
+      const hits = Object.keys(options).filter(k => mentionsAny(typed, options[k][field] ?? []));
+      if (hits.length > 1) return { right: false, note: 'Give one answer.' };
+      if (hits.length === 1) return hits[0] === own ? { right: true } : { right: false, note: `That describes ${hits[0]}.` };
+    }
+    return { right: false };
+  };
+}
+
+/** Each access control model as a situation to recognise; the front avoids the words in the model's name. */
+const ACCESS_SITUATIONS: Record<string, { front: string; names: string[]; short: string[] }> = {
+  'DAC (Discretionary Access Control)': {
+    front: 'The owner of a file decides who else may open it',
+    names: ['discretionary'], short: ['DAC'],
+  },
+  'MAC (Mandatory Access Control)': {
+    front: "The system compares a user's clearance with the data's classification label, and the owner cannot override it",
+    names: ['mandatory'], short: ['MAC'],
+  },
+  'RBAC (Role-Based Access Control)': {
+    front: 'Permissions belong to job functions, and people get them by being assigned one',
+    names: ['role based', 'role'], short: ['RBAC'],
+  },
+  'ABAC (Attribute-Based Access Control)': {
+    front: 'A policy allows access only when several properties match, such as department, managed device and time of day',
+    names: ['attribute based', 'attribute', 'attributes'], short: ['ABAC'],
+  },
+  'Rule-Based Access Control': {
+    front: "An administrator's if-then conditions decide access for everyone alike, as in a firewall's ACL",
+    names: ['rule based', 'rule', 'rules'], short: ['RuBAC'],
+  },
+};
+
+const accessCards = () => ACCESS_MODELS.map(m => card({
+  id: `access:${m.name}`,
+  name: ACCESS_SITUATIONS[m.name].front,
+  prompt: 'Which access control model is it?',
+  category: label('access'),
+  expansion: m.name,
+  definition: sentence(m.summary),
+  notes: [{ label: 'In practice', text: sentence(m.detail) }],
+  check: oneOfCheck(ACCESS_SITUATIONS, m.name),
+}));
+
+/** Each authentication factor as examples to recognise. */
+const FACTOR_EXAMPLES: Record<string, { front: string; names: string[] }> = {
+  'Something You Know': { front: 'A password, a PIN or the answer to a security question', names: ['something you know', 'knowledge'] },
+  'Something You Have': { front: 'A hardware token, a smart card or an authenticator app on your phone', names: ['something you have', 'possession', 'ownership'] },
+  'Something You Are': { front: 'A fingerprint, a face scan, an iris scan or a voice print', names: ['something you are', 'inherence', 'biometric', 'biometrics'] },
+  'Somewhere You Are': { front: 'Your GPS position, where your IP address is, or being on a particular network', names: ['somewhere you are', 'location', 'geolocation'] },
+};
+
+const mfaCards = () => MFA_FACTORS.map(f => card({
+  id: `mfa:${f.name}`,
+  name: FACTOR_EXAMPLES[f.name].front,
+  prompt: 'Which authentication factor is it?',
+  category: label('mfa'),
+  expansion: f.name.charAt(0) + f.name.slice(1).toLowerCase(),
+  definition: sentence(f.summary),
+  notes: [{ label: 'In practice', text: sentence(f.detail) }],
+  check: oneOfCheck(FACTOR_EXAMPLES, f.name),
+}));
+
+const KILL_CHAIN = [
+  ['reconnaissance', 'recon'],
+  ['weaponization', 'weaponisation', 'weaponize', 'weaponise'],
+  ['delivery', 'deliver'],
+  ['exploitation', 'exploit'],
+  ['installation', 'install'],
+  ['command and control', 'command & control', 'C2'],
+  ['actions on objectives', 'actions on objective', 'actions', 'objectives'],
+];
+
+const DIAMOND_POINTS = [['adversary', 'attacker'], ['infrastructure'], ['capability', 'capabilities'], ['victim', 'target']];
+
+/** The frameworks, recognised from a description; the front avoids each framework's name. */
+const FRAMEWORK_DESCRIPTIONS: Record<string, { front: string; names: string[] }> = {
+  'MITRE ATT&CK': { front: 'A matrix of the tactics and techniques real attackers have used, for threat hunting and detection', names: ['ATT&CK', 'MITRE', 'ATTACK'] },
+  'Cyber Kill Chain': { front: 'Splits an attack into seven stages, from reconnaissance to actions on objectives', names: ['kill chain'] },
+  'Diamond Model': { front: 'Describes an intrusion by linking four points: adversary, infrastructure, capability and victim', names: ['diamond'] },
+};
+
+function frameworkCards(): DumpCard[] {
+  const find = (name: string) => ATTACK_FRAMEWORKS.find(f => f.name === name)!;
+  const killChain = find('Cyber Kill Chain');
+  const diamond = find('Diamond Model');
+  const contents = [
+    card({
+      id: 'framework:Cyber Kill Chain',
+      name: 'Cyber Kill Chain',
+      prompt: 'Name its seven stages, in order.',
+      category: label('frameworks'),
+      expansion: 'Reconnaissance → Weaponization → Delivery → Exploitation → Installation → Command and control (C2) → Actions on objectives',
+      definition: sentence(killChain.detail),
+      check: orderCheck(KILL_CHAIN),
+      sibling: 'framework-name:Cyber Kill Chain',
+    }),
+    card({
+      id: 'framework:Diamond Model',
+      name: 'Diamond Model',
+      prompt: 'What are its four points?',
+      category: label('frameworks'),
+      expansion: 'Adversary, infrastructure, capability and victim',
+      definition: sentence(diamond.detail),
+      check: formulaCheck(DIAMOND_POINTS, []),
+      sibling: 'framework-name:Diamond Model',
+    }),
+  ];
+  const names = ATTACK_FRAMEWORKS.map(f => card({
+    id: `framework-name:${f.name}`,
+    name: FRAMEWORK_DESCRIPTIONS[f.name].front,
+    prompt: 'Which framework is it?',
+    category: label('frameworks'),
+    expansion: f.name,
+    definition: sentence(f.summary),
+    notes: [{ label: 'In practice', text: sentence(f.detail) }],
+    check: oneOfCheck(FRAMEWORK_DESCRIPTIONS, f.name),
+    sibling: f.name === 'MITRE ATT&CK' ? undefined : `framework:${f.name}`,
+  }));
+  return [...contents, ...names];
+}
+
+/**
  * Every card in the deck. Review mode deals new cards in this order, so the sections are interleaved (a day's new
  * cards are not all ports), and the two cards for one port are kept far apart so one does not give the other away.
  */
@@ -377,7 +511,8 @@ export function referenceCards(): DumpCard[] {
   const half = Math.floor(toPort.length / 2);
   const lists = [
     toProtocol, [...toPort.slice(half), ...toPort.slice(0, half)], legacyCards(), wirelessCards(), irCards(),
-    metricCards(), backupCards(), raidCards(), siteCards(), cloudCards(), riskCards(), dataCards(),
+    metricCards(), backupCards(), raidCards(), siteCards(), cloudCards(), riskCards(), dataCards(), accessCards(), mfaCards(),
+    frameworkCards(),
   ];
   const out: DumpCard[] = [];
   for (let i = 0; out.length < lists.reduce((n, l) => n + l.length, 0); i++) {
