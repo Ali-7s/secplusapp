@@ -334,6 +334,9 @@
         </button>
       </div>
       <p class="note small">On a computer that is not yours, use <strong>Remove my progress from this device</strong> when you are done.</p>
+      @if (sync.docPrefix(); as doc) {
+        <p class="note small">Your encrypted cloud copy is the document whose name starts with <code class="doc">{{ doc }}</code>.</p>
+      }
     } @else {
       <p class="note">Keep your progress safe and the same on your phone, your computer and any other device. Without
         sync it lives only in this browser, and clearing browsing data erases it. It is encrypted with a sync code
