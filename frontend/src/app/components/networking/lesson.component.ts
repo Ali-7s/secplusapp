@@ -25,7 +25,13 @@ import { FlowComponent, NestedBoxesComponent, PortStripComponent } from './block
 import { HashLabComponent } from './blocks/hash-lab.component';
 import { KeyPickerComponent } from './blocks/key-picker.component';
 import { CertCheckComponent } from './blocks/cert-check.component';
-import { CaseFileComponent } from './blocks/case-file.component';
+import { DdosComponent } from './blocks/ddos.component';
+import { OnpathComponent } from './blocks/onpath.component';
+import { ReplayComponent } from './blocks/replay.component';
+import { PrivescComponent } from './blocks/privesc.component';
+import { CsrfComponent } from './blocks/csrf.component';
+import { SsrfComponent } from './blocks/ssrf.component';
+import { TraversalComponent } from './blocks/traversal.component';
 import { MalwareLabComponent } from './blocks/malware-lab.component';
 import { OutbreakComponent } from './blocks/outbreak.component';
 import { DecideComponent } from './blocks/decide.component';
@@ -66,7 +72,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   imports: [
     RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
-    HashLabComponent, KeyPickerComponent, CertCheckComponent, CaseFileComponent, MalwareLabComponent, OutbreakComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
+    HashLabComponent, KeyPickerComponent, CertCheckComponent, MalwareLabComponent, OutbreakComponent, DdosComponent, OnpathComponent, ReplayComponent, PrivescComponent, CsrfComponent, SsrfComponent, TraversalComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
     BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
     ControlSorterComponent, CiaSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent,
   ],

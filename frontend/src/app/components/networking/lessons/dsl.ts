@@ -1,4 +1,4 @@
-import { Block, CalloutKind, CaseFile, CertCase, DecideOption, DecideStep, HuntRow, HuntTask, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, CertCase, DecideOption, DecideStep, HuntRow, HuntTask, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -91,14 +91,13 @@ export const certs = (title: string, options: string[], cases: CertCase[], intro
   ({ type: 'certs', title, intro, options, cases });
 
 /** The malware investigation lab: `spread` (six machines) or `hidden` (five that hide). */
-export const malwareLab = (round: 'spread' | 'hidden'): Block => ({ type: 'mlab', round });
+export const malwareLab = (round: 'spread' | 'hidden' | 'dns'): Block => ({ type: 'mlab', round });
 
 /** The outbreak simulator: six samples, seven defences, a challenge each. */
 export const outbreak = (): Block => ({ type: 'outbreak' });
 
-/** Case files to identify from their clues, each answered with one of `options`. */
-export const cases = (title: string, options: string[], files: CaseFile[], opts: { intro?: string; icon?: string } = {}): Block =>
-  ({ type: 'cases', title, intro: opts.intro, icon: opts.icon, options, cases: files });
+/** The attack labs: simulations you play as attacker, then defender. */
+export const lab = (kind: 'ddos' | 'onpath' | 'replay' | 'privesc' | 'csrf' | 'ssrf' | 'traversal'): Block => ({ type: kind });
 
 /** One step of a scenario. List the best option first; the options are shuffled the same way on every load. */
 export const step = (s: Omit<DecideStep, 'options'>, best: Omit<DecideOption, 'best'>, ...others: Omit<DecideOption, 'best'>[]): DecideStep =>

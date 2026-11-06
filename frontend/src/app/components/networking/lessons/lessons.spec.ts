@@ -1,5 +1,12 @@
-import { APP_CASES, APP_OPTIONS, NETWORK_CASES, NETWORK_OPTIONS } from './topics/attacks';
-import { LAB_HIDDEN, LAB_OPTIONS, LAB_SPREAD, evidence } from '../blocks/malware-lab';
+import { LAB_HIDDEN, LAB_OPTIONS, LAB_SPREAD, LabCase, LabRound, evidence } from '../blocks/malware-lab';
+import { LABS } from '../blocks/labs';
+import { DNS_CASES, DNS_OPTIONS } from '../blocks/dns-lab';
+import { DDOS_CHALLENGES, DEFENCES as DDOS_DEFENCES, DefenceId, METHODS, ddosMet, runDdos } from '../blocks/ddos';
+import { MISSIONS as ONPATH_MISSIONS, OnpathAction, START as ONPATH_START, act } from '../blocks/onpath';
+import { GUARDS, ITEMS, REPLAY_MISSIONS, ReplayMission, TARGETS, missionsFor, replay } from '../blocks/replay';
+import { CMDS, CmdId, FixId, PRIV_MISSIONS, PRIV_START, PrivState, run, toggleFix } from '../blocks/privesc';
+import { CSRF_MISSIONS, CsrfGuard, CsrfMission, PAYLOADS, PayloadId, SSRF_MISSIONS, SsrfMission, SsrfTrial, csrf, csrfMissions, preview, ssrfMissions } from '../blocks/forgery';
+import { FilterId, RunAs, TRAV_MISSIONS, TravMission, download, normalize, travMissions } from '../blocks/traversal';
 import { CHALLENGES, CONTROLS as DEFENCES, ControlId, judge, simulate } from '../blocks/outbreak';
 import { Block } from '../networking.model';
 import { mcq } from './dsl';
@@ -105,7 +112,9 @@ describe('lesson list', () => {
     expect(first('acr', 'CVSS')).toBe('vulnerabilities');
     expect(first('term', 'Logic bomb')).toBe('malware');
     expect(first('acr', 'RAT')).toBe('malware');
-    expect(first('term', 'Directory traversal')).toBe('attacks');
+    expect(first('term', 'Directory traversal')).toBe('app-attacks');
+    expect(first('term', 'Server-side request forgery')).toBe('app-attacks');
+    expect(first('term', 'Replay attack')).toBe('attacks');
   });
 
   it('links only to flashcards that exist', async () => {
@@ -219,20 +228,6 @@ describe('lesson content', () => {
           }
           // Each certificate is issued by the one above it in the chain.
           c.chain.slice(0, -1).forEach((cert, i) => expect(cert.issuer).withContext(`${slug} ${c.name}`).toBe(c.chain[i + 1].subject));
-        }
-      }
-      if (b.type === 'cases') {
-        expect(new Set(b.cases.map(c => c.answer)).size).withContext(`${slug} ${b.title} uses several answers`).toBeGreaterThan(2);
-        for (const c of b.cases) {
-          expect(b.options).withContext(`${slug} ${c.name}`).toContain(c.answer);
-          expect(c.clues.length).withContext(`${slug} ${c.name}`).toBeGreaterThanOrEqual(2);
-          expect(c.clues.some(cl => cl.key)).withContext(`${slug} ${c.name} has a giveaway clue`).toBeTrue();
-          expect(words(c.why)).withContext(`${slug} ${c.name}`).toBeGreaterThanOrEqual(12);
-          if (c.near) {
-            expect(b.options).withContext(`${slug} ${c.name} look-alike`).toContain(c.near.option);
-            expect(c.near.option).withContext(`${slug} ${c.name} look-alike`).not.toBe(c.answer);
-            expect(words(c.near.why)).withContext(`${slug} ${c.name} look-alike`).toBeGreaterThanOrEqual(10);
-          }
         }
       }
       if (b.type === 'decide') {
@@ -466,31 +461,17 @@ describe('the CIA triad on every topic', () => {
   });
 });
 
-describe('the attack case files', () => {
-  const rounds = [['network', NETWORK_OPTIONS, NETWORK_CASES], ['application', APP_OPTIONS, APP_CASES]] as const;
-
-  it('makes every option the answer to exactly one case, so each type is practised', () => {
-    for (const [name, options, files] of rounds) {
-      expect([...files.map(c => c.answer)].sort()).withContext(name).toEqual([...options].sort());
-    }
-  });
-
-  it('gives every case a look-alike to compare it with', () => {
-    for (const [name, , files] of rounds) for (const c of files) expect(c.near).withContext(`${name}: ${c.name}`).toBeTruthy();
-  });
-});
-
 describe('the malware investigation lab', () => {
-  const all = [...LAB_SPREAD, ...LAB_HIDDEN];
+  const all: [LabRound, LabCase][] = [...LAB_SPREAD.map((c): [LabRound, LabCase] => [LABS.spread, c]), ...LAB_HIDDEN.map((c): [LabRound, LabCase] => [LABS.hidden, c])];
   const words = (t: string) => t.trim().split(/\s+/).length;
 
   it('makes every kind of malware the answer on exactly one machine', () => {
-    expect(all.map(c => c.answer).sort()).toEqual([...LAB_OPTIONS].sort());
+    expect(all.map(([, c]) => c.answer).sort()).toEqual([...LAB_OPTIONS].sort());
   });
 
   it('gives every machine evidence to find, a reason and a look-alike', () => {
-    for (const c of all) {
-      expect(evidence(c).length).withContext(c.machine).toBeGreaterThan(0);
+    for (const [r, c] of all) {
+      expect(evidence(r, c).length).withContext(c.machine).toBeGreaterThan(0);
       expect(words(c.why)).withContext(c.machine).toBeGreaterThanOrEqual(12);
       expect(LAB_OPTIONS).withContext(c.machine).toContain(c.near.option);
       expect(c.near.option).withContext(c.machine).not.toBe(c.answer);
@@ -499,7 +480,7 @@ describe('the malware investigation lab', () => {
   });
 
   it('hides the rootkit and the hardware keylogger from every live tool', () => {
-    const tools = (answer: string) => [...new Set(evidence(all.find(c => c.answer === answer)!).map(e => e.tool))];
+    const tools = (answer: string) => { const [r, c] = all.find(([, x]) => x.answer === answer)!; return [...new Set(evidence(r, c).map(e => e.tool))]; };
     expect(tools('Rootkit')).toEqual(['boot']);
     expect(tools('Keylogger')).toEqual(['hw']);
   });
@@ -548,3 +529,186 @@ describe('the outbreak simulator', () => {
   });
 });
 
+
+describe('the DNS investigation', () => {
+  const words = (t: string) => t.trim().split(/\s+/).length;
+
+  it('makes every option the answer on exactly one case, each with evidence and a look-alike', () => {
+    expect(DNS_CASES.map(c => c.answer).sort()).toEqual([...DNS_OPTIONS].sort());
+    for (const c of DNS_CASES) {
+      expect(evidence(LABS.dns, c).length).withContext(c.machine).toBeGreaterThan(0);
+      expect(words(c.why)).withContext(c.machine).toBeGreaterThanOrEqual(12);
+      expect(DNS_OPTIONS).withContext(c.machine).toContain(c.near.option);
+      expect(c.near.option).withContext(c.machine).not.toBe(c.answer);
+    }
+  });
+});
+
+describe('the DDoS sandbox', () => {
+  const subsets = (ids: DefenceId[], max: number): DefenceId[][] => {
+    let out: DefenceId[][] = [[]];
+    for (const d of ids) out = [...out, ...out.filter(x => x.length < max).map(x => [...x, d])];
+    return out;
+  };
+
+  it('makes every challenge solvable, and no defender challenge solved with nothing on', () => {
+    for (const c of DDOS_CHALLENGES) {
+      if (c.role === 'attacker') {
+        expect(METHODS.some(m => ddosMet(c, { method: m.id, bots: c.bots, on: [] }))).withContext(c.id).toBeTrue();
+        expect(METHODS.some(m => !ddosMet(c, { method: m.id, bots: c.bots, on: [] }))).withContext(`${c.id} has a wrong method`).toBeTrue();
+      } else {
+        expect(subsets(c.allowed!, c.max ?? 9).some(on => ddosMet(c, { method: c.method!, bots: c.bots, on }))).withContext(c.id).toBeTrue();
+        expect(ddosMet(c, { method: c.method!, bots: c.bots, on: [] })).withContext(c.id).toBeFalse();
+      }
+    }
+  });
+
+  it('teaches the differences: each flood needs its own defence', () => {
+    const up = (method: 'http' | 'syn' | 'dns' | 'ntp', bots: number, on: DefenceId[]) => runDdos({ method, bots, on }).up;
+    expect(up('ntp', 10000, ['scrub'])).toBeTrue();
+    expect(up('ntp', 10000, ['ratelimit'])).toBeFalse();
+    expect(up('http', 2000, ['ratelimit'])).toBeTrue();
+    expect(up('http', 2000, ['scrub'])).toBeFalse();
+    expect(up('syn', 1000, ['syncookies'])).toBeTrue();
+    expect(up('syn', 1000, ['ratelimit'])).toBeFalse();
+    expect(up('dns', 10000, ['antispoof'])).toBeTrue();
+    expect(DDOS_DEFENCES.length).toBe(5);
+  });
+});
+
+describe('the on-path lab', () => {
+  const play = (...actions: OnpathAction[]) => actions.reduce(act, ONPATH_START);
+
+  it('can complete every mission', () => {
+    const s = play('intranet', 'poison-victim', 'intranet', 'forward', 'poison-gateway', 'intranet', 'shop', 'strip', 'shop', 'bank', 'dai', 'poison-victim');
+    expect([...s.done].sort()).toEqual(ONPATH_MISSIONS.map(m => m.id).sort());
+  });
+
+  it('protects HSTS sites and stops poisoning with DAI', () => {
+    const s = play('poison-victim', 'poison-gateway', 'forward', 'strip', 'bank');
+    expect(s.log.some(l => l.who === 'capture' && l.tone === 'bad')).toBeFalse();
+    const d = play('dai', 'poison-victim', 'poison-gateway');
+    expect(d.victimPoisoned || d.gatewayPoisoned).toBeFalse();
+  });
+});
+
+describe('the credential replay console', () => {
+  it('works only where each credential came from, and MFA alone stops none', () => {
+    for (const i of ITEMS) {
+      for (const t of TARGETS) expect(replay(i.id, t.id, []).ok).withContext(`${i.id} at ${t.id}`).toBe(t.id === i.home);
+      expect(replay(i.id, i.home, ['mfa']).ok).withContext(i.id).toBeTrue();
+    }
+  });
+
+  it('can complete every mission', () => {
+    const done = new Set<ReplayMission>();
+    let wins: typeof ITEMS[number]['id'][] = [];
+    const go = (item: typeof ITEMS[number]['id'], on: typeof GUARDS[number]['id'][]) => {
+      const m = missionsFor(item, ITEMS.find(i => i.id === item)!.home, on, wins);
+      wins = m.mfaWins; m.done.forEach(d => done.add(d));
+    };
+    for (const i of ITEMS) go(i.id, []);
+    for (const i of ITEMS) go(i.id, ['mfa']);
+    go('hash', ['kerberos']); go('cookie', ['sessions']); go('request', ['nonce']);
+    expect([...done].sort()).toEqual(REPLAY_MISSIONS.map(m => m.id).sort());
+  });
+});
+
+describe('the privilege escalation lab', () => {
+  const play = (steps: (CmdId | FixId)[]) => steps.reduce<PrivState>((s, x) => CMDS.some(c => c.id === x) ? run(s, x as CmdId).s : toggleFix(s, x as FixId), PRIV_START);
+
+  it('can complete every mission', () => {
+    const s = play(['id', 'crontab', 'ls-script', 'x-cron', 'sudo-l', 'x-sudo', 'uname', 'x-kernel', 'inv-own', 'inv-other', 'role', 'admin',
+      'perms', 'sudo', 'patch', 'x-cron', 'x-sudo', 'x-kernel', 'authz', 'inv-other', 'role']);
+    expect([...s.done].sort()).toEqual(PRIV_MISSIONS.map(m => m.id).sort());
+  });
+
+  it('closes each root path with its own fix only', () => {
+    const fixedBy = (fix: FixId, cmd: CmdId) => run(toggleFix(PRIV_START, fix), cmd).out.tone === 'good';
+    expect(fixedBy('perms', 'x-cron')).toBeTrue();
+    expect(fixedBy('perms', 'x-sudo')).toBeFalse();
+    expect(fixedBy('sudo', 'x-sudo')).toBeTrue();
+    expect(fixedBy('sudo', 'x-kernel')).toBeFalse();
+    expect(fixedBy('patch', 'x-kernel')).toBeTrue();
+    expect(fixedBy('patch', 'x-cron')).toBeFalse();
+    expect(fixedBy('authz', 'inv-other')).toBeTrue();
+  });
+
+  it('does not count the "all fixed" mission when a fix is switched off part way', () => {
+    const s = play(['perms', 'sudo', 'patch', 'x-cron', 'x-sudo', 'patch', 'patch', 'x-kernel']);
+    expect(s.done).not.toContain('server-fixed');
+  });
+});
+
+describe('the CSRF lab', () => {
+  it('can complete every mission, and only the token or re-entering the password stops everything alone', () => {
+    const done = new Set<CsrfMission>();
+    const ids = PAYLOADS.map(p => p.id);
+    const all = (on: CsrfGuard[]) => { let stopped: PayloadId[] = []; for (const p of ids) { const m = csrfMissions(p, on, stopped); stopped = m.stopped; m.done.forEach(d => done.add(d)); } };
+    all([]); all(['samesite']); all(['token']);
+    expect([...done].sort()).toEqual(CSRF_MISSIONS.map(m => m.id).sort());
+    const stopsAll = (g: CsrfGuard) => ids.every(p => !csrf(p, [g]).ok);
+    expect(stopsAll('token')).toBeTrue();
+    expect(stopsAll('reauth')).toBeTrue();
+    expect(stopsAll('samesite')).toBeFalse();
+    expect(stopsAll('post')).toBeFalse();
+  });
+});
+
+describe('the SSRF lab', () => {
+  const META = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/app-role';
+
+  it('can complete every mission', () => {
+    const done = new Set<SsrfMission>();
+    let trial: SsrfTrial = { news: false, metaStopped: false };
+    const go = (input: string, on: Parameters<typeof preview>[1]) => { const m = ssrfMissions(input, on, trial); trial = m.trial; m.done.forEach(d => done.add(d)); };
+    go(META, []); go('http://localhost:8080/admin', []); go('file:///etc/passwd', []);
+    go('http://2852039166/latest/meta-data/', ['blocklist']);
+    trial = { news: false, metaStopped: false };
+    go('https://news.example/story', ['private']); go(META, ['private']);
+    expect([...done].sort()).toEqual(SSRF_MISSIONS.map(m => m.id).sort());
+  });
+
+  it('lets the block list be spelled around, but not the resolved-address check', () => {
+    const tricks = ['http://2852039166/latest/meta-data/', 'http://127.1:8080/admin', 'http://[::1]:8080/admin', 'http://0.0.0.0:8080/admin',
+      'http://evil.example/redirect?to=' + encodeURIComponent(META)];
+    for (const t of tricks) {
+      expect(preview(t, ['blocklist']).ok).withContext(t).toBeTrue();
+      expect(preview(t, ['private']).ok).withContext(t).toBeFalse();
+    }
+    expect(preview('https://news.example/a', ['private', 'allow', 'scheme', 'imdstoken']).reached).toBe('news');
+  });
+});
+
+describe('the directory traversal lab', () => {
+  it('resolves paths like the operating system', () => {
+    expect(normalize('/var/www/files/../../../etc/passwd')).toBe('/etc/passwd');
+    expect(normalize('/var/www/files/../../../../../etc/passwd')).toBe('/etc/passwd');
+    expect(normalize('/var/www/files//./report.pdf')).toBe('/var/www/files/report.pdf');
+  });
+
+  it('can complete every mission', () => {
+    const done = new Set<TravMission>();
+    const go = (raw: string, f: FilterId, r: RunAs) => travMissions(raw, f, r).forEach(d => done.add(d));
+    go('../../../etc/passwd', 'none', 'root');
+    go('../app/config.php', 'none', 'www-data');
+    go('....//....//....//etc/passwd', 'strip', 'root');
+    go('%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd', 'early', 'root');
+    go('../../../etc/shadow', 'none', 'root');
+    go('../../../etc/shadow', 'none', 'www-data');
+    go('....//....//....//etc/passwd', 'canon', 'root');
+    expect([...done].sort()).toEqual(TRAV_MISSIONS.map(m => m.id).sort());
+  });
+
+  it('beats each weak filter with its own trick, and none beats the real-path check', () => {
+    const out = (raw: string, f: FilterId) => download(raw, f, 'root').ok && download(raw, f, 'root').escaped;
+    expect(out('../../../etc/passwd', 'strip')).toBeFalse();
+    expect(out('../../../etc/passwd', 'early')).toBeFalse();
+    expect(out('....//....//....//etc/passwd', 'early')).toBeFalse();
+    expect(out('%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd', 'strip')).toBeFalse();
+    for (const t of ['../../../etc/passwd', '....//....//....//etc/passwd', '%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd', '..%2f..%2f..%2fetc%2fpasswd']) {
+      expect(out(t, 'canon')).withContext(t).toBeFalse();
+    }
+    expect(download('report.pdf', 'canon', 'www-data').ok).toBeTrue();
+  });
+});

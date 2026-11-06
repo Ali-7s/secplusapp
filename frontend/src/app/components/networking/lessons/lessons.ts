@@ -16,6 +16,7 @@ import { BUILD_NETWORK } from './12-build-network';
 import { CIA } from './topics/cia';
 import { ATTACKS } from './topics/attacks';
 import { MALWARE } from './topics/malware';
+import { APP_ATTACKS } from './topics/app-attacks';
 import { CRYPTO } from './topics/crypto';
 import { PKI } from './topics/pki';
 import { SIGN_IN } from './topics/sign-in';
@@ -47,6 +48,7 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   cia: CIA,
   malware: MALWARE,
   attacks: ATTACKS,
+  'app-attacks': APP_ATTACKS,
   crypto: CRYPTO,
   pki: PKI,
   'sign-in': SIGN_IN,

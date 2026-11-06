@@ -303,8 +303,26 @@
       @case ('outbreak') {
         <app-outbreak />
       }
-      @case ('cases') {
-        <app-case-file [title]="b.title" [intro]="b.intro ?? ''" [icon]="b.icon ?? 'search'" [options]="b.options" [cases]="b.cases" />
+      @case ('ddos') {
+        <app-ddos />
+      }
+      @case ('onpath') {
+        <app-onpath />
+      }
+      @case ('replay') {
+        <app-replay />
+      }
+      @case ('privesc') {
+        <app-privesc />
+      }
+      @case ('csrf') {
+        <app-csrf />
+      }
+      @case ('ssrf') {
+        <app-ssrf />
+      }
+      @case ('traversal') {
+        <app-traversal />
       }
       @case ('decide') {
         <app-decide [title]="b.title" [intro]="b.intro ?? ''" [steps]="b.steps" />
