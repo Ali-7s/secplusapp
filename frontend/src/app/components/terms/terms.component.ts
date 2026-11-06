@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
-import { ClozeSpan, answerSpans, maskAnswer, otherCardNamed } from '../../utils/cloze';
+import { ClozeSpan, answerSpans, isTermClozeCorrect, maskAnswer, otherCardNamed } from '../../utils/cloze';
 import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonHint, lessonsForCard } from '../networking/lessons/lesson-index';
@@ -354,12 +354,12 @@ export class TermsComponent implements OnInit, DoCheck {
     return answerSpans(t.definition, [other.term]).some(span => span.answer);
   }
 
+  private get allTermNames() { return this.allTerms.map(t => t.term); }
+
   checkTermCloze() {
     if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
     this.fcClozeChecked = true;
-    const u = this.fcClozeInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const a = this.deck[this.fcIndex].term.toLowerCase().replace(/[^a-z0-9]/g, '');
-    this.fcClozeCorrect = u === a || a.includes(u) || u.includes(a);
+    this.fcClozeCorrect = isTermClozeCorrect(this.fcClozeInput, this.deck[this.fcIndex].term, this.allTermNames);
     this.fcClozeNearMiss = this.fcClozeCorrect ? undefined : otherCardNamed(this.fcClozeInput, this.deck[this.fcIndex], this.allTerms, t => t.term);
   }
 

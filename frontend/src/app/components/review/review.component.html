@@ -104,7 +104,37 @@
         </button>
       }
     } @else {
-      @if (typing() && checked()) {
+      @if (checklistActive()) {
+        <div class="covers" role="group" aria-labelledby="covers-title">
+          <p class="covers-title" id="covers-title"><strong>A complete answer covers</strong> <small>Tick what yours said</small></p>
+          @if (typed().trim()) {
+            <p class="you-wrote">You wrote: “{{ typed().trim() }}”</p>
+            <p class="legend"><mark>Marked</mark> words are ones you also used. It only compares words, so judge by meaning.</p>
+          }
+          @if (!pointsReady()) {
+            <p class="legend">Loading the key points…</p>
+          } @else {
+            <ul class="points">
+              @for (segments of checklist(); track $index; let i = $index) {
+                <li>
+                  <label class="point" [class.on]="ticks().includes(i)">
+                    <input type="checkbox" [checked]="ticks().includes(i)" (change)="toggleTick(i)" />
+                    <span class="point-text">@for (s of segments; track $index) {@if (s.hit) {<mark>{{ s.text }}</mark>} @else {<span>{{ s.text }}</span>}}</span>
+                  </label>
+                </li>
+              }
+            </ul>
+            <p class="covers-result" [attr.data-coverage]="coverage()" role="status">
+              <strong>{{ ticks().length }} of {{ rubric().length }} covered.</strong>
+              @switch (coverage()) {
+                @case ('nailed') { Rate it however it felt. }
+                @case ('partly') { Partly there: Again or Hard, so it comes back sooner. }
+                @default { Not yet: Again, so it comes back soon. Tick more only if your answer said them. }
+              }
+            </p>
+          }
+        </div>
+      } @else if (typing() && checked()) {
         @let v = verdict();
         <div class="verdict" [class.right]="v?.right" [class.wrong]="v && !v.right" role="status">
           <mat-icon aria-hidden="true">{{ !v ? 'compare_arrows' : v.right ? 'check_circle' : 'cancel' }}</mat-icon>
@@ -122,7 +152,7 @@
       }
       <div class="ratings" role="group" aria-label="How well did you remember it?">
         @for (r of ratings; track r.id) {
-          <button type="button" class="rate" [class]="r.id" (click)="answer(r.id)" [disabled]="onlyAgain() && r.id !== 'again'">
+          <button type="button" class="rate" [class]="r.id" (click)="answer(r.id)" [disabled]="!allowed().has(r.id)">
             <span class="ivl">{{ intervals()[r.id] }}</span>
             <span class="label">{{ r.label }}</span>
             <span class="key">{{ r.key }}</span>
@@ -156,7 +186,7 @@
   }
 
   <p class="hint">
-    @if (typing()) { Enter checks your answer. Then Space rates Good (Again after a miss), and keys 1 to 4 pick a rating. Ctrl+Z undoes. }
+    @if (typing()) { Enter checks your answer. Then Space rates Good (or the best rating allowed), and keys 1 to 4 pick a rating. Ctrl+Z undoes. }
     @else { Space shows the answer and rates Good. Keys 1 to 4 pick Again, Hard, Good or Easy. Ctrl+Z undoes. }
   </p>
 </div>

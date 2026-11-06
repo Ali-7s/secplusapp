@@ -134,3 +134,51 @@ export function isAcronymClozeCorrect(input: string, card: AcronymLike, deck: Re
     other => other !== card && other.expansion?.trim().toLowerCase() === expansion && normalise(other.acronym) === typed,
   );
 }
+
+// ── Key Terms ─────────────────────────────────────────────────────────────
+
+/** A term's words in a form to compare: lower case, "&" read as "and", plurals and a leading article dropped. */
+function termWords(text: string): string[] {
+  const words = text
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(w => (w.length > 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w));
+  return ['a', 'an', 'the'].includes(words[0]) ? words.slice(1) : words;
+}
+
+/** The ways of writing a term that count as the term: whole, and without a trailing "attack". */
+function termForms(term: string): string[] {
+  const words = termWords(term);
+  const forms = [words.join('')];
+  if (words.length > 1 && words[words.length - 1] === 'attack') forms.push(words.slice(0, -1).join(''));
+  return forms;
+}
+
+/** How many slips turn `a` into `b`: a letter added, dropped or changed, or two neighbours swapped. */
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+/**
+ * Checks a typed answer on a Key Terms cloze card. The answer has to be the whole term, though case, spacing,
+ * punctuation, plurals, a leading "a" or "the" and a trailing "attack" do not matter ("on path" for "On-path
+ * attack", "biometric" for "Biometrics"). Part of a term does not count ("access" for "Access control"). One
+ * slip of the keyboard in a longer term is forgiven ("phising", "socail engineering"), unless what was typed is another term.
+ */
+export function isTermClozeCorrect(input: string, term: string, allTerms: ReadonlyArray<string>): boolean {
+  const typed = termWords(input).join('');
+  if (!typed) return false;
+  const own = termForms(term);
+  if (own.includes(typed)) return true;
+  if (allTerms.some(other => other !== term && termForms(other).includes(typed))) return false;
+  return own.some(form => form.length >= 7 && editDistance(typed, form) <= 1);
+}

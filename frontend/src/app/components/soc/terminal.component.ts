@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { COMMANDS } from './engine/commands';
 import { Follow, Shell, needsMore } from './engine/shell';
@@ -19,7 +19,7 @@ const MAX_SHOW = 2000;
   templateUrl: './terminal.component.html',
   styleUrl: './terminal.component.scss',
 })
-export class SocTerminalComponent implements AfterViewInit, OnChanges, OnDestroy {
+export class SocTerminalComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) shell!: Shell;
   /** The shift clock; a running tail -f picks up new lines when it moves. */
   @Input() now = 0;
@@ -57,7 +57,12 @@ export class SocTerminalComponent implements AfterViewInit, OnChanges, OnDestroy
     }
   }
 
-  ngAfterViewInit() {
+  /**
+   * Restores the scrollback, history and folder before the first render. Doing it after the view was drawn
+   * changed the lines and the prompt under Angular's feet (an ExpressionChangedAfterItHasBeenChecked error in
+   * development, and a late redraw in production).
+   */
+  ngOnInit() {
     if (this.saved) {
       this.lines = this.saved.lines ?? [];
       this.history = this.saved.history ?? [];
@@ -67,6 +72,9 @@ export class SocTerminalComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!this.lines.length) {
       this.lines.push({ k: 'note', t: 'Fernco SOC workstation. Type help for the commands, or try: ls /var/log' });
     }
+  }
+
+  ngAfterViewInit() {
     queueMicrotask(() => this.scrollDown());
   }
 

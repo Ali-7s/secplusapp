@@ -111,6 +111,32 @@
   p { margin: 2px 0 0; color: var(--c-text-2); }
   .you-wrote { color: var(--c-text); overflow-wrap: anywhere; }
 }
+// ── Marking a Key Terms explanation against its key points ─────────────────
+.covers {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--c-border); background: var(--c-surface-2); color: var(--c-text); font-size: 14px; line-height: 1.5;
+  p { margin: 0; }
+  .covers-title { strong { font-size: 15px; } small { margin-left: 4px; color: var(--c-text-2); } }
+  .you-wrote { color: var(--c-text); overflow-wrap: anywhere; }
+  .legend { font-size: 12px; color: var(--c-text-2); }
+  mark { background: color-mix(in srgb, var(--c-accent) 26%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+}
+.points { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.point {
+  display: flex; align-items: flex-start; gap: 10px; min-height: 40px; box-sizing: border-box; padding: 8px 12px;
+  border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-surface); cursor: pointer;
+  input { flex-shrink: 0; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--c-success); cursor: pointer; }
+  .point-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  &:hover { border-color: var(--c-accent); }
+  &.on { border-color: var(--c-success); background: var(--c-success-light); }
+}
+.covers-result {
+  color: var(--c-text-2);
+  strong { color: var(--c-text); }
+  &[data-coverage='nailed'] strong { color: var(--c-success); }
+  &[data-coverage='missed'] strong { color: var(--c-error); }
+}
+
 .link {
   padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--c-accent-solid);
   text-decoration: underline; cursor: pointer;

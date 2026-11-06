@@ -1,4 +1,4 @@
-import { CLOZE_BLANK as BLANK, answerSpans, isAcronymClozeCorrect, maskAnswer, otherCardNamed } from './cloze';
+import { CLOZE_BLANK as BLANK, answerSpans, isAcronymClozeCorrect, isTermClozeCorrect, maskAnswer, otherCardNamed } from './cloze';
 
 describe('maskAnswer', () => {
   it('blanks the acronym wherever it appears', () => {
@@ -142,5 +142,47 @@ describe('otherCardNamed', () => {
     expect(otherCardNamed('AH', deck[0], deck, c => c.name)).toBeUndefined();
     expect(otherCardNamed('nope', deck[0], deck, c => c.name)).toBeUndefined();
     expect(otherCardNamed('  ', deck[0], deck, c => c.name)).toBeUndefined();
+  });
+});
+
+describe('isTermClozeCorrect', () => {
+  const terms = ['Phishing', 'Vishing', 'Smishing', 'On-path attack', 'Access control', 'Biometrics', 'e-Discovery', 'Replay attack', 'Social engineering', '802.1X'];
+  const ok = (typed: string, term: string) => isTermClozeCorrect(typed, term, terms);
+
+  it('accepts the whole term however it is spaced, cased or punctuated', () => {
+    expect(ok('phishing', 'Phishing')).toBeTrue();
+    expect(ok('on path attack', 'On-path attack')).toBeTrue();
+    expect(ok('E discovery', 'e-Discovery')).toBeTrue();
+    expect(ok('8021x', '802.1X')).toBeTrue();
+    expect(ok('socialengineering', 'Social engineering')).toBeTrue();
+  });
+
+  it('forgives plurals, a leading article and a missing trailing "attack"', () => {
+    expect(ok('biometric', 'Biometrics')).toBeTrue();
+    expect(ok('the replay attacks', 'Replay attack')).toBeTrue();
+    expect(ok('on-path', 'On-path attack')).toBeTrue();
+    expect(ok('replay', 'Replay attack')).toBeTrue();
+  });
+
+  it('rejects part of a term, single letters and other terms', () => {
+    expect(ok('p', 'Phishing')).toBeFalse();
+    expect(ok('access', 'Access control')).toBeFalse();
+    expect(ok('control', 'Access control')).toBeFalse();
+    expect(ok('engineering', 'Social engineering')).toBeFalse();
+    expect(ok('attack', 'Replay attack')).toBeFalse();
+    expect(ok('', 'Phishing')).toBeFalse();
+    expect(ok('vishing', 'Phishing')).toBeFalse();
+    expect(ok('access control list', 'Access control')).toBeFalse();
+  });
+
+  it('forgives one slip in a longer term, but not one that makes another term', () => {
+    expect(ok('phising', 'Phishing')).toBeTrue();
+    expect(ok('biometircs', 'Biometrics')).toBeTrue();
+    expect(ok('socail engineering', 'Social engineering')).toBeTrue();
+    expect(ok('social enginering', 'Social engineering')).toBeTrue();
+    expect(ok('socail enginering', 'Social engineering')).toBeFalse();
+    expect(ok('vsihing', 'Phishing')).toBeFalse();
+    // "Vishing" is one letter from "Fishing" but is a term of its own.
+    expect(isTermClozeCorrect('vishing', 'Fishing', [...terms, 'Fishing'])).toBeFalse();
   });
 });

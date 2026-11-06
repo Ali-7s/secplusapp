@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, input, signal, untracked,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CardKind, ProgressService, cardKey } from '../../services/progress.service';
-import { DumpCard } from '../../utils/brain-dump';
+import { DumpCard, Rating as Coverage, buildRubric, highlight, rate } from '../../utils/brain-dump';
+import { ContentService } from '../../services/content.service';
 import { CardRecord, ProgressData } from '../../utils/progress';
 import { RouterLink } from '@angular/router';
 import {
@@ -22,8 +24,16 @@ const RATINGS: ReadonlyArray<{ id: Rating; label: string; key: string }> = [
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** What you typed for the card on screen, kept so a refresh does not lose it. */
-interface TypedDraft { id: string; text: string; checked: boolean; countedRight?: boolean }
+/** What you typed for the card on screen (and which key points you ticked), kept so a refresh does not lose it. */
+interface TypedDraft { id: string; text: string; checked: boolean; countedRight?: boolean; ticks?: number[] }
+
+/** Which ratings each checklist result allows: a key term explained badly cannot be rated Good. */
+const ALLOWED: Record<Coverage, ReadonlySet<Rating>> = {
+  missed: new Set(['again']),
+  partly: new Set(['again', 'hard']),
+  nailed: new Set(['again', 'hard', 'good', 'easy']),
+};
+const ALL_RATINGS: ReadonlySet<Rating> = ALLOWED.nailed;
 
 const PROMPTS = { acr: 'What does it stand for?', term: 'What does it mean? Put it in your own words.', ref: 'Type your answer.' };
 
@@ -34,7 +44,8 @@ const PROMPTS = { acr: 'What does it stand for?', term: 'What does it mean? Put 
  *
  * With "type answers" on (the default) you type your answer before the card turns over. An acronym is marked
  * against its expansion and most Reference cards against their own check; a wrong answer can only be rated Again.
- * Cards whose answer is an explanation (Key Terms) are not marked: you compare your words with the card.
+ * A Key Terms answer is an explanation, which no word check can mark, so its key points (the brain dump ones) are
+ * shown as a checklist: you tick what your answer covered, and the share ticked limits the ratings (see ALLOWED).
  *
  * Keys: Enter checks a typed answer (Space or Enter shows the answer when typing is off), then 1 to 4 rate it
  * (Space is Good, or Again after a wrong answer), and Ctrl+Z undoes.
@@ -53,6 +64,7 @@ export class ReviewComponent {
   readonly kind = input.required<CardKind>();
 
   readonly progress = inject(ProgressService);
+  private readonly content = inject(ContentService);
   private readonly cardEl = viewChild<ElementRef<HTMLElement>>('card');
   private readonly answerEl = viewChild<ElementRef<HTMLInputElement>>('answerInput');
 
@@ -73,6 +85,13 @@ export class ReviewComponent {
     effect(() => {
       const id = this.card()?.id;
       untracked(() => this.restoreDraft(id));
+    });
+    // Key Terms are explanations, marked against their key points (the same ones brain dump mode uses).
+    const destroyRef = inject(DestroyRef);
+    effect(() => {
+      if (this.kind() !== 'term' || this.pointsRequested) return;
+      this.pointsRequested = true;
+      untracked(() => this.content.getKeyPoints('terms').pipe(takeUntilDestroyed(destroyRef)).subscribe(p => this.points.set(p)));
     });
   }
 
@@ -107,13 +126,47 @@ export class ReviewComponent {
   /** After a wrong answer only Again is allowed, so a miss always comes back soon. */
   readonly onlyAgain = computed(() => this.verdict()?.right === false);
 
+  // ── Marking an explanation (Key Terms) ──────────────────────────────────
+
+  private pointsRequested = false;
+  /** Key points by term, or null until they have loaded. */
+  private readonly points = signal<Record<string, string[]> | null>(null);
+  /** Which checklist items are ticked, by position. */
+  readonly ticks = signal<number[]>([]);
+  /** A Key Terms card whose answer is showing and was not left blank: it is marked by ticking its key points. */
+  readonly checklistActive = computed(() => this.kind() === 'term' && this.revealed() && !this.onlyAgain());
+  readonly pointsReady = computed(() => this.points() !== null);
+  readonly rubric = computed(() => {
+    const card = this.card();
+    const points = this.points();
+    return card && points ? buildRubric(card, points[card.id]) : [];
+  });
+  /** The checklist with the words you also typed marked. */
+  readonly checklist = computed(() => this.rubric().map(item => highlight(item.text, this.typed())));
+  readonly coverage = computed<Coverage>(() => rate(this.ticks().length, this.rubric().length));
+  readonly allowed = computed<ReadonlySet<Rating>>(() => {
+    if (this.onlyAgain()) return ALLOWED.missed;
+    return this.checklistActive() ? ALLOWED[this.coverage()] : ALL_RATINGS;
+  });
+  /** What Space picks: Good when allowed, else the best rating that is. */
+  private readonly spaceRating = computed<Rating>(() => (['good', 'hard', 'again'] as Rating[]).find(r => this.allowed().has(r))!);
+
+  toggleTick(i: number) {
+    this.ticks.update(t => (t.includes(i) ? t.filter(x => x !== i) : [...t, i].sort((a, b) => a - b)));
+    this.saveDraft();
+  }
+
   private draftKey() { return `sp-review-typed-${this.kind()}`; }
 
   private saveDraft() {
     const id = this.card()?.id;
     try {
       if (!id || (!this.typed() && !this.checked())) localStorage.removeItem(this.draftKey());
-      else localStorage.setItem(this.draftKey(), JSON.stringify({ id, text: this.typed(), checked: this.checked(), countedRight: this.countedRight() } satisfies TypedDraft));
+      else {
+        const draft: TypedDraft = { id, text: this.typed(), checked: this.checked(), countedRight: this.countedRight() };
+        if (this.ticks().length) draft.ticks = this.ticks();
+        localStorage.setItem(this.draftKey(), JSON.stringify(draft));
+      }
     } catch { /* storage unavailable */ }
   }
 
@@ -131,6 +184,7 @@ export class ReviewComponent {
     this.typed.set(mine?.text ?? '');
     this.checked.set(!!mine?.checked);
     this.countedRight.set(!!mine?.countedRight);
+    this.ticks.set(Array.isArray(mine?.ticks) ? mine.ticks.filter(n => Number.isInteger(n)) : []);
     if (mine?.checked) this.revealedId.set(id!);
     else if (this.typing()) queueMicrotask(() => this.answerEl()?.nativeElement.focus({ preventScroll: true }));
   }
@@ -236,12 +290,18 @@ export class ReviewComponent {
 
   reveal() {
     const card = this.card();
-    if (card) this.revealedId.set(card.id);
+    if (!card) return;
+    this.revealedId.set(card.id);
+    // Without typing, remember that the answer is showing, so a refresh keeps it (and any ticks) on screen.
+    if (!this.typing() && !this.checked()) {
+      this.checked.set(true);
+      this.saveDraft();
+    }
   }
 
   answer(rating: Rating) {
     const card = this.card();
-    if (!card || !this.revealed() || (this.onlyAgain() && rating !== 'again')) return;
+    if (!card || !this.revealed() || !this.allowed().has(rating)) return;
     this.lastAnswer = { name: card.id, card: this.record(), review: structuredClone(this.progress.data().review), draft: this.readDraft() };
     try { localStorage.removeItem(this.draftKey()); } catch { /* storage unavailable */ }
     this.canUndo.set(true);
@@ -252,6 +312,7 @@ export class ReviewComponent {
     this.typed.set('');
     this.checked.set(false);
     this.countedRight.set(false);
+    this.ticks.set([]);
     this.now.set(Date.now());
     this.focusCard();
   }
@@ -305,7 +366,7 @@ export class ReviewComponent {
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.reveal(); }
       return;
     }
-    const rating = e.key === ' ' || e.key === 'Enter' ? (this.onlyAgain() ? 'again' : 'good') : RATINGS.find(r => r.key === e.key)?.id;
+    const rating = e.key === ' ' || e.key === 'Enter' ? this.spaceRating() : RATINGS.find(r => r.key === e.key)?.id;
     if (rating) { e.preventDefault(); this.answer(rating); }
   }
 
