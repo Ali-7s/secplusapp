@@ -258,7 +258,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 16,
   },
   {
-    slug: 'malware', number: 14, minutes: 34, icon: 'pest_control',
+    slug: 'malware', number: 14, minutes: 34, optionalMinutes: 4, icon: 'pest_control',
     objectives: ['2.4'],
     cia: { goals: ['C', 'I', 'A'], how: 'Ransomware denies availability, spyware and keyloggers steal confidential data, and rootkits and logic bombs change or destroy systems (integrity).' },
     title: 'Malware: name it from the clues',
