@@ -13,6 +13,6 @@ describe('routes', () => {
   });
 
   it('has the study pages, the lessons and the practice exam', () => {
-    expect(routes.map(r => r.path)).toEqual(['', 'lessons', 'lessons/:slug', 'networking', 'networking/:slug', 'acronyms', 'terms', 'exam', 'objectives', 'today', 'progress', 'reference', '**']);
+    expect(routes.map(r => r.path)).toEqual(['', 'lessons', 'lessons/:slug', 'networking', 'networking/:slug', 'acronyms', 'terms', 'exam', 'objectives', 'today', 'progress', 'soc', 'soc/:id', 'reference', '**']);
   });
 });

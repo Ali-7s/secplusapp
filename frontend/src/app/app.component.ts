@@ -47,6 +47,7 @@ export class AppComponent {
     { path: '/objectives', icon: 'checklist', label: 'Exam Objectives', short: 'Objectives' },
     { path: '/reference', icon: 'table_chart', label: 'Reference Sheet', short: 'Reference' },
     { path: '/exam', icon: 'assignment', label: 'Practice Exam', short: 'Exam' },
+    { path: '/soc', icon: 'terminal', label: 'SOC Lab', short: 'SOC Lab' },
     { path: '/today', icon: 'today', label: 'Today and Progress', short: 'Today' },
   ];
 }

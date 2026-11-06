@@ -13,6 +13,8 @@ export const routes: Routes = [
   { path: 'objectives', loadComponent: () => import('./components/objectives/objectives.component').then(m => m.ObjectivesComponent) },
   { path: 'today', loadComponent: () => import('./components/progress/progress.component').then(m => m.ProgressComponent) },
   { path: 'progress', redirectTo: '/today' },
+  { path: 'soc', loadComponent: () => import('./components/soc/soc.component').then(m => m.SocComponent) },
+  { path: 'soc/:id', loadComponent: () => import('./components/soc/workstation.component').then(m => m.SocWorkstationComponent) },
   { path: 'reference', loadComponent: () => import('./components/reference/reference.component').then(m => m.ReferenceComponent) },
   { path: '**', redirectTo: '/today' }
 ];

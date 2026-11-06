@@ -1,0 +1,157 @@
+@if (ready) {
+<div class="ws">
+  <header class="ws-head">
+    <a routerLink="/soc" class="back" aria-label="All shifts"><mat-icon aria-hidden="true">arrow_back</mat-icon></a>
+    <div class="title">
+      <span class="num">Shift {{ shift.number }}</span>
+      <h1>{{ shift.title }}</h1>
+    </div>
+    <div class="clock" aria-label="Shift clock">
+      <mat-icon aria-hidden="true">schedule</mat-icon>
+      <span class="mono time">{{ hms(now()) }}</span>
+      <span class="ends">ends {{ hms(shift.end).slice(0, 5) }}</span>
+    </div>
+    <div class="controls">
+      @if (running()) {
+        <button type="button" class="btn" (click)="pause()"><mat-icon aria-hidden="true">pause</mat-icon> Pause</button>
+      } @else {
+        <button type="button" class="btn primary" (click)="play()" [attr.aria-disabled]="ended()"><mat-icon aria-hidden="true">play_arrow</mat-icon> {{ save.started ? 'Resume' : 'Start shift' }}</button>
+      }
+      <div class="speeds" role="radiogroup" aria-label="Clock speed">
+        @for (s of speeds; track s) {
+          <button type="button" role="radio" [attr.aria-checked]="speed === s" [class.on]="speed === s" (click)="setSpeed(s)">{{ s }}×</button>
+        }
+      </div>
+      @if (nextAlert(); as na) {
+        <button type="button" class="btn ghost" (click)="skipToNext()" [title]="'Jump the clock to ' + hms(na.t).slice(0, 5)"><mat-icon aria-hidden="true">skip_next</mat-icon> Next alert</button>
+      }
+    </div>
+    <div class="score" aria-label="Score"><mat-icon aria-hidden="true">military_tech</mat-icon> {{ score() }} / {{ maxScore() }}</div>
+  </header>
+  <div class="progress" aria-hidden="true"><div [style.width.%]="progressPct()"></div></div>
+
+  @if (briefOpen) {
+    <section class="brief" aria-label="Shift briefing">
+      <div class="brief-text">
+        @for (p of shift.brief; track $index) { <p>{{ p }}</p> }
+        <p class="skills"><strong>You will practise:</strong> {{ shift.skills.join(' · ') }}</p>
+      </div>
+      <div class="brief-acts">
+        @if (!save.started) { <button type="button" class="btn primary" (click)="play(); hideBrief()"><mat-icon aria-hidden="true">play_arrow</mat-icon> Start the shift</button> }
+        <button type="button" class="btn ghost" (click)="hideBrief()">Hide briefing</button>
+      </div>
+    </section>
+  } @else {
+    <button type="button" class="link brief-link" (click)="showBrief()"><mat-icon aria-hidden="true">info</mat-icon> Briefing</button>
+  }
+
+  <section class="traffic" aria-label="Live traffic">
+    <div class="rates">
+      <span class="live-dot" [class.on]="running()" aria-hidden="true"></span>
+      <span class="lbl">Traffic</span>
+      @for (r of rates(); track r.src) { <span class="rate"><span class="mono">{{ r.src }}</span> {{ r.perMin }}/min</span> }
+      <span class="total">{{ totalEvents().toLocaleString('en-US') }} event{{ totalEvents() === 1 ? '' : 's' }} so far</span>
+    </div>
+    <ol class="feed mono" aria-hidden="true">
+      @for (e of recent(); track e) { <li><span class="t">{{ hms(e.t) }}</span> <span class="s">{{ e.source }}</span> {{ e.raw }}</li> }
+    </ol>
+  </section>
+
+  @if (ended() && !showDebrief) {
+    <div class="banner"><mat-icon aria-hidden="true">flag</mat-icon>
+      <span>The shift is over. {{ openAlertCount() ? openAlertCount() + ' alert ticket(s) still open.' : 'All tickets are in.' }}</span>
+      <button type="button" class="btn primary" (click)="endShift()">See the debrief</button>
+    </div>
+  }
+
+  @if (showDebrief) {
+    <section class="debrief" aria-label="Shift debrief">
+      <h2><mat-icon aria-hidden="true">emoji_events</mat-icon> Debrief: {{ score() }} of {{ maxScore() }} points</h2>
+      <p class="sub">Best score on this shift: {{ save.best ?? score() }}. Tasks done: {{ tasksDone() }} of {{ shift.tasks.length }}.</p>
+      <table class="dt">
+        <thead><tr><th>Alert</th><th>Verdict</th><th>Response</th><th>Evidence</th><th>Points</th></tr></thead>
+        <tbody>
+          @for (row of alertRows(); track row.a.id) {
+            <tr>
+              <td>{{ row.a.rule }}</td>
+              @if (row.m; as m) {
+                <td [class.good]="m.verdict" [class.bad]="!m.verdict">{{ m.verdict ? 'Right' : 'Wrong' }}</td>
+                <td [class.good]="!m.missing.length && !m.wrong.length" [class.bad]="m.missing.length || m.wrong.length">{{ !m.missing.length && !m.wrong.length ? 'Right' : 'Partly' }}</td>
+                <td>{{ evidenceOf(m) }} of {{ row.a.questions.length }}</td>
+                <td>{{ m.points }}/{{ m.max }}</td>
+              } @else {
+                <td colspan="4" class="bad">{{ row.arrived ? 'No ticket submitted' : 'Had not arrived yet' }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+      <p class="sub">Open each alert for the full story of what happened. You can keep working: submit any remaining tickets and finish tasks, and the score updates.</p>
+      <div class="brief-acts">
+        <button type="button" class="btn" (click)="showDebrief = false">Back to the workstation</button>
+        @if (!confirmRestart) {
+          <button type="button" class="btn ghost" (click)="confirmRestart = true"><mat-icon aria-hidden="true">restart_alt</mat-icon> Start this shift again</button>
+        } @else {
+          <span class="sub">This clears your tickets, tasks and files for this shift (the best score stays).</span>
+          <button type="button" class="btn primary" (click)="restart()">Yes, start again</button>
+          <button type="button" class="btn ghost" (click)="confirmRestart = false">Cancel</button>
+        }
+      </div>
+    </section>
+  }
+
+  <nav class="tabs narrow-tabs" aria-label="Workstation panes">
+    <button type="button" [class.on]="isPane('alerts')" (click)="pane('alerts')"><mat-icon aria-hidden="true">notifications</mat-icon> Alerts @if (openAlertCount()) { <span class="badge">{{ openAlertCount() }}</span> }</button>
+    <button type="button" [class.on]="isPane('tasks')" (click)="pane('tasks')"><mat-icon aria-hidden="true">checklist</mat-icon> Tasks <span class="badge muted">{{ tasksDone() }}/{{ shift.tasks.length }}</span></button>
+    <button type="button" [class.on]="isPane('terminal')" (click)="pane('terminal')"><mat-icon aria-hidden="true">terminal</mat-icon> Terminal</button>
+    <button type="button" [class.on]="isPane('siem')" (click)="pane('siem')"><mat-icon aria-hidden="true">manage_search</mat-icon> SIEM</button>
+  </nav>
+
+  <div class="cols" [attr.data-focus]="focusCol">
+    <div class="col left">
+      <nav class="tabs wide-tabs" aria-label="Alerts and tasks">
+        <button type="button" [class.on]="left === 'alerts'" (click)="pane('alerts')"><mat-icon aria-hidden="true">notifications</mat-icon> Alerts @if (openAlertCount()) { <span class="badge">{{ openAlertCount() }}</span> }</button>
+        <button type="button" [class.on]="left === 'tasks'" (click)="pane('tasks')"><mat-icon aria-hidden="true">checklist</mat-icon> Tasks <span class="badge muted">{{ tasksDone() }}/{{ shift.tasks.length }}</span></button>
+      </nav>
+      <div class="pane-body">
+        @if (left === 'alerts') {
+          <app-soc-alerts [alerts]="visibleAlerts()" [tickets]="save.tickets" [openId]="openId" [waiting]="waitingAlerts()"
+            (openIdChange)="setOpen($event)" (ticketChange)="onTicket($event)" (investigate)="investigate($event)" />
+          @if (waitingAlerts()) { <p class="sub more">{{ waitingAlerts() }} more alert{{ waitingAlerts() === 1 ? '' : 's' }} will arrive this shift.</p> }
+          @if (!ended() && !waitingAlerts() && submittedCount() === shift.alerts.length && !showDebrief) {
+            <button type="button" class="btn" (click)="skipToEnd(); endShift()"><mat-icon aria-hidden="true">flag</mat-icon> All tickets in: end the shift</button>
+          }
+        } @else {
+          <app-soc-tasks [tasks]="shift.tasks" [state]="save.tasks" [results]="results" [now]="now()" (reveal)="onReveal($event)" (checkScript)="onCheckScript($event)" />
+        }
+      </div>
+    </div>
+    <div class="col right">
+      <nav class="tabs wide-tabs" aria-label="Terminal and SIEM">
+        <button type="button" [class.on]="right === 'terminal'" (click)="pane('terminal')"><mat-icon aria-hidden="true">terminal</mat-icon> Terminal</button>
+        <button type="button" [class.on]="right === 'siem'" (click)="pane('siem')"><mat-icon aria-hidden="true">manage_search</mat-icon> SIEM</button>
+      </nav>
+      <div class="pane-body tool" [hidden]="right !== 'terminal'">
+        <app-soc-terminal [shell]="shell" [now]="now()" [saved]="screen.term" (ran)="onRan($event)" (changed)="onTermChange($event)" (filesChanged)="onFiles()" />
+      </div>
+      <div class="pane-body" [hidden]="right !== 'siem'">
+        <app-soc-siem [world]="world" [now]="now()" [saved]="screen.siem" (searched)="onSearched($event)" (changed)="onSiemChange($event)" />
+      </div>
+    </div>
+  </div>
+
+  @if (!showDebrief && save.started) {
+    <div class="end-row"><button type="button" class="btn ghost" (click)="endShift()"><mat-icon aria-hidden="true">flag</mat-icon> End shift and see the debrief</button></div>
+  }
+
+  <div class="toast-area" aria-live="polite">
+    @if (toast(); as t) {
+      <div class="toast" [attr.data-kind]="t.kind" role="status">
+        <mat-icon aria-hidden="true">{{ t.kind === 'alert' ? 'notification_important' : t.kind === 'task' ? 'task_alt' : 'info' }}</mat-icon>
+        <span>{{ t.text }}</span>
+        <button type="button" (click)="toast.set(null)" aria-label="Dismiss"><mat-icon aria-hidden="true">close</mat-icon></button>
+      </div>
+    }
+  </div>
+</div>
+}

@@ -1,0 +1,72 @@
+// The terminal is dark in both themes, like a real one; its colours are fixed so they stay readable either way.
+:host {
+  display: flex; flex-direction: column; min-height: 0; height: 100%;
+  --t-bg: #0d1117; --t-fg: #dbe3ea; --t-dim: #8b98a5; --t-err: #ff8a80; --t-in: #9fe2a0; --t-note: #79c0ff; --t-bar: #161b22; --t-line: #30363d;
+}
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.term {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden;
+  background: var(--t-bg); border: 1px solid var(--t-line);
+}
+
+.screen {
+  flex: 1; min-height: 260px; overflow: auto; padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--t-fg); cursor: text;
+  overscroll-behavior: contain;
+}
+
+.ln { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--t-fg); }
+.ln.in { color: var(--t-in); }
+.ln.err { color: var(--t-err); }
+.ln.note { color: var(--t-note); }
+
+.prompt-row { display: flex; align-items: baseline; gap: 0; }
+.prompt { flex: none; color: var(--t-in); white-space: pre; }
+.cmd {
+  flex: 1; min-width: 40px; border: 0; outline: 0; padding: 0; margin: 0; background: transparent; color: var(--t-fg);
+  font: inherit; caret-color: var(--t-in);
+}
+
+.following {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--t-note); flex-wrap: wrap;
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--t-in); animation: pulse 1.2s infinite; }
+}
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .following .dot { animation: none; } }
+
+.tbtn {
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--t-line); background: var(--t-bar); color: var(--t-fg);
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  kbd { font: inherit; font-size: 11px; color: var(--t-dim); }
+  &:hover { border-color: var(--t-dim); }
+}
+
+.keys {
+  display: flex; gap: 4px; padding: 6px 8px; background: var(--t-bar); border-top: 1px solid var(--t-line); overflow-x: auto;
+  button {
+    flex: none; min-width: 34px; height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--t-line);
+    background: var(--t-bg); color: var(--t-fg); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    &:hover { border-color: var(--t-dim); }
+  }
+}
+// Keyboards with Tab and Ctrl do not need the button row.
+@media (hover: hover) and (pointer: fine) { .keys { display: none; } }
+
+.editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ed-bar {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--t-bar); border-bottom: 1px solid var(--t-line); flex-wrap: wrap;
+  .ed-name { color: var(--t-fg); font-size: 13px; overflow-wrap: anywhere; }
+  .spacer { flex: 1; }
+}
+.ed-area {
+  flex: 1; min-height: 260px; resize: none; border: 0; outline: 0; padding: 10px 12px; background: var(--t-bg); color: var(--t-fg);
+  font-size: 13px; line-height: 1.5; caret-color: var(--t-in); tab-size: 2;
+}
+
+:host ::selection { background: #264f78; color: #fff; }
+
+// The whole terminal shows focus, rather than a box around the command line.
+.cmd:focus-visible, .ed-area:focus-visible { outline: none !important; }
+.term:focus-within { box-shadow: 0 0 0 2px var(--c-accent); }

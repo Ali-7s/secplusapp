@@ -1,0 +1,41 @@
+<section class="term" aria-label="Terminal">
+  @if (editor) {
+    <div class="editor" role="dialog" [attr.aria-label]="'Editing ' + editorName">
+      <div class="ed-bar">
+        <span class="mono ed-name">nano {{ editorName }}{{ editor.saved ? '' : ' (modified)' }}</span>
+        <span class="spacer"></span>
+        <button type="button" class="tbtn" (click)="saveEditor()"><mat-icon aria-hidden="true">save</mat-icon> Save <kbd>Ctrl+S</kbd></button>
+        <button type="button" class="tbtn" (click)="closeEditor()"><mat-icon aria-hidden="true">close</mat-icon> Close <kbd>Esc</kbd></button>
+      </div>
+      <textarea #editorArea class="ed-area mono" spellcheck="false" autocapitalize="off" autocomplete="off" [attr.aria-label]="'Contents of ' + editorName"
+        [value]="editor.text" (input)="editor.text = $any($event.target).value; editor.saved = false" (keydown)="editorKey($event)"></textarea>
+    </div>
+  } @else {
+    <div class="screen mono" #screen (click)="focus()" role="log" aria-live="off">
+      @for (l of lines; track $index) {
+        <pre class="ln" [class]="'ln ' + l.k">{{ l.t }}</pre>
+      }
+      @if (completions.length) { <pre class="ln note">{{ completions.join('   ') }}</pre> }
+      @if (follow) {
+        <div class="following"><span class="dot" aria-hidden="true"></span> Following {{ follow.path }}
+          <button type="button" class="tbtn" (click)="stopFollow(); $event.stopPropagation()">Stop (Ctrl+C)</button>
+        </div>
+      } @else {
+        <div class="prompt-row">
+          <label class="prompt" for="term-input">{{ prompt }}</label>
+          <input #input id="term-input" class="cmd" type="text" [value]="value" (input)="value = $any($event.target).value" (keydown)="keydown($event)"
+            autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" aria-label="Command" />
+        </div>
+      }
+    </div>
+    <div class="keys" aria-label="Terminal keys">
+      <button type="button" (click)="key('tab')">Tab</button>
+      <button type="button" (click)="key('up')" aria-label="Previous command">↑</button>
+      <button type="button" (click)="key('down')" aria-label="Next command">↓</button>
+      <button type="button" (click)="key('ctrlc')">Ctrl+C</button>
+      @for (k of symbols; track k) {
+        <button type="button" class="mono" (click)="key(k)">{{ k }}</button>
+      }
+    </div>
+  }
+</section>

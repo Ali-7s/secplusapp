@@ -1,0 +1,137 @@
+<section class="siem" aria-label="SIEM search">
+  <form class="bar" (submit)="$event.preventDefault(); run()">
+    <label class="sr-only" for="siem-q">Search</label>
+    <input id="siem-q" class="q mono" type="text" [value]="query" (input)="query = $any($event.target).value" placeholder="source=auth action=failed | stats count by src"
+      autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" />
+    <select class="range" aria-label="Time range" [value]="range" (change)="setRange($any($event.target).value)">
+      @for (r of ranges; track r.id) { <option [value]="r.id" [selected]="r.id === range">{{ r.label }}</option> }
+    </select>
+    <button type="submit" class="go"><mat-icon aria-hidden="true">search</mat-icon><span>Search</span></button>
+  </form>
+  <div class="sub">
+    <label class="live"><input type="checkbox" [checked]="live" (change)="live = $any($event.target).checked" /> Live: re-run as events arrive</label>
+    <button type="button" class="link" (click)="help = !help" [attr.aria-expanded]="help"><mat-icon aria-hidden="true">help_outline</mat-icon> Search help</button>
+    <span class="spacer"></span>
+    @if (result) { <span class="count" aria-live="polite">{{ countLabel }}</span> }
+  </div>
+
+  @if (help) {
+    <div class="help">
+      <p>Filter events first, then pipe them through commands. Field names: <span class="mono">source host src dst user action status query client EventID bytes</span> and more; open an event to see its fields. Click an example to run it.</p>
+      <ul>
+        @for (x of examples; track x[0]) {
+          <li><button type="button" class="ex mono" (click)="useExample(x[0])">{{ x[0] }}</button><span>{{ x[1] }}</span></li>
+        }
+      </ul>
+      <p class="small">Commands: stats, top, rare, timechart, table, fields, sort, head, tail, dedup, where, eval, rename, search. Sources: {{ world.shift.sources.join(', ') }}.</p>
+    </div>
+  }
+
+  @if (error) { <div class="error" role="alert"><mat-icon aria-hidden="true">error</mat-icon> {{ error }}</div> }
+
+  @if (!result && !error) {
+    <div class="empty">
+      <mat-icon aria-hidden="true">manage_search</mat-icon>
+      <p>Search everything the shift has logged so far. Try <button type="button" class="ex mono" (click)="useExample('source=' + world.shift.sources[0])">source={{ world.shift.sources[0] }}</button>, or open an alert and press Investigate.</p>
+    </div>
+  }
+
+  @if (result; as res) {
+    @switch (res.kind) {
+      @case ('events') {
+        <div class="ev-layout">
+          <details class="fields" [open]="wideFields">
+            <summary>Fields</summary>
+            <ul>
+              @for (f of fields; track f.field) {
+                <li>
+                  <button type="button" class="fname" (click)="fieldOpen = fieldOpen === f.field ? null : f.field" [attr.aria-expanded]="fieldOpen === f.field">
+                    <span class="mono">{{ f.field }}</span><span class="dc">{{ f.distinct }}</span>
+                  </button>
+                  @if (fieldOpen === f.field) {
+                    <ul class="vals">
+                      @for (v of f.top; track v.v) {
+                        <li><button type="button" class="val mono" (click)="addFilter(f.field, v.v)" [title]="'Add ' + f.field + '=' + v.v">{{ v.v }}</button><span class="n">{{ v.n }}</span></li>
+                      }
+                    </ul>
+                  }
+                </li>
+              }
+            </ul>
+          </details>
+          <ol class="events">
+            @for (e of events; track e; let i = $index) {
+              <li class="ev" [class.open]="open.has(e)">
+                <button type="button" class="ev-row" (click)="toggle(e)" [attr.aria-expanded]="open.has(e)">
+                  <span class="time mono">{{ hms(e.t) }}</span>
+                  <span class="src" [attr.data-src]="e.source">{{ e.source }}</span>
+                  <span class="raw mono">{{ e.raw }}</span>
+                </button>
+                @if (extraOf(i).length) {
+                  <div class="extra mono">@for (x of extraOf(i); track x[0]) { <span>{{ x[0] }}={{ x[1] }}</span> }</div>
+                }
+                @if (open.has(e)) {
+                  <table class="kv">
+                    <tbody>
+                      @for (f of fieldsOf(e); track f[0]) {
+                        <tr>
+                          <th class="mono">{{ f[0] }}</th>
+                          <td class="mono">{{ f[1] }}</td>
+                          <td class="acts">
+                            <button type="button" (click)="addFilter(f[0], f[1])" [attr.aria-label]="'Add ' + f[0] + '=' + f[1] + ' to the search'" title="Add to search">+</button>
+                            <button type="button" (click)="addFilter(f[0], f[1], true)" [attr.aria-label]="'Exclude ' + f[0] + '=' + f[1]" title="Exclude">−</button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </li>
+            } @empty {
+              <li class="none">No events match in this time range.</li>
+            }
+          </ol>
+        </div>
+        @if (res.events.length > shown) {
+          <button type="button" class="more" (click)="shown = shown + 100">Show more ({{ (res.events.length - shown).toLocaleString('en-US') }} left)</button>
+        }
+      }
+      @case ('chart') {
+        <div class="chart-head">
+          <span>Events per {{ res.span >= 3600 ? res.span / 3600 + ' h' : res.span >= 60 ? res.span / 60 + ' min' : res.span + ' s' }}, highest {{ chartMax }}</span>
+          <button type="button" class="link" (click)="chartAsTable = !chartAsTable">{{ chartAsTable ? 'Show chart' : 'Show table' }}</button>
+        </div>
+        @if (!chartAsTable) {
+          <div class="chart" role="img" [attr.aria-label]="'Chart of ' + res.buckets.length + ' time buckets, highest ' + chartMax">
+            @for (b of res.buckets; track b.t; let i = $index) {
+              <div class="col" [title]="hms(b.t) + ': ' + b.n">
+                <div class="cbar" [style.height.%]="(b.n / chartMax) * 100"></div>
+                @if (chartLabel(i, res.buckets.length); as lab) { <span class="lab mono">{{ lab }}</span> }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="table-wrap"><table class="grid">
+            <thead><tr>@for (c of res.cols; track c) { <th class="mono">{{ c }}</th> }</tr></thead>
+            <tbody>@for (r of res.rows; track $index) { <tr>@for (c of res.cols; track c) { <td class="mono" [class.num]="isNum(r[c])">{{ fmt(r[c]) }}</td> }</tr> }</tbody>
+          </table></div>
+        }
+      }
+      @case ('table') {
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>@for (c of res.cols; track c) { <th class="mono">{{ c }}</th> }</tr></thead>
+            <tbody>
+              @for (r of res.rows.slice(0, 500); track $index) {
+                <tr>@for (c of res.cols; track c) { <td class="mono" [class.num]="isNum(r[c])">{{ fmt(r[c]) }}</td> }</tr>
+              } @empty {
+                <tr><td [attr.colspan]="res.cols.length" class="none">No results in this time range.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (res.rows.length > 500) { <p class="small">Showing the first 500 of {{ res.rows.length }} rows; add | head or a filter.</p> }
+      }
+    }
+  }
+</section>

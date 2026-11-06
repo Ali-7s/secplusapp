@@ -1,0 +1,101 @@
+<section class="queue" aria-label="Alert queue">
+  @if (!alerts.length) {
+    <div class="quiet"><mat-icon aria-hidden="true">notifications_paused</mat-icon>
+      <p>No alerts yet. {{ waiting ? 'More will arrive as the shift goes on.' : '' }} Meanwhile, explore the logs: open the Tasks tab for things to try.</p>
+    </div>
+  }
+  <ol class="list">
+    @for (a of alerts; track a.id) {
+      @let st = status(a);
+      @let m = mark(a);
+      <li class="alert" [class.open]="openId === a.id" [attr.data-sev]="a.severity">
+        <button type="button" class="a-head" (click)="toggle(a)" [attr.aria-expanded]="openId === a.id">
+          <span class="sev">{{ a.severity }}</span>
+          <span class="a-main">
+            <span class="rule">{{ a.rule }}</span>
+            <span class="meta mono">{{ hms(a.t).slice(0, 5) }} · {{ a.host }}</span>
+          </span>
+          <span class="st" [attr.data-st]="st">
+            @if (m) { {{ m.points }}/{{ m.max }} } @else { {{ st === 'draft' ? 'Draft' : 'New' }} }
+          </span>
+        </button>
+
+        @if (openId === a.id) {
+          @let t = ticket(a);
+          <div class="body">
+            <p class="summary">{{ a.summary }}</p>
+            <dl class="ents">
+              @for (e of a.entities; track e[0]) { <div><dt>{{ e[0] }}</dt><dd class="mono">{{ e[1] }}</dd></div> }
+            </dl>
+            <button type="button" class="btn" (click)="investigate.emit(a.query)"><mat-icon aria-hidden="true">manage_search</mat-icon> Investigate in the SIEM</button>
+            <span class="q mono">{{ a.query }}</span>
+
+            <fieldset class="part" [disabled]="t.submitted">
+              <legend>1. Verdict</legend>
+              @for (v of verdicts; track v.id) {
+                <label class="opt" [class.on]="t.verdict === v.id" [class.right]="m && a.verdict === v.id" [class.wrong]="m && t.verdict === v.id && a.verdict !== v.id">
+                  <input type="radio" [name]="'verdict-' + a.id" [checked]="t.verdict === v.id" (change)="setVerdict(a, v.id)" />
+                  <span><strong>{{ v.label }}</strong><span class="sub">{{ v.hint }}</span></span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="part" [disabled]="t.submitted">
+              <legend>2. Response <span class="sub">(tick everything you would do)</span></legend>
+              @for (x of actions; track x.id) {
+                <label class="opt" [class.on]="t.actions.includes(x.id)"
+                  [class.right]="m && a.need.includes(x.id)" [class.wrong]="m && m.wrong.includes(x.id)" [class.fine]="m && t.actions.includes(x.id) && a.fine.includes(x.id)">
+                  <input type="checkbox" [checked]="t.actions.includes(x.id)" (change)="toggleAction(a, x.id)" />
+                  <span>{{ x.label }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="part" [disabled]="t.submitted">
+              <legend>3. Evidence</legend>
+              @for (q of a.questions; track q.id) {
+                <div class="qa" [class.right]="m?.answers?.[q.id]" [class.wrong]="m && !m.answers[q.id]">
+                  <label [for]="'q-' + a.id + '-' + q.id">{{ q.ask }}</label>
+                  <div class="qa-row">
+                    <input [id]="'q-' + a.id + '-' + q.id" type="text" class="mono" [value]="t.answers[q.id] || ''" (input)="setAnswer(a, q.id, $any($event.target).value)"
+                      autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    @if (!t.submitted) {
+                      <button type="button" class="hint-btn" (click)="toggleHint(a.id + q.id)" [attr.aria-expanded]="hints.has(a.id + q.id)">Hint</button>
+                    }
+                  </div>
+                  @if (hints.has(a.id + q.id) && !t.submitted) { <p class="hint">{{ q.hint }}</p> }
+                  @if (m && !m.answers[q.id]) { <p class="hint">Answer: <strong class="mono">{{ q.answers[0] }}</strong></p> }
+                </div>
+              }
+              <label class="notes-l" [for]="'notes-' + a.id">Notes for the ticket (optional)</label>
+              <textarea [id]="'notes-' + a.id" class="notes" rows="2" [value]="t.notes" (input)="setNotes(a, $any($event.target).value)"></textarea>
+            </fieldset>
+
+            @if (!t.submitted) {
+              <div class="controls">
+                <button type="button" class="btn primary" [attr.aria-disabled]="!canSubmit(a)" (click)="submit(a)"><mat-icon aria-hidden="true">send</mat-icon> Submit ticket</button>
+                @if (!canSubmit(a)) { <span class="sub">Choose a verdict and at least one response first.</span> }
+              </div>
+            } @else if (m) {
+              <div class="debrief" aria-live="polite">
+                <div class="score"><mat-icon aria-hidden="true">{{ m.points === m.max ? 'emoji_events' : 'fact_check' }}</mat-icon> {{ m.points }} of {{ m.max }} points</div>
+                <p [class.good]="m.verdict" [class.bad]="!m.verdict" class="line">
+                  <strong>Verdict:</strong> {{ m.verdict ? 'right' : 'it was a ' + verdictLabel(a.verdict).toLowerCase() + ', not ' + verdictLabel(t.verdict).toLowerCase() }}.
+                </p>
+                @if (m.missing.length || m.wrong.length) {
+                  <div class="line bad">
+                    @if (m.missing.length) { <p><strong>Also needed:</strong> {{ m.missing.map(actionLabel).join('; ') }}.</p> }
+                    @for (w of m.wrong; track w) { <p><strong>{{ actionLabel(w) }}:</strong> {{ a.actionWhy[w] ?? 'not needed here.' }}</p> }
+                  </div>
+                } @else {
+                  <p class="line good"><strong>Response:</strong> right.</p>
+                }
+                <p class="why">{{ a.why }}</p>
+              </div>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ol>
+</section>
