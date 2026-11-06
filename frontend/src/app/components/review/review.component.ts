@@ -7,7 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { CardKind, ProgressService, cardKey } from '../../services/progress.service';
 import { DumpCard } from '../../utils/brain-dump';
 import { CardRecord, ProgressData } from '../../utils/progress';
-import { Rating, SrsCard, formatDelay, nextCard, previewIntervals } from '../../utils/srs';
+import { RouterLink } from '@angular/router';
+import {
+  LEECH_LAPSES, RETENTION_CHOICES, Rating, SrsCard, clampRetention, formatDelay, isLeech, nextCard, previewIntervals, recallNow,
+} from '../../utils/srs';
 import { AnswerCheck, Verdict, expansionCheck } from '../../utils/typed-answer';
 
 const RATINGS: ReadonlyArray<{ id: Rating; label: string; key: string }> = [
@@ -39,7 +42,7 @@ const PROMPTS = { acr: 'What does it stand for?', term: 'What does it mean? Put 
 @Component({
   selector: 'app-review',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './review.component.html',
   styleUrl: './review.component.scss',
@@ -175,7 +178,17 @@ export class ReviewComponent {
     return Math.max(0, this.progress.newLeftToday(this.kind()));
   });
 
-  readonly queue = computed(() => nextCard(this.cards().map(c => c.id), this.records(), this.now(), this.newLeft()));
+  /** When each card's twin was last answered, for cards that have one (see DumpCard.sibling). */
+  private readonly siblingAt = computed(() => {
+    const all = this.progress.data().cards;
+    const twins = new Map(this.cards().filter(c => c.sibling).map(c => [c.id, c.sibling!]));
+    return (id: string) => {
+      const twin = twins.get(id);
+      return twin ? all[cardKey(this.kind(), twin)]?.at : undefined;
+    };
+  });
+
+  readonly queue = computed(() => nextCard(this.cards().map(c => c.id), this.records(), this.now(), this.newLeft(), this.siblingAt()));
   readonly card = computed(() => {
     const id = this.queue().next;
     return id ? this.cards().find(c => c.id === id) : undefined;
@@ -188,7 +201,17 @@ export class ReviewComponent {
     const r = this.record();
     return !r ? 'new' : r.state === 'review' ? 'review' : 'learning';
   });
-  readonly intervals = computed(() => previewIntervals(this.record(), this.now()));
+  readonly retention = computed(() => clampRetention(this.progress.data().review.retention));
+  readonly retentionChoices = RETENTION_CHOICES;
+  readonly intervals = computed(() => {
+    const card = this.card();
+    return previewIntervals(this.record(), this.now(), { retention: this.retention(), id: card ? cardKey(this.kind(), card.id) : undefined });
+  });
+  /** Forgotten again and again: repeating it the same way is not working. */
+  readonly leech = computed(() => isLeech(this.record()));
+  readonly leechLapses = LEECH_LAPSES;
+  /** A port card, whose fix is the Ports trainer's memory hooks. */
+  readonly isPortCard = computed(() => this.kind() === 'ref' && /^(port|proto):/.test(this.card()?.id ?? ''));
 
   // ── The finished screen ───────────────────────────────────────────────
 
@@ -197,6 +220,11 @@ export class ReviewComponent {
   readonly dueTomorrow = computed(() => {
     const end = this.now() + DAY;
     return Object.values(this.records()).filter(r => r.due <= end).length;
+  });
+  /** The average chance you would recall a studied card in this deck right now, as a whole percent. */
+  readonly recallPercent = computed(() => {
+    const chances = Object.values(this.records()).map(r => recallNow(r, this.now()) ?? 0);
+    return chances.length ? Math.round((chances.reduce((a, b) => a + b, 0) / chances.length) * 100) : null;
   });
   /** When the next card in this deck falls due, as "3h" or "2d". */
   readonly nextDueIn = computed(() => {
@@ -248,6 +276,13 @@ export class ReviewComponent {
     this.progress.studyMoreNew(this.kind(), extra);
     this.now.set(Date.now());
   }
+
+  setRetention(event: Event) {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (Number.isFinite(value)) this.progress.setRetention(value);
+  }
+
+  readonly percent = (r: number) => Math.round(r * 100);
 
   setNewPerDay(event: Event) {
     const value = Number((event.target as HTMLInputElement).value);

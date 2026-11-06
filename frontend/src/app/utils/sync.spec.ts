@@ -68,11 +68,13 @@ describe('mergeProgress', () => {
   });
 
   it('takes settings from the device that changed them last', () => {
-    const a = progress(d => { d.plan.examDate = '2026-12-01'; d.review.newPerDay = 10; d.settingsAt = 500; });
-    const b = progress(d => { d.plan.examDate = '2026-11-15'; d.review.newPerDay = 30; d.settingsAt = 200; });
+    const a = progress(d => { d.plan.examDate = '2026-12-01'; d.review.newPerDay = 10; d.review.retention = 0.95; d.settingsAt = 500; });
+    const b = progress(d => { d.plan.examDate = '2026-11-15'; d.review.newPerDay = 30; d.review.retention = 0.85; d.settingsAt = 200; });
     const m = mergeProgress(a, b);
     expect(m.plan.examDate).toBe('2026-12-01');
     expect(m.review.newPerDay).toBe(10);
+    expect(m.review.retention).toBe(0.95);
+    expect(mergeProgress(b, a).review.retention).toBe(0.95);
     expect(m.settingsAt).toBe(500);
   });
 

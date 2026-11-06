@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, noNewToday, parseProgress, recordQuestion } from '../utils/progress';
-import { Rating, answerOutsideQueue, dayKey, schedule } from '../utils/srs';
+import { Rating, answerOutsideQueue, clampRetention, dayKey, schedule } from '../utils/srs';
 import { ScrollSpot, sameSpot } from '../utils/scroll-spot';
 import { mergeProgress, stableStringify } from '../utils/sync';
 
@@ -54,7 +54,7 @@ export class ProgressService {
     const key = cardKey(kind, name);
     const now = Date.now();
     this.update(d => {
-      d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', now);
+      d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', now, { retention: d.review.retention, id: key });
       this.studied(d, now);
     });
   }
@@ -68,7 +68,7 @@ export class ProgressService {
         this.rollDay(d, now);
         d.review.newToday[kind]++;
       }
-      d.cards[key] = schedule(d.cards[key], rating, now);
+      d.cards[key] = schedule(d.cards[key], rating, now, { retention: d.review.retention, id: key });
       this.studied(d, now);
     });
   }
@@ -110,6 +110,14 @@ export class ProgressService {
   setTypeAnswers(on: boolean) {
     this.update(d => {
       d.review.typeAnswers = on;
+      d.settingsAt = Date.now();
+    });
+  }
+
+  /** The recall chance Review mode times reviews for (0.8 to 0.95). */
+  setRetention(r: number) {
+    this.update(d => {
+      d.review.retention = clampRetention(r);
       d.settingsAt = Date.now();
     });
   }

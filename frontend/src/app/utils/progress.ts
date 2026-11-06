@@ -4,7 +4,7 @@
  * ProgressService wraps it with storage.
  */
 
-import { SrsCard } from './srs';
+import { SrsCard, clampRetention } from './srs';
 import { ScrollSpot } from './scroll-spot';
 
 export type ExamDomainKey = 1 | 2 | 3 | 4 | 5;
@@ -42,7 +42,7 @@ export interface QuestionRecord {
   at: number;
 }
 
-/** A glossary card's spaced repetition state (SM-2, see srs.ts) and its results. */
+/** A glossary card's spaced repetition state (see srs.ts) and its results. */
 export type CardRecord = SrsCard;
 
 /** The flashcard decks: acronyms, key terms, and cards made from the Reference tables. */
@@ -60,6 +60,8 @@ export interface ReviewSettings {
   newToday: Record<CardKind, number>;
   /** False when answers are shown without typing them first. Typing is on unless turned off. */
   typeAnswers?: boolean;
+  /** The recall chance reviews are timed for (0.9 if missing). See srs.ts. */
+  retention?: number;
 }
 
 export const DEFAULT_NEW_PER_DAY = 20;
@@ -147,7 +149,10 @@ function parseReview(r: unknown): ReviewSettings {
     const n = review.newToday?.[kind];
     if (typeof n === 'number' && Number.isFinite(n)) counts[kind] = n;
   }
-  return { ...review, newToday: counts };
+  const out: ReviewSettings = { ...review, newToday: counts };
+  if (typeof out.retention !== 'number' || !Number.isFinite(out.retention)) delete out.retention;
+  else out.retention = clampRetention(out.retention);
+  return out;
 }
 
 /** Keeps only cards in the current scheduler's shape (an early build saved simpler records). */

@@ -221,6 +221,7 @@ function portCards(): { toProtocol: DumpCard[]; toPort: DumpCard[] } {
     definition: `${p.service}. ${sentence(p.notes)}`,
     notes: [{ label: 'Rated', text: RATING[p.status] }],
     check: protocolCheck(p.port),
+    sibling: `proto:${p.protocol}`,
   }));
   const toPort = PORTS.map(p => card({
     id: `proto:${p.protocol}`,
@@ -231,6 +232,7 @@ function portCards(): { toProtocol: DumpCard[]; toPort: DumpCard[] } {
     definition: `${p.service}. ${sentence(p.notes)}`,
     notes: [{ label: 'Rated', text: RATING[p.status] }],
     check: portCheck(p.port, p.transport),
+    sibling: `port:${p.port}`,
   }));
   return { toProtocol, toPort };
 }

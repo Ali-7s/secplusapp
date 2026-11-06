@@ -17,18 +17,37 @@
 
   @if (showSettings()) {
     <div class="settings">
-      <label>
-        New cards per day
-        <input type="number" min="0" max="999" [value]="progress.data().review.newPerDay" (change)="setNewPerDay($event)" />
-      </label>
+      <div class="row">
+        <label>
+          New cards per day
+          <input type="number" min="0" max="999" [value]="progress.data().review.newPerDay" (change)="setNewPerDay($event)" />
+        </label>
+        <label class="target">
+          Target recall
+          <select [value]="retention()" (change)="setRetention($event)">
+            @for (r of retentionChoices; track r) {
+              <option [value]="r" [selected]="r === retention()">{{ percent(r) }}%{{ r === 0.9 ? ' (default)' : '' }}</option>
+            }
+          </select>
+        </label>
+      </div>
       <label class="check-setting">
         <input type="checkbox" [checked]="typing()" (change)="setTypeAnswers($event)" />
         Type each answer before it is shown
       </label>
       <p>
-        Applies to each deck. New cards start on short learning steps (1 and 10 minutes); after that, each
-        Good roughly multiplies the gap before the next review by 2.5. Again sends a card back to relearning.
+        Applies to each deck. New cards start on short learning steps (1 and 10 minutes). After that, the scheduler
+        keeps a model of how well you know each card: how long the memory lasts and how hard the card is for you.
+        It brings a card back when the chance you still remember it falls to your target recall. A higher target
+        means shorter gaps and more reviews: 95% asks for about two and a half times as many as 90%. Again sends
+        a card back to relearning.
       </p>
+      @if (kind() === 'ref') {
+        <p>
+          A port's two cards ("which protocol?" and "which port?") never come up on the same day: once you have
+          answered one, the other waits until tomorrow.
+        </p>
+      }
     </div>
   }
 
@@ -56,6 +75,16 @@
           @if (c.analogy) { <p class="analogy"><strong>Think of it as:</strong> {{ c.analogy }}</p> }
           @if (c.examContext) { <p class="exam"><strong>On the exam:</strong> {{ c.examContext }}</p> }
           @for (n of c.notes ?? []; track n.label) { <p class="note"><strong>{{ n.label }}:</strong> {{ n.text }}</p> }
+          @if (leech()) {
+            <p class="leech">
+              <mat-icon aria-hidden="true">priority_high</mat-icon>
+              <span>
+                You have forgotten this one {{ record()!.lapses }} times. Seeing it again the same way is not
+                working: give it a hook (a picture, a story, a pair it contrasts with) before you rate it.
+                @if (isPortCard()) { The <a routerLink="/ports">Ports trainer</a> has a hook for every port. }
+              </span>
+            </p>
+          }
         </div>
       }
     </div>
@@ -110,6 +139,12 @@
         @if (nextDueIn(); as next) { The next card is due in {{ next }}. }
         @if (dueTomorrow()) { {{ dueTomorrow() }} will be due within a day. }
       </p>
+      @if (recallPercent() !== null) {
+        <p>Right now you would likely recall about {{ recallPercent() }}% of the {{ noun() }}s you have studied here.</p>
+      }
+      @if (queue().held) {
+        <p>{{ queue().held }} {{ queue().held === 1 ? 'card waits' : 'cards wait' }} until tomorrow, because you answered the other direction of {{ queue().held === 1 ? 'that port' : 'those ports' }} today.</p>
+      }
       @if (unseenCount()) {
         <p>You have reached today's limit of {{ progress.data().review.newPerDay }} new {{ noun() }}s. {{ unseenCount() }} are still unseen.</p>
         <div class="more">

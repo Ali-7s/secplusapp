@@ -34,6 +34,11 @@
   padding: 12px 14px; border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface-2);
   font-size: 14px; color: var(--c-text);
   label { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+  select {
+    height: 36px; padding: 0 8px; border-radius: 8px; font: inherit;
+    border: 1px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+  }
   .check-setting { display: flex; margin-top: 10px; input { width: 18px; height: 18px; accent-color: var(--c-accent); } }
   input {
     width: 76px; height: 36px; padding: 0 8px; border-radius: 8px; font: inherit;
@@ -69,6 +74,12 @@
 .expansion { font-size: 20px; font-weight: 800; text-align: center; color: var(--c-text); }
 .prompt { margin: 0; font-size: 15px; font-weight: 600; color: var(--c-text-2); }
 .analogy, .exam, .note { color: var(--c-text-2); }
+.leech {
+  display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 8px;
+  background: var(--c-warning-light); color: var(--c-text);
+  mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; color: var(--c-warning); }
+  a { color: var(--c-primary-mid); font-weight: 700; }
+}
 
 // ── Show answer and the four ratings ────────────────────────────────────────
 .key {

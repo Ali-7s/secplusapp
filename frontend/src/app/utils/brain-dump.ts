@@ -37,6 +37,8 @@ export interface DumpCard {
   notes?: { label: string; text: string }[];
   /** Marks an answer typed in Review mode. Reference deck cards with a short answer only (see typed-answer.ts). */
   check?: AnswerCheck;
+  /** The id of this card's twin in the same deck (a port's "which protocol?" and "which port?" cards). Review mode never shows both on one day. */
+  sibling?: string;
 }
 
 /** One line of the "a complete answer covers" checklist. */
