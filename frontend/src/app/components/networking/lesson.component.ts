@@ -47,6 +47,7 @@ import { CiaSorterComponent } from './blocks/cia-sorter.component';
 import { EmailInspectorComponent } from './blocks/email-inspector.component';
 import { CvssCalcComponent } from './blocks/cvss-calc.component';
 import { NetworkLabComponent } from './blocks/network-lab/network-lab.component';
+import { CaptureLabComponent } from './blocks/capture/capture-lab.component';
 
 /** What the hover preview of a flashcard shows. */
 interface CardPreview { title: string; subtitle?: string; text: string }
@@ -74,7 +75,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
     HashLabComponent, KeyPickerComponent, CertCheckComponent, MalwareLabComponent, OutbreakComponent, DdosComponent, OnpathComponent, ReplayComponent, PrivescComponent, CsrfComponent, SsrfComponent, TraversalComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
     BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
-    ControlSorterComponent, CiaSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent,
+    ControlSorterComponent, CiaSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent, CaptureLabComponent,
   ],
   templateUrl: './lesson.component.html',
   styleUrl: './lesson.component.scss',

@@ -363,6 +363,9 @@
       @case ('netlab') {
         <app-network-lab />
       }
+      @case ('capture') {
+        <app-capture-lab />
+      }
       @case ('pbqs') {
         <app-pbq-practice [title]="b.title" [intro]="b.intro ?? ''" [fromLesson]="b.lesson" (checkedResult)="pbqChecked($event)" />
       }

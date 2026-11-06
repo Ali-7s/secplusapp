@@ -143,3 +143,6 @@ export const cvssCalc = (): Block => ({ type: 'cvss' });
 
 /** The network lab: six scenarios to build and test. */
 export const networkLab = (): Block => ({ type: 'netlab' });
+
+/** The packet capture lab: five captures to filter, open and explain. */
+export const captureLab = (): Block => ({ type: 'capture' });

@@ -94,7 +94,7 @@ export const PORT_NAMES: Record<string, string[]> = {
  * "Port 22: which protocol?" Right when it names one of the port's protocols and no other port's, so listing
  * every protocol you can think of does not pass.
  */
-function protocolCheck(port: string): AnswerCheck {
+export function protocolCheck(port: string): AnswerCheck {
   const own = PORT_NAMES[port] ?? [];
   return typed => {
     for (const [other, names] of Object.entries(PORT_NAMES)) {

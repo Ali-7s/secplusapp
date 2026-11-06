@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -29,7 +29,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, MatTabsModule, MatInputModule,
     MatFormFieldModule, MatIconModule, MatTooltipModule, MatChipsModule,
-    MatProgressBarModule, MatButtonModule, SubnetCheatSheetComponent, ReviewComponent],
+    MatProgressBarModule, MatButtonModule, RouterLink, SubnetCheatSheetComponent, ReviewComponent],
   templateUrl: './reference.component.html',
   styleUrl: './reference.component.scss'
 })

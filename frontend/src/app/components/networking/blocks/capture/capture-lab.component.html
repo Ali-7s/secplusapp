@@ -1,0 +1,158 @@
+<section class="w" aria-label="Packet capture lab">
+  <header class="head">
+    <div class="title"><mat-icon aria-hidden="true">troubleshoot</mat-icon> Packet capture lab</div>
+    <div class="count" aria-live="polite">{{ sw.done.length }} of {{ scenario.questions.length }} answered</div>
+  </header>
+
+  <div class="scenarios" role="tablist" aria-label="Captures">
+    @for (c of captures; track c.id) {
+      <button type="button" role="tab" class="sc" [class.on]="c.id === scenario.id" [attr.aria-selected]="c.id === scenario.id" (click)="pick(c)">
+        <span class="sc-t">{{ c.title }}</span>
+        <span class="sc-n" [class.all]="doneCount(c) === c.questions.length">{{ doneCount(c) }}/{{ c.questions.length }}</span>
+      </button>
+    }
+  </div>
+
+  <p class="story">{{ scenario.story }}</p>
+  <p class="where"><mat-icon aria-hidden="true">sensors</mat-icon> <span><strong>Captured:</strong> {{ scenario.where }}</span></p>
+
+  <details class="legend">
+    <summary>Who is who on this network</summary>
+    <table class="hosts">
+      <thead><tr><th>Device</th><th>IP address</th><th>MAC address</th></tr></thead>
+      <tbody>
+        @for (h of scenario.hosts; track h.ip) {
+          <tr><td>{{ h.name }}</td><td class="mono">{{ h.ip }}</td><td class="mono">{{ h.mac === '00:00:00:00:00:00' ? 'not on this LAN' : h.mac }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </details>
+
+  <form class="fbar" (submit)="$event.preventDefault(); apply()">
+    <label class="sr-only" [for]="'cf-' + scenario.id">Display filter</label>
+    <input [id]="'cf-' + scenario.id" class="filter mono" type="text" [class.bad]="filterError" [value]="draft" (input)="draft = $any($event.target).value"
+      placeholder="Filter, e.g. ip.addr == 10.0.4.57 && tcp.port == 443" autocomplete="off" autocapitalize="off" spellcheck="false"
+      [attr.aria-invalid]="!!filterError" [attr.aria-describedby]="'cf-msg-' + scenario.id" />
+    <button type="submit" class="btn primary"><mat-icon aria-hidden="true">filter_alt</mat-icon> Apply</button>
+    @if (sw.filter) { <button type="button" class="btn ghost" (click)="clearFilter()">Clear</button> }
+    <button type="button" class="btn ghost" (click)="showHelp = !showHelp" [attr.aria-expanded]="showHelp"><mat-icon aria-hidden="true">help_outline</mat-icon> Filter help</button>
+  </form>
+  <p class="fmsg" [id]="'cf-msg-' + scenario.id" [class.err]="filterError" aria-live="polite">
+    @if (filterError) { {{ filterError }} } @else { Showing {{ shown.length }} of {{ packets.length }} packets }
+  </p>
+  <div class="chips" aria-label="Filters to try">
+    @for (f of scenario.filters; track f) {
+      <button type="button" class="chip mono" [class.on]="sw.filter === f" (click)="setFilter(f)">{{ f }}</button>
+    }
+  </div>
+  @if (showHelp) {
+    <div class="help">
+      <p><strong>Filters</strong> pick the packets you want. Type a protocol (<code>dns</code>, <code>arp</code>, <code>tcp</code>, <code>http</code>, <code>tls</code>, <code>icmp</code>) or compare a field, and join conditions with <code>&&</code> (and), <code>||</code> (or) and <code>!</code> (not).</p>
+      <ul>
+        <li><code>ip.addr == 10.0.4.57</code> either address; <code>ip.src</code> or <code>ip.dst</code> for one side; <code>ip.addr == 10.0.4.0/24</code> a whole subnet</li>
+        <li><code>tcp.port == 443</code> either port; <code>tcp.dstport</code>, <code>udp.port</code></li>
+        <li><code>tcp.flags.syn == 1 && tcp.flags.ack == 0</code> connection attempts; <code>tcp.flags.reset == 1</code> refusals</li>
+        <li><code>dns.qry.name contains "shop"</code>, <code>http.request.method == "POST"</code>, <code>arp.opcode == 2</code> (replies)</li>
+      </ul>
+      <p class="small">Or open a packet, pick a field and press <strong>Filter on this</strong>. Every field: <span class="mono">{{ fieldNames.join(', ') }}</span></p>
+    </div>
+  }
+
+  <div class="list" tabindex="0" role="listbox" [attr.aria-label]="'Packets, ' + shown.length + ' shown. Use the arrow keys to move.'" (keydown)="listKey($event)"
+    [attr.aria-activedescendant]="sw.sel ? 'pkt-' + scenario.id + '-' + sw.sel : null">
+    <div class="row hd" aria-hidden="true">
+      <span class="c-no">No.</span><span class="c-t">Time</span><span class="c-s">Source</span><span class="c-d">Destination</span><span class="c-p">Protocol</span><span class="c-l">Len</span><span class="c-i">Info</span>
+    </div>
+    @for (p of shown; track p.no) {
+      <div class="row" role="option" [id]="'pkt-' + scenario.id + '-' + p.no" [attr.data-tone]="tone(p)" [class.sel]="p.no === sw.sel" [attr.aria-selected]="p.no === sw.sel" (click)="select(p.no)">
+        <span class="c-no">{{ p.no }}</span><span class="c-t">{{ rel(p) }}</span><span class="c-s">{{ src(p) }}</span><span class="c-d">{{ dst(p) }}</span>
+        <span class="c-p">{{ protocolOf(p) }}</span><span class="c-l">{{ p.len }}</span><span class="c-i">{{ infoOf(p) }}</span>
+      </div>
+    } @empty {
+      <div class="empty">No packets match this filter.</div>
+    }
+  </div>
+
+  <div class="detail" aria-live="polite">
+    @if (selected; as p) {
+      <div class="d-head">Packet {{ p.no }} <span class="sub">· tap a field to see what it means</span></div>
+      @for (l of layers; track $index; let i = $index) {
+        <div class="layer">
+          <button type="button" class="l-t" (click)="toggleLayer(i)" [attr.aria-expanded]="openLayers.has(i)">
+            <mat-icon aria-hidden="true">{{ openLayers.has(i) ? 'expand_more' : 'chevron_right' }}</mat-icon> {{ l.title }}
+          </button>
+          @if (openLayers.has(i)) {
+            <ul class="fields">
+              @for (f of l.fields; track f.name) {
+                <li>
+                  <button type="button" class="f" [class.on]="field === f" (click)="pickField(f)" [attr.aria-expanded]="field === f">
+                    <span class="f-n">{{ f.name }}:</span>&ngsp;<span class="f-v mono">{{ f.value }}</span>
+                  </button>
+                  @if (field === f) {
+                    <div class="explain">
+                      @if (f.explain) { <p>{{ f.explain }}</p> }
+                      @if (f.key) { <p class="small">Filter field: <code>{{ f.key }}</code></p> }
+                      @if (fieldFilter(f); as ff) {
+                        <button type="button" class="btn" (click)="setFilter(ff)"><mat-icon aria-hidden="true">filter_alt</mat-icon> Filter on this: <span class="mono">{{ ff }}</span></button>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+      @if (p.app?.text) {
+        <div class="payload"><div class="p-h">Readable payload</div><pre class="mono">{{ p.app!.text }}</pre></div>
+      }
+    } @else {
+      <p class="sub none">Select a packet to open it layer by layer.</p>
+    }
+  </div>
+
+  <h4 class="qh">What happened?</h4>
+  <ol class="qs">
+    @for (q of scenario.questions; track q.id) {
+      @let done = isDone(q);
+      @let shownAns = isShown(q);
+      <li class="q" [class.done]="done">
+        <label class="ask" [for]="'cq-' + scenario.id + '-' + q.id">
+          <mat-icon aria-hidden="true">{{ done ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> {{ q.ask }}
+        </label>
+        <div class="q-row">
+          <input [id]="'cq-' + scenario.id + '-' + q.id" class="mono" type="text" [value]="answer(q)" (input)="setAnswer(q, $any($event.target).value)"
+            (keydown.enter)="check(q)" [disabled]="done" autocomplete="off" autocapitalize="off" spellcheck="false"
+            [attr.inputmode]="q.kind === 'packet' ? 'numeric' : null" [class.bad]="wrong[q.id]" [attr.aria-invalid]="wrong[q.id] || null" />
+          @if (!done) {
+            @if (q.kind === 'packet') {
+              <button type="button" class="btn" [attr.aria-disabled]="sw.sel == null" (click)="useSelected(q)">Use packet {{ sw.sel ?? '' }}</button>
+            }
+            <button type="button" class="btn primary" (click)="check(q)">Check</button>
+            <button type="button" class="btn ghost" (click)="toggleHint(q)" [attr.aria-expanded]="hintOpen(q)">Hint</button>
+          }
+        </div>
+        @if (hintOpen(q) && !done) { <p class="hint">{{ q.hint }}</p> }
+        @if (wrong[q.id]) {
+          <p class="why bad" role="status">Not quite. @if (!shownAns) { <button type="button" class="link" (click)="reveal(q)">Show the answer</button> }</p>
+        }
+        @if (shownAns && !done) {
+          <p class="why bad">Answer: <strong class="mono">{{ solution(q) }}</strong>. {{ q.why }}
+            @if (q.kind === 'packet') { <button type="button" class="link" (click)="goTo(q)">Go to packet {{ solution(q) }}</button> }
+          </p>
+        }
+        @if (done) {
+          <p class="why good">{{ q.why }} @if (q.kind === 'packet') { <button type="button" class="link" (click)="goTo(q)">Go to it</button> }</p>
+        }
+      </li>
+    }
+  </ol>
+
+  <div class="controls">
+    @if (sw.done.length === scenario.questions.length) {
+      <span class="result good"><mat-icon aria-hidden="true">emoji_events</mat-icon> Capture solved.</span>
+    }
+    <span class="spacer"></span>
+    @if (sw.done.length || sw.filter || sw.shown.length) { <button type="button" class="btn ghost" (click)="restart()">Start this capture over</button> }
+  </div>
+</section>

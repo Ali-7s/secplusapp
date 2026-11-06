@@ -52,7 +52,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 3,
   },
   {
-    slug: 'ports-to-know', number: 5, minutes: 25, icon: 'format_list_numbered',
+    slug: 'ports-to-know', number: 5, minutes: 26, icon: 'format_list_numbered',
     objectives: ['4.5'],
     title: 'The ports and protocols to know',
     summary: 'Common ports grouped by job, the secure replacement for each insecure protocol, a few memory hooks, and where to practice.',
@@ -116,6 +116,16 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     related: [...term('Security zone', 'Screened subnet', 'Implicit deny', 'Port security', 'Port mirroring', 'Jump server', 'Defense in depth', 'Least privilege'),
       ...acr('IDS', 'IPS', 'WAF', 'NGFW', 'VPN', 'DHCP', 'VLAN', 'SIEM', 'ICS', 'SCADA', 'OT')],
     // A capstone that revisits earlier lessons, so it never outranks the lesson a card is really about.
+    focus: 0,
+  },
+  {
+    slug: 'captures', number: 13, minutes: 38, icon: 'troubleshoot',
+    objectives: ['4.9', '2.4'],
+    title: 'Lab: read a packet capture',
+    summary: 'Open five real-looking captures packet by packet: a laptop joining the network, cleartext logins, a port scan, ARP poisoning and a firewall drop. Filter them in both filter languages and explain every address, port and flag.',
+    related: [...acr('PCAP', 'TCP', 'UDP', 'ARP', 'DHCP', 'DNS', 'TLS', 'ICMP', 'MAC', 'FTP', 'SSH'),
+      ...term('Three-way handshake', 'Port mirroring', 'Network tap', 'ARP poisoning', 'Plaintext and ciphertext', 'Secure protocol selection')],
+    // Another capstone: it revisits cards that belong to earlier lessons.
     focus: 0,
   },
 ]), ...inTrack('topics', [

@@ -245,7 +245,9 @@ export type Block =
   /** A CVSS 3.1 base score calculator with vulnerabilities to score. */
   | { type: 'cvss' }
   /** Build a network from a scenario: place devices, set VLANs and addresses, write rules, then run traffic. */
-  | { type: 'netlab' };
+  | { type: 'netlab' }
+  /** Read packet captures: filter them, open each packet layer by layer, and answer what happened. */
+  | { type: 'capture' };
 
 /** The PBQ kinds a lesson can embed (the practice exam's own types). */
 export type PbqQuestion = FirewallQuestion | MatchQuestion | OrderQuestion;

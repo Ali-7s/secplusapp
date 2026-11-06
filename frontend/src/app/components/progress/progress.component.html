@@ -253,6 +253,13 @@
           }
         </a>
       }
+      @let ps = portStats();
+      <a class="deck" routerLink="/ports">
+        <div class="deck-title">Ports trainer</div>
+        <div class="bar"><span [style.width.%]="pct(ps.mastered, ps.total)"></span></div>
+        <div class="deck-line"><strong>{{ ps.mastered }}</strong> of {{ ps.total }} ports mastered · <strong>{{ ps.started }}</strong> in progress</div>
+        <div class="deck-line">Small sets by job, drilled five ways</div>
+      </a>
     </div>
   </section>
 

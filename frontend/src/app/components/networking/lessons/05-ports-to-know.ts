@@ -98,10 +98,10 @@ export const PORTS_TO_KNOW: LessonBody = {
     p('Memorizing needs repetition, not reading. Short rounds on several days in a row work far better than one long session.'),
     {
       type: 'cta',
-      to: '/reference',
+      to: '/ports',
       icon: 'fitness_center',
-      label: 'Open the Reference Sheet and start the Ports recall drill',
-      note: 'The first tab, Network Ports, has a Recall Drill button that quizzes you on exactly this list.',
+      label: 'Open the Ports trainer and drill one small set at a time',
+      note: 'It splits these ports into sets by job (remote access, web, email and so on), with a memory hook for each port. Each round asks five ways: port to name, name to port, TCP or UDP, the secure replacement, and which port a situation needs. It tracks how well you know each port and asks about the weak ones most.',
     },
     {
       type: 'cta',

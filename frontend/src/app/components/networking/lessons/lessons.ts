@@ -13,6 +13,7 @@ import { SECURITY_DEVICES } from './09-security-devices';
 import { WEB_REQUEST } from './10-web-request';
 import { HARDENING } from './11-hardening';
 import { BUILD_NETWORK } from './12-build-network';
+import { CAPTURES_LESSON } from './13-captures';
 import { CIA } from './topics/cia';
 import { ATTACKS } from './topics/attacks';
 import { MALWARE } from './topics/malware';
@@ -45,6 +46,7 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   'web-request': WEB_REQUEST,
   hardening: HARDENING,
   'build-network': BUILD_NETWORK,
+  captures: CAPTURES_LESSON,
   cia: CIA,
   malware: MALWARE,
   attacks: ATTACKS,

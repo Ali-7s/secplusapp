@@ -18,6 +18,8 @@ import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
 import { DeckId } from '../../utils/brain-dump';
+import { MAX_LEVEL, Mastery, masteredIn } from '../ports/ports-trainer';
+import { PORTS } from '../reference/reference-data';
 
 interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
 
@@ -193,6 +195,12 @@ export class ProgressComponent implements OnInit {
   readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames(), 'acronyms'));
   readonly termStats = computed(() => this.deckStats('term', this.termNames(), 'terms'));
   readonly refStats = computed(() => this.deckStats('ref', this.refIds));
+  /** The Ports trainer: how many ports are mastered and how many have been started. */
+  readonly portStats = computed(() => {
+    const m = (this.progress.lessonWork('ports-trainer', 'mastery') as Mastery | undefined) ?? {};
+    const all = PORTS.map(p => p.port);
+    return { total: all.length, mastered: masteredIn(m, all), started: all.filter(p => m[p] && m[p].level < MAX_LEVEL).length };
+  });
 
   private deckStats(kind: CardKind, names: string[], deck?: DeckId): DeckStats {
     const cards = this.progress.data().cards;

@@ -1,0 +1,151 @@
+<div class="page-header">
+  <mat-icon aria-hidden="true">settings_ethernet</mat-icon>
+  <div>
+    <h1>Ports trainer</h1>
+    <p>Learn the ports a few at a time, by job, then drill them until they stick.</p>
+  </div>
+</div>
+
+@if (round) {
+  <section class="drill" aria-label="Drill">
+    <header class="d-head">
+      <div class="d-title"><span class="set">{{ setTitle(round.set) }}</span>
+        @if (!finished) { <span class="sub">Question {{ round.i + 1 }} of {{ round.refs.length }} · {{ score }} right</span> }
+      </div>
+      <button type="button" class="btn ghost" (click)="exit()"><mat-icon aria-hidden="true">close</mat-icon> {{ finished ? 'Back to the sets' : 'Stop' }}</button>
+    </header>
+    <div class="bar" aria-hidden="true"><div [style.width.%]="(round.answers.length / round.refs.length) * 100"></div></div>
+
+    @if (question; as q) {
+      @let a = answered;
+      <div class="card" [class.right]="a?.right" [class.wrong]="a && !a.right">
+        <span class="kind">{{ q.label }}@if (isOutside(q.port)) { <span class="from-other">· from another set</span> }</span>
+        <p class="prompt" id="port-prompt">{{ q.prompt }}</p>
+
+        @if (q.choices) {
+          <div class="choices" role="group" aria-labelledby="port-prompt">
+            @for (c of q.choices; track c) {
+              <button type="button" class="choice" [class.picked]="a?.typed === c" [class.is-answer]="a && c === q.answer" [disabled]="!!a" (click)="check(c)">{{ c }}</button>
+            }
+          </div>
+        } @else {
+          <div class="answer-row">
+            <label class="sr-only" for="port-answer">Your answer</label>
+            <input #answerBox id="port-answer" type="text" class="answer mono" [value]="round.typed" (input)="setTyped($any($event.target).value)" (keydown)="key($event)"
+              [disabled]="!!a" autocomplete="off" autocapitalize="off" spellcheck="false" [attr.inputmode]="q.kind === 'name' ? null : 'numeric'"
+              [placeholder]="q.kind === 'name' ? 'Protocol name' : 'Port number'" aria-describedby="port-prompt" />
+            @if (!a) { <button type="button" class="btn primary" (click)="check()">Check</button> }
+          </div>
+        }
+
+        @if (a) {
+          <div class="verdict" aria-live="polite">
+            <p class="v-line"><mat-icon aria-hidden="true">{{ a.right ? 'check_circle' : 'cancel' }}</mat-icon>
+              <strong>{{ a.right ? 'Right.' : 'Not quite.' }}</strong>
+              @if (a.note) { {{ a.note }} }
+            </p>
+            <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
+            @if (hookForQuestion(q); as hook) { <p class="hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
+            <div class="v-acts">
+              @if (!a.right && !q.choices) { <button type="button" class="btn ghost" (click)="override()">My answer was right</button> }
+              <span class="spacer"></span>
+              <button #nextBtn type="button" class="btn primary" (click)="next()" (keydown)="key($event)">Next <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (finished) {
+      <div class="done">
+        <h2><mat-icon aria-hidden="true">{{ score >= 8 ? 'emoji_events' : 'fact_check' }}</mat-icon> {{ score }} of {{ round.refs.length }} right</h2>
+        <ul class="moves">
+          @for (c of changes(); track c.port) {
+            <li><span class="mono">{{ c.port }}</span> {{ c.name }}
+              <span class="lv-row" [attr.aria-label]="'mastery ' + c.from + ' to ' + c.to + ' of 4'">
+                @for (l of [1, 2, 3, 4]; track l) { <span class="pip" [class.on]="l <= c.to" [class.lost]="l > c.to && l <= c.from"></span> }
+              </span>
+              <span class="sub">{{ c.to > c.from ? 'up' : c.to < c.from ? 'down' : c.held ? 'same (already up today: come back tomorrow)' : 'same' }}</span>
+            </li>
+          }
+        </ul>
+        <details class="review">
+          <summary>See every answer</summary>
+          <ol>
+            @for (s of summary(); track $index) {
+              <li [class.bad]="!s.a?.right"><mat-icon aria-hidden="true">{{ s.a?.right ? 'check' : 'close' }}</mat-icon>
+                <span>{{ s.q.prompt }} <strong class="mono">{{ s.q.answer }}</strong>@if (!s.a?.right) { <span class="sub"> (you: {{ s.a?.typed }})</span> }</span></li>
+            }
+          </ol>
+        </details>
+        <div class="v-acts">
+          <button type="button" class="btn primary" (click)="start(round.set)"><mat-icon aria-hidden="true">replay</mat-icon> Another round</button>
+          <button type="button" class="btn" (click)="exit()">Back to the sets</button>
+        </div>
+      </div>
+    }
+  </section>
+} @else {
+  <section class="intro">
+    <h2>How it works</h2>
+    <ul>
+      <li><strong>Learn a set</strong> of four to eight ports that do the same kind of job, with a memory hook for each.</li>
+      <li><strong>Drill it</strong> in rounds of {{ ROUND }}: port to name, name to port, TCP or UDP, the secure replacement, and which port a situation needs.</li>
+      <li>A right answer moves a port up a level, but <strong>only once a day</strong>; a miss drops it two. Recalling a port minutes after reading it only shows it looks familiar, so <strong>mastered</strong> (level 4) means you got it right on four different days. Come back tomorrow to move ports up.</li>
+      <li>Set rounds slip in three ports from sets you have already started, so you cannot answer by elimination, and older sets keep coming back. Rounds ask about your weakest ports most.</li>
+      <li>Answers also count in the Reference deck's <a routerLink="/reference" [queryParams]="{ mode: 'review', deck: 'ports' }">Review mode</a>, which brings ports back on later days so they stay learned.</li>
+    </ul>
+  </section>
+
+  <div class="overall">
+    <div class="o-num"><strong>{{ masteredAll }}</strong> of {{ total }} ports mastered</div>
+    <div class="o-bar" aria-hidden="true"><div [style.width.%]="(masteredAll / total) * 100"></div></div>
+    <div class="o-acts">
+      <button type="button" class="btn primary" (click)="start('weak')"><mat-icon aria-hidden="true">bolt</mat-icon> {{ started ? 'Drill my weakest' : 'Start with the first sets' }}</button>
+      <button type="button" class="btn" (click)="start('all')"><mat-icon aria-hidden="true">shuffle</mat-icon> Mixed: every port</button>
+    </div>
+  </div>
+
+  <ol class="groups">
+    @for (g of groups; track g.id; let n = $index) {
+      <li class="group">
+        <div class="g-head">
+          <span class="g-num">{{ n + 1 }}</span>
+          <div class="g-text">
+            <h2>{{ g.title }}</h2>
+            <p>{{ g.blurb }}</p>
+          </div>
+          <span class="g-count" [class.all]="mastered(g) === g.ports.length">{{ mastered(g) }}/{{ g.ports.length }}</span>
+        </div>
+        <div class="chips" aria-label="Mastery of each port">
+          @for (p of g.ports; track p) {
+            <span class="chip mono" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4'">{{ p }}</span>
+          }
+        </div>
+        <div class="g-acts">
+          <button type="button" class="btn" (click)="toggleLearn(g)" [attr.aria-expanded]="learning.has(g.id)"><mat-icon aria-hidden="true">menu_book</mat-icon> {{ learning.has(g.id) ? 'Hide' : 'Learn' }}</button>
+          <button type="button" class="btn primary" (click)="start(g.id)"><mat-icon aria-hidden="true">fitness_center</mat-icon> Drill this set</button>
+        </div>
+        @if (learning.has(g.id)) {
+          <ul class="learn">
+            @for (p of g.ports; track p) {
+              @let e = entryOf(p);
+              <li>
+                <div class="l-top"><span class="l-port mono">{{ e.port }}</span><strong>{{ e.protocol }}</strong>
+                  <span class="tag">{{ e.transport }}</span><span class="tag" [attr.data-status]="e.status">{{ rating(e) }}</span></div>
+                <div class="l-sub">{{ e.service }}. {{ e.notes }}</div>
+              </li>
+            }
+          </ul>
+          <ul class="hooks">
+            @for (h of g.hooks; track h) { <li><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ h }}</li> }
+          </ul>
+        }
+      </li>
+    }
+  </ol>
+
+  <p class="legend">
+    <span class="chip mono" data-level="0">0</span> new
+    <span class="chip mono" data-level="2">2</span> learning
+    <span class="chip mono" data-level="4">4</span> mastered
+  </p>
+}

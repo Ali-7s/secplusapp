@@ -158,9 +158,12 @@
       <div class="tab-content">
         <div class="tab-hint-row">
           <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
-          <button mat-stroked-button class="drill-btn" (click)="startDrill('ports', 'Network Ports')">
-            <mat-icon>fitness_center</mat-icon> Recall Drill
-          </button>
+          <span class="drill-btns">
+            <a mat-flat-button class="drill-btn" routerLink="/ports"><mat-icon>settings_ethernet</mat-icon> Ports trainer</a>
+            <button mat-stroked-button class="drill-btn" (click)="startDrill('ports', 'Network Ports')">
+              <mat-icon>fitness_center</mat-icon> Recall Drill
+            </button>
+          </span>
         </div>
         <div class="table-wrap">
           <table class="ref-table">

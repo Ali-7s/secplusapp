@@ -15,6 +15,7 @@ export const routes: Routes = [
   { path: 'progress', redirectTo: '/today' },
   { path: 'soc', loadComponent: () => import('./components/soc/soc.component').then(m => m.SocComponent) },
   { path: 'soc/:id', loadComponent: () => import('./components/soc/workstation.component').then(m => m.SocWorkstationComponent) },
+  { path: 'ports', loadComponent: () => import('./components/ports/ports-page.component').then(m => m.PortsPageComponent) },
   { path: 'reference', loadComponent: () => import('./components/reference/reference.component').then(m => m.ReferenceComponent) },
   { path: '**', redirectTo: '/today' }
 ];

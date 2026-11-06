@@ -23,7 +23,7 @@ export interface LessonPart {
 const WORDS_PER_MINUTE = 110;
 
 /** Extra minutes for blocks you work through rather than read. */
-const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, mlab: 7, outbreak: 6, ddos: 6, onpath: 6, replay: 5, privesc: 6, csrf: 5, ssrf: 6, traversal: 6, decide: 4, riskcalc: 3, policy: 4, backups: 3, hunt: 5, pwpolicy: 4, perms: 3, mdm: 4, controls: 4, cia: 3, email: 5, cvss: 5, netlab: 20 };
+const HANDS_ON: Partial<Record<Block['type'], number>> = { pbq: 5, pbqs: 6, layers: 3, cidr: 3, sequence: 2, spot: 3, harden: 1, hashlab: 2, keys: 3, certs: 4, mlab: 7, outbreak: 6, ddos: 6, onpath: 6, replay: 5, privesc: 6, csrf: 5, ssrf: 6, traversal: 6, decide: 4, riskcalc: 3, policy: 4, backups: 3, hunt: 5, pwpolicy: 4, perms: 3, mdm: 4, controls: 4, cia: 3, email: 5, cvss: 5, netlab: 20, capture: 25 };
 
 function words(value: unknown): number {
   if (typeof value === 'string') return value.split(/\s+/).filter(Boolean).length;
