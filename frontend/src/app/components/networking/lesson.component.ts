@@ -25,6 +25,7 @@ import { FlowComponent, NestedBoxesComponent, PortStripComponent } from './block
 import { HashLabComponent } from './blocks/hash-lab.component';
 import { KeyPickerComponent } from './blocks/key-picker.component';
 import { CertCheckComponent } from './blocks/cert-check.component';
+import { CaseFileComponent } from './blocks/case-file.component';
 import { DecideComponent } from './blocks/decide.component';
 import { RiskCalcComponent } from './blocks/risk-calc.component';
 import { PolicyPlaygroundComponent } from './blocks/policy-playground.component';
@@ -63,7 +64,7 @@ const CALLOUT_ICONS: Record<CalloutKind, string> = {
   imports: [
     RouterLink, NgTemplateOutlet, MatIconModule, MdPipe, LessonQuizComponent, SequenceComponent, LayerExplorerComponent,
     CidrReaderComponent, HardenListComponent, SpotIssuesComponent, PbqPracticeComponent, FlowComponent, NestedBoxesComponent, PortStripComponent,
-    HashLabComponent, KeyPickerComponent, CertCheckComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
+    HashLabComponent, KeyPickerComponent, CertCheckComponent, CaseFileComponent, DecideComponent, RiskCalcComponent, PolicyPlaygroundComponent,
     BackupWeekComponent, EvidenceHuntComponent, PasswordPolicyComponent, PermsLabComponent, MdmConsoleComponent,
     ControlSorterComponent, CiaSorterComponent, EmailInspectorComponent, CvssCalcComponent, NetworkLabComponent,
   ],

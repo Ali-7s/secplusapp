@@ -14,6 +14,7 @@ import { WEB_REQUEST } from './10-web-request';
 import { HARDENING } from './11-hardening';
 import { BUILD_NETWORK } from './12-build-network';
 import { CIA } from './topics/cia';
+import { ATTACKS, MALWARE } from './topics/attacks';
 import { CRYPTO } from './topics/crypto';
 import { PKI } from './topics/pki';
 import { SIGN_IN } from './topics/sign-in';
@@ -43,6 +44,8 @@ export const LESSON_BODIES: Record<string, LessonBody> = {
   hardening: HARDENING,
   'build-network': BUILD_NETWORK,
   cia: CIA,
+  malware: MALWARE,
+  attacks: ATTACKS,
   crypto: CRYPTO,
   pki: PKI,
   'sign-in': SIGN_IN,

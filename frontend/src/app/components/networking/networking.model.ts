@@ -127,6 +127,24 @@ export interface CertCase {
   clue?: { cert: number; field: string };
 }
 
+/** One clue in a case file: where it came from and what it says. `key` marks the clue that gives the answer away. */
+export interface CaseClue {
+  from: string;
+  text: string;
+  mono?: boolean;
+  key?: boolean;
+}
+
+/** A case to identify from its clues: which malware or attack is it? */
+export interface CaseFile {
+  name: string;
+  clues: CaseClue[];
+  answer: string;
+  why: string;
+  /** The look-alike answer and what tells them apart, shown after checking. */
+  near?: { option: string; why: string };
+}
+
 export interface DecideOption {
   text: string;
   best?: boolean;
@@ -213,6 +231,8 @@ export type Block =
   | { type: 'keys'; title: string; intro?: string; tasks: KeyTask[] }
   /** Look at certificate chains and decide whether the browser should trust each one. */
   | { type: 'certs'; title: string; intro?: string; options: string[]; cases: CertCase[] }
+  /** Case files to identify from their clues, each with one answer from `options`. */
+  | { type: 'cases'; title: string; intro?: string; icon?: string; options: string[]; cases: CaseFile[] }
   /** A scenario told one decision at a time: pick what you would do, see why, then move on. */
   | { type: 'decide'; title: string; intro?: string; steps: DecideStep[] }
   /** Risk calculators: SLE and ALE with a control's yearly value (`ale`), or uptime from MTBF, SLAs and redundancy (`availability`). */

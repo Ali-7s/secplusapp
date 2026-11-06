@@ -1,4 +1,4 @@
-import { Block, CalloutKind, CertCase, DecideOption, DecideStep, HuntRow, HuntTask, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
+import { Block, CalloutKind, CaseFile, CertCase, DecideOption, DecideStep, HuntRow, HuntTask, KeyTask, PbqQuestion, PolicyAttr, PolicyChallenge, PolicyRule, QuizQuestion } from '../networking.model';
 
 /** Small builders so lesson files read like the lessons themselves. Text supports **bold** and `code`. */
 
@@ -89,6 +89,10 @@ export const keys = (title: string, tasks: KeyTask[], intro?: string): Block => 
 /** Certificate chains to judge, each with one verdict from `options`. */
 export const certs = (title: string, options: string[], cases: CertCase[], intro?: string): Block =>
   ({ type: 'certs', title, intro, options, cases });
+
+/** Case files to identify from their clues, each answered with one of `options`. */
+export const cases = (title: string, options: string[], files: CaseFile[], opts: { intro?: string; icon?: string } = {}): Block =>
+  ({ type: 'cases', title, intro: opts.intro, icon: opts.icon, options, cases: files });
 
 /** One step of a scenario. List the best option first; the options are shuffled the same way on every load. */
 export const step = (s: Omit<DecideStep, 'options'>, best: Omit<DecideOption, 'best'>, ...others: Omit<DecideOption, 'best'>[]): DecideStep =>

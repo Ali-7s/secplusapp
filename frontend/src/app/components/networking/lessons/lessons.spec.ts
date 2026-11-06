@@ -1,3 +1,4 @@
+import { APP_CASES, APP_OPTIONS, MALWARE_CASES, MALWARE_OPTIONS, NETWORK_CASES, NETWORK_OPTIONS } from './topics/attacks';
 import { Block } from '../networking.model';
 import { mcq } from './dsl';
 import { LESSON_META, lessonBySlug, lessonsForCard, trackLessons } from './lesson-index';
@@ -100,6 +101,9 @@ describe('lesson list', () => {
     expect(first('acr', 'DMARC')).toBe('phishing');
     expect(first('term', 'Business email compromise')).toBe('phishing');
     expect(first('acr', 'CVSS')).toBe('vulnerabilities');
+    expect(first('term', 'Logic bomb')).toBe('malware');
+    expect(first('acr', 'RAT')).toBe('malware');
+    expect(first('term', 'Directory traversal')).toBe('attacks');
   });
 
   it('links only to flashcards that exist', async () => {
@@ -213,6 +217,20 @@ describe('lesson content', () => {
           }
           // Each certificate is issued by the one above it in the chain.
           c.chain.slice(0, -1).forEach((cert, i) => expect(cert.issuer).withContext(`${slug} ${c.name}`).toBe(c.chain[i + 1].subject));
+        }
+      }
+      if (b.type === 'cases') {
+        expect(new Set(b.cases.map(c => c.answer)).size).withContext(`${slug} ${b.title} uses several answers`).toBeGreaterThan(2);
+        for (const c of b.cases) {
+          expect(b.options).withContext(`${slug} ${c.name}`).toContain(c.answer);
+          expect(c.clues.length).withContext(`${slug} ${c.name}`).toBeGreaterThanOrEqual(2);
+          expect(c.clues.some(cl => cl.key)).withContext(`${slug} ${c.name} has a giveaway clue`).toBeTrue();
+          expect(words(c.why)).withContext(`${slug} ${c.name}`).toBeGreaterThanOrEqual(12);
+          if (c.near) {
+            expect(b.options).withContext(`${slug} ${c.name} look-alike`).toContain(c.near.option);
+            expect(c.near.option).withContext(`${slug} ${c.name} look-alike`).not.toBe(c.answer);
+            expect(words(c.near.why)).withContext(`${slug} ${c.name} look-alike`).toBeGreaterThanOrEqual(10);
+          }
         }
       }
       if (b.type === 'decide') {
@@ -443,5 +461,19 @@ describe('the CIA triad on every topic', () => {
       expect(new Set(l.cia!.goals).size).withContext(l.slug).toBe(l.cia!.goals.length);
       expect(l.cia!.how.split(/\s+/).length).withContext(l.slug).toBeGreaterThanOrEqual(10);
     }
+  });
+});
+
+describe('the malware and attack case files', () => {
+  const rounds = [['malware', MALWARE_OPTIONS, MALWARE_CASES], ['network', NETWORK_OPTIONS, NETWORK_CASES], ['application', APP_OPTIONS, APP_CASES]] as const;
+
+  it('makes every option the answer to exactly one case, so each type is practised', () => {
+    for (const [name, options, files] of rounds) {
+      expect([...files.map(c => c.answer)].sort()).withContext(name).toEqual([...options].sort());
+    }
+  });
+
+  it('gives every case a look-alike to compare it with', () => {
+    for (const [name, , files] of rounds) for (const c of files) expect(c.near).withContext(`${name}: ${c.name}`).toBeTruthy();
   });
 });
