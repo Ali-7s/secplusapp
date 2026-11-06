@@ -258,11 +258,11 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 16,
   },
   {
-    slug: 'malware', number: 14, minutes: 38, icon: 'pest_control',
+    slug: 'malware', number: 14, minutes: 34, icon: 'pest_control',
     objectives: ['2.4'],
     cia: { goals: ['C', 'I', 'A'], how: 'Ransomware denies availability, spyware and keyloggers steal confidential data, and rootkits and logic bombs change or destroy systems (integrity).' },
     title: 'Malware: name it from the clues',
-    summary: 'Tell viruses from worms, trojans from RATs and spyware from keyloggers, then name eleven kinds of malware from the clues in tickets and logs. Finish with the indicators of an attack and a ransomware worm to contain.',
+    summary: 'Investigate eleven infected machines with processes, connections, startup items, scans and a hardware check, flag the evidence and name the malware. Then release six samples into an office, pick the defences that stop each one, and contain a ransomware worm.',
     related: [...term('Malware', 'Virus', 'Worm', 'Trojan horse', 'Ransomware', 'Spyware', 'Keylogger', 'Rootkit', 'Logic bomb', 'Bloatware', 'Fileless malware', 'Backdoor'), ...acr('RAT'),
       ...term('Botnet', 'Cryptojacking', 'Adware', 'Command and control', 'Persistence', 'Indicator of compromise', 'Impossible travel', 'Out-of-cycle logging', 'Missing logs', 'Concurrent session usage', 'Account lockout'),
       ...acr('C2', 'IoC', 'EDR', 'PUP')],

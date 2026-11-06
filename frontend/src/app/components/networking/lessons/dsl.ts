@@ -90,6 +90,12 @@ export const keys = (title: string, tasks: KeyTask[], intro?: string): Block => 
 export const certs = (title: string, options: string[], cases: CertCase[], intro?: string): Block =>
   ({ type: 'certs', title, intro, options, cases });
 
+/** The malware investigation lab: `spread` (six machines) or `hidden` (five that hide). */
+export const malwareLab = (round: 'spread' | 'hidden'): Block => ({ type: 'mlab', round });
+
+/** The outbreak simulator: six samples, seven defences, a challenge each. */
+export const outbreak = (): Block => ({ type: 'outbreak' });
+
 /** Case files to identify from their clues, each answered with one of `options`. */
 export const cases = (title: string, options: string[], files: CaseFile[], opts: { intro?: string; icon?: string } = {}): Block =>
   ({ type: 'cases', title, intro: opts.intro, icon: opts.icon, options, cases: files });

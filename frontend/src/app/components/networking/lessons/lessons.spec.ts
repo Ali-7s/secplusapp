@@ -1,4 +1,6 @@
-import { APP_CASES, APP_OPTIONS, MALWARE_CASES, MALWARE_OPTIONS, NETWORK_CASES, NETWORK_OPTIONS } from './topics/attacks';
+import { APP_CASES, APP_OPTIONS, NETWORK_CASES, NETWORK_OPTIONS } from './topics/attacks';
+import { LAB_HIDDEN, LAB_OPTIONS, LAB_SPREAD, evidence } from '../blocks/malware-lab';
+import { CHALLENGES, CONTROLS as DEFENCES, ControlId, judge, simulate } from '../blocks/outbreak';
 import { Block } from '../networking.model';
 import { mcq } from './dsl';
 import { LESSON_META, lessonBySlug, lessonsForCard, trackLessons } from './lesson-index';
@@ -464,8 +466,8 @@ describe('the CIA triad on every topic', () => {
   });
 });
 
-describe('the malware and attack case files', () => {
-  const rounds = [['malware', MALWARE_OPTIONS, MALWARE_CASES], ['network', NETWORK_OPTIONS, NETWORK_CASES], ['application', APP_OPTIONS, APP_CASES]] as const;
+describe('the attack case files', () => {
+  const rounds = [['network', NETWORK_OPTIONS, NETWORK_CASES], ['application', APP_OPTIONS, APP_CASES]] as const;
 
   it('makes every option the answer to exactly one case, so each type is practised', () => {
     for (const [name, options, files] of rounds) {
@@ -477,3 +479,72 @@ describe('the malware and attack case files', () => {
     for (const [name, , files] of rounds) for (const c of files) expect(c.near).withContext(`${name}: ${c.name}`).toBeTruthy();
   });
 });
+
+describe('the malware investigation lab', () => {
+  const all = [...LAB_SPREAD, ...LAB_HIDDEN];
+  const words = (t: string) => t.trim().split(/\s+/).length;
+
+  it('makes every kind of malware the answer on exactly one machine', () => {
+    expect(all.map(c => c.answer).sort()).toEqual([...LAB_OPTIONS].sort());
+  });
+
+  it('gives every machine evidence to find, a reason and a look-alike', () => {
+    for (const c of all) {
+      expect(evidence(c).length).withContext(c.machine).toBeGreaterThan(0);
+      expect(words(c.why)).withContext(c.machine).toBeGreaterThanOrEqual(12);
+      expect(LAB_OPTIONS).withContext(c.machine).toContain(c.near.option);
+      expect(c.near.option).withContext(c.machine).not.toBe(c.answer);
+      expect(words(c.near.why)).withContext(c.machine).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('hides the rootkit and the hardware keylogger from every live tool', () => {
+    const tools = (answer: string) => [...new Set(evidence(all.find(c => c.answer === answer)!).map(e => e.tool))];
+    expect(tools('Rootkit')).toEqual(['boot']);
+    expect(tools('Keylogger')).toEqual(['hw']);
+  });
+});
+
+describe('the outbreak simulator', () => {
+  const subsets = (max: number): ControlId[][] => {
+    let out: ControlId[][] = [[]];
+    for (const c of DEFENCES.map(x => x.id)) out = [...out, ...out.filter(s => s.length < max).map(s => [...s, c])];
+    return out;
+  };
+
+  it('makes every challenge solvable, and none solved with no defences', () => {
+    for (const ch of CHALLENGES) {
+      expect(subsets(ch.max).some(s => judge(ch, s).ok)).withContext(ch.sample).toBeTrue();
+      expect(judge(ch, []).ok).withContext(ch.sample).toBeFalse();
+    }
+  });
+
+  it('teaches the differences: the defences that do nothing for a sample really do nothing', () => {
+    const solves = (sample: string, on: ControlId[]) => judge(CHALLENGES.find(c => c.sample === sample)!, on).ok;
+    expect(solves('worm', ['patch'])).toBeTrue();
+    expect(solves('worm', ['segment'])).toBeFalse();
+    expect(solves('virus', ['macros'])).toBeTrue();
+    expect(solves('virus', ['patch'])).toBeFalse();
+    expect(solves('virus', ['edr'])).toBeFalse();
+    expect(solves('trojan', ['allowlist'])).toBeTrue();
+    expect(solves('trojan', ['patch'])).toBeFalse();
+    expect(solves('ransomworm', ['patch', 'backups'])).toBeTrue();
+    expect(solves('ransomworm', ['backups'])).toBeFalse();
+    expect(solves('ransomworm', ['patch'])).toBeFalse();
+    expect(solves('logicbomb', ['review'])).toBeTrue();
+    expect(solves('logicbomb', ['backups'])).toBeFalse();
+    expect(solves('fileless', ['edr'])).toBeTrue();
+    expect(solves('fileless', ['allowlist'])).toBeFalse();
+  });
+
+  it('explains every chosen defence in every sample', () => {
+    for (const ch of CHALLENGES) {
+      for (const c of DEFENCES) {
+        const r = simulate(ch.sample, [c.id]);
+        const mentioned = r.frames.some(f => f.events.some(e => e.control === c.id));
+        expect(mentioned).withContext(`${ch.sample} with ${c.id}`).toBeTrue();
+      }
+    }
+  });
+});
+

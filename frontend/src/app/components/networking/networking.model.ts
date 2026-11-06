@@ -231,6 +231,10 @@ export type Block =
   | { type: 'keys'; title: string; intro?: string; tasks: KeyTask[] }
   /** Look at certificate chains and decide whether the browser should trust each one. */
   | { type: 'certs'; title: string; intro?: string; options: string[]; cases: CertCase[] }
+  /** Investigate infected machines with responder tools and name the malware. */
+  | { type: 'mlab'; round: 'spread' | 'hidden' }
+  /** Release malware into a small office with chosen defences and watch it hour by hour. */
+  | { type: 'outbreak' }
   /** Case files to identify from their clues, each with one answer from `options`. */
   | { type: 'cases'; title: string; intro?: string; icon?: string; options: string[]; cases: CaseFile[] }
   /** A scenario told one decision at a time: pick what you would do, see why, then move on. */

@@ -297,6 +297,12 @@
       @case ('certs') {
         <app-cert-check [title]="b.title" [intro]="b.intro ?? ''" [options]="b.options" [cases]="b.cases" />
       }
+      @case ('mlab') {
+        <app-malware-lab [round]="b.round" />
+      }
+      @case ('outbreak') {
+        <app-outbreak />
+      }
       @case ('cases') {
         <app-case-file [title]="b.title" [intro]="b.intro ?? ''" [icon]="b.icon ?? 'search'" [options]="b.options" [cases]="b.cases" />
       }
