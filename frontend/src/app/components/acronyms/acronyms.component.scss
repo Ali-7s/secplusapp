@@ -94,8 +94,7 @@
 
     .fc-expansion { font-size: 18px; font-weight: 700; color: #1e3a8a; }
     .fc-answer    { font-size: 14px; font-weight: 500; line-height: 1.7; width: 100%; color: #222; }
-    .fc-tip       { background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 0 8px 8px 0;
-                    padding: 9px 12px; font-size: 13px; width: 100%; line-height: 1.5; flex-shrink: 0; color: #1e40af; }
+    .fc-note      { width: 100%; flex-shrink: 0; margin: 0; }
   }
 
   &.flipped .fc-front { transform: rotateY(-180deg); }
@@ -172,12 +171,6 @@
 
 .acr-definition { font-size: 12.5px; color: var(--c-text-2); line-height: 1.6; margin-bottom: 8px; }
 
-.acr-exam {
-  display: flex; align-items: flex-start; gap: 6px;
-  background: #f0fdf4; border-radius: 8px; padding: 7px 10px;
-  font-size: 11px; color: #166534; margin-bottom: 6px; line-height: 1.4;
-  mat-icon { font-size: 13px; width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; }
-}
 
 .acr-related { font-size: 11px; color: var(--c-muted); padding-top: 6px; border-top: 1px solid var(--c-border); }
 
@@ -330,7 +323,6 @@
 
   .acr-letters    { background: var(--c-accent-light); color: var(--c-accent); }
   .acr-category   { background: rgba(167,139,250,.15); color: #c084fc; }
-  .acr-exam       { background: rgba(34,197,94,.1); color: #4ade80; }
 
   .acronym-card {
     &:hover   { border-color: rgba(167,139,250,.5) !important; }
@@ -343,7 +335,6 @@
       background: var(--c-surface-2); border-color: var(--c-border); color: var(--c-text);
       .fc-expansion { color: var(--c-accent); }
       .fc-answer    { color: var(--c-text); }
-      .fc-tip       { background: var(--c-accent-light); border-left-color: var(--c-accent); color: var(--c-accent); }
     }
   }
   .fc-complete { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.2); color: var(--c-success); mat-icon { color: var(--c-success); } }

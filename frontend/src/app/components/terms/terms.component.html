@@ -96,7 +96,7 @@
             <div class="cloze-prompt">Name this concept:</div>
             <div class="cloze-expansion">@if (fcClozeChecked) {@for (s of clozeReveal(deck[fcIndex], 'definition'); track $index) {@if (s.answer) {<mark class="cloze-fill">{{ s.text }}</mark>} @else {{{ s.text }}}}} @else {{{ clozeText(deck[fcIndex], 'definition') }}}</div>
             @if (deck[fcIndex].analogy) {
-              <div class="cloze-def-hint">💡 @if (fcClozeChecked) {@for (s of clozeReveal(deck[fcIndex], 'analogy'); track $index) {@if (s.answer) {<mark class="cloze-fill">{{ s.text }}</mark>} @else {{{ s.text }}}}} @else {{{ clozeText(deck[fcIndex], 'analogy') }}}</div>
+              <div class="card-note cloze-def-hint"><mat-icon aria-hidden="true">lightbulb</mat-icon><span>@if (fcClozeChecked) {@for (s of clozeReveal(deck[fcIndex], 'analogy'); track $index) {@if (s.answer) {<mark class="cloze-fill">{{ s.text }}</mark>} @else {{{ s.text }}}}} @else {{{ clozeText(deck[fcIndex], 'analogy') }}}</span></div>
             }
           </div>
           @if (!fcClozeChecked) {
@@ -149,10 +149,10 @@
             <div class="fc-back">
               <div class="fc-answer">{{ deck[fcIndex].definition }}</div>
               @if (deck[fcIndex].analogy) {
-                <div class="fc-mnemonic">💡 {{ deck[fcIndex].analogy }}</div>
+                <div class="card-note fc-note"><mat-icon aria-hidden="true">lightbulb</mat-icon><span>{{ deck[fcIndex].analogy }}</span></div>
               }
               @if (deck[fcIndex].examContext) {
-                <div class="fc-tip">📋 {{ deck[fcIndex].examContext }}</div>
+                <div class="card-note fc-note"><mat-icon aria-hidden="true">school</mat-icon><span>{{ deck[fcIndex].examContext }}</span></div>
               }
             </div>
           </div>
@@ -227,7 +227,7 @@
             <!-- Collapsed preview -->
             <div class="term-definition term-preview">{{ t.definition }}</div>
             @if (t.analogy) {
-              <div class="term-analogy"><mat-icon>lightbulb</mat-icon> {{ t.analogy }}</div>
+              <div class="card-note compact"><mat-icon aria-hidden="true">lightbulb</mat-icon><span>{{ t.analogy }}</span></div>
             }
             @if (t.relatedTerms) {
               <div class="term-related">Related: {{ t.relatedTerms }}</div>
@@ -241,15 +241,15 @@
               <div class="term-definition">{{ t.definition }}</div>
 
               @if (t.analogy) {
-                <div class="analogy-box">
-                  <mat-icon>lightbulb</mat-icon>
+                <div class="card-note">
+                  <mat-icon aria-hidden="true">lightbulb</mat-icon>
                   <span>{{ t.analogy }}</span>
                 </div>
               }
 
               @if (t.examContext) {
-                <div class="term-exam">
-                  <mat-icon>school</mat-icon>
+                <div class="card-note">
+                  <mat-icon aria-hidden="true">school</mat-icon>
                   <span>{{ t.examContext }}</span>
                 </div>
               }

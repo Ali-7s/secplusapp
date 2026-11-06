@@ -104,10 +104,7 @@
     @media (max-width: 600px) { padding: 20px; }
 
     .fc-answer   { font-size: 14px; font-weight: 500; line-height: 1.7; white-space: pre-line; width: 100%; }
-    .fc-mnemonic { background: #fefce8; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0;
-                   padding: 9px 12px; font-size: 13px; width: 100%; line-height: 1.5; flex-shrink: 0; color: #92400e; }
-    .fc-tip      { background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 0 8px 8px 0;
-                   padding: 9px 12px; font-size: 13px; width: 100%; line-height: 1.5; flex-shrink: 0; color: #166534; }
+    .fc-note     { width: 100%; flex-shrink: 0; margin: 0; }
   }
 
   &.flipped .fc-front { transform: rotateY(-180deg); }
@@ -183,19 +180,7 @@
 
 .term-definition { font-size: 13px; color: var(--c-text-2); line-height: 1.65; margin-bottom: 8px; }
 
-.term-analogy {
-  display: flex; align-items: flex-start; gap: 6px;
-  background: #fefce8; border-radius: 8px; padding: 7px 10px;
-  font-size: 11.5px; color: #78350f; margin-bottom: 6px; line-height: 1.45;
-  mat-icon { font-size: 14px; width: 14px; height: 14px; color: #d97706; flex-shrink: 0; margin-top: 1px; }
-}
 
-.term-exam {
-  display: flex; align-items: flex-start; gap: 6px;
-  background: #f0fdf4; border-radius: 8px; padding: 7px 10px;
-  font-size: 11px; color: #166534; margin-bottom: 6px; line-height: 1.4;
-  mat-icon { font-size: 13px; width: 13px; height: 13px; color: #059669; flex-shrink: 0; margin-top: 1px; }
-}
 
 .term-related { font-size: 11px; color: var(--c-muted); padding-top: 6px; border-top: 1px solid var(--c-border); }
 
@@ -204,13 +189,6 @@
   margin-top: 8px; border-top: 1px solid var(--c-border); padding-top: 12px;
 }
 
-.analogy-box {
-  display: flex; align-items: flex-start; gap: 8px;
-  background: #fefce8; border: 1px solid #fde68a; border-radius: 10px;
-  padding: 10px 14px; margin-bottom: 10px;
-  font-size: 13px; color: #78350f; line-height: 1.55;
-  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #d97706; flex-shrink: 0; margin-top: 1px; }
-}
 
 // ── Related chips ──────────────────────────────────────────
 .related-chips {
@@ -357,16 +335,11 @@
   }
   .term-name     { color: #34d399; }
   .term-category { background: rgba(52,211,153,.12); color: #34d399; }
-  .term-analogy  { background: rgba(245,158,11,.1); color: #fcd34d; mat-icon { color: #fbbf24; } }
-  .term-exam     { background: rgba(34,197,94,.08); color: #4ade80; mat-icon { color: #4ade80; } }
 
-  .analogy-box   { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.2); color: #fcd34d; mat-icon { color: #fbbf24; } }
 
   .flashcard .fc-back {
     background: var(--c-surface-2); border-color: var(--c-border); color: var(--c-text);
     .fc-answer   { color: var(--c-text); }
-    .fc-mnemonic { background: rgba(245,158,11,.1); border-left-color: #f59e0b; color: #fcd34d; }
-    .fc-tip      { background: rgba(34,197,94,.08); border-left-color: #22c55e; color: #4ade80; }
   }
   .fc-progress-row .fc-known { background: var(--c-success-light); color: var(--c-success); }
   .fc-complete { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.2); color: var(--c-success); mat-icon { color: var(--c-success); } }
@@ -414,7 +387,7 @@
 .cloze-category { font-size: 11px; font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: .6px; }
 .cloze-prompt { font-size: 13px; color: #64748b; }
 .cloze-expansion { font-size: 17px; font-weight: 700; color: #1e293b; line-height: 1.5; max-width: 480px; }
-.cloze-def-hint { font-size: 13px; color: #64748b; font-style: italic; line-height: 1.5; max-width: 440px; }
+.cloze-def-hint { width: 100%; max-width: 440px; margin: 0; }
 
 .cloze-input-row {
   display: flex; gap: 10px; align-items: center; margin: 12px 0 0; width: 100%;
@@ -445,7 +418,7 @@
 :host-context([data-theme="dark"]) {
   .cloze-card { background: var(--c-surface-2); border-color: rgba(20,184,166,.3); }
   .cloze-expansion { color: var(--c-text); }
-  .cloze-def-hint, .cloze-prompt { color: var(--c-muted); }
+  .cloze-prompt { color: var(--c-muted); }
   .cloze-input-row .cloze-input {
     background: var(--c-surface-2); color: var(--c-text); border-color: rgba(20,184,166,.4);
     &:focus { border-color: #2dd4bf; }

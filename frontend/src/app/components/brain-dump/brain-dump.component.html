@@ -107,13 +107,13 @@
             <p class="bd-def"><ng-container *ngTemplateOutlet="hl; context: { $implicit: definition() }"></ng-container></p>
 
             @if (c.examContext) {
-              <p class="bd-note bd-exam">
+              <p class="card-note bd-note bd-exam">
                 <mat-icon aria-hidden="true">school</mat-icon>
                 <span><ng-container *ngTemplateOutlet="hl; context: { $implicit: exam() }"></ng-container></span>
               </p>
             }
             @if (c.analogy) {
-              <p class="bd-note bd-analogy">
+              <p class="card-note bd-note bd-analogy">
                 <mat-icon aria-hidden="true">lightbulb</mat-icon>
                 <span>{{ c.analogy }}</span>
               </p>

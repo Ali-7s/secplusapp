@@ -149,7 +149,7 @@
               <div class="fc-expansion">{{ deck[fcIndex].expansion }}</div>
               <div class="fc-answer">{{ deck[fcIndex].definition }}</div>
               @if (deck[fcIndex].examContext) {
-                <div class="fc-tip">📋 {{ deck[fcIndex].examContext }}</div>
+                <div class="card-note fc-note"><mat-icon aria-hidden="true">school</mat-icon><span>{{ deck[fcIndex].examContext }}</span></div>
               }
             </div>
           </div>
@@ -225,7 +225,7 @@
           @if (expandedAcronym !== a.acronym) {
             <div class="acr-definition acr-preview">{{ a.definition }}</div>
             @if (a.examContext) {
-              <div class="acr-exam"><mat-icon>school</mat-icon> {{ a.examContext }}</div>
+              <div class="card-note compact"><mat-icon aria-hidden="true">school</mat-icon><span>{{ a.examContext }}</span></div>
             }
             @if (a.relatedAcronyms) {
               <div class="acr-related">Related: {{ a.relatedAcronyms }}</div>
@@ -238,8 +238,8 @@
               <div class="acr-definition" [innerHTML]="linkify(a.definition, a.acronym)"></div>
 
               @if (a.examContext) {
-                <div class="acr-exam">
-                  <mat-icon>school</mat-icon>
+                <div class="card-note">
+                  <mat-icon aria-hidden="true">school</mat-icon>
                   <span [innerHTML]="linkify(a.examContext, a.acronym)"></span>
                 </div>
               }

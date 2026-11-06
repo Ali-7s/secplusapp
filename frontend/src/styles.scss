@@ -431,6 +431,18 @@ a.lesson-link {
   &:hover { background: var(--c-surface-3); }
 }
 
+// ── Card notes: a card's exam tip and analogy (flashcards, glossary cards, brain dump) ──
+.card-note {
+  display: flex; align-items: flex-start; gap: 10px; margin: 0 0 8px; padding: 10px 12px; box-sizing: border-box;
+  border-radius: 0 10px 10px 0; border-left: 3px solid var(--c-accent);
+  background: var(--c-accent-light); color: var(--c-text); font-size: 13px; line-height: 1.55; text-align: left;
+  mat-icon { flex-shrink: 0; width: 18px; height: 18px; font-size: 18px; color: var(--c-primary); }
+  &.compact {
+    gap: 6px; padding: 7px 10px; font-size: 11.5px; line-height: 1.45;
+    mat-icon { width: 14px; height: 14px; font-size: 14px; margin-top: 1px; }
+  }
+}
+
 // ── Utilities ─────────────────────────────────────────────────
 .text-muted    { color: var(--c-muted); }
 .text-success  { color: var(--c-success); }
