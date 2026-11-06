@@ -278,6 +278,22 @@ describe('SOC lab network commands', () => {
     expect(out(after, 'tcpdump -nr /var/captures/bk01-1310.pcap -c 2 port 22').trim().split('\n').length).toBe(2);
     expect(sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap port').err).toContain('tcpdump:');
   });
+
+  it('prints tcpdump\'s "reading from file" line before the packets, and redirects it like any error', () => {
+    const reading = /^reading from file \/var\/captures\/bk01-1310\.pcap, link-type EN10MB/;
+    const plain = sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap -c 2');
+    expect(plain.display).toMatch(reading);
+    expect(plain.display.split('\n')[1]).toMatch(/^\d\d:\d\d:\d\d\.\d+ /);
+    expect(plain.out).not.toMatch(reading);
+    // Through a pipe the line still comes first on screen, and never reaches grep.
+    const piped = sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap | grep -c Flags');
+    expect(piped.display).toMatch(reading);
+    expect(piped.out.trim()).toMatch(/^\d+$/);
+    // A second command's output follows the first command's.
+    expect(sh(after, 'echo first; tcpdump -nr /var/captures/bk01-1310.pcap -c 1').display).toMatch(/^first\nreading from file/);
+    expect(sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap -c 1 2>/dev/null').display).not.toContain('reading from file');
+    expect(sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap -c 1 2>&1 | head -1').out).toMatch(reading);
+  });
 });
 
 describe('SOC lab shift 4 answers match the data', () => {

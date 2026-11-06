@@ -483,6 +483,11 @@ export class Shell {
   steps = 0;
   depth = 0;
   err = '';
+  /**
+   * Error-stream lines a command printed before any of its output, such as tcpdump's "reading from file" line.
+   * The screen shows them ahead of the output, as a real terminal would.
+   */
+  errLead = '';
   edit?: string;
   clear = false;
   /** False while output goes into a pipe, a file or $(...), like isatty() in a real shell. */
@@ -494,6 +499,7 @@ export class Shell {
   /** Runs one line (or several) as typed at the prompt. */
   run(src: string): RunOutput {
     this.err = '';
+    this.errLead = '';
     this.edit = undefined;
     this.clear = false;
     this.steps = 0;
@@ -510,8 +516,10 @@ export class Shell {
       const head = follow.node;
       const res = this.guard(() => this.exec({ k: 'pipe', cmds: [head, ...follow.rest], neg: false }, { text: '', pos: 0 }));
       const file = this.vfs.read(follow.path);
-      if (res.code !== 0 || file === undefined) return { out: res.out, err: this.err, display: res.out + this.err, code: res.code };
-      return { out: res.out, err: this.err, display: res.out + this.err, code: 0, follow: { path: follow.path, seen: lines(file).length, rest: follow.rest } };
+      const err = this.errLead + this.err;
+      const display = this.errLead + res.out + this.err;
+      if (res.code !== 0 || file === undefined) return { out: res.out, err, display, code: res.code };
+      return { out: res.out, err, display, code: 0, follow: { path: follow.path, seen: lines(file).length, rest: follow.rest } };
     }
     // Top-level commands run one at a time so each one's errors show right after its output.
     const items = node.k === 'seq' ? node.items.map(i => i.node) : [node];
@@ -521,10 +529,11 @@ export class Shell {
     let code = 0;
     for (const item of items) {
       this.err = '';
+      this.errLead = '';
       const res = this.guard(() => this.exec(item, { text: '', pos: 0 }));
       out += res.out;
-      err += this.err;
-      display += res.out + this.err;
+      err += this.errLead + this.err;
+      display += this.errLead + res.out + this.err;
       code = this.lastCode = res.code;
       if (this.exited) break;
     }
@@ -548,6 +557,7 @@ export class Shell {
     f.seen = all.length;
     if (!f.rest.length) return fresh;
     this.err = '';
+    this.errLead = '';
     const res = this.guard(() => this.exec({ k: 'pipe', cmds: f.rest, neg: false }, { text: fresh, pos: 0 }));
     return res.out;
   }
@@ -737,20 +747,26 @@ export class Shell {
     }
     if (!outTo && !errTo && !errToOut) return run(input);
     const savedErr = this.err;
+    const savedLead = this.errLead;
     const tty = this.tty;
     this.err = '';
+    this.errLead = '';
     if (outTo) this.tty = false;
     let res: Result;
     try { res = run(input); } finally { this.tty = tty; }
     let err = this.err;
+    let lead = this.errLead;
     this.err = savedErr;
+    this.errLead = savedLead;
     let out = res.out;
-    if (errToOut) { out += err; err = ''; }
+    if (errToOut) { out = lead + out + err; err = ''; lead = ''; }
     if (errTo) {
-      const e = this.vfs.write(errTo.path, err, errTo.append);
+      const e = this.vfs.write(errTo.path, lead + err, errTo.append);
       if (e) this.err += `bash: ${e}\n`;
       err = '';
+      lead = '';
     }
+    this.errLead += lead;
     this.err += err;
     if (outTo) {
       const e = this.vfs.write(outTo.path, out, outTo.append);

@@ -629,7 +629,7 @@ const tcpdump: Cmd = c => {
     if (e instanceof FilterError) return fail(c, `tcpdump: ${e.message}`);
     throw e;
   }
-  c.sh.err += `reading from file ${file}, link-type EN10MB (Ethernet), snapshot length 262144\n`;
+  c.sh.errLead += `reading from file ${file}, link-type EN10MB (Ethernet), snapshot length 262144\n`;
   const limit = o.v.has('c') ? Math.max(1, Number(o.v.get('c')) || 1) : Infinity;
   const numeric = o.f.has('n');
   const out: string[] = [];
