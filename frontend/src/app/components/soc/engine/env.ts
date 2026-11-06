@@ -4,7 +4,7 @@
  * among normal noise. Everything is seeded, so a shift's logs come out the same on every visit and every device.
  */
 
-import { Ev, Source, auth, dns, edr, fw, idp, proxy, web, win } from './events';
+import { Ev, Source, auth, dns, edr, fw, ids, idp, proxy, web, win } from './events';
 
 export type Rng = () => number;
 
@@ -219,6 +219,21 @@ export function background(r: Rng, sources: Source[], start: number, end: number
         user: p.user, src: remote ? '192.0.2.6' : '192.0.2.5', geo: remote ? 'Frankfurt, DE' : 'Lisbon, PT',
         device: p.host, mfa: 'approved', result: 'success',
       }));
+    });
+  }
+
+  if (has('ids')) {
+    // Everyday low-severity detections: the old intranet still takes sign-ins over plain HTTP, a news site's
+    // certificate has expired, and the odd lookup of a dynamic DNS name.
+    every(r, start, end, 0.08 * busy, t => {
+      const p = pick(r, staff);
+      out.push(ids(t, { sig: 'Policy: password sent over cleartext HTTP', severity: 'low', proto: 'tcp', src: p.ip, dst: '10.0.2.20', dpt: '80' }));
+    });
+    every(r, start, end, 0.12 * busy, t => {
+      out.push(ids(t, { sig: 'TLS: server presented an expired certificate', severity: 'low', proto: 'tcp', src: pick(r, staff).ip, dst: '192.0.2.31', dpt: '443' }));
+    });
+    every(r, start, end, 0.03, t => {
+      out.push(ids(t, { sig: 'DNS: lookup of a dynamic DNS domain', severity: 'low', proto: 'udp', src: pick(r, staff).ip, dst: '10.0.1.53', dpt: '53', query: pick(r, ['home-nas.dyn-dns.example', 'camera7.dyn-dns.example']) }));
     });
   }
 

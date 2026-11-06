@@ -9,6 +9,7 @@ import { Shift } from './model';
 import { Shell, ShellHost } from './shell';
 import { joinLines } from './text';
 import { HOME, Vfs } from './vfs';
+import { ETC_SERVICES, Net, PCAP_TEXT, RESOLVERS } from './net';
 
 export const DOCS: Record<string, string> = {
   'README.txt': `SOC analyst workstation (soc-ws)
@@ -26,10 +27,14 @@ web01,10.0.2.10,s.ito,Public web shop in the DMZ (public address 192.0.2.10); SS
 ci01,10.0.5.20,p.harris,Build server; deploys to web01 as user deploy using an SSH key
 scanner01,10.0.9.5,l.moreau,IT Security vulnerability scanner
 dc01,10.0.1.5,p.harris,Windows domain controller
-dns01,10.0.1.53,s.ito,Internal DNS resolver; forwards outside lookups to the internet
+dns01,10.0.1.53,s.ito,Internal DNS resolver handed out to every device by DHCP; answers for fernco.example itself and forwards outside lookups to the ISP's resolvers
+dns02,10.0.1.54,s.ito,Second DNS resolver (being commissioned; not yet handed out by DHCP); forwards outside lookups to the ISP's resolvers
 proxy01,10.0.1.80,s.ito,Web proxy for staff browsing
 bk01,10.0.6.40,k.mensah,Backup server; nightly offsite copy to Offsite Vault (CHG-420)
 db02,10.0.3.22,p.harris,Customer database server (Linux); should only talk to the web shop and backups
+siem01,10.0.8.20,l.moreau,SIEM: collects the logs the SOC searches
+sensor01,10.0.8.30,l.moreau,Network intrusion detection sensor; watches mirror ports on sw-floor2 and the server switch; saves packet captures to /var/captures on the SOC workstation
+sw-floor2,10.0.9.2,s.ito,Access switch for floor 2 (laptops on 10.0.4.0/24, VLAN 40); gateway gw-floor2 is 10.0.4.1
 vpn-gw,192.0.2.6,s.ito,Remote-access VPN gateway (cloud hosted in Frankfurt); remote staff appear from this address
 office-line,192.0.2.5,s.ito,Office internet connection (Lisbon)
 `,
@@ -42,6 +47,8 @@ CHG-415  daily 07:00-18:00  web01  Deployments from ci01 (user deploy, SSH key) 
 CHG-412  08:45-09:30        web01  Weekly authenticated vulnerability scan from scanner01 (10.0.9.5). Owner: l.moreau
 CHG-420  nightly 01:00-03:00 bk01  Offsite backup to Offsite Vault Backup Services (198.51.100.200), about 8-10 GB. Owner: k.mensah
 CHG-418  10:30-11:00        mail   Mail filter rule update. Owner: s.ito
+CHG-432  13:50-14:00        dns01  Point DNS forwarders at the new ISP resolvers 203.0.113.53 and 203.0.113.54 (firewall rule FW-218 allows DNS from dns01 to them). Owner: s.ito
+CHG-433  13:00-15:00        bk01   First test of the offsite copy over SFTP to sftp.offsite-vault.example, replacing the HTTPS upload. Needs firewall rule FW-219 (pending approval). Owner: k.mensah
 `,
   'docs/oncall.txt': `IT on call, week of 2 to 8 November 2026
   Primary:  k.mensah (Kofi Mensah)
@@ -75,6 +82,7 @@ export function buildEvents(shift: Shift): Ev[] {
   resetPids();
   const r = rng(shift.seed);
   let evs = [...background(r, shift.sources, shift.start, shift.end, shift.busy), ...shift.incidents(rng(shift.seed * 7 + 1))];
+  if (shift.adjust) evs = evs.map(shift.adjust);
   if (shift.edrSilent?.length) evs = evs.filter(e => !(e.source === 'edr' && shift.edrSilent!.includes(e.host)));
   evs = evs.filter(e => e.t >= shift.start && e.t < shift.end);
   // Stable sort by time keeps multi-line events (Invalid user, then Failed password) in order.
@@ -102,7 +110,7 @@ export function buildWorld(shift: Shift, clock = { now: shift.start }): World {
     list.push(e);
   }
   const vfs = new Vfs(() => clock.now);
-  for (const d of ['/var/log', '/tmp', '/etc', HOME, `${HOME}/bin`, `${HOME}/docs`]) vfs.mkdirp(d);
+  for (const d of ['/var/log', '/var/captures', '/tmp', '/etc', HOME, `${HOME}/bin`, `${HOME}/docs`]) vfs.mkdirp(d);
   // Each log file shows the events up to the shift clock; the text is cached until a new line arrives.
   for (const source of shift.sources) {
     const list = bySource.get(source) ?? [];
@@ -117,6 +125,10 @@ export function buildWorld(shift: Shift, clock = { now: shift.start }): World {
     });
   }
   for (const [path, text] of Object.entries(DOCS)) vfs.add(`${HOME}/${path}`, { text, mtime: 0 });
+  for (const [path, text] of Object.entries(shift.docs ?? {})) vfs.add(`${HOME}/docs/${path}`, { text, mtime: 0 });
+  for (const c of shift.net?.captures ?? []) vfs.add(c.path, { text: PCAP_TEXT, since: c.at, mtime: c.at });
+  vfs.add('/etc/resolv.conf', { text: `nameserver ${RESOLVERS.primary}\nsearch fernco.example\n` });
+  vfs.add('/etc/services', { text: ETC_SERVICES });
   vfs.add('/etc/hostname', { text: 'soc-ws\n' });
   vfs.add('/etc/hosts', { text: '127.0.0.1 localhost\n10.0.8.15 soc-ws\n10.0.1.5 dc01\n10.0.1.53 dns01\n10.0.2.10 web01\n' });
 
@@ -124,9 +136,12 @@ export function buildWorld(shift: Shift, clock = { now: shift.start }): World {
     ...SITES.map(([n, ip]) => [n, ip] as [string, string]),
     ['invoices-portal.example', '192.0.2.140'], ['cdn-update.example', '192.0.2.77'], ['sync-check.example', '203.0.113.9'],
     ['ns1.sync-check.example', '203.0.113.9'], ['shop.fernco.example', '192.0.2.10'], ['intranet.fernco.example', '10.0.2.20'],
+    ['sftp.offsite-vault.example', '198.51.100.200'], ['api.offsite-vault.example', '198.51.100.201'],
   ]);
+  const net = new Net(() => clock.now, [...dnsTable], shift.net);
   const host: ShellHost = {
     now: () => clock.now,
+    net,
     lookup(kind, q) {
       const key = q.trim().toLowerCase();
       if (kind === 'intel') return shift.intel[key] ?? shift.intel[q.trim()];

@@ -12,6 +12,8 @@ export interface VFile {
   exec?: boolean;
   /** Seconds since midnight of the last change, for ls -l. */
   mtime?: number | (() => number);
+  /** The file appears at this moment of the shift (a capture saved by a sensor), and is absent before. */
+  since?: number;
 }
 
 export class Vfs {
@@ -54,21 +56,29 @@ export class Vfs {
     this.files.set(p, file);
   }
 
+  /** A file, if it exists yet by the shift clock. */
+  private live(p: string): VFile | undefined {
+    const f = this.files.get(p);
+    return f && (f.since === undefined || f.since <= this.clock()) ? f : undefined;
+  }
+
+  private liveKeys() { return [...this.files.keys()].filter(k => this.live(k)); }
+
   isDir(path: string) { return this.dirs.has(Vfs.normalize(path)); }
-  isFile(path: string) { return this.files.has(Vfs.normalize(path)); }
+  isFile(path: string) { return !!this.live(Vfs.normalize(path)); }
   exists(path: string) { return this.isDir(path) || this.isFile(path); }
 
   read(path: string): string | undefined {
     const p = Vfs.normalize(path);
     if (p === '/dev/null') return '';
-    const f = this.files.get(p);
+    const f = this.live(p);
     return f ? (f.gen ? f.gen() : f.text ?? '') : undefined;
   }
 
-  file(path: string) { return this.files.get(Vfs.normalize(path)); }
+  file(path: string) { return this.live(Vfs.normalize(path)); }
 
   mtime(path: string): number {
-    const f = this.files.get(Vfs.normalize(path));
+    const f = this.live(Vfs.normalize(path));
     const m = f?.mtime;
     return typeof m === 'function' ? m() : m ?? 0;
   }
@@ -129,7 +139,7 @@ export class Vfs {
     const p = Vfs.normalize(path);
     const prefix = p === '/' ? '/' : p + '/';
     const names = new Set<string>();
-    for (const k of [...this.files.keys(), ...this.dirs]) {
+    for (const k of [...this.liveKeys(), ...this.dirs]) {
       if (k !== p && k.startsWith(prefix)) {
         const rest = k.slice(prefix.length);
         if (rest && !rest.includes('/')) names.add(rest);
@@ -142,7 +152,7 @@ export class Vfs {
   walk(path: string): string[] {
     const p = Vfs.normalize(path);
     const prefix = p === '/' ? '/' : p + '/';
-    return [...new Set([...this.dirs, ...this.files.keys()])].filter(k => k === p || k.startsWith(prefix)).sort();
+    return [...new Set([...this.dirs, ...this.liveKeys()])].filter(k => k === p || k.startsWith(prefix)).sort();
   }
 
   /** The analyst's own files and folders, to save between visits. */

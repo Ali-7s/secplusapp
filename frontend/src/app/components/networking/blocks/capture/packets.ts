@@ -22,7 +22,7 @@ export interface AppData {
   fields: Field[];
   /** Readable payload (cleartext protocols only), shown by tcpdump -A and the bytes view. */
   text?: string;
-  dns?: { id: number; qname: string; qtype: string; answers: string[]; response: boolean };
+  dns?: { id: number; qname: string; qtype: string; answers: string[]; response: boolean; rcode?: 'SERVFAIL' };
   http?: { method?: string; uri?: string; status?: number };
   sni?: string;
 }
@@ -145,23 +145,35 @@ export class Capture {
     return this;
   }
 
-  dns(client: Host, server: Host, name: string, qtype: string, answers: string[], sport: number, opts: { ttl?: number; delay?: number } = {}) {
+  /**
+   * A DNS question and its answer. No answers means "no such name", unless `servfail` says the server failed to
+   * get an answer at all; `noReply` sends the question and nothing comes back. `during` adds packets between the
+   * question and the answer (a resolver asking the servers it forwards to, say).
+   */
+  dns(client: Host, server: Host, name: string, qtype: string, answers: string[], sport: number,
+    opts: { ttl?: number; delay?: number; servfail?: boolean; noReply?: boolean; during?: () => void } = {}) {
     const id = this.nextId++;
     const q = `Standard query 0x${id.toString(16).padStart(4, '0')} ${qtype} ${name}`;
     const fields = (response: boolean): Field[] => [
       { name: 'Transaction ID', value: `0x${id.toString(16).padStart(4, '0')}`, key: 'dns.id', explain: 'Matches a response to its question. A reply with an unexpected ID is ignored, which is why DNS spoofers try to guess it.' },
       { name: 'Type', value: response ? 'Response' : 'Query', key: 'dns.flags.response', explain: 'Whether this is the question or the answer.' },
       { name: 'Question', value: `${name} ${qtype}`, key: 'dns.qry.name', explain: `The name being looked up, and the record type: ${QTYPE[qtype] ?? qtype}.` },
-      ...(response ? [{ name: 'Answers', value: answers.length ? answers.join(', ') : '(none: no such name)', key: 'dns.a', explain: 'What the DNS server says the name resolves to. Clients trust this, which is what DNSSEC protects.' }] : []),
+      ...(response && opts.servfail ? [{ name: 'Reply code', value: 'Server failure (2)', explain: 'SERVFAIL: the server could not get an answer, for example because the servers it forwards to did not reply. It is not "no such name" (NXDOMAIN, code 3): the name may well exist.' }] : []),
+      ...(response ? [{ name: 'Answers', value: answers.length ? answers.join(', ') : opts.servfail ? '(none: server failure)' : '(none: no such name)', key: 'dns.a', explain: 'What the DNS server says the name resolves to. Clients trust this, which is what DNSSEC protects.' }] : []),
     ];
     const len = 12 + name.length + 6;
     this.udp(client, server, sport, 53, {
       proto: 'DNS', info: q, fields: fields(false), dns: { id, qname: name, qtype, answers: [], response: false },
     }, len, opts.ttl ?? 64);
+    if (opts.noReply) return this;
+    opts.during?.();
     this.wait(opts.delay ?? 0.012);
+    const hex = id.toString(16).padStart(4, '0');
     this.udp(server, client, 53, sport, {
-      proto: 'DNS', info: `Standard query response 0x${id.toString(16).padStart(4, '0')} ${qtype} ${name}${answers.length ? ' ' + answers.map(a => `${qtype} ${a}`).join(' ') : ' No such name'}`,
-      fields: fields(true), dns: { id, qname: name, qtype, answers, response: true },
+      proto: 'DNS',
+      info: opts.servfail ? `Standard query response 0x${hex} Server failure ${qtype} ${name}`
+        : `Standard query response 0x${hex} ${qtype} ${name}${answers.length ? ' ' + answers.map(a => `${qtype} ${a}`).join(' ') : ' No such name'}`,
+      fields: fields(true), dns: { id, qname: name, qtype, answers, response: true, ...(opts.servfail ? { rcode: 'SERVFAIL' as const } : {}) },
     }, len + answers.length * 16, 64);
     return this;
   }
@@ -481,7 +493,7 @@ export function tcpdumpLine(p: Pkt, opts: { e?: boolean } = {}): string {
     const body = p.arp.op === 1
       ? `Request who-has ${p.arp.targetIp} tell ${p.arp.senderIp}, length 28`
       : `Reply ${p.arp.senderIp} is-at ${p.arp.senderMac}, length 28`;
-    return `${head} ${ether}ARP, ${body}`;
+    return `${head} ${ether}${opts.e ? '' : 'ARP, '}${body}`;
   }
   const ip = p.ip!;
   const lead = opts.e ? '' : 'IP ';
@@ -498,7 +510,8 @@ export function tcpdumpLine(p: Pkt, opts: { e?: boolean } = {}): string {
   let rest = `UDP, length ${u.len - 8}`;
   const d = p.app?.dns;
   if (d) rest = d.response
-    ? `${d.id} ${d.answers.length}/0/0 ${d.answers.length ? d.answers.map(a => `${d.qtype} ${a}`).join(', ') : 'NXDomain'} (${u.len - 8})`
+    ? d.rcode === 'SERVFAIL' ? `${d.id} ServFail 0/0/0 (${u.len - 8})`
+    : `${d.id} ${d.answers.length}/0/0 ${d.answers.length ? d.answers.map(a => `${d.qtype} ${a}`).join(', ') : 'NXDomain'} (${u.len - 8})`
     : `${d.id}+ ${d.qtype}? ${d.qname}. (${u.len - 8})`;
   else if (p.app?.proto === 'DHCP') rest = `BOOTP/DHCP, ${u.dport === 67 ? 'Request' : 'Reply'} from ${p.eth.src}, length ${u.len - 8}`;
   return `${head} ${ether}${lead}${ip.src}.${u.sport} > ${ip.dst}.${u.dport}: ${rest}`;

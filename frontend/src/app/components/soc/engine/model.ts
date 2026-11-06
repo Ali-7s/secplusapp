@@ -1,5 +1,7 @@
 import { Ev, Source } from './events';
 import { Rng } from './env';
+import type { Pkt } from '../../networking/blocks/capture/packets';
+import type { NetNode } from './net';
 
 export type Verdict = 'tp' | 'benign' | 'fp';
 export type ActionId = 'block' | 'isolate' | 'disable' | 'reset' | 'escalate' | 'tune' | 'close';
@@ -95,4 +97,19 @@ export interface Shift {
   tasks: Task[];
   intel: Record<string, string>;
   whois: Record<string, string>;
+  /** Network details the network commands use: extra devices, a DNS fault, saved packet captures. */
+  net?: ShiftNet;
+  /** Extra company notes in ~/docs for this shift, by file name. */
+  docs?: Record<string, string>;
+  /** Rewrites a background event, for example a DNS answer once a fault has started. */
+  adjust?: (e: Ev) => Ev;
+}
+
+export interface ShiftNet {
+  /** Devices that exist only in this shift (a rogue device, say). */
+  hosts?: NetNode[];
+  /** From `from`, this DNS server answers SERVFAIL for every name outside the company's own zone. */
+  dnsFault?: { server: string; from: number };
+  /** Packet captures saved by a sensor: the file appears at `at`. */
+  captures?: { path: string; at: number; build: () => Pkt[] }[];
 }

@@ -3,7 +3,7 @@
  * terminal shows. Times are seconds since midnight on the shift's day; every shift happens on 5 November 2026.
  */
 
-export type Source = 'auth' | 'web' | 'fw' | 'dns' | 'proxy' | 'edr' | 'win' | 'idp';
+export type Source = 'auth' | 'web' | 'fw' | 'dns' | 'proxy' | 'edr' | 'win' | 'idp' | 'ids';
 
 export interface Ev {
   t: number;
@@ -23,6 +23,7 @@ export const LOG_FILES: Record<Source, { path: string; what: string }> = {
   edr: { path: '/var/log/edr.log', what: 'Endpoint detection and response: processes, files and registry on laptops' },
   win: { path: '/var/log/security.log', what: 'Windows security events from the domain controller dc01' },
   idp: { path: '/var/log/signin.log', what: 'Cloud identity provider sign-ins' },
+  ids: { path: '/var/log/ids.log', what: 'Network intrusion detection on sensor01, which watches mirror ports on the floor 2 and server switches' },
 };
 
 export const DAY = '2026-11-05';
@@ -114,6 +115,11 @@ export function fw(t: number, action: 'allow' | 'deny', src: string, spt: number
 
 export function dns(t: number, client: string, query: string, qtype: string, answer: string, rcode = 'NOERROR'): Ev {
   return kvEvent(t, 'dns', 'dns01', { client, query, qtype, rcode, answer });
+}
+
+/** A network intrusion detection event from sensor01. */
+export function ids(t: number, f: Record<string, string>): Ev {
+  return kvEvent(t, 'ids', 'sensor01', f);
 }
 
 export function proxy(t: number, user: string, src: string, method: string, url: string, status: number, bytes: number, category: string, action = 'allowed'): Ev {

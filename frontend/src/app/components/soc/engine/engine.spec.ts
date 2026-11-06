@@ -147,7 +147,8 @@ describe('SOC lab shifts', () => {
             expect(checkScript(w, t).ok).withContext(`${t.id} empty`).toBeFalse();
           } else if (t.where === 'terminal') {
             const r = sh(w, t.ref);
-            expect(r.err).withContext(t.id).toBe('');
+            // tcpdump announces the file it reads on standard error, as the real one does.
+            expect(r.err.replace(/^reading from file .*\n/gm, '')).withContext(t.id).toBe('');
             expect(r.out.trim()).withContext(t.id).not.toBe('');
             expect(checkTerminal(w, t, r.out)).withContext(t.id).toBeTrue();
             expect(checkTerminal(w, t, 'nothing to see\n')).withContext(`${t.id} wrong`).toBeFalse();
@@ -198,5 +199,107 @@ describe('SOC lab alert answers match the data', () => {
     expect(out(w, `grep "Failed password" /var/log/auth.log | grep "from 203.0.113.50 " | awk '{print $(NF-5)}' | sort -u | wc -l`).trim())
       .toBe(ans(s, 'ssh-brute', 'names'));
     expect(out(w, 'grep "Accepted" /var/log/auth.log | grep -c "from 203.0.113.50 "').trim()).toBe('0');
+  });
+});
+
+describe('SOC lab network commands', () => {
+  const s = shiftById('net')!;
+  const before = worldAt(s, s.start + 60);
+  const after = worldAt(s);
+
+  it('shows the workstation\'s own address, route, neighbours and sockets', () => {
+    expect(out(before, 'ip addr')).toContain('inet 10.0.8.15/24 brd 10.0.8.255 scope global eth0');
+    expect(out(before, 'ip route')).toContain('default via 10.0.8.1 dev eth0');
+    expect(out(before, 'ip -br a')).toContain('10.0.8.15/24');
+    expect(out(before, 'arp -n')).toContain('00:1a:2b:00:08:01');
+    expect(out(before, 'ss -tuln')).toContain('0.0.0.0:22');
+    expect(out(before, 'ss -tul')).toContain('0.0.0.0:ssh');
+    expect(out(before, 'netstat -tan')).toContain('ESTABLISHED');
+    expect(sh(before, 'ip bogus').code).toBe(1);
+  });
+
+  it('pings with TTLs that tell the system apart, and treats silence honestly', () => {
+    const dc = sh(before, 'ping -c 2 dc01');
+    expect(dc.code).toBe(0);
+    expect(dc.out).toContain('PING dc01.fernco.example (10.0.1.5) 56(84) bytes of data.');
+    expect(dc.out).toContain('ttl=127');
+    expect(dc.out).toContain('2 packets transmitted, 2 received, 0% packet loss');
+    expect(out(before, 'ping -c 1 web01')).toContain('ttl=63');
+    expect(out(before, 'ping -c 1 10.0.8.20')).toContain('ttl=64');
+    const laptop = sh(before, 'ping -c 2 10.0.4.101');
+    expect(laptop.code).toBe(1);
+    expect(laptop.out).toContain('100% packet loss');
+    expect(sh(before, 'ping -c 1 10.0.8.99').out).toContain('Destination Host Unreachable');
+    expect(sh(before, 'ping -c 1 nosuchhost').err).toContain('Name or service not known');
+    // The same command, same answer: times are repeatable.
+    expect(out(before, 'ping -c 3 dc01')).toBe(out(before, 'ping -c 3 dc01'));
+    // The rogue device answers once the shift has it.
+    expect(out(after, 'ping -c 1 10.0.4.177')).toContain('ttl=63');
+  });
+
+  it('traces the route through the gateway, and stops at the edge for the internet', () => {
+    const t = out(before, 'traceroute -n web01');
+    expect(t.split('\n')[1]).toMatch(/^ 1 {2}10\.0\.8\.1 /);
+    expect(t.split('\n')[2]).toMatch(/^ 2 {2}10\.0\.2\.10 /);
+    const far = out(before, 'traceroute -n -m 5 crm.saas-vendor.example');
+    expect(far).toContain(' 2  10.0.0.1 ');
+    expect(far).toContain(' 5  * * *');
+  });
+
+  it('answers DNS, then fails with SERVFAIL on dns01 only after the change', () => {
+    expect(out(before, 'dig crm.saas-vendor.example +short')).toBe('192.0.2.21\n');
+    expect(out(before, 'dig crm.saas-vendor.example')).toContain('status: NOERROR');
+    expect(out(after, 'dig crm.saas-vendor.example')).toContain('status: SERVFAIL');
+    expect(out(after, 'dig @10.0.1.54 crm.saas-vendor.example +short')).toBe('192.0.2.21\n');
+    expect(out(after, 'dig intranet.fernco.example +short')).toBe('10.0.2.20\n');
+    expect(out(after, 'dig -x 10.0.1.5 +short')).toBe('dc01.fernco.example.\n');
+    expect(out(after, 'dig nosuch.fernco.example')).toContain('status: NXDOMAIN');
+    expect(sh(after, 'dig @8.8.8.8 crm.saas-vendor.example').code).toBe(9);
+    expect(sh(after, 'nslookup crm.saas-vendor.example').out).toContain("server can't find crm.saas-vendor.example: SERVFAIL");
+    expect(out(after, 'nslookup dc01')).toContain('Address: 10.0.1.5');
+    expect(out(before, 'host fernco.example')).toContain('mail is handled by 10 mail.fernco.example.');
+    expect(sh(after, 'ping -c 1 crm.saas-vendor.example').err).toContain('Temporary failure in name resolution');
+  });
+
+  it('reads captures only once they are saved, with filters and payloads', () => {
+    expect(out(before, 'ls /var/captures')).toBe('');
+    expect(sh(before, 'tcpdump -nr /var/captures/floor2-1344.pcap').err).toContain('No such file or directory');
+    expect(out(after, 'ls /var/captures').split(/\s+/).filter(Boolean)).toEqual(['bk01-1310.pcap', 'dns01-1405.pcap', 'floor2-1344.pcap']);
+    expect(out(after, 'file /var/captures/bk01-1310.pcap')).toContain('pcap capture file');
+    expect(sh(after, 'tcpdump -i eth0').err).toContain("You don't have permission");
+    const arp = out(after, 'tcpdump -enr /var/captures/floor2-1344.pcap arp');
+    expect(arp).toContain('b4:2e:99:5c:1e:42 > 28:d2:44:7a:10:65, ethertype ARP (0x0806), length 42: Reply 10.0.4.1 is-at b4:2e:99:5c:1e:42');
+    expect(out(after, 'tcpdump -nAr /var/captures/floor2-1344.pcap tcp port 80')).toContain('user=a.ng&password=');
+    const syn = out(after, 'tcpdump -nr /var/captures/bk01-1310.pcap dst port 22').trim().split('\n');
+    expect(syn.length).toBe(8);
+    expect(syn.every(l => l.includes('Flags [S]'))).toBeTrue();
+    expect(out(after, 'tcpdump -nr /var/captures/dns01-1405.pcap')).toContain('ServFail 0/0/0');
+    expect(out(after, 'tcpdump -r /var/captures/bk01-1310.pcap -c 1 port 22')).toContain('bk01.fernco.example.');
+    expect(out(after, 'tcpdump -nr /var/captures/bk01-1310.pcap -c 2 port 22').trim().split('\n').length).toBe(2);
+    expect(sh(after, 'tcpdump -nr /var/captures/bk01-1310.pcap port').err).toContain('tcpdump:');
+  });
+});
+
+describe('SOC lab shift 4 answers match the data', () => {
+  const s = shiftById('net')!;
+  const w = worldAt(s);
+  const ans = (alertId: string, q: string) => s.alerts.find(a => a.id === alertId)!.questions.find(x => x.id === q)!.answers[0];
+
+  it('the blocked backup goes to port 22 and is covered by CHG-433', () => {
+    expect(out(w, 'grep "src=10.0.6.40 " /var/log/firewall.log | grep deny | grep -o "dpt=[0-9]*" | sort -u')).toBe(`dpt=${ans('net-backup', 'port')}\n`);
+    expect(out(w, 'grep bk01 ~/docs/change-calendar.txt')).toContain(ans('net-backup', 'chg'));
+  });
+
+  it('the rogue MAC leads to the switch port, the room and the exposed password', () => {
+    const mac = ans('net-arp', 'mac');
+    expect(out(w, `grep ${mac} ~/docs/sw-floor2-mac-table.txt`)).toContain(ans('net-arp', 'port'));
+    expect(out(w, `grep "${ans('net-arp', 'port')}," ~/docs/floor2-ports.csv`)).toContain(ans('net-arp', 'where'));
+    expect(out(w, 'tcpdump -nAr /var/captures/floor2-1344.pcap tcp port 80')).toContain(`user=${ans('net-arp', 'who')}&`);
+  });
+
+  it('dns01 forwards to the mistyped address after CHG-432', () => {
+    expect(out(w, 'grep "src=10.0.1.53 " /var/log/firewall.log | grep deny | grep -o "dst=[0-9.]*" | sort -u')).toBe(`dst=${ans('net-dns', 'fwd')}\n`);
+    expect(out(w, 'grep dns01 ~/docs/change-calendar.txt')).toContain(ans('net-dns', 'chg'));
+    expect(out(w, 'grep -c "rcode=NXDOMAIN" /var/log/dns.log').trim()).not.toBe(out(w, 'grep -c "rcode=SERVFAIL" /var/log/dns.log').trim());
   });
 });

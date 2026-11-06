@@ -8,6 +8,7 @@ import { Ev, at, auth, dns, edr, fw, idp, proxy, web, win } from './events';
 import { Rng, int } from './env';
 import { Shift } from './model';
 import { sha256 } from './text';
+import { NET_SHIFT } from './shift-net';
 
 // ── Shift 1: exposed SSH on the web server ────────────────────────────────
 
@@ -488,5 +489,5 @@ const NIGHT_SHIFT: Shift = {
   },
 };
 
-export const SHIFTS: Shift[] = [SSH_SHIFT, PHISH_SHIFT, NIGHT_SHIFT];
+export const SHIFTS: Shift[] = [SSH_SHIFT, PHISH_SHIFT, NIGHT_SHIFT, NET_SHIFT];
 export const shiftById = (id: string) => SHIFTS.find(s => s.id === id);

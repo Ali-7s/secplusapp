@@ -22,8 +22,8 @@ import { SocStore } from './soc-store';
     <section class="intro">
       <h2>How a shift works</h2>
       <ul>
-        <li>The clock runs while logs stream in from Fernco's systems: sign-ins, web requests, the firewall, DNS, the proxy, EDR. Most of it is harmless.</li>
-        <li>Alerts arrive in the queue. Investigate each one in the <strong>SIEM</strong> and the <strong>terminal</strong> (real bash: grep, awk, sort, uniq, pipes, loops, your own scripts).</li>
+        <li>The clock runs while logs stream in from Fernco's systems: sign-ins, web requests, the firewall, DNS, the proxy, EDR, network intrusion detection. Most of it is harmless.</li>
+        <li>Alerts arrive in the queue. Investigate each one in the <strong>SIEM</strong> and the <strong>terminal</strong> (real bash: grep, awk, sort, uniq, pipes, loops, your own scripts; network tools such as ip, ping, dig and tcpdump on saved captures).</li>
         <li>Close each alert with a ticket: true positive, benign or false positive, the response, and the evidence. Some alerts are attacks, some are authorised work, some are the detection being wrong.</li>
         <li>Tasks give you terminal, SIEM and scripting practice on the same data, and tick themselves off when your output is right.</li>
       </ul>

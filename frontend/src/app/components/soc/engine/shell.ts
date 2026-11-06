@@ -4,6 +4,7 @@
  * the lab's file system. Commands work on whole strings rather than streams, which is plenty for log analysis.
  */
 
+import type { Net } from './net';
 import { HOME, Vfs } from './vfs';
 import { globRegex, lines } from './text';
 import { COMMANDS, CmdCtx } from './commands';
@@ -458,6 +459,8 @@ export interface ShellHost {
   /** Seconds since midnight on the shift's day. */
   now(): number;
   lookup(kind: 'whois' | 'intel' | 'dns', q: string): string | undefined;
+  /** The network the network commands see. */
+  net?: Net;
 }
 
 /** break, continue, return and exit unwind the interpreter; `partial` carries the output made before them. */

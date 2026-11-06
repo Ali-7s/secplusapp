@@ -120,6 +120,6 @@ describe('tcpdump filters', () => {
     const synAck = scan.find(p => p.tcp?.flags.syn && p.tcp.flags.ack && p.tcp.sport === 22)!;
     expect(tcpdumpLine(synAck)).toMatch(/^\d\d:\d\d:\d\d\.\d{6} IP 10\.0\.2\.20\.22 > 10\.0\.4\.122\.41522: Flags \[S\.\], seq 0, ack 1, win 64240, length 0$/);
     const arp = packetsOf(CAPTURES.find(c => c.id === 'arp')!).find(p => p.arp?.op === 2 && p.arp.senderMac === '3c:52:82:4a:19:7e')!;
-    expect(tcpdumpLine(arp, { e: true })).toContain('3c:52:82:4a:19:7e > d8:bb:c1:0e:73:5a, ethertype ARP (0x0806), length 42: ARP, Reply 10.0.4.1 is-at 3c:52:82:4a:19:7e');
+    expect(tcpdumpLine(arp, { e: true })).toContain('3c:52:82:4a:19:7e > d8:bb:c1:0e:73:5a, ethertype ARP (0x0806), length 42: Reply 10.0.4.1 is-at 3c:52:82:4a:19:7e');
   });
 });

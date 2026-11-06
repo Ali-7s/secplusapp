@@ -10,6 +10,7 @@ import { awk, AwkError } from './awk';
 import { escapeRe, format, globRegex, joinLines, lines, makeRegex, posixRegex, sha256, toNum, unescape } from './text';
 import { HOME, Vfs } from './vfs';
 import { DAY, hms } from './events';
+import { NET_COMMANDS, NET_MAN } from './net';
 
 export interface CmdCtx { sh: Shell; args: string[]; stdin: Stdin; name: string }
 type Cmd = (c: CmdCtx) => Result;
@@ -860,6 +861,7 @@ const fileCmd: Cmd = c => {
     if (c.sh.vfs.isDir(p)) return `${f}: directory`;
     const t = c.sh.vfs.read(p);
     if (t === undefined) return `${f}: cannot open \`${f}' (No such file or directory)`;
+    if (c.sh.host.net?.isCapture(p)) return `${f}: pcap capture file, microsecond ts (little-endian) - version 2.4 (Ethernet, capture length 262144)`;
     if (!t) return `${f}: empty`;
     if (t.startsWith('#!')) return `${f}: Bourne-Again shell script, ASCII text executable`;
     if (/^[\w.-]+,[\w.-]+,/.test(t)) return `${f}: CSV text`;
@@ -1094,12 +1096,14 @@ const help: Cmd = () => ok(`Commands on this workstation (try "man <command>" fo
   Slicing         cut  awk  sed  tr  sort  uniq  column  rev
   Files           touch  mkdir  cp  mv  rm  chmod  nano  tee
   Decoding        base64  sha256sum
-  Looking up      whois  intel  dig  nslookup
+  Looking up      whois  intel
+  Network         ip  ping  traceroute  ss  netstat  arp  dig  nslookup  host  tcpdump -r
   Scripting       echo  printf  read  test [ ]  if  for  while  case  functions  $(...)  $((...))  bash script.sh
   Other           date  history  clear  whoami  hostname  xargs  seq  basename  dirname
 
   Pipes: cmd1 | cmd2     Save output: cmd > file (>> appends)     Stop tail -f: Ctrl+C
   Your files live in ~ (/home/analyst). Logs are in /var/log. Notes about the company are in ~/docs.
+  Packet captures saved by the network sensor are in /var/captures (read them with tcpdump -r).
 `);
 
 export const MAN: Record<string, string> = {
@@ -1124,7 +1128,6 @@ export const MAN: Record<string, string> = {
   sha256sum: 'sha256sum [FILE...]\n  SHA-256 hash of each file, to compare with threat intelligence.',
   whois: 'whois IP|DOMAIN\n  Who owns an address: organisation, country, network.',
   intel: 'intel IP|DOMAIN|SHA256\n  Look an indicator up in the threat intelligence feeds the SOC subscribes to.',
-  dig: 'dig NAME\n  Resolve a name to an address (from the resolver\'s records). Also: nslookup NAME, host NAME.',
   nano: 'nano FILE\n  Open a simple editor for FILE (create it if new). Save with Ctrl+S, close with Esc. Scripts go in ~/bin.',
   bash: 'bash SCRIPT [ARGS...]   or   bash -c "COMMANDS"\n  Run a script. Inside it, $1 $2 ... are the arguments, $# their count, $@ all of them.\n  Make a script runnable on its own: chmod +x ~/bin/x.sh, then run ~/bin/x.sh or just x.sh.',
   echo: 'echo [-n] [-e] TEXT...\n  Print text. -n no newline, -e understand \\n and \\t.',
@@ -1140,6 +1143,7 @@ export const MAN: Record<string, string> = {
   for: 'for VAR in WORDS; do COMMANDS; done\n  for ip in $(cat ~/ips.txt); do grep -c "$ip" /var/log/auth.log; done\n  for ((i=1; i<=5; i++)); do echo $i; done',
   while: 'while COMMAND; do COMMANDS; done\n  while read -r line; do echo "$line"; done < file',
   if: 'if COMMAND; then ...; elif COMMAND; then ...; else ...; fi\n  The condition is any command: 0 exit status means true. if grep -q root file; then echo found; fi',
+  ...NET_MAN,
 };
 
 const man: Cmd = c => {
@@ -1172,17 +1176,16 @@ export const COMMANDS: Record<string, Cmd> = {
   whoami: () => ok('analyst\n'), hostname: () => ok('soc-ws\n'), id: () => ok('uid=1000(analyst) gid=1000(analyst) groups=1000(analyst),4(adm)\n'),
   uname: c => ok(c.args.includes('-a') ? 'Linux soc-ws 6.8.0-soc #1 SMP x86_64 GNU/Linux\n' : 'Linux\n'),
   sleep: () => ok(), alias: () => ok(),
-  whois: lookup('whois'), intel: lookup('intel'), dig: lookup('dns'), nslookup: lookup('dns'), host: lookup('dns'),
+  whois: lookup('whois'), intel: lookup('intel'),
+  ...NET_COMMANDS,
   nano: edit, vi: edit, vim: edit, edit, code: edit,
   sudo: c => fail(c, 'analyst is not in the sudoers file. This incident will be reported. (The SOC workstation is read-only for investigation; response actions go through the ticket.)'),
   su: c => fail(c, 'Authentication failure'),
   ssh: notHere('connecting to other hosts is not allowed from the SOC workstation; their logs are collected in /var/log'),
   curl: notHere('this workstation has no internet access, on purpose: never fetch a suspicious URL from your own machine. Use intel and whois instead'),
   wget: notHere('this workstation has no internet access, on purpose: never fetch a suspicious URL from your own machine. Use intel and whois instead'),
-  ping: notHere('network tools are not available here; the firewall log shows the traffic'),
-  nc: notHere('network tools are not available here; the firewall log shows the traffic'),
+  nc: notHere('opening connections from the SOC workstation is not allowed; ping, traceroute and dig are, and the firewall log shows the traffic'),
   nmap: notHere('scanning is not available from the SOC workstation, and scanning without authorisation is never OK'),
-  tcpdump: notHere('live capture is not available here; this workstation reads the collected logs in /var/log'),
   python3: notHere('Python is not installed on this workstation; bash, awk and sed are'),
   python: notHere('Python is not installed on this workstation; bash, awk and sed are'),
   jq: notHere('jq is not installed; the logs here are plain text, so grep, cut and awk do the job'),
