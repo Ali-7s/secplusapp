@@ -39,11 +39,6 @@ export class SyncService {
   readonly error = signal<string | null>(null);
   /** The code formatted for display ("K7P2-9XMA-QR4T"), or null when sync is off. */
   readonly code = signal<string | null>(null);
-  /**
-   * The first characters of this code's cloud document name, so the site's owner can tell which document in the
-   * database is whose. Too short to open the document, which needs the whole 64-character name.
-   */
-  readonly docPrefix = signal<string | null>(null);
 
   private keys: SyncKeys | null = null;
   private running = false;
@@ -130,7 +125,6 @@ export class SyncService {
     this.state.set('syncing');
     try { localStorage.setItem(SYNC_KEY, code); } catch { /* storage unavailable: sync lasts until the page closes */ }
     this.keys = await deriveSyncKeys(code);
-    this.docPrefix.set(this.keys.id.slice(0, 8));
     document.addEventListener('visibilitychange', this.onVisible);
     window.addEventListener('online', this.onVisible);
     this.checkTimer = setInterval(() => { if (document.visibilityState === 'visible') void this.run(); }, CHECK_EVERY);
@@ -144,7 +138,6 @@ export class SyncService {
     window.removeEventListener('online', this.onVisible);
     this.keys = null;
     this.code.set(null);
-    this.docPrefix.set(null);
     this.state.set('off');
     this.error.set(null);
     this.lastSynced.set(null);

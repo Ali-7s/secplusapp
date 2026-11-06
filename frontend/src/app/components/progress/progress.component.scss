@@ -130,8 +130,7 @@ table { width: 100%; border-collapse: collapse; font-size: 14px;
 // ── Sync ──────────────────────────────────────────────────────────────────
 .sync { display: flex; flex-direction: column; gap: 10px;
   h2 { margin: 0; }
-  .note { margin: 0; &.small { font-size: 13px; } }
-  .doc { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; color: var(--c-text); } }
+  .note { margin: 0; &.small { font-size: 13px; } } }
 .sync-status { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 700; font-size: 14px; color: var(--c-text-2);
   mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
   &.synced { color: var(--c-success); }
