@@ -34,7 +34,7 @@
         <ol class="reqs">
           @for (r of f.requirements; track $index) { <li>{{ r }}</li> }
         </ol>
-        <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are read top to bottom and the first match wins. Rule N carries out requirement N.@if (givenRows) { Rule 1 is filled in for you as an example. }</p>
+        <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are read top to bottom and the first match wins. Rule N carries out requirement N. In the Port column, type the number: a dash for a range, Any for every port, or N/A if the protocol has no ports.@if (givenRows) { Rule 1 is filled in for you as an example. }</p>
         <div class="fw-wrap">
           <table class="fw">
             <thead><tr><th>#</th>@for (c of f.columns; track c) { <th>{{ c }}</th> }</tr></thead>
@@ -44,11 +44,17 @@
                   <td class="rn">{{ r + 1 }}</td>
                   @for (c of f.columns; track c) {
                     <td>
-                      <select [value]="cell(r, c)" [disabled]="checked || isGiven(r)" [attr.aria-label]="'Rule ' + (r + 1) + ' ' + c"
-                        (change)="setCell(r, c, $any($event.target).value)">
-                        <option value="" disabled [selected]="!cell(r, c)">Select</option>
-                        @for (o of f.choices[c]; track o) { <option [value]="o" [selected]="cell(r, c) === o">{{ o }}</option> }
-                      </select>
+                      @if (isTypedColumn(c)) {
+                        <input class="port-input" type="text" [value]="cell(r, c)" [disabled]="checked || isGiven(r)" [attr.aria-label]="'Rule ' + (r + 1) + ' ' + c"
+                          placeholder="Type port" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                          (input)="setCell(r, c, $any($event.target).value)" />
+                      } @else {
+                        <select [value]="cell(r, c)" [disabled]="checked || isGiven(r)" [attr.aria-label]="'Rule ' + (r + 1) + ' ' + c"
+                          (change)="setCell(r, c, $any($event.target).value)">
+                          <option value="" disabled [selected]="!cell(r, c)">Select</option>
+                          @for (o of f.choices[c]; track o) { <option [value]="o" [selected]="cell(r, c) === o">{{ o }}</option> }
+                        </select>
+                      }
                     </td>
                   }
                 </tr>

@@ -297,7 +297,7 @@
   @if (stage === 'rules') {
     <p class="lead">The firewall checks rules from the top and acts on the <strong>first match</strong>; anything no rule allows is dropped by the <strong>implicit deny</strong> at the end. A rule can name a whole zone or one device. Allow only what the requirements need. Replies to an allowed connection are let back in automatically, because the firewall is stateful.</p>
     @if (w.portMode) {
-      <p class="note"><mat-icon aria-hidden="true">pin</mat-icon><span>Rules here use <strong>port numbers only</strong>, as on a real firewall. The requirements and the traffic name the program or protocol ("SSH", "the email app reads new messages"); picking its protocol and port is up to you. Stuck? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</span></p>
+      <p class="note"><mat-icon aria-hidden="true">pin</mat-icon><span>Rules here use <strong>port numbers only</strong>, as on a real firewall. The requirements and the traffic name the program or protocol ("SSH", "the email app reads new messages"); choosing its protocol and typing its port number is up to you. Stuck? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</span></p>
     }
     @if (!sc.portsOnly) {
       <button type="button" class="toggle easy" [class.on]="!w.portMode" [attr.aria-pressed]="!w.portMode" (click)="togglePortMode()">
@@ -354,16 +354,26 @@
             }
           </select>
         </label>
-        <label class="field">{{ w.portMode ? 'Protocol and port' : 'Service' }}
-          <select (change)="setDraft('service', $event)">
-            <option value="any" [selected]="draft.service === 'any'">Any service</option>
-            @if (w.portMode) {
-              @for (c of portChoices; track c.value) { <option [value]="c.value" [selected]="draft.service === c.value">{{ c.label }}</option> }
-            } @else {
+        @if (w.portMode) {
+          <label class="field">Protocol
+            <select (change)="setDraft('proto', $event)">
+              <option value="any" [selected]="draft.proto === 'any'">Any service</option>
+              <option value="tcp" [selected]="draft.proto === 'tcp'">TCP</option>
+              <option value="udp" [selected]="draft.proto === 'udp'">UDP</option>
+            </select>
+          </label>
+          <label class="field">Port
+            <input type="text" inputmode="numeric" maxlength="5" autocomplete="off" [value]="draft.proto === 'any' ? '' : draft.port" [disabled]="draft.proto === 'any'"
+              [placeholder]="draft.proto === 'any' ? 'Any' : 'Type port'" (input)="setDraft('port', $event)" />
+          </label>
+        } @else {
+          <label class="field">Service
+            <select (change)="setDraft('service', $event)">
+              <option value="any" [selected]="draft.service === 'any'">Any service</option>
               @for (s of sc.services; track s) { <option [value]="s" [selected]="draft.service === s">{{ service(s) }}</option> }
-            }
-          </select>
-        </label>
+            </select>
+          </label>
+        }
         <label class="field">Action
           <select (change)="setDraft('action', $event)">
             <option value="allow" [selected]="draft.action === 'allow'">Allow</option>
@@ -371,6 +381,7 @@
           </select>
         </label>
       </div>
+      @if (portError) { <p class="port-error" role="alert">Type a port number from 1 to 65535, or set Protocol to Any service.</p> }
       <button type="button" class="btn" (click)="addRule()"><mat-icon aria-hidden="true">add</mat-icon> Add rule</button>
     </div>
 

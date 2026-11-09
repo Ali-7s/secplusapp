@@ -158,7 +158,7 @@ export function isAnswered(q: ExamQuestion, a: ExamAnswer | undefined): boolean 
     case 'multi':
       return (a.choices?.length ?? 0) > 0;
     case 'firewall':
-      return q.rows.every((_, r) => q.columns.every(c => !!a.cells?.[r]?.[c]));
+      return q.rows.every((_, r) => q.columns.every(c => !!a.cells?.[r]?.[c]?.trim()));
     case 'match':
       return q.prompts.every((_, i) => !!a.picks?.[i]);
     case 'order':
@@ -175,6 +175,19 @@ export function isStarted(q: ExamQuestion, a: ExamAnswer | undefined): boolean {
 
 const same = (x: string | undefined, y: string) => (x ?? '').trim().toLowerCase() === y.trim().toLowerCase();
 
+/** The firewall column the learner types into, because knowing the number is the point. The others are lists. */
+export const isTypedColumn = (column: string) => column === 'Port';
+
+/** A typed port in one form, so "any" and "*", "n/a" and "Not applicable", or "16384 - 32767" and "16384-32767" compare equal. */
+export function normalizePort(text: string): string {
+  const t = text.trim().toLowerCase();
+  if (t === 'any' || t === 'all' || t === '*') return 'any';
+  if (t === 'n/a' || t === 'na' || t === 'none' || t === 'not applicable') return 'not applicable';
+  const m = /^(\d+)(?:\s*(?:-|–|—|to)\s*(\d+))?$/.exec(t);
+  if (!m) return t;
+  return m[2] ? `${Number(m[1])}-${Number(m[2])}` : String(Number(m[1]));
+}
+
 export function gradeQuestion(q: ExamQuestion, a: ExamAnswer | undefined, item?: ExamItem): GradedQuestion {
   const answered = isStarted(q, a);
   if (q.kind === 'single' || q.kind === 'multi') {
@@ -188,11 +201,12 @@ export function gradeQuestion(q: ExamQuestion, a: ExamAnswer | undefined, item?:
     let okCells = 0;
     parts = q.rows.map((row, r) => {
       const cell = (c: string) => a?.cells?.[r]?.[c] ?? '';
-      const rowOk = q.columns.filter(c => same(cell(c), row.answer[c])).length;
+      const cellOk = (c: string) => isTypedColumn(c) ? normalizePort(cell(c)) === normalizePort(row.answer[c]) : same(cell(c), row.answer[c]);
+      const rowOk = q.columns.filter(cellOk).length;
       okCells += rowOk;
       return {
         label: `Rule ${r + 1}`,
-        given: q.columns.map(c => cell(c) || '(blank)').join(' | '),
+        given: q.columns.map(c => cell(c).trim() || '(blank)').join(' | '),
         expected: q.columns.map(c => row.answer[c]).join(' | '),
         ok: rowOk === q.columns.length,
         why: row.why,

@@ -5,7 +5,7 @@
  * explains what the learner picked as well as the right answer. Options are shuffled at run time, so nothing may
  * refer to a letter or to another option, and the correct option must not be a giveaway by being the longest.
  */
-import { EXAM_SPECS } from './exam-engine';
+import { EXAM_SPECS, normalizePort } from './exam-engine';
 import { LESSON_META } from '../components/networking/lessons/lesson-index';
 import { LESSON_BODIES } from '../components/networking/lessons/lessons';
 import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
@@ -109,6 +109,8 @@ describe('practice exam pool', () => {
         if (q.rows.length !== q.requirements.length) problems.push(`${q.id}: rows and requirements differ`);
         q.rows.forEach((row, r) => {
           for (const c of q.columns) if (!q.choices[c]?.includes(row.answer[c])) problems.push(`${q.id}: rule ${r + 1} ${c}`);
+          // Ports are typed, so the answer has to be something a learner can write.
+          if (!/^(any|not applicable|\d+(-\d+)?)$/.test(normalizePort(row.answer['Port'] ?? 'any'))) problems.push(`${q.id}: rule ${r + 1} port`);
           if (words(row.why) < 8) problems.push(`${q.id}: rule ${r + 1} why`);
         });
       } else if (q.kind === 'match') {

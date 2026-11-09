@@ -70,22 +70,12 @@ export function parsePortRule(service: string): { proto: Proto; port: number } |
   return m && port >= 1 && port <= 65535 ? { proto: m[1].toUpperCase() as Proto, port } : null;
 }
 
-/**
- * The ports offered when writing rules by number: every port on the Reference Sheet plus the scenarios' own, with no
- * names, so choosing one means knowing which protocol uses it.
- */
-export const PORT_CHOICES: { value: string; label: string }[] = (() => {
-  const seen = new Map<string, { proto: Proto; port: number }>();
-  const add = (proto: Proto, port: number) => { if (port > 0) seen.set(`${proto.toLowerCase()}:${port}`, { proto, port }); };
-  for (const e of PORT_LIST) {
-    const protos = e.transport.toUpperCase().split('/').filter((x): x is Proto => x === 'TCP' || x === 'UDP');
-    for (const part of e.port.split('/')) for (const proto of protos) add(proto, Number(part.split('-')[0]));
-  }
-  for (const s of Object.values(SERVICES)) for (const proto of s.protos) add(proto, s.port);
-  return [...seen.entries()]
-    .sort(([, a], [, b]) => a.port - b.port || a.proto.localeCompare(b.proto))
-    .map(([value, r]) => ({ value, label: `${r.proto} ${r.port}` }));
-})();
+/** A typed port as a rule's service ("tcp:443"), or null if it is not a whole number from 1 to 65535. */
+export function typedPortRule(proto: 'tcp' | 'udp', typed: string): string | null {
+  const t = typed.trim();
+  const rule = `${proto}:${Number(t)}`;
+  return /^\d{1,5}$/.test(t) && parsePortRule(rule) ? rule : null;
+}
 
 export const portRuleLabel = (r: { proto: Proto; port: number }) => `${r.proto} ${r.port}`;
 
@@ -195,6 +185,8 @@ export interface LabFlow {
 }
 
 export interface LabRule { from: string; to: string; service: string; action: 'allow' | 'deny' }
+/** The "Add a rule" form before it is added. When rules go by port, `proto` and the typed `port` are used instead of `service`. */
+export interface RuleDraft extends LabRule { proto: 'any' | 'tcp' | 'udp'; port: string }
 
 export interface Detect { ipsMode: 'prevent' | 'detect'; signatures: boolean; anomaly: boolean; reputation: boolean; siem: boolean }
 
@@ -231,6 +223,8 @@ export interface LabWork {
   detect: Detect;
   /** Rules are written as a protocol and port number ("tcp:443") instead of a service name. */
   portMode?: boolean;
+  /** The half-filled "Add a rule" form, so a refresh keeps it. */
+  ruleDraft?: RuleDraft;
   /** Built from scratch: the learner's own diagram, which traffic follows instead of the scenario's outline. */
   canvas?: Canvas;
 }

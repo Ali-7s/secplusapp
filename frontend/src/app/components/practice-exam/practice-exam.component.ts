@@ -17,7 +17,7 @@ import {
 } from '../../models/exam.model';
 import {
   EXAM_SPECS, ExamAnswer, ExamGrade, ExamItem, ExamLength, GradedQuestion, PASSING_SCALED,
-  SeenCounts, buildExam, examSize, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted,
+  SeenCounts, buildExam, examSize, correctIndexes, gradeExam, gradeQuestion, isAnswered, isStarted, isTypedColumn,
 } from '../../utils/exam-engine';
 
 export type ExamMode = 'exam' | 'study';
@@ -59,6 +59,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
 
   readonly specs = EXAM_SPECS;
+  readonly isTypedColumn = isTypedColumn;
   readonly lengths: ExamLength[] = ['full', 'quick', 'network', 'weak'];
   readonly domains = [1, 2, 3, 4, 5] as ExamDomain[];
   readonly domainNames = DOMAIN_NAMES;

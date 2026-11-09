@@ -1,6 +1,6 @@
 import {
-  Canvas, LabScenario, LabWork, PORT_CHOICES, SERVICES, addrFaults, addressedHosts, blankCanvas, chainCanvas, emptyWork, gradeAddr, gradeDesign,
-  gradePort, gradeSlot, hostById, identifyPort, ipToNum, parsePortRule, referenceWork, runFlow, serviceMatches, startWork, subnetOf, toPortRule,
+  Canvas, LabScenario, LabWork, SERVICES, addrFaults, addressedHosts, blankCanvas, chainCanvas, emptyWork, gradeAddr, gradeDesign,
+  gradePort, gradeSlot, hostById, identifyPort, ipToNum, parsePortRule, referenceWork, runFlow, serviceMatches, startWork, subnetOf, toPortRule, typedPortRule,
   zoneById,
 } from './lab';
 import { SCENARIOS } from './scenarios';
@@ -192,15 +192,14 @@ describe('network lab ports', () => {
     expect(serviceMatches('any', 'scan')).toBeTrue();
   });
 
-  it('offers every scenario port as a bare number, sorted, with decoys from the Reference Sheet', () => {
-    const values = PORT_CHOICES.map(c => c.value);
-    for (const id of Object.keys(SERVICES)) expect(values).withContext(id).toContain(toPortRule(id));
-    for (const c of PORT_CHOICES) expect(/^(TCP|UDP) \d+$/.test(c.label)).withContext(c.label).toBeTrue();
-    expect(new Set(values).size).toBe(values.length);
-    const nums = PORT_CHOICES.map(c => Number(c.value.split(':')[1]));
-    expect(nums).toEqual([...nums].sort((a, b) => a - b));
-    expect(values).toContain('tcp:23');
-    expect(values).toContain('tcp:995');
+  it('turns a typed port into a rule, and refuses anything that is not a port', () => {
+    expect(typedPortRule('tcp', '443')).toBe('tcp:443');
+    expect(typedPortRule('udp', ' 0123 ')).toBe('udp:123');
+    for (const bad of ['', '0', '65536', 'https', '44.3', '1e3', '-1']) expect(typedPortRule('tcp', bad)).withContext(bad).toBeNull();
+    for (const id of Object.keys(SERVICES)) {
+      const [proto, port] = toPortRule(id).split(':');
+      expect(typedPortRule(proto as 'tcp' | 'udp', port)).withContext(id).toBe(toPortRule(id));
+    }
   });
 
   it('names what a wrong port really is when the run blocks it', () => {

@@ -122,6 +122,7 @@ export interface FirewallQuestion extends ExamQuestionBase {
   kind: 'firewall';
   requirements: string[];
   columns: string[];
+  /** Each column's list. The Port list is not shown, since ports are typed (see isTypedColumn). */
   choices: Record<string, string[]>;
   rows: FirewallRow[];
 }

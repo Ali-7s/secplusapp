@@ -5,8 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LessonWork } from '../../lesson-work.service';
 import {
   AddrMode, Canvas, DEVICES, Detect, DeviceKind, FlowResult, Hop, LabFlow, LabHost, LabRule, LabScenario, LabSlot, LabWork, LabZone, PortRow,
-  PORT_CHOICES, START_DETECT, SERVICES, addressedHosts, blankCanvas, chainCanvas, emptyWork, externalById, gradeAddr, gradeDesign, gradePort,
-  gradeSlot, hostById, hostZone, parsePortRule, portRuleLabel, runFlow, serviceLabel, startWork, toPortRule, zoneById,
+  RuleDraft, START_DETECT, SERVICES, addressedHosts, blankCanvas, chainCanvas, emptyWork, externalById, gradeAddr, gradeDesign, gradePort,
+  gradeSlot, hostById, hostZone, parsePortRule, portRuleLabel, runFlow, serviceLabel, startWork, toPortRule, typedPortRule, zoneById,
 } from './lab';
 import { LabCanvasComponent } from './lab-canvas.component';
 import { SCENARIOS } from './scenarios';
@@ -68,7 +68,6 @@ export class NetworkLabComponent implements OnInit {
   private store = inject(LessonWork, { optional: true });
   private route = inject(ActivatedRoute, { optional: true });
   private router = inject(Router, { optional: true });
-  readonly portChoices = PORT_CHOICES;
   readonly scenarios = SCENARIOS;
   readonly stages = STAGES;
   readonly devices = DEVICES;
@@ -92,7 +91,8 @@ export class NetworkLabComponent implements OnInit {
   /** The worked example of a diagram, shown on request. */
   showDesign = false;
   private example?: { sc: string; canvas: Canvas };
-  draft: LabRule = { from: 'internet', to: 'any', service: 'any', action: 'allow' };
+  /** Shown under the Add a rule form when the typed port cannot be used. */
+  portError = false;
 
   ngOnInit() {
     this.restore();
@@ -154,6 +154,7 @@ export class NetworkLabComponent implements OnInit {
     // A ports scenario comes built, so it opens on the rules.
     if (this.sc.portsOnly && ['place', 'segment', 'address'].includes(this.stage)) this.stage = 'rules';
     this.picked = null;
+    this.portError = false;
     this.openFlow = null;
     this.showSolution = false;
     this.showDesign = false;
@@ -261,15 +262,23 @@ export class NetworkLabComponent implements OnInit {
   /** Rules by port number, or (the easier way) by service name. */
   togglePortMode() {
     this.w.portMode = !this.w.portMode;
-    this.draft = { ...this.draft, service: 'any' };
+    this.w.ruleDraft = { ...this.draft, service: 'any', proto: 'any', port: '' };
+    this.portError = false;
     this.edited('rules');
   }
   solutionService(id: string) { return this.service(this.w.portMode ? toPortRule(id) : id); }
-  setDraft(field: keyof LabRule, e: Event) {
-    this.draft = { ...this.draft, [field]: (e.target as HTMLSelectElement).value };
+  get draft(): RuleDraft { return this.w.ruleDraft ?? { from: 'internet', to: 'any', service: 'any', action: 'allow', proto: 'any', port: '' }; }
+  setDraft(field: keyof RuleDraft, e: Event) {
+    this.w.ruleDraft = { ...this.draft, [field]: (e.target as HTMLInputElement | HTMLSelectElement).value };
+    this.portError = false;
+    this.save();
   }
   addRule() {
-    this.w.rules = [...this.w.rules, { ...this.draft }];
+    const d = this.draft;
+    const service = !this.w.portMode ? d.service : d.proto === 'any' ? 'any' : typedPortRule(d.proto, d.port);
+    this.portError = service === null;
+    if (service === null) return;
+    this.w.rules = [...this.w.rules, { from: d.from, to: d.to, service, action: d.action }];
     this.edited('rules');
   }
   moveRule(i: number, by: number) {

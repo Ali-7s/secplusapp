@@ -36,6 +36,14 @@
 select { width: 100%; padding: 8px; border-radius: 6px; font: inherit; font-size: 13px;
   border: 1px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
   &:disabled { opacity: .85; } }
+.port-input {
+  width: 100%; min-width: 92px; box-sizing: border-box; padding: 8px; border-radius: 6px; font: inherit; font-size: 13px;
+  border: 1px solid var(--c-border-dark); background: var(--c-surface); color: var(--c-text);
+  &::placeholder { color: var(--c-muted); }
+  &:focus { outline: none; border-color: var(--c-accent); }
+  &:disabled { opacity: .85; }
+  @media (max-width: 600px) { font-size: 16px; } // below 16px, phones zoom the page on focus
+}
 .example { display: flex; gap: 8px; margin: 10px 0 0; padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; line-height: 1.55;
   background: var(--c-accent-light); color: var(--c-text);
   mat-icon { flex-shrink: 0; color: var(--c-accent-solid); } }

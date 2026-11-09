@@ -1,5 +1,5 @@
 import { ChoiceQuestion, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion } from '../models/exam.model';
-import { EXAM_SPECS, PASSING_SCALED, buildExam, examSize, gradeExam, gradeQuestion, isAnswered, scaledScore } from './exam-engine';
+import { EXAM_SPECS, PASSING_SCALED, buildExam, examSize, gradeExam, gradeQuestion, isAnswered, normalizePort, scaledScore } from './exam-engine';
 
 const why = 'because this explanation is long enough';
 
@@ -123,6 +123,24 @@ describe('exam engine', () => {
 
     expect(gradeQuestion(order, { order: [0, 1, 2, 3] }).correct).toBeTrue();
     expect(gradeQuestion(order, { order: [1, 0, 2, 3] }).earned).toBe(1.5);
+  });
+
+  it('marks a typed port by its value, however it was written', () => {
+    const right = (port: string, answer = '443') => normalizePort(port) === normalizePort(answer);
+    for (const typed of ['443', ' 443 ', '0443']) expect(right(typed)).withContext(typed).toBeTrue();
+    for (const typed of ['any', 'ANY', '*', 'all']) expect(right(typed, 'Any')).withContext(typed).toBeTrue();
+    for (const typed of ['n/a', 'N/A', 'none', 'not applicable']) expect(right(typed, 'Not applicable')).withContext(typed).toBeTrue();
+    for (const typed of ['16384-32767', '16384 - 32767', '16384–32767', '16384 to 32767']) expect(right(typed, '16384-32767')).withContext(typed).toBeTrue();
+    for (const typed of ['80', '4430', 'https', '', 'any']) expect(right(typed)).withContext(typed).toBeFalse();
+
+    const fw = gradeQuestion(firewall, { cells: [{ Port: ' 0443', Action: 'Allow' }, { Port: 'any', Action: 'Deny' }] });
+    expect(fw.correct).toBeTrue();
+    expect(gradeQuestion(firewall, { cells: [{ Port: 'https', Action: 'Allow' }, { Port: 'any', Action: 'Deny' }] }).parts[0].ok).toBeFalse();
+  });
+
+  it('does not count a port of only spaces as filled in', () => {
+    expect(isAnswered(firewall, { cells: [{ Port: '443', Action: 'Allow' }, { Port: '  ', Action: 'Deny' }] })).toBeFalse();
+    expect(isAnswered(firewall, { cells: [{ Port: '443', Action: 'Allow' }, { Port: 'Any', Action: 'Deny' }] })).toBeTrue();
   });
 
   it('only counts a PBQ as answered when every part is filled', () => {

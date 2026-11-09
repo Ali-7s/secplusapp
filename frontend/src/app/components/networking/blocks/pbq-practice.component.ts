@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentService } from '../../../services/content.service';
 import { FirewallQuestion, MatchQuestion, OrderQuestion, isPbq } from '../../../models/exam.model';
-import { ExamAnswer, GradedQuestion, gradeQuestion, isAnswered, seededRandom, shuffled } from '../../../utils/exam-engine';
+import { ExamAnswer, GradedQuestion, gradeQuestion, isAnswered, isTypedColumn, seededRandom, shuffled } from '../../../utils/exam-engine';
 import { PbqQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
 import { LessonWork } from '../lesson-work.service';
@@ -42,6 +42,7 @@ export class PbqPracticeComponent implements OnChanges {
   /** Fires each time an answer is checked, with the share of parts right (0 to 1). */
   @Output() checkedResult = new EventEmitter<{ id: string; fraction: number }>();
 
+  readonly isTypedColumn = isTypedColumn;
   list: PbqQuestion[] = [];
   index = 0;
   loading = false;
