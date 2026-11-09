@@ -1,7 +1,7 @@
 /**
  * Builds a new firewall table every time, so nothing can be memorized by position: the ports chosen, the hosts, the
  * addresses and the wording all change. Each rule is worded one of two ways at random: `plain` names the protocol the
- * way exam simulations do ("Allow IMAP email retrieval from ..."), and `job` only describes what is needed. Neither
+ * way exam simulations do ("Allow LDAP queries from ..."), and `job` only describes what is needed. Neither
  * ever gives the number.
  *
  * A table is rebuilt from a small GeneratedRef, so a refresh brings back exactly the same one.
@@ -108,8 +108,8 @@ export const FLOWS: Flow[] = [
     plain: ['Allow RDP connections from {from} to {to}', 'Allow Remote Desktop from {from} to {to}'],
     job: ['{from} can open the full graphical desktop of {to}'],
     why: 'A whole Windows desktop over the network is RDP on TCP 3389.' },
-  { id: 'rdp-block', set: 'remote', label: 'RDP', port: '3389', proto: TCP, action: 'Deny', from: ['employee', 'guest', 'corp'], to: ['db', 'win', 'dc'],
-    plain: ['Block all RDP connections from {from} to {to}'],
+  { id: 'rdp-block', set: 'remote', label: 'RDP', port: '3389', proto: TCP, action: 'Deny', from: ['employee', 'guest', 'corp'], to: ['win', 'dc'],
+    plain: ['Block Remote Desktop traffic from {from} to {to}'],
     job: [`{from} must not be able to open a graphical desktop on {to}. ${BLOCK_LOG}`],
     why: 'RDP is TCP 3389, and block means the Action is Deny.' },
   { id: 'vnc', set: 'remote', label: 'VNC', port: '5900', proto: TCP, from: ['admin'], to: ['kiosk'],
@@ -207,11 +207,11 @@ export const FLOWS: Flow[] = [
     job: ['{from} can download mail from {to} over an encrypted connection, removing it from the server'],
     why: 'Encrypted POP3 is POP3S on TCP 995.' },
   { id: 'imap', set: 'mail', label: 'IMAP', port: '143', proto: TCP, from: ['corp', 'legacy'], to: ['mail'],
-    plain: ['Allow IMAP email retrieval from {from} to {to}'],
+    plain: ['Allow unencrypted IMAP mailbox access from {from} to {to}'],
     job: ['{from} can read mail on {to} without encryption, leaving it on the server'],
     why: 'Leaving mail on the server is IMAP, and plain IMAP is TCP 143.' },
   { id: 'imaps', set: 'mail', label: 'IMAPS', port: '993', proto: TCP, from: ['corp', 'employee'], to: ['mail'],
-    plain: ['Allow secure IMAP email retrieval from {from} to {to}', 'Allow IMAPS from {from} to {to}'],
+    plain: ['Allow secure IMAP mailbox access from {from} to {to}', 'Allow IMAPS from {from} to {to}'],
     job: ['{from} can read mail on {to} over an encrypted connection, leaving it on the server'],
     why: 'Encrypted IMAP is IMAPS on TCP 993. The secure mail readers live in the 990s.' },
 
@@ -220,10 +220,6 @@ export const FLOWS: Flow[] = [
     plain: ['Allow SMB file sharing from {from} to {to}'],
     job: ['{from} can open the shared folders on {to}'],
     why: 'Windows file sharing is SMB on TCP 445, the port ransomware loves to spread over.' },
-  { id: 'smb-print', set: 'files', label: 'Windows printing (SMB)', port: '445', proto: TCP, from: ['admin', 'employee'], to: ['print'],
-    plain: ['Allow {from} to connect to {to} using the Windows print protocol'],
-    job: ['{from} can use the shared printers on {to} the normal Windows way'],
-    why: 'Windows shares printers the same way it shares folders, over SMB on TCP 445.' },
   { id: 'smb-block', set: 'files', label: 'SMB', port: '445', proto: TCP, action: 'Deny', from: ['guest'], to: ['file', 'print'],
     plain: ['Block all SMB connections from {from} to {to}'],
     job: [`{from} must not be able to open Windows shares on {to}. ${BLOCK_LOG}`],
@@ -315,7 +311,7 @@ export const FLOWS: Flow[] = [
 
   // ── VPNs ──
   { id: 'ike', set: 'vpn', label: 'IKE', port: '500', proto: UDP, from: ['internet', 'branch'], to: ['vpn'],
-    plain: ['Allow IPsec key exchange from {from} to {to}'],
+    plain: ['Allow IKE from {from} to {to}'],
     job: ['{from} can negotiate the keys for an IPsec tunnel with {to}'],
     why: 'IKE sets up an IPsec tunnel on UDP 500, and every IPsec peer has to do it first.' },
   { id: 'natt', set: 'vpn', label: 'IPsec NAT traversal', port: '4500', proto: UDP, from: ['branch'], to: ['vpn'],
