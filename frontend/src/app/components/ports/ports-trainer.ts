@@ -261,16 +261,49 @@ export const RISE_GAP_MS = 3_600_000;
 /** Whether this port moved up within the last hour, so another right answer now will not raise it. */
 export const roseRecently = (m: Mastery, port: string, now: number) => now - (m[port]?.rose ?? 0) < RISE_GAP_MS;
 
+/** When each set was last practiced, meaning a finished round or a checked firewall table. */
+export type Practiced = Record<string, number>;
+
+/** In a practice that spans sets, how many questions a set needs before it counts as practiced. */
+const MIN_TO_COUNT = 2;
+
+export const groupOf = (port: string) => GROUPS.find(g => g.ports.includes(port))?.id;
+
+/** Whether this port went up and no different set has been practiced since, so it may still be fresh in mind. */
+export function needsOtherSet(m: Mastery, port: string, practiced: Practiced): boolean {
+  const rose = m[port]?.rose;
+  if (rose === undefined) return false;
+  const own = groupOf(port);
+  return !Object.entries(practiced).some(([set, at]) => set !== own && at > rose);
+}
+
 /**
- * A right answer raises the level by one, but only once an hour: recalling a port minutes after reading it shows
- * it is familiar, not that it is learned, so mastery (level 4) takes right answers in four sittings an hour apart.
+ * Which sets a finished practice counts for. A set's own round counts only for that set, because the few ports mixed
+ * in from other sets are not practicing them. A practice across sets counts for each set it asked enough about.
+ */
+export function setsPracticed(set: string, ports: string[]): string[] {
+  if (GROUPS.some(g => g.id === set)) return [set];
+  const counts = new Map<string, number>();
+  for (const p of ports) {
+    const g = groupOf(p);
+    if (g) counts.set(g, (counts.get(g) ?? 0) + 1);
+  }
+  return [...counts].filter(([, n]) => n >= MIN_TO_COUNT).map(([g]) => g);
+}
+
+export const markPracticed = (practiced: Practiced, sets: string[], now: number): Practiced =>
+  ({ ...practiced, ...Object.fromEntries(sets.map(s => [s, now])) });
+
+/**
+ * A right answer raises the level by one, but only once an hour and only after a different set has been practiced
+ * since the last rise: recalling a port minutes after reading it shows it is familiar, not that it is learned.
  * A wrong answer drops it two levels at any time.
  */
-export function updateMastery(m: Mastery, port: string, right: boolean, now: number): Mastery {
+export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced): Mastery {
   const cur = m[port] ?? { level: 0, right: 0, wrong: 0, at: 0 };
   let next: PortMastery;
   if (right) {
-    const rise = !roseRecently(m, port, now) && cur.level < MAX_LEVEL;
+    const rise = !roseRecently(m, port, now) && !needsOtherSet(m, port, practiced) && cur.level < MAX_LEVEL;
     next = { ...cur, level: rise ? cur.level + 1 : cur.level, right: cur.right + 1, at: now, ...(rise ? { rose: now } : {}) };
   } else {
     next = { ...cur, level: Math.max(0, cur.level - 2), wrong: cur.wrong + 1, at: now };

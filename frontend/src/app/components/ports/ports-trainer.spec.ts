@@ -1,13 +1,16 @@
 import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
-  GROUPS, MAX_LEVEL, MIX_IN, Mastery, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, pickRound, setRound, updateMastery,
+  GROUPS, MAX_LEVEL, MIX_IN, Mastery, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, markPracticed, needsOtherSet, pickRound, setRound, setsPracticed, updateMastery,
 } from './ports-trainer';
 
 /** A seeded random, so round tests are repeatable. */
 function seeded(seed: number) {
   return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 }
+
+/** A different set practiced later than any rise, so only the hour limit applies. */
+const OTHER = { web: Number.MAX_SAFE_INTEGER };
 
 describe('Ports trainer', () => {
   const all = PORTS.map(p => p.port);
@@ -76,29 +79,57 @@ describe('Ports trainer', () => {
     const HOUR = 3_600_000;
     const noon = new Date(2026, 10, 5, 12).getTime();
     let m: Mastery = {};
-    m = updateMastery(m, '22', true, noon);
-    m = updateMastery(m, '22', true, noon + 60_000);
-    m = updateMastery(m, '22', true, noon + HOUR - 1);
+    m = updateMastery(m, '22', true, noon, OTHER);
+    m = updateMastery(m, '22', true, noon + 60_000, OTHER);
+    m = updateMastery(m, '22', true, noon + HOUR - 1, OTHER);
     expect(levelOf(m, '22')).withContext('three right within the hour').toBe(1);
     expect(m['22'].right).toBe(3);
-    m = updateMastery(m, '22', true, noon + HOUR);
+    m = updateMastery(m, '22', true, noon + HOUR, OTHER);
     expect(levelOf(m, '22')).withContext('an hour after the rise').toBe(2);
-    for (let h = 2; h <= 6; h++) m = updateMastery(m, '22', true, noon + h * HOUR);
+    for (let h = 2; h <= 6; h++) m = updateMastery(m, '22', true, noon + h * HOUR, OTHER);
     expect(levelOf(m, '22')).withContext('capped').toBe(MAX_LEVEL);
-    m = updateMastery(m, '22', false, noon + 7 * HOUR);
+    m = updateMastery(m, '22', false, noon + 7 * HOUR, OTHER);
     expect(levelOf(m, '22')).toBe(MAX_LEVEL - 2);
-    m = updateMastery(updateMastery(m, '22', false, noon + 7 * HOUR), '22', false, noon + 7 * HOUR);
+    m = updateMastery(updateMastery(m, '22', false, noon + 7 * HOUR, OTHER), '22', false, noon + 7 * HOUR, OTHER);
     expect(levelOf(m, '22')).toBe(0);
     expect(m['22'].wrong).toBe(3);
     // Misses do not start the hour again: only a rise does.
-    m = updateMastery(m, '22', true, noon + 7 * HOUR);
+    m = updateMastery(m, '22', true, noon + 7 * HOUR, OTHER);
     expect(levelOf(m, '22')).toBe(1);
   });
 
   it('lets a port saved under the old once-a-day rule rise', () => {
     const noon = new Date(2026, 10, 5, 12).getTime();
     const saved = { '22': { level: 1, right: 1, wrong: 0, at: noon, day: '2026-11-5' } } as Mastery;
-    expect(levelOf(updateMastery(saved, '22', true, noon + 60_000), '22')).toBe(2);
+    expect(levelOf(updateMastery(saved, '22', true, noon + 60_000, OTHER), '22')).toBe(2);
+  });
+
+  it('holds a port back until a different set is practiced after it went up', () => {
+    const HOUR = 3_600_000;
+    const noon = new Date(2026, 10, 5, 12).getTime();
+    let m = updateMastery({}, '22', true, noon, {});
+    expect(levelOf(m, '22')).withContext('a first rise needs nothing').toBe(1);
+    m = updateMastery(m, '22', true, noon + 2 * HOUR, { remote: noon + HOUR });
+    expect(levelOf(m, '22')).withContext('its own set does not count').toBe(1);
+    m = updateMastery(m, '22', true, noon + 3 * HOUR, { web: noon - 1 });
+    expect(levelOf(m, '22')).withContext('a set done before the rise does not count').toBe(1);
+    const practiced = { web: noon + HOUR };
+    expect(needsOtherSet(m, '22', practiced)).toBeFalse();
+    m = updateMastery(m, '22', true, noon + 4 * HOUR, practiced);
+    expect(levelOf(m, '22')).withContext('a different set since the rise').toBe(2);
+    expect(needsOtherSet(m, '22', practiced)).withContext('and the rise starts the wait again').toBeTrue();
+  });
+
+  it('still needs the hour after a different set', () => {
+    const noon = new Date(2026, 10, 5, 12).getTime();
+    const m = updateMastery({}, '22', true, noon, {});
+    expect(levelOf(updateMastery(m, '22', true, noon + 60_000, { web: noon + 1 }), '22')).toBe(1);
+  });
+
+  it('counts a set round only for that set, and mixed practice for sets it asked enough about', () => {
+    expect(setsPracticed('remote', ['22', '22', '80', '443', '53'])).toEqual(['remote']);
+    expect(setsPracticed('weak', ['22', '23', '80', '443', '53'])).toEqual(['remote', 'web']);
+    expect(markPracticed({ web: 1 }, ['remote'], 5)).toEqual({ web: 1, remote: 5 });
   });
 
   it('mixes ports from other started sets into a set round, spread out', () => {

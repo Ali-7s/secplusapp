@@ -6,10 +6,10 @@ import { PORTS, PortEntry } from '../reference/reference-data';
 import { LessonWork } from '../networking/lesson-work.service';
 import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
 import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
-import { MIXED, PortScenario, SCENARIOS, portOutcomes } from './firewall-scenarios';
+import { MIXED, PortScenario, SCENARIOS, portOutcomes, trainerEntry } from './firewall-scenarios';
 import { GeneratedRef, buildTable, newTable } from './firewall-generator';
 import {
-  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, levelOf, masteredIn, pickRound, roseRecently, setRound, shortName, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, ROUND, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -47,6 +47,7 @@ export class PortsPageComponent {
   learning = new Set<string>();
 
   mastery: Mastery = (this.progress.lessonWork(SLUG, 'mastery') as Mastery | undefined) ?? {};
+  practiced: Practiced = (this.progress.lessonWork(SLUG, 'practiced') as Practiced | undefined) ?? {};
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   question: PortQuestion | null = null;
 
@@ -124,9 +125,11 @@ export class PortsPageComponent {
     const mark = s.seed === undefined ? 'done' : String(s.seed);
     const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
     if (s.seed === undefined ? scored[s.id] : scored[s.id] === mark) return;
+    const now = Date.now();
     for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
-      this.mastery = updateMastery(this.mastery, port, right, Date.now());
+      this.mastery = updateMastery(this.mastery, port, right, now, this.practiced);
     }
+    this.recordPractice(s.set, s.rows.map(r => trainerEntry(r.answer['Port'])).filter((p): p is string => !!p), now);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: mark });
   }
@@ -134,6 +137,16 @@ export class PortsPageComponent {
   // ── Overview ────────────────────────────────────────────────────────────
 
   level(port: string) { return levelOf(this.mastery, port); }
+
+  private waitsForOtherSet(port: string) { return this.level(port) < MAX_LEVEL && needsOtherSet(this.mastery, port, this.practiced); }
+  /** Some of this set's ports can't go up again until a different set is practiced. */
+  waiting(g: PortGroup) { return g.ports.some(p => this.waitsForOtherSet(p)); }
+
+  private recordPractice(set: string, ports: string[], now: number) {
+    this.practiced = markPracticed(this.practiced, setsPracticed(set, ports), now);
+    this.progress.setLessonWork(SLUG, 'practiced', this.practiced);
+  }
+
   isOutside(port: string) { const g = GROUPS.find(x => x.id === this.round?.set); return !!g && !g.ports.includes(port); }
   mastered(g: PortGroup) { return masteredIn(this.mastery, g.ports); }
   get masteredAll() { return masteredIn(this.mastery, PORTS.map(p => p.port)); }
@@ -200,9 +213,11 @@ export class PortsPageComponent {
     const v = q.check(typed);
     const before = this.level(q.port);
     r.answers[r.i] = { typed, right: v.right, note: v.note, before };
-    this.mastery = updateMastery(this.mastery, q.port, v.right, Date.now());
+    const now = Date.now();
+    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, v.right);
+    if (r.answers.filter(Boolean).length === r.refs.length) this.recordPractice(r.set, r.refs.map(x => x.port), now);
     this.saveRound();
     setTimeout(() => this.nextBtn?.nativeElement.focus());
   }
@@ -214,7 +229,7 @@ export class PortsPageComponent {
     a.right = true;
     a.note = undefined;
     const m = { ...this.mastery, [q.port]: { ...(this.mastery[q.port] ?? { level: 0, right: 0, wrong: 1, at: 0 }), level: a.before, wrong: Math.max(0, (this.mastery[q.port]?.wrong ?? 1) - 1) } };
-    this.mastery = updateMastery(m, q.port, true, Date.now());
+    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, true);
     this.saveRound();
@@ -259,8 +274,17 @@ export class PortsPageComponent {
     const r = this.round!;
     const first = new Map<string, number>();
     r.refs.forEach((ref, i) => { if (!first.has(ref.port) && r.answers[i]) first.set(ref.port, r.answers[i].before); });
-    return [...first].map(([port, from]) => ({ port, name: shortName(entryOf(port)), from, to: this.level(port), held: roseRecently(this.mastery, port, Date.now()) }));
+    return [...first].map(([port, from]) => ({ port, name: shortName(entryOf(port)), from, to: this.level(port), held: this.heldNote(port) }));
   }
+
+  private heldNote(port: string): string {
+    if (this.level(port) >= MAX_LEVEL) return '';
+    if (this.waitsForOtherSet(port)) return 'same (do a different set first)';
+    return roseRecently(this.mastery, port, Date.now()) ? 'same (already went up in the last hour)' : '';
+  }
+
+  /** The round's ports include some that need a different set before they can go up again. */
+  roundWaits() { return this.changes().some(c => this.waitsForOtherSet(c.port)); }
 
   hookForQuestion(q: PortQuestion) {
     const g = GROUPS.find(x => x.ports.includes(q.port))!;
