@@ -257,7 +257,7 @@ export class NetworkLabComponent implements OnInit {
   isZone(id: string) { return !!zoneById(this.sc, id); }
   service(id: string) {
     const pr = parsePortRule(id);
-    return id === 'any' ? 'Any service' : pr ? portRuleLabel(pr) : serviceLabel(id);
+    return id === 'any' ? 'Any service' : id === 'icmp' ? 'ICMP' : pr ? portRuleLabel(pr) : serviceLabel(id);
   }
   /** Rules by port number, or (the easier way) by service name. */
   togglePortMode() {
@@ -268,6 +268,8 @@ export class NetworkLabComponent implements OnInit {
   }
   solutionService(id: string) { return this.service(this.w.portMode ? toPortRule(id) : id); }
   get draft(): RuleDraft { return this.w.ruleDraft ?? { from: 'internet', to: 'any', service: 'any', action: 'allow', proto: 'any', port: '' }; }
+  /** Only TCP and UDP have ports to type. */
+  get draftTakesPort() { return this.draft.proto === 'tcp' || this.draft.proto === 'udp'; }
   setDraft(field: keyof RuleDraft, e: Event) {
     this.w.ruleDraft = { ...this.draft, [field]: (e.target as HTMLInputElement | HTMLSelectElement).value };
     this.portError = false;
@@ -275,7 +277,7 @@ export class NetworkLabComponent implements OnInit {
   }
   addRule() {
     const d = this.draft;
-    const service = !this.w.portMode ? d.service : d.proto === 'any' ? 'any' : typedPortRule(d.proto, d.port);
+    const service = !this.w.portMode ? d.service : d.proto === 'tcp' || d.proto === 'udp' ? typedPortRule(d.proto, d.port) : d.proto;
     this.portError = service === null;
     if (service === null) return;
     this.w.rules = [...this.w.rules, { from: d.from, to: d.to, service, action: d.action }];

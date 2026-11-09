@@ -44,7 +44,7 @@ export const FIREWALL_GUIDED: FirewallQuestion = {
   choices: {
     Source: ['Any', '10.0.10.0/24', '10.0.10.5', '10.0.20.10'],
     Destination: ['Any', '10.0.20.10', '10.0.20.0/24', '10.0.10.0/24'],
-    Protocol: ['TCP', 'UDP', 'Any'],
+    Protocol: ['TCP', 'UDP', 'ICMP', 'Any'],
     Port: ['Any', '22', '23', '80', '443', '3389'],
     Action: ['Allow', 'Deny'],
   },

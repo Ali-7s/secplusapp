@@ -360,11 +360,12 @@
               <option value="any" [selected]="draft.proto === 'any'">Any service</option>
               <option value="tcp" [selected]="draft.proto === 'tcp'">TCP</option>
               <option value="udp" [selected]="draft.proto === 'udp'">UDP</option>
+              <option value="icmp" [selected]="draft.proto === 'icmp'">ICMP</option>
             </select>
           </label>
           <label class="field">Port
-            <input type="text" inputmode="numeric" maxlength="5" autocomplete="off" [value]="draft.proto === 'any' ? '' : draft.port" [disabled]="draft.proto === 'any'"
-              [placeholder]="draft.proto === 'any' ? 'Any' : 'Type port'" (input)="setDraft('port', $event)" />
+            <input type="text" inputmode="numeric" maxlength="5" autocomplete="off" [value]="draftTakesPort ? draft.port : ''" [disabled]="!draftTakesPort"
+              [placeholder]="draftTakesPort ? 'Type port' : draft.proto === 'any' ? 'Any' : 'N/A'" (input)="setDraft('port', $event)" />
           </label>
         } @else {
           <label class="field">Service

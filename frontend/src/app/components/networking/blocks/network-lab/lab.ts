@@ -185,8 +185,8 @@ export interface LabFlow {
 }
 
 export interface LabRule { from: string; to: string; service: string; action: 'allow' | 'deny' }
-/** The "Add a rule" form before it is added. When rules go by port, `proto` and the typed `port` are used instead of `service`. */
-export interface RuleDraft extends LabRule { proto: 'any' | 'tcp' | 'udp'; port: string }
+/** The "Add a rule" form before it is added. When rules go by port, `proto` and the typed `port` are used instead of `service`. ICMP has no port. */
+export interface RuleDraft extends LabRule { proto: 'any' | 'tcp' | 'udp' | 'icmp'; port: string }
 
 export interface Detect { ipsMode: 'prevent' | 'detect'; signatures: boolean; anomaly: boolean; reputation: boolean; siem: boolean }
 

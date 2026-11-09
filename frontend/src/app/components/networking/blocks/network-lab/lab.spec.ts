@@ -202,6 +202,12 @@ describe('network lab ports', () => {
     }
   });
 
+  it('lets an ICMP rule be written without it matching any TCP or UDP traffic', () => {
+    expect(parsePortRule('icmp')).toBeNull();
+    for (const id of Object.keys(SERVICES)) expect(serviceMatches('icmp', id)).withContext(id).toBeFalse();
+    expect(serviceMatches('icmp', 'scan')).toBeFalse();
+  });
+
   it('names what a wrong port really is when the run blocks it', () => {
     expect(identifyPort('TCP', 23)?.names).toContain('Telnet');
     expect(identifyPort('TCP', 23)?.insecure).toBeTrue();

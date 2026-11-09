@@ -107,6 +107,7 @@ describe('practice exam pool', () => {
     for (const q of pool) {
       if (q.kind === 'firewall') {
         if (q.rows.length !== q.requirements.length) problems.push(`${q.id}: rows and requirements differ`);
+        if (!q.choices['Protocol']?.includes('ICMP')) problems.push(`${q.id}: ICMP missing from the Protocol list`);
         q.rows.forEach((row, r) => {
           for (const c of q.columns) if (!q.choices[c]?.includes(row.answer[c])) problems.push(`${q.id}: rule ${r + 1} ${c}`);
           // Ports are typed, so the answer has to be something a learner can write.
