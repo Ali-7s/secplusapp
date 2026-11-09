@@ -3,8 +3,12 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ProgressService } from '../../services/progress.service';
 import { PORTS, PortEntry } from '../reference/reference-data';
+import { LessonWork } from '../networking/lesson-work.service';
+import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
+import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
+import { MIXED, PortScenario, SCENARIOS, portOutcomes } from './firewall-scenarios';
 import {
-  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, levelOf, masteredIn, pickRound, roseToday, setRound, shortName, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, dayOf, entryOf, levelOf, masteredIn, pickRound, roseToday, setRound, shortName, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -14,17 +18,23 @@ interface Round { set: string; refs: QRef[]; i: number; answers: Answered[]; typ
 
 const SLUG = 'ports-trainer';
 
+type View = 'drills' | 'firewalls';
+/** A firewall scenario's state, as PbqPracticeComponent saves it. */
+interface SavedScenario { answer?: ExamAnswer; checked?: boolean }
+
 /** Ports in small sets by job: learn a set, drill it five ways, and watch each port's mastery grow. */
 @Component({
   selector: 'app-ports-page',
   standalone: true,
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, PbqPracticeComponent],
+  providers: [LessonWork],
   templateUrl: './ports-page.component.html',
   styleUrl: './ports-page.component.scss',
 })
 export class PortsPageComponent {
   private progress = inject(ProgressService);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private work = inject(LessonWork);
   @ViewChild('answerBox') answerBox?: ElementRef<HTMLInputElement>;
   @ViewChild('nextBtn') nextBtn?: ElementRef<HTMLButtonElement>;
 
@@ -39,9 +49,59 @@ export class PortsPageComponent {
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   question: PortQuestion | null = null;
 
+  view: View = this.progress.lessonWork(SLUG, 'view') === 'firewalls' ? 'firewalls' : 'drills';
+  scenario: PortScenario | null = SCENARIOS.find(s => s.id === this.progress.lessonWork(SLUG, 'fw:open')) ?? null;
+  readonly scenarios = SCENARIOS;
+  readonly scenarioSets = [...GROUPS.map(g => ({ id: g.id, title: g.title })), { id: MIXED, title: 'Mixed: whole companies' }]
+    .map(set => ({ ...set, items: SCENARIOS.filter(s => s.set === set.id) }));
+
   constructor() {
+    this.work.slug = SLUG;
     if (this.round && !this.round.refs?.length) this.round = null;
     this.load();
+  }
+
+  // ── Firewall scenarios ──────────────────────────────────────────────────
+
+  setView(view: View) {
+    this.view = view;
+    this.progress.setLessonWork(SLUG, 'view', view);
+  }
+
+  openScenario(s: PortScenario | null) {
+    this.scenario = s;
+    this.progress.setLessonWork(SLUG, 'fw:open', s?.id ?? null);
+    this.toTop();
+  }
+
+  private savedScenario(s: PortScenario) { return this.work.get<SavedScenario>(`pbq:${s.id}`); }
+
+  /** Rules right on the last check, or null if it has not been checked. */
+  rulesRight(s: PortScenario): number | null {
+    const saved = this.savedScenario(s);
+    return saved?.checked ? gradeQuestion(s, saved.answer).parts.filter(p => p.ok).length : null;
+  }
+  isBegun(s: PortScenario) { return isStarted(s, this.savedScenario(s)?.answer); }
+  get checkedCount() { return SCENARIOS.filter(s => this.savedScenario(s)?.checked).length; }
+
+  get nextScenario(): PortScenario | undefined {
+    return this.scenario ? SCENARIOS[SCENARIOS.indexOf(this.scenario) + 1] : undefined;
+  }
+  get firstUnchecked(): PortScenario | undefined { return SCENARIOS.find(s => !this.savedScenario(s)?.checked); }
+
+  /**
+   * A checked scenario counts toward the ports' levels the first time each day. A second try that day comes after
+   * reading the answers, so it shows nothing about memory and must neither raise a level nor drop one.
+   */
+  onScenarioChecked(s: PortScenario) {
+    const today = dayOf(Date.now());
+    const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
+    if (scored[s.id] === today) return;
+    for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
+      this.mastery = updateMastery(this.mastery, port, right, Date.now());
+    }
+    this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
+    this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: today });
   }
 
   // ── Overview ────────────────────────────────────────────────────────────
