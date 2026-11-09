@@ -9,7 +9,7 @@ import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
 import { MIXED, PortScenario, SCENARIOS, portOutcomes } from './firewall-scenarios';
 import { GeneratedRef, buildTable, newTable } from './firewall-generator';
 import {
-  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, dayOf, entryOf, levelOf, masteredIn, pickRound, roseToday, setRound, shortName, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, levelOf, masteredIn, pickRound, roseRecently, setRound, shortName, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -121,7 +121,7 @@ export class PortsPageComponent {
    * nothing about memory and must neither raise a level nor drop one.
    */
   onScenarioChecked(s: PortScenario) {
-    const mark = s.seed === undefined ? dayOf(Date.now()) : String(s.seed);
+    const mark = s.seed === undefined ? 'done' : String(s.seed);
     const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
     if (s.seed === undefined ? scored[s.id] : scored[s.id] === mark) return;
     for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
@@ -259,7 +259,7 @@ export class PortsPageComponent {
     const r = this.round!;
     const first = new Map<string, number>();
     r.refs.forEach((ref, i) => { if (!first.has(ref.port) && r.answers[i]) first.set(ref.port, r.answers[i].before); });
-    return [...first].map(([port, from]) => ({ port, name: shortName(entryOf(port)), from, to: this.level(port), held: roseToday(this.mastery, port, Date.now()) }));
+    return [...first].map(([port, from]) => ({ port, name: shortName(entryOf(port)), from, to: this.level(port), held: roseRecently(this.mastery, port, Date.now()) }));
   }
 
   hookForQuestion(q: PortQuestion) {

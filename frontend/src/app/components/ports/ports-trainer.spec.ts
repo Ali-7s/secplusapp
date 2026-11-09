@@ -72,25 +72,33 @@ describe('Ports trainer', () => {
     }
   });
 
-  it('raises a level at most once a day, and drops two on a miss', () => {
-    const DAY = 86_400_000;
+  it('raises a level at most once an hour, and drops two on a miss', () => {
+    const HOUR = 3_600_000;
     const noon = new Date(2026, 10, 5, 12).getTime();
     let m: Mastery = {};
     m = updateMastery(m, '22', true, noon);
     m = updateMastery(m, '22', true, noon + 60_000);
-    m = updateMastery(m, '22', true, noon + 3_600_000);
-    expect(levelOf(m, '22')).withContext('three right in one day').toBe(1);
+    m = updateMastery(m, '22', true, noon + HOUR - 1);
+    expect(levelOf(m, '22')).withContext('three right within the hour').toBe(1);
     expect(m['22'].right).toBe(3);
-    for (let d = 1; d <= 5; d++) m = updateMastery(m, '22', true, noon + d * DAY);
+    m = updateMastery(m, '22', true, noon + HOUR);
+    expect(levelOf(m, '22')).withContext('an hour after the rise').toBe(2);
+    for (let h = 2; h <= 6; h++) m = updateMastery(m, '22', true, noon + h * HOUR);
     expect(levelOf(m, '22')).withContext('capped').toBe(MAX_LEVEL);
-    m = updateMastery(m, '22', false, noon + 6 * DAY);
+    m = updateMastery(m, '22', false, noon + 7 * HOUR);
     expect(levelOf(m, '22')).toBe(MAX_LEVEL - 2);
-    m = updateMastery(updateMastery(m, '22', false, noon + 6 * DAY), '22', false, noon + 6 * DAY);
+    m = updateMastery(updateMastery(m, '22', false, noon + 7 * HOUR), '22', false, noon + 7 * HOUR);
     expect(levelOf(m, '22')).toBe(0);
     expect(m['22'].wrong).toBe(3);
-    // A miss does not reset the day: a right answer later the same day still rises only if it has not risen today.
-    m = updateMastery(m, '22', true, noon + 6 * DAY);
+    // Misses do not start the hour again: only a rise does.
+    m = updateMastery(m, '22', true, noon + 7 * HOUR);
     expect(levelOf(m, '22')).toBe(1);
+  });
+
+  it('lets a port saved under the old once-a-day rule rise', () => {
+    const noon = new Date(2026, 10, 5, 12).getTime();
+    const saved = { '22': { level: 1, right: 1, wrong: 0, at: noon, day: '2026-11-5' } } as Mastery;
+    expect(levelOf(updateMastery(saved, '22', true, noon + 60_000), '22')).toBe(2);
   });
 
   it('mixes ports from other started sets into a set round, spread out', () => {

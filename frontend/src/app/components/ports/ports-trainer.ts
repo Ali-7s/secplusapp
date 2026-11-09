@@ -250,28 +250,28 @@ export function kindsFor(port: string): QKind[] {
 
 // ── Mastery ───────────────────────────────────────────────────────────────
 
-/** `day` is the local day the level last rose: a level rises at most once a day. */
-export interface PortMastery { level: number; right: number; wrong: number; at: number; day?: string }
+/** `rose` is when the level last went up: a level rises at most once an hour. */
+export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number }
 export type Mastery = Record<string, PortMastery>;
 export const MAX_LEVEL = 4;
 
-/** The local calendar day of a moment, for the once-a-day rule. */
-export const dayOf = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+/** How long after a rise a port's level can rise again. */
+export const RISE_GAP_MS = 3_600_000;
 
-/** Whether this port already moved up today, so another right answer today will not raise it. */
-export const roseToday = (m: Mastery, port: string, now: number) => m[port]?.day === dayOf(now);
+/** Whether this port moved up within the last hour, so another right answer now will not raise it. */
+export const roseRecently = (m: Mastery, port: string, now: number) => now - (m[port]?.rose ?? 0) < RISE_GAP_MS;
 
 /**
- * A right answer raises the level by one, but only once per day: recalling a port minutes after reading it shows
- * it is familiar, not that it is learned, so mastery (level 4) takes right answers on four different days.
+ * A right answer raises the level by one, but only once an hour: recalling a port minutes after reading it shows
+ * it is familiar, not that it is learned, so mastery (level 4) takes right answers in four sittings an hour apart.
  * A wrong answer drops it two levels at any time.
  */
 export function updateMastery(m: Mastery, port: string, right: boolean, now: number): Mastery {
   const cur = m[port] ?? { level: 0, right: 0, wrong: 0, at: 0 };
   let next: PortMastery;
   if (right) {
-    const rise = cur.day !== dayOf(now) && cur.level < MAX_LEVEL;
-    next = { ...cur, level: rise ? cur.level + 1 : cur.level, right: cur.right + 1, at: now, ...(rise ? { day: dayOf(now) } : {}) };
+    const rise = !roseRecently(m, port, now) && cur.level < MAX_LEVEL;
+    next = { ...cur, level: rise ? cur.level + 1 : cur.level, right: cur.right + 1, at: now, ...(rise ? { rose: now } : {}) };
   } else {
     next = { ...cur, level: Math.max(0, cur.level - 2), wrong: cur.wrong + 1, at: now };
   }
@@ -286,7 +286,7 @@ export const masteredIn = (m: Mastery, ports: string[]) => ports.filter(p => lev
 export const ROUND = 10;
 
 /**
- * Picks a round: weaker ports more often (and ports that already rose today less often), never the same port twice
+ * Picks a round: weaker ports more often (and ports that rose in the last hour less often), never the same port twice
  * in a row, and the easy directions first for ports not yet learned (port to name and back), the harder kinds once a
  * port is known.
  */
@@ -296,7 +296,7 @@ export function pickRound(ports: string[], m: Mastery, random: () => number = Ma
   const asked = new Map<string, QKind[]>();
   for (let i = 0; i < size; i++) {
     const pool = ports.filter(p => ports.length === 1 || p !== out[i - 1]?.port);
-    const weights = pool.map(p => (MAX_LEVEL + 1 - levelOf(m, p)) ** 2 / (1 + (asked.get(p)?.length ?? 0)) * (roseToday(m, p, now) ? 0.4 : 1));
+    const weights = pool.map(p => (MAX_LEVEL + 1 - levelOf(m, p)) ** 2 / (1 + (asked.get(p)?.length ?? 0)) * (roseRecently(m, p, now) ? 0.4 : 1));
     let r = random() * weights.reduce((a, b) => a + b, 0);
     let k = 0;
     while (k < pool.length - 1 && (r -= weights[k]) > 0) k++;
