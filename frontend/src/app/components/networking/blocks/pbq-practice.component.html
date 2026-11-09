@@ -67,19 +67,7 @@
         }
       }
       @case ('match') {
-        @let m = asMatch(q);
-        <div class="match" [class.code]="m.codeLabels">
-          @for (p of m.prompts; track $index; let i = $index) {
-            @if (p.group && (i === 0 || m.prompts[i - 1].group !== p.group)) { <h4 class="mgroup">{{ p.group }}</h4> }
-            <label class="mrow">
-              <span class="mlabel">{{ p.label }}</span>
-              <select [value]="pick(i)" [disabled]="checked" (change)="setPick(i, $any($event.target).value)">
-                <option value="" disabled [selected]="!pick(i)">Select</option>
-                @for (o of p.choices ?? m.choices ?? []; track o) { <option [value]="o" [selected]="pick(i) === o">{{ o }}</option> }
-              </select>
-            </label>
-          }
-        </div>
+        <app-match-board [question]="asMatch(q)" [picks]="answer.picks ?? []" [disabled]="checked" (picked)="setPick($event.index, $event.value)" />
       }
       @case ('order') {
         @let o = asOrder(q);

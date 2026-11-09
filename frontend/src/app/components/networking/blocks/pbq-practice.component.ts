@@ -9,6 +9,7 @@ import { PbqQuestion } from '../networking.model';
 import { MdPipe } from './md.pipe';
 import { LessonWork } from '../lesson-work.service';
 import { ExhibitComponent } from '../../practice-exam/exhibit.component';
+import { MatchBoardComponent } from '../../practice-exam/match-board.component';
 
 /** A question's saved answer, and whether it was checked. */
 interface SavedPbq { answer: ExamAnswer; checked: boolean }
@@ -23,7 +24,7 @@ interface SavedBank { ids: string[]; index: number }
 @Component({
   selector: 'app-pbq-practice',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, DragDropModule, MdPipe, ExhibitComponent],
+  imports: [MatButtonModule, MatIconModule, DragDropModule, MdPipe, ExhibitComponent, MatchBoardComponent],
   templateUrl: './pbq-practice.component.html',
   styleUrl: './pbq-practice.component.scss',
 })
@@ -138,7 +139,6 @@ export class PbqPracticeComponent implements OnChanges {
     this.save();
   }
 
-  pick(i: number): string { return this.answer.picks?.[i] ?? ''; }
   setPick(i: number, value: string) { (this.answer.picks ??= [])[i] = value; this.save(); }
 
   orderOf(): number[] { return this.answer.order ?? this.startOrder; }

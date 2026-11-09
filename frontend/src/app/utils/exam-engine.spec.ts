@@ -1,5 +1,5 @@
 import { ChoiceQuestion, ExamQuestion, FirewallQuestion, MatchQuestion, OrderQuestion } from '../models/exam.model';
-import { EXAM_SPECS, PASSING_SCALED, buildExam, examSize, gradeExam, gradeQuestion, isAnswered, normalizePort, scaledScore } from './exam-engine';
+import { EXAM_SPECS, PASSING_SCALED, buildExam, examSize, gradeExam, gradeQuestion, isAnswered, matchSegments, normalizePort, scaledScore } from './exam-engine';
 
 const why = 'because this explanation is long enough';
 
@@ -90,6 +90,27 @@ describe('exam engine', () => {
     for (let seed = 0; seed < 100; seed++) {
       expect(buildExam(p, 'quick', seed).slice(0, EXAM_SPECS.quick.pbqs).some(i => i.id === 'fw-only')).toBeTrue();
     }
+  });
+
+  it('always includes an ordering PBQ in a full exam, and a firewall table too', () => {
+    const p = [...pool(), ...Array.from({ length: 20 }, (_, i) => ({ ...match, id: `m-many-${i}` }))];
+    const byId = new Map(p.map(q => [q.id, q]));
+    for (let seed = 0; seed < 100; seed++) {
+      const kinds = buildExam(p, 'full', seed).slice(0, EXAM_SPECS.full.pbqs).map(i => byId.get(i.id)!.kind);
+      expect(kinds).withContext(`seed ${seed}`).toContain('order');
+      expect(kinds).withContext(`seed ${seed}`).toContain('firewall');
+    }
+  });
+
+  it('shows prompts that share their answers as a board and the rest as dropdowns', () => {
+    const prompt = (label: string, choices?: string[]) => ({ label, answer: 'A', why, ...(choices ? { choices } : {}) });
+    const shared: MatchQuestion = { ...match, choices: ['A', 'B'], prompts: [prompt('1'), prompt('2'), prompt('3')] };
+    expect(matchSegments(shared)).toEqual([{ pool: ['A', 'B'], prompts: [0, 1, 2] }]);
+    const own: MatchQuestion = { ...match, choices: undefined, prompts: [prompt('1', ['A', 'B']), prompt('2', ['A', 'C']), prompt('3', ['A', 'D'])] };
+    expect(matchSegments(own).every(s => s.pool === null)).toBeTrue();
+    const runs: MatchQuestion = { ...match, choices: undefined, prompts: [prompt('1', ['A', 'B']), prompt('2', ['B', 'A']), prompt('3', ['A', 'B']), prompt('4', ['A', 'C']), prompt('5', ['A', 'C'])] };
+    expect(matchSegments(runs).map(s => s.pool?.length ?? 0)).toEqual([2, 0, 0]);
+    expect(matchSegments(runs).map(s => s.prompts)).toEqual([[0, 1, 2], [3], [4]]);
   });
 
   it('never starts an ordering PBQ in the solved order', () => {

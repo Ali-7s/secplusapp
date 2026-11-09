@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { MatchBoardComponent } from './match-board.component';
 import { ContentService } from '../../services/content.service';
 import { ProgressService } from '../../services/progress.service';
 import { isBenchmark, objectiveScores, weakQuestionIds } from '../../utils/progress';
@@ -45,10 +46,13 @@ const STORAGE_KEY = 'sp-exam';
 /** Times each question has appeared in a graded attempt, so new attempts draw unseen questions first. */
 const SEEN_KEY = 'sp-exam-seen';
 
+/** One shared empty list, so a question with no answers yet does not look changed on every check. */
+const NO_PICKS: string[] = [];
+
 @Component({
   selector: 'app-practice-exam',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule, GuessToggleComponent, ExhibitComponent],
+  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatIconModule, DragDropModule, MatchBoardComponent, GuessToggleComponent, ExhibitComponent],
   templateUrl: './practice-exam.component.html',
   styleUrl: './practice-exam.component.scss',
 })
@@ -338,7 +342,7 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
     this.save();
   }
 
-  pick(id: string, i: number): string { return this.answers[id]?.picks?.[i] ?? ''; }
+  picksOf(id: string): string[] { return this.answers[id]?.picks ?? NO_PICKS; }
   setPick(id: string, i: number, value: string) {
     if (this.locked(id)) return;
     const a = this.answerFor(id);

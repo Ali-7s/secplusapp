@@ -48,15 +48,6 @@ select { width: 100%; padding: 8px; border-radius: 6px; font: inherit; font-size
   background: var(--c-accent-light); color: var(--c-text);
   mat-icon { flex-shrink: 0; color: var(--c-accent-solid); } }
 
-.match { display: flex; flex-direction: column; gap: 10px; }
-.mgroup { margin: 10px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--c-accent-solid); }
-.mrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center;
-  padding: 10px 12px; border-radius: var(--r-sm); background: var(--c-surface-2); border: 1px solid var(--c-border);
-  .mlabel { color: var(--c-text); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; } }
-.match.code .mrow { grid-template-columns: 1fr; gap: 8px;
-  .mlabel { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
-    padding: 8px 10px; border-radius: 6px; background: var(--c-surface-3); }
-  select { max-width: 320px; } }
 
 .order { display: flex; flex-direction: column; gap: 6px; }
 .oitem { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm);
@@ -96,7 +87,6 @@ li.picked-wrong .part-head mat-icon { color: var(--c-error); }
 
 @media (max-width: 600px) {
   .pbq { padding: 14px; }
-  .mrow { grid-template-columns: 1fr; gap: 6px; }
   // Give the text room: smaller arrow buttons, and no drag handle (the arrows are easier on a touch screen).
   .oitem { gap: 6px; padding: 6px 4px 6px 8px;
     .grip { display: none; }

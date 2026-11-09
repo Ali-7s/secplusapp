@@ -1,4 +1,4 @@
-import { ChoiceQuestion, ExamDomain, ExamQuestion, isPbq } from '../models/exam.model';
+import { ChoiceQuestion, ExamDomain, ExamQuestion, MatchQuestion, isPbq } from '../models/exam.model';
 import { lessonBySlug } from '../components/networking/lessons/lesson-index';
 
 export interface ExamSpec {
@@ -120,10 +120,13 @@ export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, see
   // Random order, then a stable sort by times seen: unseen first, ties stay random.
   const freshFirst = (list: ExamQuestion[]) => shuffled(list, rand).sort((a, b) => (seen[a.id] ?? 0) - (seen[b.id] ?? 0));
   if (spec.networking) pool = pool.filter(q => lessonBySlug(q.lesson)?.track === 'networking');
-  // Every exam gets at least one firewall rule table, the PBQ type learners most need practice on.
+  // Every exam gets at least one firewall rule table, the PBQ type learners most need practice on. Exams with room
+  // for more also get an ordering task, so drag and drop is always practiced.
   const allPbqs = freshFirst(pool.filter(isPbq));
   const firewall = allPbqs.find(q => q.kind === 'firewall');
-  const picked = firewall ? [firewall, ...allPbqs.filter(q => q !== firewall)] : allPbqs;
+  const ordering = spec.pbqs >= 3 ? allPbqs.find(q => q.kind === 'order') : undefined;
+  const first: ExamQuestion[] = [...(firewall ? [firewall] : []), ...(ordering ? [ordering] : [])];
+  const picked = [...first, ...allPbqs.filter(q => !first.includes(q))];
   const pbqs = shuffled(picked.slice(0, spec.pbqs), rand);
   const choices: ExamQuestion[] = [];
   if (spec.perDomain) {
@@ -145,6 +148,34 @@ export function buildExam(pool: readonly ExamQuestion[], length: ExamLength, see
     }
     return item;
   });
+}
+
+/** Part of a matching question: prompts shown together, over one answer bank or (with no pool) as dropdowns. */
+export interface MatchSegment { pool: string[] | null; prompts: number[] }
+
+/** Fewest prompts in a row sharing their answers that makes a drag-and-drop board worth having. */
+const MIN_BOARD_PROMPTS = 3;
+
+/**
+ * Splits a matching question into drag-and-drop boards and dropdowns. A run of prompts with the same answers is a
+ * board. A prompt with answers of its own stays a dropdown, as a configuration form does on the real exam.
+ */
+export function matchSegments(q: MatchQuestion): MatchSegment[] {
+  const answers = (i: number) => q.prompts[i].choices ?? q.choices ?? [];
+  const key = (i: number) => [...answers(i)].sort().join('\u0000');
+  const out: MatchSegment[] = [];
+  let run: number[] = [];
+  const flush = () => {
+    if (run.length >= MIN_BOARD_PROMPTS) out.push({ pool: answers(run[0]), prompts: run });
+    else for (const i of run) out.push({ pool: null, prompts: [i] });
+    run = [];
+  };
+  q.prompts.forEach((_, i) => {
+    if (run.length && key(run[0]) !== key(i)) flush();
+    run.push(i);
+  });
+  flush();
+  return out;
 }
 
 export function correctIndexes(q: ChoiceQuestion): number[] {

@@ -1,0 +1,41 @@
+@if (hasBoard && !disabled) {
+  <p class="hint"><mat-icon aria-hidden="true">drag_indicator</mat-icon> Drag each answer to where it belongs, or tap an answer and then tap its place. An answer can be used more than once, and some may not be used at all.</p>
+}
+<div class="match" [class.code]="question.codeLabels">
+  @for (seg of segments; track $index; let s = $index) {
+    @if (seg.pool; as pool) {
+      <div class="bank" role="group" aria-label="Answers" [attr.data-seg]="s">
+        @for (o of pool; track o) {
+          <button type="button" class="chip" [class.selected]="isSelected(s, o)" [class.used]="isUsed(seg, o)" [disabled]="disabled" [attr.aria-pressed]="isSelected(s, o)"
+            cdkDrag [cdkDragDisabled]="disabled" [cdkDragStartDelay]="{ touch: 120, mouse: 0 }"
+            (cdkDragStarted)="dragStarted($event, s)" (cdkDragMoved)="dragMoved($event, s)" (cdkDragEnded)="dragEnded($event, s, o)" (click)="tapAnswer(s, o)">{{ o }}</button>
+        }
+      </div>
+    }
+    @for (i of seg.prompts; track i) {
+      @let p = question.prompts[i];
+      @if (showsGroup(i)) { <h3 class="mgroup">{{ p.group }}</h3> }
+      @if (seg.pool; as pool) {
+        <div class="mrow">
+          <span class="mlabel">{{ p.label }}</span>
+          <div class="slot" [attr.data-slot]="i" [attr.data-seg]="s" [class.hot]="hot === i" [class.armed]="selected?.seg === s" [class.filled]="picks[i]">
+            <button type="button" class="slot-btn" [disabled]="disabled" [attr.aria-label]="p.label + ': ' + (picks[i] || 'no answer yet')"
+              cdkDrag [cdkDragDisabled]="disabled || !picks[i]" [cdkDragStartDelay]="{ touch: 120, mouse: 0 }"
+              (cdkDragStarted)="dragStarted($event, s)" (cdkDragMoved)="dragMoved($event, s)" (cdkDragEnded)="dragEnded($event, s, picks[i] ?? '', i)" (click)="tapSlot(s, i)">{{ picks[i] || (selected?.seg === s ? 'Tap to place here' : 'Drop answer here') }}</button>
+            @if (picks[i] && !disabled) {
+              <button type="button" class="clear" [attr.aria-label]="'Remove the answer for ' + p.label" (click)="clear(i)"><mat-icon aria-hidden="true">close</mat-icon></button>
+            }
+          </div>
+        </div>
+      } @else {
+        <label class="mrow">
+          <span class="mlabel">{{ p.label }}</span>
+          <select [value]="picks[i] ?? ''" [disabled]="disabled" (change)="picked.emit({ index: i, value: $any($event.target).value })">
+            <option value="" disabled [selected]="!picks[i]">Select</option>
+            @for (o of p.choices ?? question.choices ?? []; track o) { <option [value]="o" [selected]="picks[i] === o">{{ o }}</option> }
+          </select>
+        </label>
+      }
+    }
+  }
+</div>
