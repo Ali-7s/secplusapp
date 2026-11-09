@@ -7,6 +7,7 @@ import { LessonWork } from '../networking/lesson-work.service';
 import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
 import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
 import { MIXED, PortScenario, SCENARIOS, portOutcomes } from './firewall-scenarios';
+import { GeneratedRef, buildTable, newTable } from './firewall-generator';
 import {
   GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, dayOf, entryOf, levelOf, masteredIn, pickRound, roseToday, setRound, shortName, updateMastery,
 } from './ports-trainer';
@@ -50,8 +51,9 @@ export class PortsPageComponent {
   question: PortQuestion | null = null;
 
   view: View = this.progress.lessonWork(SLUG, 'view') === 'firewalls' ? 'firewalls' : 'drills';
-  scenario: PortScenario | null = SCENARIOS.find(s => s.id === this.progress.lessonWork(SLUG, 'fw:open')) ?? null;
+  scenario: PortScenario | null = this.restoreScenario();
   readonly scenarios = SCENARIOS;
+  readonly MIXED = MIXED;
   readonly scenarioSets = [...GROUPS.map(g => ({ id: g.id, title: g.title })), { id: MIXED, title: 'Mixed: whole companies' }]
     .map(set => ({ ...set, items: SCENARIOS.filter(s => s.set === set.id) }));
 
@@ -76,6 +78,30 @@ export class PortsPageComponent {
 
   private savedScenario(s: PortScenario) { return this.work.get<SavedScenario>(`pbq:${s.id}`); }
 
+  private restoreScenario(): PortScenario | null {
+    const id = this.progress.lessonWork(SLUG, 'fw:open') as string | null | undefined;
+    if (!id) return null;
+    if (!id.startsWith('gen-')) return SCENARIOS.find(s => s.id === id) ?? null;
+    const ref = this.randomRef(id.slice(4));
+    return ref ? buildTable(ref) : null;
+  }
+
+  private randomRef(set: string) { return this.progress.lessonWork(SLUG, `fw:gen:${set}`) as GeneratedRef | undefined; }
+
+  /** A random table was started for this set and has not been checked yet. */
+  randomUnfinished(set: string) { return !!this.randomRef(set) && !this.work.get<SavedScenario>(`pbq:gen-${set}`)?.checked; }
+
+  /** Carries on with this set's unfinished random table, or builds a new one. Only the latest per set is kept. */
+  openRandom(set: string, fresh = false) {
+    let ref = this.randomRef(set);
+    if (!ref || fresh || !this.randomUnfinished(set)) {
+      ref = newTable(set, port => this.level(port), Date.now() % 2 ** 31);
+      this.progress.setLessonWork(SLUG, `fw:gen:${set}`, ref);
+      this.work.clear(`pbq:gen-${set}`);
+    }
+    this.openScenario(buildTable(ref));
+  }
+
   /** Rules right on the last check, or null if it has not been checked. */
   rulesRight(s: PortScenario): number | null {
     const saved = this.savedScenario(s);
@@ -90,18 +116,19 @@ export class PortsPageComponent {
   get firstUnchecked(): PortScenario | undefined { return SCENARIOS.find(s => !this.savedScenario(s)?.checked); }
 
   /**
-   * A checked scenario counts toward the ports' levels the first time each day. A second try that day comes after
-   * reading the answers, so it shows nothing about memory and must neither raise a level nor drop one.
+   * A random table counts toward the ports' levels once, on its first check. So does a written scenario, but only
+   * ever once: after that it may just be remembered. A second try comes after reading the answers, so it shows
+   * nothing about memory and must neither raise a level nor drop one.
    */
   onScenarioChecked(s: PortScenario) {
-    const today = dayOf(Date.now());
+    const mark = s.seed === undefined ? dayOf(Date.now()) : String(s.seed);
     const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
-    if (scored[s.id] === today) return;
+    if (s.seed === undefined ? scored[s.id] : scored[s.id] === mark) return;
     for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
       this.mastery = updateMastery(this.mastery, port, right, Date.now());
     }
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
-    this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: today });
+    this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: mark });
   }
 
   // ── Overview ────────────────────────────────────────────────────────────

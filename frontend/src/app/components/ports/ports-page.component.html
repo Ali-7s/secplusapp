@@ -87,14 +87,16 @@
   @let s = scenario!;
   <div class="fw-bar">
     <button type="button" class="btn ghost" (click)="openScenario(null)"><mat-icon aria-hidden="true">arrow_back</mat-icon> All scenarios</button>
-    <span class="sub">Scenario {{ scenarios.indexOf(s) + 1 }} of {{ scenarios.length }}</span>
+    <span class="sub">@if (s.seed !== undefined) { New every time } @else { Scenario {{ scenarios.indexOf(s) + 1 }} of {{ scenarios.length }} }</span>
   </div>
   <p class="fw-help">Stuck on a port? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</p>
   <app-pbq-practice [title]="s.title" [questions]="[s]" (checkedResult)="onScenarioChecked(s)" />
   <div class="v-acts fw-next">
     <span class="spacer"></span>
-    @if (nextScenario; as n) {
-      <button type="button" class="btn primary" (click)="openScenario(n)">Next scenario <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
+    @if (s.seed !== undefined) {
+      <button type="button" class="btn primary" (click)="openRandom(s.set, true)"><mat-icon aria-hidden="true">shuffle</mat-icon> New table</button>
+    } @else if (nextScenario) {
+      <button type="button" class="btn primary" (click)="openScenario(nextScenario!)">Next scenario <mat-icon aria-hidden="true">arrow_forward</mat-icon></button>
     } @else {
       <button type="button" class="btn primary" (click)="openScenario(null)">Back to the scenarios</button>
     }
@@ -109,24 +111,36 @@
     <section class="intro">
       <h2>How it works</h2>
       <ul>
-        <li>Each scenario is a network and a list of jobs. <strong>Choose the protocol and type the port from memory</strong>: the question never gives you the number.</li>
-        <li>Every port and protocol in this trainer is covered. Each set has its own scenarios, and the mixed ones pull from all of them.</li>
-        <li>The first check of a scenario each day <strong>counts toward your port levels</strong>, just like a drill. A port counts as right only if every rule using it had both the protocol and the port right.</li>
+        <li>Each table is a network and a list of rules to write. <strong>Choose the protocol and type the port from memory</strong>: the question never gives you the number.</li>
+        <li><strong>Random tables are new every time</strong>: different ports, hosts, addresses and wording, with your weakest ports asked most, so there is nothing to memorize. Some rules name the protocol and some only describe the job.</li>
+        <li><strong>Written scenarios</strong> are fixed networks that cover every port and protocol in this trainer.</li>
+        <li>Your first check of a random table <strong>counts toward your port levels</strong>, just like a drill. A written scenario counts only the first time, since after that you may just remember it. A port counts as right only if every rule using it had both the protocol and the port right.</li>
       </ul>
     </section>
 
     <div class="overall">
-      <div class="o-num"><strong>{{ checkedCount }}</strong> of {{ scenarios.length }} scenarios checked · <strong>{{ masteredAll }}</strong> of {{ total }} ports mastered</div>
+      <div class="o-num"><strong>{{ checkedCount }}</strong> of {{ scenarios.length }} written scenarios checked · <strong>{{ masteredAll }}</strong> of {{ total }} ports mastered</div>
       <div class="o-bar" aria-hidden="true"><div [style.width.%]="(checkedCount / scenarios.length) * 100"></div></div>
-      @if (firstUnchecked; as f) {
-        <div class="o-acts"><button type="button" class="btn primary" (click)="openScenario(f)"><mat-icon aria-hidden="true">play_arrow</mat-icon> {{ checkedCount ? 'Next unchecked scenario' : 'Start the first scenario' }}</button></div>
-      }
+      <div class="o-acts">
+        <button type="button" class="btn primary" (click)="openRandom(MIXED)"><mat-icon aria-hidden="true">shuffle</mat-icon> {{ randomUnfinished(MIXED) ? 'Continue random table' : 'Random table: every set' }}</button>
+        @if (firstUnchecked; as f) {
+          <button type="button" class="btn" (click)="openScenario(f)"><mat-icon aria-hidden="true">play_arrow</mat-icon> Next written scenario</button>
+        }
+      </div>
     </div>
 
     @for (set of scenarioSets; track set.id) {
       <section class="fw-set">
         <h2>{{ set.title }}</h2>
         <ul>
+          <li>
+            <button type="button" class="fw-item fw-random" (click)="openRandom(set.id)">
+              <mat-icon aria-hidden="true">shuffle</mat-icon>
+              <span class="fw-title">Random table</span>
+              <span class="fw-state">{{ randomUnfinished(set.id) ? 'In progress' : 'New every time' }}</span>
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </button>
+          </li>
           @for (item of set.items; track item.id) {
             @let right = rulesRight(item);
             <li>

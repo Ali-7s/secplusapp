@@ -14,24 +14,26 @@ export interface PortScenario extends FirewallQuestion {
   /** The trainer set this scenario practices, or MIXED. */
   set: string;
   title: string;
+  /** Set on a generated table: what it was built from. Written scenarios have none. */
+  seed?: number;
 }
 
 export const MIXED = 'mixed';
 
-const TCP = 'TCP';
-const UDP = 'UDP';
-const BOTH = 'TCP and UDP';
-const ICMP = 'ICMP';
-const ESP = 'ESP (IP protocol 50)';
-const AH = 'AH (IP protocol 51)';
-const NO_PORT = 'Not applicable';
+export const TCP = 'TCP';
+export const UDP = 'UDP';
+export const BOTH = 'TCP and UDP';
+export const ICMP = 'ICMP';
+export const ESP = 'ESP (IP protocol 50)';
+export const AH = 'AH (IP protocol 51)';
+export const NO_PORT = 'Not applicable';
 
 const PROTOCOLS = [TCP, UDP, ICMP, BOTH, ESP, AH, 'Any'];
 
 /** A rule, with hosts and zones given by name. `to` or `from` is the host itself on a host-based firewall. */
-interface Rule { need: string; from: string; to: string; proto: string; port: string; action?: 'Deny'; why: string }
+export interface Rule { need: string; from: string; to: string; proto: string; port: string; action?: 'Deny'; why: string }
 
-interface Draft {
+export interface Draft {
   id: string;
   set: string;
   title: string;
@@ -41,21 +43,25 @@ interface Draft {
   outside?: NetHost[];
   /** Set on a host-based firewall: the table is written from this host's point of view. */
   host?: string;
+  /** Draw the internet even when no outside host is named. */
+  internet?: boolean;
+  seed?: number;
   rules: Rule[];
   takeaway: string;
 }
 
 const RULES_TEXT = 'The firewall is stateful, so replies pass automatically. Rules run top to bottom and the first match wins. Its implicit deny at the end is not logged, so write only the rules listed.';
 
-function build(d: Draft): PortScenario {
+export function build(d: Draft): PortScenario {
   const outside = d.outside ?? [];
   const hosts = [...d.zones.flatMap(z => z.hosts), ...outside];
   const addr = (name: string) => name === 'Any' ? 'Any' : hosts.find(h => h.name === name)?.ip ?? d.zones.find(z => z.name === name)?.subnet ?? name;
   const addresses = ['Any', ...new Set([...d.zones.flatMap(z => [z.subnet!, ...z.hosts.map(h => h.ip!)]), ...outside.map(h => h.ip!)])];
   const base = {
     id: d.id, domain: 3 as const, objective: '3.2', kind: 'firewall' as const, set: d.set, title: d.title,
+    ...(d.seed === undefined ? {} : { seed: d.seed }),
     scenario: `${d.story} ${RULES_TEXT}`,
-    diagram: { firewall: d.firewall, ...(outside.length ? { outside: { label: 'Internet', hosts: outside } } : {}), zones: d.zones },
+    diagram: { firewall: d.firewall, ...(outside.length || d.internet ? { outside: { label: 'Internet', hosts: outside } } : {}), zones: d.zones },
     stem: 'Complete the rule table so that it meets every requirement and follows least privilege.',
     requirements: d.rules.map(r => r.need),
     takeaway: d.takeaway,
