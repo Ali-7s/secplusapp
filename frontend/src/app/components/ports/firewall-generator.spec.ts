@@ -3,7 +3,7 @@ import { gradeQuestion, isAnswered } from '../../utils/exam-engine';
 import { ICON_H, ICON_W, narrowLayout, wideLayout } from '../practice-exam/network-diagram';
 import { PORTS } from '../reference/reference-data';
 import { SrsCard } from '../../utils/srs';
-import { FACTS, FLOWS, LOOKALIKES, NEW_PER_TABLE, RuleMemory, TableContext, buildTable, factOf, newTable, setOfFact } from './firewall-generator';
+import { FACTS, FLOWS, HOST_SHARE, LOOKALIKES, NEW_PER_TABLE, RuleMemory, TableContext, buildTable, factOf, fitsHostTable, newTable, setOfFact } from './firewall-generator';
 import { rateTable } from './firewall-memory';
 import { MIXED, portNumbers } from './firewall-scenarios';
 import { GROUPS } from './ports-trainer';
@@ -41,13 +41,26 @@ const factsOf = (set: string, ctx: TableContext, seed: number) => newTable(set, 
 const transports = (proto: string) => (proto === 'TCP and UDP' ? ['TCP', 'UDP'] : [proto]);
 
 describe('firewall table generator', () => {
-  it('has a unique id and both ways of wording every rule', () => {
+  it('has a unique id and at least five wordings for every rule: two that name the protocol, three that describe the job', () => {
     expect(new Set(FLOWS.map(f => f.id)).size).toBe(FLOWS.length);
     for (const f of FLOWS) {
-      expect(f.plain.length).withContext(f.id).toBeGreaterThan(0);
-      expect(f.job.length).withContext(f.id).toBeGreaterThan(0);
+      expect(f.plain.length).withContext(f.id).toBeGreaterThanOrEqual(2);
+      expect(f.job.length).withContext(f.id).toBeGreaterThanOrEqual(3);
+      expect(new Set([...f.plain, ...f.job]).size).withContext(f.id).toBe(f.plain.length + f.job.length);
       expect(f.why.length).withContext(f.id).toBeGreaterThan(20);
+      for (const text of [...f.plain, ...f.job]) {
+        // Both ends are named (a few rules about "any device" name only the server), and nothing else is left to fill in.
+        expect(text.includes('{from}') || text.includes('{to}')).withContext(text).toBeTrue();
+        expect(text.replace(/\{from\}|\{to\}/g, '')).withContext(text).not.toMatch(/[{}]/);
+        expect(text).withContext(text).not.toMatch(/\.$/);
+      }
+      // A block has to read as one, whichever wording is drawn.
+      if (f.action === 'Deny') for (const text of [...f.plain, ...f.job]) expect(text).withContext(text).toMatch(/^(Block|Deny|Stop)|must not|may |must be (kept away|refused)|must stay silent/);
     }
+  });
+
+  it('never words a rule the way the samples the learner asked to have removed did', () => {
+    for (const f of FLOWS) for (const text of [...f.plain, ...f.job]) expect(text).withContext(text).not.toMatch(/IMAP email retrieval|IPsec VPN connections|Block all RDP connections|Windows print protocol/i);
   });
 
   it('can ask about every port number and transport in the trainer', () => {
@@ -83,13 +96,26 @@ describe('firewall table generator', () => {
 
   it('uses both exam-style wording and vague wording, and gets vaguer as the ports are learned', () => {
     const named = (ctx: { level: () => number }) => {
-      const needs = SETS.flatMap(set => SEEDS.flatMap(seed => buildTable(newTable(set, ctx, seed)).requirements));
-      return needs.filter(n => /^(Allow|Block) /.test(n)).length / needs.length;
+      const vague = SETS.flatMap(set => SEEDS.flatMap(seed => newTable(set, ctx, seed).vague!));
+      return vague.filter(v => !v).length / vague.length;
     };
     expect(named(NEW)).toBeGreaterThan(0.5);
     expect(named(NEW)).toBeLessThan(0.7);
     expect(named(KNOWN)).toBeGreaterThan(0.12);
     expect(named(KNOWN)).toBeLessThan(0.3);
+  });
+
+  it('words a rule by naming its protocol or by describing the job, as its ref says', () => {
+    for (const f of FLOWS) {
+      const fill = (t: string) => t.replace(/[+']/g, '.').replace(/\{from\}|\{to\}/g, '(.+)');
+      for (const vague of [true, false]) {
+        const allowed = (vague ? f.job : f.plain).map(t => new RegExp(`^${fill(t)}\\.$`, 'i'));
+        for (const seed of SEEDS.slice(0, 12)) {
+          const text = buildTable({ set: f.set, seed, flows: [f.id], vague: [vague] }).requirements[0];
+          expect(allowed.some(rx => rx.test(text))).withContext(`${f.id}: ${text}`).toBeTrue();
+        }
+      }
+    }
   });
 
   it('still rebuilds a table saved before the wording was stored with it', () => {
@@ -238,6 +264,70 @@ describe('firewall table generator', () => {
     });
   });
 
+  describe('host-based tables', () => {
+    it('makes about one table in three the firewall of a single server', () => {
+      // Sixty seeds are too few to tell 0.3 from 0.4, so this one uses many more.
+      const refs = Array.from({ length: 1500 }, (_, i) => newTable(MIXED, NEW, 1000 + i * 7919));
+      const share = refs.filter(r => r.host).length / refs.length;
+      expect(share).toBeGreaterThan(HOST_SHARE - 0.05);
+      expect(share).toBeLessThan(HOST_SHARE + 0.05);
+    });
+
+    it('writes every rule from the server\'s side: inbound to it or outbound from it', () => {
+      let both = 0, hosts = 0;
+      for (const set of SETS) {
+        for (const seed of SEEDS) {
+          const ref = newTable(set, seed % 2 ? partway(seed) : NEW, seed);
+          if (!ref.host) continue;
+          hosts++;
+          const q = buildTable(ref);
+          const where = `${set} ${seed}`;
+          expect(q.columns).withContext(where).toEqual(['Direction', 'Remote address', 'Protocol', 'Port', 'Action']);
+          const server = q.diagram!.zones[0].hosts[0];
+          expect(q.diagram!.firewall).withContext(where).toBe(`Host firewall on ${server.name}`);
+          expect(q.scenario).withContext(where).toContain(`its ${server.name}`);
+          q.rows.forEach((r, i) => {
+            // The requirement names the server, and the remote end is never the server itself.
+            expect(q.requirements[i]).withContext(where).toContain(server.name);
+            expect(['Inbound', 'Outbound']).withContext(where).toContain(r.answer['Direction']);
+            expect(r.answer['Remote address']).withContext(where).not.toBe(server.ip!);
+          });
+          if (new Set(q.rows.map(r => r.answer['Direction'])).size === 2) both++;
+        }
+      }
+      expect(hosts).toBeGreaterThan(100);
+      expect(both / hosts).toBeGreaterThan(0.6);
+    });
+
+    it('can put every rule on a host firewall, in the direction the traffic really goes', () => {
+      for (const f of FLOWS) {
+        expect(fitsHostTable(f)).withContext(f.id).toBeTrue();
+        const seen = new Set<string>();
+        for (const seed of SEEDS.slice(0, 30)) {
+          const q = buildTable({ set: f.set, seed, flows: [f.id], vague: [seed % 2 === 0], host: true });
+          const server = q.diagram!.zones[0].hosts[0].name;
+          expect(q.rows.length).withContext(f.id).toBe(1);
+          expect(q.requirements[0]).withContext(f.id).not.toMatch(/[{}]|undefined/);
+          expect([q.rows[0].answer['Protocol'], q.rows[0].answer['Port'], q.rows[0].answer['Action']]).withContext(f.id).toEqual([f.proto, f.port, f.action ?? 'Allow']);
+          expect(q.choices['Remote address']).withContext(f.id).toContain(q.rows[0].answer['Remote address']);
+          expect(q.requirements[0]).withContext(f.id).toContain(server);
+          seen.add(q.rows[0].answer['Direction']);
+        }
+        // Traffic that only ever arrives from users' PCs or from outside can only be inbound; a rule to the outside only outbound.
+        const outsideOnly = f.to.every(t => ['internet', 'anydev', 'partner', 'isp', 'resolver', 'ptime'].includes(t));
+        if (outsideOnly) expect([...seen]).withContext(f.id).toEqual(['Outbound']);
+        if (['dns', 'smb', 'kerberos', 'ntp', 'syslog-tls', 'snmp', 'ldaps'].includes(f.id)) expect(seen.size).withContext(f.id).toBe(2);
+        if (['https-in', 'submission', 'imaps', 'tftp', 'sip', 'ike', 'telnet-block'].includes(f.id)) expect([...seen]).withContext(f.id).toEqual(['Inbound']);
+      }
+    });
+
+    it('rebuilds a table saved before host-based tables existed as the network table it was', () => {
+      const { host, ...old } = { ...newTable(MIXED, NEW, 4242), host: true };
+      expect(host).toBeTrue();
+      expect(buildTable(old).columns).toContain('Source');
+    });
+  });
+
   it('builds sound tables for every set', () => {
     const says = (text: string, n: string) => new RegExp(`(?<![\\d./])${n}(?![\\d.])`).test(text);
     for (const set of SETS) {
@@ -256,7 +346,7 @@ describe('firewall table generator', () => {
         // Every answer can be chosen, and the two ends of a rule differ unless they are both Any.
         for (const r of q.rows) {
           for (const c of q.columns) if (c !== 'Port') expect(q.choices[c]).withContext(`${where} ${c}`).toContain(r.answer[c]);
-          if (r.answer['Source'] !== 'Any') expect(r.answer['Source']).withContext(where).not.toBe(r.answer['Destination']);
+          if (q.columns.includes('Source') && r.answer['Source'] !== 'Any') expect(r.answer['Source']).withContext(where).not.toBe(r.answer['Destination']);
         }
 
         // First match wins, so one port can't be both allowed and blocked in a table.
