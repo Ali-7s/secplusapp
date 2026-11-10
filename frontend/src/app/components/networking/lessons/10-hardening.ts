@@ -11,7 +11,7 @@ export const HARDENING: LessonBody = {
     'Explain how baselines and drift checks keep devices hardened over time',
   ],
   blocks: [
-    recap('Every open port is a door an attacker can try, and all those doors together are the **attack surface** (lesson 3). Host-based firewalls have inbound and outbound rules (lesson 9). Plaintext protocols such as Telnet have secure replacements such as SSH (lesson 5). The switch and router checklists in lesson 6 were hardening for those two devices; this lesson turns that into a method for any device.'),
+    recap('Every open port is a door an attacker can try, and all those doors together are the **attack surface**. Host-based firewalls have inbound and outbound rules (lesson 8). Plaintext protocols such as Telnet have secure replacements such as SSH (lesson 4). The switch and router checklists in lesson 5 were hardening for those two devices; this lesson turns that into a method for any device.'),
     words(
       ['Hardening', 'Making a device harder to attack: removing what is not needed and locking down what is'],
       ['Default credentials', 'The username and password a device ships with, which are published online'],
@@ -41,12 +41,12 @@ export const HARDENING: LessonBody = {
       intro: 'It applies to a switch, a router, a firewall, an access point, a server or an IoT camera. Tap each item as you work through it.',
       items: [
         { action: 'Change default credentials, remove unused accounts, and give each person their own strong login', why: 'Default usernames and passwords are published online and attackers scan for them constantly. Personal accounts (with **MFA**, a second proof such as a phone code, for administrators) show who did what and can be removed one at a time.' },
-        { action: 'Remove or switch off whatever you do not use', why: 'Every running service, protocol and open port is attack surface. Turn off Telnet, plain FTP and HTTP, old SNMP, SMBv1, and any feature you do not need (lesson 5).' },
-        { action: 'Manage it only over encrypted connections, from a restricted place', why: 'Use SSH, HTTPS and SNMPv3, and allow admin logins only from an admin network, a jump server (lesson 9) or a short allow list.' },
+        { action: 'Remove or switch off whatever you do not use', why: 'Every running service, protocol and open port is attack surface. Turn off Telnet, plain FTP and HTTP, old SNMP, SMBv1, and any feature you do not need (lesson 4).' },
+        { action: 'Manage it only over encrypted connections, from a restricted place', why: 'Use SSH, HTTPS and SNMPv3, and allow admin logins only from an admin network, a jump server (lesson 8) or a short allow list.' },
         { action: 'Install updates (patches) on a schedule', why: 'Most successful attacks use known flaws that already have fixes. Test updates first, roll them out through change management, and have a faster route for urgent fixes.' },
         { action: 'Apply least privilege', why: 'Give each person only the access their job needs: for example, read-only accounts for people who only need to look, and admin accounts only for those who must make changes. Never share accounts.' },
-        { action: 'Log, send the logs somewhere else, and keep the clock in sync', why: 'Logs kept only on a hacked device can be erased by the attacker. Send them to a central log server or **SIEM**, and use NTP (lesson 8) so timestamps from different devices line up.' },
-        { action: 'Protect the device with network controls too', why: 'Firewall rules and ACLs, segmentation (lesson 7), port security and 802.1X (lesson 6), all blocking by default. A hardened device sitting in a wide open network is still exposed.' },
+        { action: 'Log, send the logs somewhere else, and keep the clock in sync', why: 'Logs kept only on a hacked device can be erased by the attacker. Send them to a central log server or **SIEM**, and use NTP (lesson 7) so timestamps from different devices line up.' },
+        { action: 'Protect the device with network controls too', why: 'Firewall rules and ACLs, segmentation (lesson 6), port security and 802.1X (lesson 5), all blocking by default. A hardened device sitting in a wide open network is still exposed.' },
         { action: 'Secure it physically', why: 'Lock the room or cabinet, protect the console port (the socket for direct admin access), switch off unused ports and use tamper-evident seals. Physical access gets around many software protections.' },
         { action: 'Back up and track the configuration', why: 'Keep encrypted backups of the settings, store them with a history of changes, and compare each device with its approved baseline to catch drift and unauthorized changes.' },
         { action: 'Add login protections', why: 'A warning banner, automatic logout of idle sessions, and limits on failed login attempts make password guessing and unattended sessions harder.' },
@@ -60,12 +60,12 @@ export const HARDENING: LessonBody = {
     table(
       ['Device', 'The most important hardening steps'],
       [
-        ['**Switch**', 'Switch off unused ports, port security, 802.1X, DHCP snooping and Dynamic ARP Inspection, BPDU Guard, no automatic trunks, change the native VLAN, SSH only (lessons 6 and 7)'],
-        ['**Router**', 'Change defaults, turn off unneeded services, disable source routing and directed broadcasts, filter fake addresses in both directions, restrict admin logins, require proof on routing updates, SSH only (lesson 6)'],
-        ['**Firewall**', 'Block by default in both directions, remove "allow anything" rules, review rules regularly, MFA and restricted admin access, updates, logging (lesson 9)'],
-        ['**Wireless access point**', 'WPA3 or WPA2 with AES, Enterprise mode, WPS off, a separate guest network, admin defaults changed, wireless intrusion prevention, updates (lesson 9)'],
-        ['**DNS server**', 'Do not answer lookups for strangers on the internet, allow zone transfers only to your own servers, DNSSEC, limit answer rates, patch, log lookups (lesson 8)'],
-        ['**DHCP server**', 'Approve only your real DHCP servers, DHCP snooping on switches, fixed addresses for important devices, alerts when an unknown DHCP server appears (lesson 8)'],
+        ['**Switch**', 'Switch off unused ports, port security, 802.1X, DHCP snooping and Dynamic ARP Inspection, BPDU Guard, no automatic trunks, change the native VLAN, SSH only (lessons 5 and 6)'],
+        ['**Router**', 'Change defaults, turn off unneeded services, disable source routing and directed broadcasts, filter fake addresses in both directions, restrict admin logins, require proof on routing updates, SSH only (lesson 5)'],
+        ['**Firewall**', 'Block by default in both directions, remove "allow anything" rules, review rules regularly, MFA and restricted admin access, updates, logging (lesson 8)'],
+        ['**Wireless access point**', 'WPA3 or WPA2 with AES, Enterprise mode, WPS off, a separate guest network, admin defaults changed, wireless intrusion prevention, updates (lesson 8)'],
+        ['**DNS server**', 'Do not answer lookups for strangers on the internet, allow zone transfers only to your own servers, DNSSEC, limit answer rates, patch, log lookups (lesson 7)'],
+        ['**DHCP server**', 'Approve only your real DHCP servers, DHCP snooping on switches, fixed addresses for important devices, alerts when an unknown DHCP server appears (lesson 7)'],
         ['**Servers and computers**', 'Patch, remove unneeded software, a host-based firewall, endpoint protection (**EDR**, software that watches the device for attacks), full disk encryption, least privilege, and **application allow listing** (only approved programs may run)'],
         ['**IoT and embedded devices**', 'Change defaults, update firmware, put them in their own VLAN with limited access, turn off features such as UPnP, and monitor them'],
       ],
@@ -94,10 +94,10 @@ export const HARDENING: LessonBody = {
       '**Break-glass account**: one local emergency admin account, kept locked away and used only when the central login server (such as TACACS+ or RADIUS) is down. Without it, a login server outage can lock everyone out of the network gear; with it, normal logins still go through the central server.',
       '**SNMPv3 security levels**: SNMPv3 can run at three levels. **noAuthNoPriv** has no login and no encryption, **authNoPriv** checks a login but sends data in plaintext, and **authPriv** both checks a login and encrypts. Hardened devices use **authPriv**.',
       '**Sticky MAC**: a port security option where a switch port remembers the first MAC address it sees and only allows that one afterwards. Easy to set up, but MAC addresses can be faked, so it is weaker than 802.1X.',
-      '**EAP-TLS**: the 802.1X login method where devices prove who they are with certificates instead of passwords (lesson 9). The strongest choice for "only company laptops may connect".',
+      '**EAP-TLS**: the 802.1X login method where devices prove who they are with certificates instead of passwords (lesson 8). The strongest choice for "only company laptops may connect".',
       '**Captive portal**: the "accept the terms" web page a guest network shows before giving access. It is for guests, not a security control for company devices.',
       '**PoE** (Power over Ethernet): power for phones, cameras and access points delivered through the network cable itself. Turning it off does not secure a port.',
-      '**Web shell**: a malicious script an attacker plants on a hacked web server to run commands through a web page. Strict outbound host firewall rules stop it calling home (lesson 9).',
+      '**Web shell**: a malicious script an attacker plants on a hacked web server to run commands through a web page. Strict outbound host firewall rules stop it calling home (lesson 8).',
     ),
 
     h('Exercise: spot the weaknesses', { objective: '4.1', keep: 'Configuration PBQs ask you to find the weak lines: default passwords, plaintext protocols, needless open ports and missing logging.' }),
@@ -136,7 +136,7 @@ export const HARDENING: LessonBody = {
         { text: ' ip access-group BLOCK-SPOOFED in', fine: 'Applies an allow and block list (ACL) to incoming traffic that drops fake private source addresses (lesson 2). Good practice.' },
         {
           text: ' ip directed-broadcast',
-          issue: { why: 'Lets someone on the internet send a broadcast to the whole network behind the router, which powers Smurf-style flooding attacks (lesson 8).', fix: 'Turn it off (`no ip directed-broadcast`).' },
+          issue: { why: 'Lets someone on the internet send a broadcast to the whole network behind the router, which powers Smurf-style flooding attacks (lesson 7).', fix: 'Turn it off (`no ip directed-broadcast`).' },
         },
         { text: 'interface GigabitEthernet0/3', fine: 'The heading for another connection. Not a weakness by itself.' },
         {

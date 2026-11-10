@@ -42,14 +42,6 @@
         }
       </header>
 
-      @if (view === 'all' || step === 0) {
-        <div class="reading-guide">
-          <mat-icon aria-hidden="true">self_improvement</mat-icon>
-          <p><strong>No need to memorize this lesson.</strong> Read each part once to understand it, and keep only its
-            <strong>Remember this</strong> box. Flashcards and Review mode do the memorizing over the next weeks, a few
-            minutes a day. You can stop after any part and pick up where you left off.</p>
-        </div>
-      }
 
       <div class="view-toggle" role="group" aria-label="How to show the lesson">
         <button type="button" [class.on]="view === 'steps'" [attr.aria-pressed]="view === 'steps'" (click)="setView('steps')">One part at a time</button>

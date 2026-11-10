@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CidrReaderComponent } from '../networking/blocks/cidr-reader.component';
@@ -13,7 +12,7 @@ import { ANSWER_FIELDS, SubnetAnswers, SubnetProblem, makeProblem, sameAnswer } 
 @Component({
   selector: 'app-subnet-cheat-sheet',
   standalone: true,
-  imports: [FormsModule, RouterLink, MatButtonModule, MatIconModule, CidrReaderComponent],
+  imports: [FormsModule, MatButtonModule, MatIconModule, CidrReaderComponent],
   templateUrl: './subnet-cheat-sheet.component.html',
   styleUrl: './subnet-cheat-sheet.component.scss',
 })

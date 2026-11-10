@@ -28,7 +28,7 @@ export const CRYPTO: LessonBody = {
     'Follow how TLS combines key exchange, a session key and a signature',
   ],
   blocks: [
-    recap('**HTTPS** is web traffic protected by **TLS** (Networking lessons 5 and 10). Nothing else is needed: this topic starts from scratch.'),
+    recap('**HTTPS** is web traffic protected by **TLS** (Networking lessons 4 and 9). Nothing else is needed: this topic starts from scratch.'),
     words(
       ['Plaintext', 'Readable data before it is encrypted'],
       ['Ciphertext', 'Scrambled data after encryption. Useless without the key'],

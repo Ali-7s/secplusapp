@@ -28,7 +28,7 @@ export const SIGN_IN: LessonBody = {
     'Identify the protocol from what you see in a scenario or a capture',
   ],
   blocks: [
-    recap('From topic 3: a **digital signature** proves who made something, and is checked with the signer\'s public key. From topic 4: a **certificate** is how you get that public key and trust it. From Networking lesson 9: with **802.1X**, a Wi-Fi access point passes your login to a central server to check.'),
+    recap('From topic 3: a **digital signature** proves who made something, and is checked with the signer\'s public key. From topic 4: a **certificate** is how you get that public key and trust it. From Networking lesson 8: with **802.1X**, a Wi-Fi access point passes your login to a central server to check.'),
     words(
       ['Authentication', 'Proving who you are, for example with a password and a code from your phone'],
       ['Authorization', 'Deciding what you are allowed to do once you are known'],

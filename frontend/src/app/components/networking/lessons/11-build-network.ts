@@ -10,7 +10,7 @@ export const BUILD_NETWORK: LessonBody = {
     'Isolate special networks: industrial control, card payments, medical devices, phones and cameras',
   ],
   blocks: [
-    recap('This lesson puts the whole course together. Subnets, masks and gateways come from lesson 2, switches and port security from lesson 6, VLANs and segmentation from lesson 7, DHCP from lesson 8, and firewalls, the screened subnet, IDS, IPS, WAF, proxies and VPNs from lesson 9.'),
+    recap('This lesson puts the whole course together. Subnets, masks and gateways come from lesson 2, switches and port security from lesson 5, VLANs and segmentation from lesson 6, DHCP from lesson 7, and firewalls, the screened subnet, IDS, IPS, WAF, proxies and VPNs from lesson 8.'),
     words(
       ['Inline', 'Placed in the path, so all traffic passes through the device and it can block'],
       ['Mirror port (SPAN)', 'A switch port that receives a copy of other ports\' traffic, for a monitoring device'],

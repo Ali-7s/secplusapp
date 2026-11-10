@@ -11,7 +11,7 @@ export const HELPERS: LessonBody = {
     'Name the attack that targets each helper and the defense that stops it',
   ],
   blocks: [
-    recap('A device needs an **IP address**, a **subnet mask** and a **default gateway** (lesson 2). Data on the local network is delivered by **MAC address**, and a **broadcast** reaches every device on the local network (lessons 2 and 6). **Private addresses** are never sent across the internet (lesson 2).'),
+    recap('A device needs an **IP address**, a **subnet mask** and a **default gateway** (lesson 2). Data on the local network is delivered by **MAC address**, and a **broadcast** reaches every device on the local network (lessons 2 and 5). **Private addresses** are never sent across the internet (lesson 2).'),
     words(
       ['DHCP', 'The service that hands out IP addresses and settings to devices automatically'],
       ['Lease', 'How long a device may keep the address DHCP gave it before renewing'],
@@ -71,13 +71,13 @@ export const HELPERS: LessonBody = {
       '**After the acknowledge**, a careful device checks that no other machine is already using the address (it sends an ARP question for it, explained below) before it starts using it. If someone answers, it declines the address and asks again.',
       '**Renewing** works differently from joining. Halfway through the lease the device sends its renewal request straight to the server it already knows, as a **unicast**: a message to one specific address, instead of a broadcast to everyone.',
     ),
-    p('**What if the DHCP server is on another network?** Broadcasts never cross a router (lesson 6), so a Discover sent on a user VLAN cannot reach a server on the server network. The fix is a **DHCP relay agent** (on Cisco routers, the "IP helper" setting): the router interface on the user VLAN hears the broadcast and forwards it as a unicast to the DHCP server, adding its own address so the server knows which network the device is on and which pool of addresses (the **scope**) to hand out from. The server\'s replies come back the same way. One DHCP server can then serve every VLAN.'),
+    p('**What if the DHCP server is on another network?** Broadcasts never cross a router (lesson 5), so a Discover sent on a user VLAN cannot reach a server on the server network. The fix is a **DHCP relay agent** (on Cisco routers, the "IP helper" setting): the router interface on the user VLAN hears the broadcast and forwards it as a unicast to the DHCP server, adding its own address so the server knows which network the device is on and which pool of addresses (the **scope**) to hand out from. The server\'s replies come back the same way. One DHCP server can then serve every VLAN.'),
     p('Notice the weakness: the device takes the **first** offer it gets, from anyone. That leads to two attacks:'),
     list(
       '**Rogue DHCP server.** An attacker runs their own DHCP server and answers first. They hand out a gateway or DNS server that points to the attacker\'s own machine, so victims send their traffic through the attacker. That is an **on-path attack** (an attacker secretly sitting in the middle of a conversation).',
       '**DHCP starvation.** The attacker pretends to be thousands of new devices (using fake MAC addresses) and requests every address the server has, so real devices cannot get one. Often this is followed by a rogue server to "help" them.',
     ),
-    secure('Turn on **DHCP snooping** on the switches. You tell the switch which ports lead to the real DHCP server; DHCP offers arriving on any other port are dropped, and the number of requests from one port is limited. Also use **port security** and **802.1X** (lesson 6) so unknown devices never get on the network, and watch for DHCP servers that should not exist.', 'Stopping rogue DHCP'),
+    secure('Turn on **DHCP snooping** on the switches. You tell the switch which ports lead to the real DHCP server; DHCP offers arriving on any other port are dropped, and the number of requests from one port is limited. Also use **port security** and **802.1X** (lesson 5) so unknown devices never get on the network, and watch for DHCP servers that should not exist.', 'Stopping rogue DHCP'),
 
     h('DNS: turning names into addresses', { objective: '2.4', keep: 'DNS turns names into IP addresses (A record for IPv4, AAAA for IPv6, MX for mail). DNS poisoning sends users to fake sites; DNSSEC lets answers be checked.' }),
     p('People remember names; computers need numbers. A **domain name** like `www.example.com` is easy to type, but to connect, your device needs the IP address behind it. **DNS** (Domain Name System) is the internet\'s phone book: you give it a name, and it gives you the address.'),
@@ -134,7 +134,7 @@ export const HELPERS: LessonBody = {
     secure('**DNSSEC** adds digital signatures to DNS records, so a resolver can tell a forged answer from a real one. **DoH and DoT** (DNS over HTTPS on port 443, and DNS over TLS on port 853) encrypt lookups so others cannot see or change them. Also: allow zone transfers only to your own named servers, do not answer lookups for strangers on the internet (no "open recursion"), patch DNS servers, limit how many answers one source can get, block known malicious domains (**DNS filtering**, or a **sinkhole** that sends them nowhere), and log lookups to spot tunneling.', 'Securing DNS'),
 
     h('ARP: finding the MAC address', { objective: '2.4', keep: 'ARP finds the MAC address that goes with an IP address on the local network. ARP poisoning puts the attacker in the middle; Dynamic ARP Inspection stops it.' }),
-    p('Here is a gap from lesson 6: to deliver a frame on the local network, a device needs the destination\'s **MAC address**, but usually it only knows the **IP address**. Even to reach the internet, it needs the MAC address of its default gateway. **ARP** (Address Resolution Protocol) fills the gap by shouting a question to everyone, and the owner answers.'),
+    p('Here is a gap from lesson 5: to deliver a frame on the local network, a device needs the destination\'s **MAC address**, but usually it only knows the **IP address**. Even to reach the internet, it needs the MAC address of its default gateway. **ARP** (Address Resolution Protocol) fills the gap by shouting a question to everyone, and the owner answers.'),
     {
       type: 'sequence',
       title: 'ARP: who has this address?',
@@ -153,7 +153,7 @@ export const HELPERS: LessonBody = {
         },
       ],
     },
-    secure('**Dynamic ARP Inspection (DAI)** makes the switch check every ARP reply against the list of genuine address assignments that DHCP snooping recorded, and drop fakes. Also: fixed (static) ARP entries for critical devices such as the gateway, port security and 802.1X, segmentation (lesson 7), and encryption (HTTPS and VPNs) so that even intercepted traffic is unreadable. IPv6 uses a different protocol, **NDP**, for the same job and has similar attacks; a switch feature called **RA Guard** helps block them.', 'Stopping ARP poisoning'),
+    secure('**Dynamic ARP Inspection (DAI)** makes the switch check every ARP reply against the list of genuine address assignments that DHCP snooping recorded, and drop fakes. Also: fixed (static) ARP entries for critical devices such as the gateway, port security and 802.1X, segmentation (lesson 6), and encryption (HTTPS and VPNs) so that even intercepted traffic is unreadable. IPv6 uses a different protocol, **NDP**, for the same job and has similar attacks; a switch feature called **RA Guard** helps block them.', 'Stopping ARP poisoning'),
 
     h('ICMP: the network\'s messenger', { objective: '2.4', keep: 'ICMP carries the network\'s status messages, and ping and traceroute use it. Attackers abuse it for floods and for sneaking data out.' }),
     p('**ICMP** (Internet Control Message Protocol) carries the network\'s status messages: "that address cannot be reached", "this packet expired on the way", "are you there?" "yes I am". It has no ports. Instead each message has a **type** that says what it is.'),
@@ -180,7 +180,7 @@ export const HELPERS: LessonBody = {
         ['`ipconfig` / `ifconfig` / `ip addr`', 'Your own IP address, mask and gateway'],
         ['`arp -a`', 'Your ARP cache: the IP to MAC pairs your device remembers'],
         ['`netstat` / `ss`', 'Your device\'s current connections and **listening ports**: how you check what is open on a machine'],
-        ['`nmap`', 'A port scan of another device: which ports are open, closed or filtered (lesson 3)'],
+        ['`nmap`', 'A port scan of another device: which ports are open, closed or filtered'],
         ['Wireshark / `tcpdump`', 'Captures packets so you can read their headers and contents'],
       ],
       { caption: 'Windows names come first where the tools differ (ipconfig, tracert), Linux and Mac names second.' },
@@ -224,7 +224,7 @@ export const HELPERS: LessonBody = {
         ['DNS tunneling', 'Logging and watching DNS lookups, and only allowing outgoing DNS to your own resolvers'],
         ['ARP poisoning', 'Dynamic ARP Inspection, 802.1X, segmentation, encryption'],
         ['ICMP floods and Smurf attacks', 'Limiting ICMP, blocking broadcasts to whole networks, filtering fake source addresses'],
-        ['Exposed devices behind NAT', 'A stateful firewall (lesson 9), UPnP turned off, as little port forwarding as possible'],
+        ['Exposed devices behind NAT', 'A stateful firewall (lesson 8), UPnP turned off, as little port forwarding as possible'],
       ],
     ),
     examPbqs('helpers'),

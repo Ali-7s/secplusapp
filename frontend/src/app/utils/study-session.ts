@@ -4,7 +4,7 @@
  * device's screens, not study progress, so they are not synced (card schedules and results are, via progress).
  */
 
-import { FcMode } from '../components/brain-dump/fc-mode-switch.component';
+import { FcMode } from '../components/review/fc-mode-switch.component';
 
 export type DeckKind = 'acr' | 'term';
 
@@ -69,10 +69,3 @@ export function loadQuickAnswers(kind: DeckKind): Map<string, QuickAnswer> {
 export function saveQuickAnswers(kind: DeckKind, answers: ReadonlyMap<string, QuickAnswer>) {
   write(quickKey(kind), Object.fromEntries(answers));
 }
-
-/** A brain dump round in progress: its cards in order, the open card, and what has been typed for it so far. */
-export interface DumpRound { ids: string[]; index: number; draft: string }
-
-const roundKey = (deck: string) => `sp-dump-round-${deck}`;
-export const loadDumpRound = (deck: string) => read<DumpRound>(roundKey(deck));
-export const saveDumpRound = (deck: string, round: DumpRound) => write(roundKey(deck), round);

@@ -116,27 +116,15 @@ describe('mergeProgress', () => {
 });
 
 describe('mergeSynced', () => {
-  const dump = (ratings: Record<string, string>, cards: Record<string, number>, cleared?: number) =>
-    ({ ratings: { acronyms: ratings }, times: { acronyms: cleared ? { cleared, cards } : { cards } } });
-
-  it('keeps the latest brain dump rating of each card, from either device', () => {
-    const a: SyncPayload = { progress: emptyProgress(), braindump: dump({ AH: 'missed', ESP: 'nailed' }, { AH: 100, ESP: 300 }) };
-    const b: SyncPayload = { progress: emptyProgress(), braindump: dump({ AH: 'nailed', IKE: 'partly' }, { AH: 200, IKE: 50 }) };
-    expect(mergeSynced(a, b).braindump.ratings).toEqual({ acronyms: { AH: 'nailed', ESP: 'nailed', IKE: 'partly' } });
+  it('merges the progress of both devices', () => {
+    const a: SyncPayload = { progress: progress(d => { d.cards['acr:AH'] = card(100); }) };
+    const b: SyncPayload = { progress: progress(d => { d.cards['acr:ESP'] = card(200); }) };
+    expect(Object.keys(mergeSynced(a, b).progress.cards).sort()).toEqual(['acr:AH', 'acr:ESP']);
   });
 
-  it('drops ratings made before the deck was cleared or progress was reset', () => {
-    const cleared: SyncPayload = { progress: emptyProgress(), braindump: dump({ IKE: 'nailed' }, { IKE: 500 }, 400) };
-    const old: SyncPayload = { progress: emptyProgress(), braindump: dump({ AH: 'nailed' }, { AH: 300 }) };
-    expect(mergeSynced(old, cleared).braindump.ratings).toEqual({ acronyms: { IKE: 'nailed' } });
-
-    const reset: SyncPayload = { progress: progress(d => { d.resetAt = 1000; }), braindump: { ratings: {}, times: {} } };
-    expect(mergeSynced(cleared, reset).braindump.ratings).toEqual({ acronyms: {} });
-  });
-
-  it('reads the first sync build, which dated all ratings at once', () => {
-    const legacy = parsePayload({ progress: emptyProgress(), braindump: { at: 70, ratings: { acronyms: { AH: 'nailed' } } } });
-    expect(legacy.braindump.times).toEqual({ acronyms: { cards: { AH: 70 } } });
+  it('reads an older cloud copy that also held brain dump ratings, and drops them', () => {
+    const old = parsePayload({ progress: emptyProgress(), braindump: { at: 70, ratings: { acronyms: { AH: 'nailed' } } } });
+    expect(Object.keys(old)).toEqual(['progress']);
   });
 });
 
@@ -170,7 +158,6 @@ describe('sync codes', () => {
 describe('encryption', () => {
   const payload: SyncPayload = {
     progress: progress(d => { d.cards['acr:AH'] = card(100); d.plan.examDate = '2026-12-01'; }),
-    braindump: { ratings: { acronyms: { AH: 'nailed' } }, times: { acronyms: { cards: { AH: 5 } } } },
   };
 
   it('derives the same document id on every device, and a different one for another code', async () => {

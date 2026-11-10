@@ -143,13 +143,6 @@ td.mono { font-family: 'Courier New', monospace; font-size: 13px; }
 }
 
 // ── Reading guide and step-by-step mode ───────────────────
-.reading-guide {
-  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; margin: 12px 0 14px; padding: 14px 16px;
-  border-radius: var(--r-md); background: var(--c-accent-light); border: 1px solid var(--c-accent); color: var(--c-text);
-  > mat-icon { flex: none; color: var(--c-accent-solid); }
-  p { flex: 1; min-width: 220px; margin: 0; font-size: 14.5px; line-height: 1.6; }
-}
-:host-context([data-theme='dark']) .reading-guide > mat-icon { color: var(--c-accent); }
 
 .view-toggle {
   display: flex; width: fit-content; gap: 4px; padding: 3px; margin: 0 0 8px auto; border-radius: 10px; background: var(--c-surface); border: 1px solid var(--c-border);

@@ -285,12 +285,11 @@
 }
 
 // ── Reference deck (Review mode) ───────────────────────────
-.search-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 12px; margin-bottom: 0; }
+.search-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 12px; margin-bottom: 12px; }
 .search-bar .search-field { flex: 1 1 280px; }
 .review-btn { height: 52px; margin-top: 4px; flex-shrink: 0; }
 .due-pill { margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 800;
   background: var(--c-surface); color: var(--c-primary); }
-.deck-note { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--c-text-2); max-width: 760px; }
 
 .ref-review { max-width: 760px; margin: 0 auto; padding-bottom: 32px; }
 .ref-review-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 16px; }

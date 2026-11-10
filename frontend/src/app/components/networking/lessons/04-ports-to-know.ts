@@ -10,7 +10,7 @@ export const PORTS_TO_KNOW: LessonBody = {
     'Use a few memory hooks for the numbers that always show up',
   ],
   blocks: [
-    recap('A **port number** tells a device which program the data is for, and each service **listens** on an agreed port (lesson 3). A **protocol** is an agreed set of rules (lesson 1). **Plaintext** means anyone watching can read it; **encryption** scrambles it so only the receiver can.'),
+    recap('A **port number** tells a device which program the data is for, and each service **listens** on an agreed port. A **protocol** is an agreed set of rules (lesson 1). **Plaintext** means anyone watching can read it; **encryption** scrambles it so only the receiver can.'),
     words(
       ['TLS', 'The standard encryption used to secure other protocols. The S in HTTPS comes from it'],
       ['Secure version', 'The same protocol wrapped in encryption, usually on a different port'],
@@ -18,13 +18,13 @@ export const PORTS_TO_KNOW: LessonBody = {
       ['Directory', 'A central database of users, computers and groups that other systems check logins against'],
       ['STARTTLS', 'A way to start a conversation in plaintext and then switch on encryption before anything sensitive is sent'],
       ['Implicit TLS', 'Encryption from the very first byte, usually on its own dedicated port'],
-      ['VPN', 'An encrypted tunnel across the internet into a private network (lesson 9)'],
+      ['VPN', 'An encrypted tunnel across the internet into a private network (lesson 8)'],
     ),
 
     p('There is no way to work out a port number by reasoning. They are conventions everyone agreed on years ago, and you simply have to learn them. Two tricks make it far easier: learn them **by job** (about ten families instead of forty loose numbers), and always learn the **secure version next to the insecure one**.'),
 
     h('The ports, by job', { objective: '4.5', keep: 'Learn each port together with its job. The ones you will see constantly: 22 SSH, 25 SMTP, 53 DNS, 80 HTTP, 443 HTTPS, 3389 RDP.' }),
-    p('Read the "What it does" column first. A port number is much easier to remember once you know what the protocol is for. All of these use **TCP** unless the table says **UDP** (lesson 3 explains the difference).'),
+    p('Read the "What it does" column first. A port number is much easier to remember once you know what the protocol is for. All of these use **TCP** unless the table says **UDP**.'),
     table(
       ['Job', 'Protocol and port', 'What it does'],
       [
@@ -42,9 +42,9 @@ export const PORTS_TO_KNOW: LessonBody = {
         ['', '**FTPS** `990` (or `21`)', 'The old FTP wrapped in TLS encryption'],
         ['', '**TFTP** `69` UDP', 'A tiny file transfer with no login and no encryption, used to load settings onto network gear'],
         ['', '**SMB** `445`', 'Windows file and printer sharing. The old version, SMBv1, is dangerous'],
-        ['Names and addresses', '**DNS** `53` UDP and TCP', 'Looking up the IP address for a name like `www.example.com` (lesson 8)'],
-        ['', '**DNS over TLS (DoT)** `853`', 'DNS lookups inside TLS encryption, so nobody along the way can read or change them (lesson 8)'],
-        ['', '**DHCP** `67` and `68` UDP', 'Handing out IP addresses automatically. The server uses 67, devices use 68 (lesson 8)'],
+        ['Names and addresses', '**DNS** `53` UDP and TCP', 'Looking up the IP address for a name like `www.example.com` (lesson 7)'],
+        ['', '**DNS over TLS (DoT)** `853`', 'DNS lookups inside TLS encryption, so nobody along the way can read or change them (lesson 7)'],
+        ['', '**DHCP** `67` and `68` UDP', 'Handing out IP addresses automatically. The server uses 67, devices use 68 (lesson 7)'],
         ['Directory and sign-in', '**LDAP** `389`, secure **LDAPS** `636`', 'Looking things up in a **directory** (the central list of users and groups), and checking logins against it'],
         ['', '**Kerberos** `88` TCP and UDP', 'How Windows networks sign you in once and give you "tickets" to use other services'],
         ['', '**RADIUS** `1812` and `1813` UDP', 'A central login server that Wi-Fi, VPNs and switches ask "is this user allowed in?"'],
@@ -52,7 +52,7 @@ export const PORTS_TO_KNOW: LessonBody = {
         ['Management', '**SNMP** `161` and `162` UDP', 'Monitoring network devices (traffic, errors, temperature). Only version 3 is secure'],
         ['', '**Syslog** `514` UDP', 'Sending log messages to a central log server. The encrypted version uses `6514`'],
         ['', '**NTP** `123` UDP', 'Keeping every device\'s clock in sync, which logs and logins depend on'],
-        ['VPN and tunnels', '**IKE** `500` UDP and **NAT-T** `4500` UDP', 'Setting up IPsec VPN tunnels; 4500 lets them work through home routers (lesson 9)'],
+        ['VPN and tunnels', '**IKE** `500` UDP and **NAT-T** `4500` UDP', 'Setting up IPsec VPN tunnels; 4500 lets them work through home routers (lesson 8)'],
         ['', '**L2TP** `1701` UDP and **PPTP** `1723`', 'Older VPN types. L2TP needs IPsec added for encryption. PPTP is broken: do not use it'],
         ['', '**OpenVPN** `1194` and **WireGuard** `51820` UDP', 'Modern VPN software (these are their default ports)'],
         ['Databases', '**MS SQL** `1433`, **Oracle** `1521`, **MySQL** `3306`', 'Programs talking to databases. Only the servers that need them should reach these ports'],
@@ -109,14 +109,14 @@ export const PORTS_TO_KNOW: LessonBody = {
       query: { part: '3', lab: 'ports' },
       icon: 'settings_ethernet',
       label: 'Then use them: write a company\'s firewall rules by port number',
-      note: 'The Ports and protocols scenario in the network lab (lesson 12) names only the program or protocol, such as "SSH" or "the email app reads new mail". You pick the protocol and port from a bare list of numbers, then run the traffic to see what you got right.',
+      note: 'The Ports and protocols scenario in the network lab (lesson 11) names only the program or protocol, such as "SSH" or "the email app reads new mail". You pick the protocol and port from a bare list of numbers, then run the traffic to see what you got right.',
     },
     tip('You do not need all of these on day one. Start with the rising run in the memory hooks, then add the secure pairs.'),
 
     hSecure('How to secure it: protocols and ports', { objective: '4.5', keep: 'Use the encrypted protocol and switch the plaintext one off, and keep management ports (SSH, RDP, SNMP) off the internet.' }),
     list(
       '**Use the encrypted version and switch off the plaintext one.** On every device, turn off Telnet, FTP, plain HTTP admin pages and old SNMP, and use SSH, SFTP, HTTPS and SNMPv3 instead.',
-      '**Keep management ports off the internet.** SSH, RDP, SNMP and database ports should only be reachable from administrators\' networks, through a VPN, or through a **jump server** (one locked-down computer that administrators must go through, lesson 9).',
+      '**Keep management ports off the internet.** SSH, RDP, SNMP and database ports should only be reachable from administrators\' networks, through a VPN, or through a **jump server** (one locked-down computer that administrators must go through, lesson 8).',
       '**Block what you do not use at the firewall, in both directions.** Blocking unexpected outgoing traffic (called **egress filtering**) also catches malware trying to contact its owner on odd ports.',
       '**Hunt for old leftovers.** Common ones: SMBv1, SNMP still using the default community string "public", FTP that allows anonymous logins, and TFTP.',
       '**Watch for surprises.** Alert on connections from the internet to risky ports such as 23, 445 or 3389.',

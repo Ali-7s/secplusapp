@@ -6,7 +6,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CardKind, ProgressService, cardKey } from '../../services/progress.service';
-import { DumpCard, Rating as Coverage, buildRubric, highlight, rate } from '../../utils/brain-dump';
+import { Coverage, buildRubric, highlight, rate } from '../../utils/key-points';
+import { StudyCard } from '../../utils/study-card';
 import { ContentService } from '../../services/content.service';
 import { CardRecord, ProgressData } from '../../utils/progress';
 import { RouterLink } from '@angular/router';
@@ -44,7 +45,7 @@ const PROMPTS = { acr: 'What does it stand for?', term: 'What does it mean? Put 
  *
  * With "type answers" on (the default) you type your answer before the card turns over. An acronym is marked
  * against its expansion and most Reference cards against their own check; a wrong answer can only be rated Again.
- * A Key Terms answer is an explanation, which no word check can mark, so its key points (the brain dump ones) are
+ * A Key Terms answer is an explanation, which no word check can mark, so its key points are
  * shown as a checklist: you tick what your answer covered, and the share ticked limits the ratings (see ALLOWED).
  *
  * Keys: Enter checks a typed answer (Space or Enter shows the answer when typing is off), then 1 to 4 rate it
@@ -60,7 +61,7 @@ const PROMPTS = { acr: 'What does it stand for?', term: 'What does it mean? Put 
 })
 export class ReviewComponent {
   /** The cards on offer, already narrowed by the page's search and category filters. */
-  readonly cards = input.required<DumpCard[]>();
+  readonly cards = input.required<StudyCard[]>();
   readonly kind = input.required<CardKind>();
 
   readonly progress = inject(ProgressService);
@@ -86,12 +87,12 @@ export class ReviewComponent {
       const id = this.card()?.id;
       untracked(() => this.restoreDraft(id));
     });
-    // Key Terms are explanations, marked against their key points (the same ones brain dump mode uses).
+    // Key Terms are explanations, marked against their key points.
     const destroyRef = inject(DestroyRef);
     effect(() => {
       if (this.kind() !== 'term' || this.pointsRequested) return;
       this.pointsRequested = true;
-      untracked(() => this.content.getKeyPoints('terms').pipe(takeUntilDestroyed(destroyRef)).subscribe(p => this.points.set(p)));
+      untracked(() => this.content.getKeyPoints().pipe(takeUntilDestroyed(destroyRef)).subscribe(p => this.points.set(p)));
     });
   }
 
@@ -232,7 +233,7 @@ export class ReviewComponent {
     return Math.max(0, this.progress.newLeftToday(this.kind()));
   });
 
-  /** When each card's twin was last answered, for cards that have one (see DumpCard.sibling). */
+  /** When each card's twin was last answered, for cards that have one (see StudyCard.sibling). */
   private readonly siblingAt = computed(() => {
     const all = this.progress.data().cards;
     const twins = new Map(this.cards().filter(c => c.sibling).map(c => [c.id, c.sibling!]));

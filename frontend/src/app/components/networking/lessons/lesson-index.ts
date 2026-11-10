@@ -20,7 +20,7 @@ const inTrack = (track: TrackId, lessons: Omit<LessonMeta, 'track'>[]): LessonMe
  */
 export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
   {
-    slug: 'start', number: 1, minutes: 24, optionalMinutes: 2, icon: 'flag',
+    slug: 'start', number: 1, minutes: 24, optionalMinutes: 1, icon: 'flag',
     objectives: ['3.2', '2.2'],
     title: 'Start here: what a network is',
     summary: 'For complete beginners: what a network is, what bits and packets are, what addresses, protocols, clients and servers are, and how your home network connects to the internet.',
@@ -36,23 +36,15 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 12,
   },
   {
-    slug: 'ports-tcp-udp', number: 3, minutes: 24, icon: 'settings_ethernet',
-    objectives: ['2.4', '2.2', '2.5'],
-    title: 'Ports, TCP and UDP',
-    summary: 'What a port is, how TCP and UDP differ, the three-way handshake, and why every open port is part of your attack surface.',
-    related: [...acr('TCP', 'UDP'), ...term('Network port', 'Three-way handshake', 'Attack surface', 'Implicit deny'), ...acr('DoS', 'DDoS'), ...term('Hardening', 'Stateful inspection')],
-    focus: 8,
-  },
-  {
-    slug: 'layers', number: 4, minutes: 28, icon: 'layers',
+    slug: 'layers', number: 3, minutes: 28, icon: 'layers',
     objectives: ['3.2'],
     title: 'The layers: everything in one picture',
     summary: 'The seven-layer model in plain English: what each layer does, which devices and attacks live where, and how data gets wrapped on the way down.',
-    related: [...acr('OSI'), ...term('Defense in depth', 'Encapsulation'), ...acr('TCP', 'UDP', 'IP', 'ARP', 'WAF', 'NGFW'), ...term('Firewall', 'Packet filtering', 'Stateful inspection')],
-    focus: 3,
+    related: [...term('Network port', 'Three-way handshake'), ...acr('OSI', 'TCP', 'UDP'), ...term('Defense in depth', 'Encapsulation'), ...acr('IP', 'ARP', 'WAF', 'NGFW'), ...term('Firewall', 'Packet filtering', 'Stateful inspection')],
+    focus: 5,
   },
   {
-    slug: 'ports-to-know', number: 5, minutes: 26, icon: 'format_list_numbered',
+    slug: 'ports-to-know', number: 4, minutes: 26, icon: 'format_list_numbered',
     objectives: ['4.5'],
     title: 'The ports and protocols to know',
     summary: 'Common ports grouped by job, the secure replacement for each insecure protocol, a few memory hooks, and where to practice.',
@@ -60,7 +52,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 14,
   },
   {
-    slug: 'devices', number: 6, minutes: 32, icon: 'router',
+    slug: 'devices', number: 5, minutes: 32, icon: 'router',
     objectives: ['3.2', '4.1'],
     title: 'Hubs, switches and routers',
     summary: 'What each device looks at to decide where traffic goes, how a switch learns, why MAC addresses change at every hop while IP addresses do not, and how to harden switches and routers.',
@@ -68,7 +60,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 15,
   },
   {
-    slug: 'vlans', number: 7, minutes: 22, icon: 'device_hub',
+    slug: 'vlans', number: 6, minutes: 22, icon: 'device_hub',
     objectives: ['3.2', '2.4', '2.5', '4.1'],
     title: 'VLANs and segmentation',
     summary: 'How one switch becomes several separate networks, what trunks and 802.1Q tags are, and how VLAN hopping is stopped.',
@@ -76,7 +68,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 9,
   },
   {
-    slug: 'helpers', number: 8, minutes: 50, icon: 'dns',
+    slug: 'helpers', number: 7, minutes: 50, icon: 'dns',
     objectives: ['3.2', '2.4', '2.5'],
     title: 'The helpers: DHCP, DNS, ARP, ICMP and NAT',
     summary: 'The quiet protocols every connection depends on: how each works step by step, how each is attacked, and how each is defended.',
@@ -84,7 +76,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 15,
   },
   {
-    slug: 'security-devices', number: 9, minutes: 68, icon: 'security',
+    slug: 'security-devices', number: 8, minutes: 68, icon: 'security',
     objectives: ['4.5', '3.2', '2.5', '4.1', '2.4'],
     title: 'Firewalls, zones, VPNs and Wi-Fi',
     summary: 'How firewall rules are read, where firewalls and the screened subnet sit, what proxies and load balancers do, and the basics of VPNs and Wi-Fi security, with hardening for each.',
@@ -92,7 +84,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 20,
   },
   {
-    slug: 'web-request', number: 10, minutes: 20, icon: 'language',
+    slug: 'web-request', number: 9, minutes: 20, icon: 'language',
     objectives: ['3.2', '2.4'],
     title: 'One web request, start to finish',
     summary: 'Follow a single page load from your laptop to a web server and back, with the address and port fields at every hop, then see where each attack and defense fits.',
@@ -101,7 +93,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 0,
   },
   {
-    slug: 'hardening', number: 11, minutes: 37, optionalMinutes: 2, icon: 'shield',
+    slug: 'hardening', number: 10, minutes: 37, optionalMinutes: 2, icon: 'shield',
     objectives: ['2.5', '4.1'],
     title: 'Hardening: how to secure network devices',
     summary: 'What hardening means, a checklist that works for any device, quick lists for each kind of device, and a hands-on exercise: spot the weaknesses in a router configuration.',
@@ -109,7 +101,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 11,
   },
   {
-    slug: 'build-network', number: 12, minutes: 36, icon: 'hub',
+    slug: 'build-network', number: 11, minutes: 36, icon: 'hub',
     objectives: ['3.2', '4.5', '3.1'],
     title: 'Lab: build a network',
     summary: 'Build six networks from their requirements (ports and protocols, a web shop, a clinic, card payments, phones and cameras, and a water plant): place firewalls, IPS and IDS, set VLANs, port security and addresses, write the rules by port number, then run traffic and attacks through it.',
@@ -119,7 +111,7 @@ export const LESSON_META: LessonMeta[] = [...inTrack('networking', [
     focus: 0,
   },
   {
-    slug: 'captures', number: 13, minutes: 38, icon: 'troubleshoot',
+    slug: 'captures', number: 12, minutes: 38, icon: 'troubleshoot',
     objectives: ['4.9', '2.4'],
     title: 'Lab: read a packet capture',
     summary: 'Open five real-looking captures packet by packet: a laptop joining the network, cleartext logins, a port scan, ARP poisoning and a firewall drop. Filter them in both filter languages and explain every address, port and flag.',

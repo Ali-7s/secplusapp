@@ -2,13 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, shareReplay } from 'rxjs';
 import { Acronym, AcronymDetail, Term, TermDetail } from '../models/glossary.model';
-import { DeckId } from '../utils/brain-dump';
 import { ExamQuestion } from '../models/exam.model';
 
 @Injectable({ providedIn: 'root' })
 export class ContentService {
   private http = inject(HttpClient);
-  private keyPoints = new Map<DeckId, Observable<Record<string, string[]>>>();
+  private keyPoints?: Observable<Record<string, string[]>>;
   private examPool?: Observable<ExamQuestion[]>;
 
   getAcronyms(): Observable<Acronym[]> {
@@ -28,20 +27,16 @@ export class ContentService {
   }
 
   /**
-   * The key points a complete explanation of each card covers, by card name. They are only needed in brain dump
-   * mode, so they live in their own file and load on first use. If the file cannot be loaded the cards fall back
-   * to the sentences of their definition.
+   * The key points a complete explanation of each Key Terms card covers, by term. Only Review needs them, so they
+   * live in their own file and load on first use. If the file cannot be loaded the checklist falls back to the
+   * sentences of the definition.
    */
-  getKeyPoints(deck: DeckId): Observable<Record<string, string[]>> {
-    let points = this.keyPoints.get(deck);
-    if (!points) {
-      points = this.http.get<Record<string, string[]>>(`/data/braindump-${deck}.json`).pipe(
-        catchError(() => of({} as Record<string, string[]>)),
-        shareReplay(1),
-      );
-      this.keyPoints.set(deck, points);
-    }
-    return points;
+  getKeyPoints(): Observable<Record<string, string[]>> {
+    this.keyPoints ??= this.http.get<Record<string, string[]>>('/data/key-points-terms.json').pipe(
+      catchError(() => of({} as Record<string, string[]>)),
+      shareReplay(1),
+    );
+    return this.keyPoints;
   }
 
   /** The practice exam question pool, loaded once when the exam page first needs it. */

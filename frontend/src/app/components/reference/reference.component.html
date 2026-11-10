@@ -43,9 +43,6 @@
       @if (refDue) { <span class="due-pill">{{ refDue }} due</span> }
     </button>
   </div>
-  <p class="deck-note">Review mode turns ports (both ways), RAID, backups, recovery metrics, risk formulas, site types,
-    incident response order, legacy replacements, Wi-Fi security, cloud models, data labels, access control models,
-    authentication factors and attack frameworks into {{ allRefCards.length }} spaced repetition cards.</p>
 
   <!-- Section picker: a grouped dropdown, so every section is visible and you always know how many there are -->
   <nav class="section-picker" aria-label="Reference sections">
@@ -81,7 +78,7 @@
     <mat-tab label="Network Ports">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredPorts.length }} ports · memorize port number, protocol, transport layer, and whether it is plaintext or encrypted</p>
+          <p class="tab-hint">{{ filteredPorts.length }} ports</p>
           <a mat-flat-button class="drill-btn" routerLink="/ports"><mat-icon>settings_ethernet</mat-icon> Ports trainer</a>
         </div>
         <div class="table-wrap">
@@ -128,7 +125,7 @@
     <mat-tab label="VPN &amp; Tunneling">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredVpn.length }} protocols · know tunnel vs transport mode and which provide forward secrecy</p>
+          <p class="tab-hint">{{ filteredVpn.length }} protocols</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -164,7 +161,7 @@
     <mat-tab label="Wireless Security">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredWireless.length }} standards · know WPA2 vs WPA3 differences and what WPS vulnerability is</p>
+          <p class="tab-hint">{{ filteredWireless.length }} standards</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -200,7 +197,7 @@
     <mat-tab label="Legacy → Modern">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredReplacements.length }} replacements · the exam frequently asks "which protocol/port REPLACED X?" — this tab answers exactly that</p>
+          <p class="tab-hint">{{ filteredReplacements.length }} replacements</p>
         </div>
 
         @if (filteredReplacements.length === 0) {
@@ -246,7 +243,7 @@
     <mat-tab label="Encryption Ciphers">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredCiphers.length }} ciphers · know symmetric vs asymmetric, key sizes, and whether each is still safe</p>
+          <p class="tab-hint">{{ filteredCiphers.length }} ciphers</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -284,7 +281,7 @@
     <mat-tab label="Hashing &amp; MACs">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredHashes.length }} algorithms · hashes are one-way; MACs add a key for authentication</p>
+          <p class="tab-hint">{{ filteredHashes.length }} algorithms</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -320,7 +317,7 @@
     <mat-tab label="PKI &amp; Certs">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredPkiReference.length }} concepts · know the difference between CRL (a list) and OCSP (a real-time check)</p>
+          <p class="tab-hint">{{ filteredPkiReference.length }} concepts</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -354,7 +351,7 @@
     <mat-tab label="Auth Protocols">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAuth.length }} protocols · know the port, what it encrypts, and where it's used</p>
+          <p class="tab-hint">{{ filteredAuth.length }} protocols</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -390,7 +387,7 @@
     <mat-tab label="MFA Factors">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredMfaFactors.length }} factors · true MFA combines factors from DIFFERENT categories, not two of the same type</p>
+          <p class="tab-hint">{{ filteredMfaFactors.length }} factors</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -424,7 +421,7 @@
     <mat-tab label="Access Models">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAccessModels.length }} models · DAC = owner decides, MAC = labels, RBAC = role, ABAC = attributes</p>
+          <p class="tab-hint">{{ filteredAccessModels.length }} models</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -458,7 +455,7 @@
     <mat-tab label="Threat Actors">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredThreatActors.length }} actor types · know the motivation and sophistication level that distinguishes each one</p>
+          <p class="tab-hint">{{ filteredThreatActors.length }} actor types</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -494,7 +491,7 @@
     <mat-tab label="Attack Frameworks">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredAttackFrameworks.length }} frameworks · ATT&amp;CK catalogs TTPs, the Kill Chain models attack stages, Diamond Model links campaigns</p>
+          <p class="tab-hint">{{ filteredAttackFrameworks.length }} frameworks</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -526,7 +523,7 @@
     <mat-tab label="IR Phases">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredIrPhases.length }} phases · memorize the order — containment comes before eradication, which comes before recovery</p>
+          <p class="tab-hint">{{ filteredIrPhases.length }} phases</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -560,7 +557,7 @@
     <mat-tab label="BCP/DR Metrics">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredBcdrMetrics.length }} metrics · RTO/RPO are frequently confused — RTO is about TIME, RPO is about DATA LOSS</p>
+          <p class="tab-hint">{{ filteredBcdrMetrics.length }} metrics</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -594,7 +591,7 @@
     <mat-tab label="Backup Types">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredBackupTypes.length }} backup concepts · know the restore-speed vs storage-cost tradeoff for each type</p>
+          <p class="tab-hint">{{ filteredBackupTypes.length }} backup concepts</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -628,7 +625,7 @@
     <mat-tab label="RAID Levels">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredRaidLevels.length }} levels · know minimum disks and fault tolerance for 0, 1, 5, 6, and 10</p>
+          <p class="tab-hint">{{ filteredRaidLevels.length }} levels</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -664,7 +661,7 @@
     <mat-tab label="Site Types">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredSiteTypes.length }} site types · recovery speed and cost move in opposite directions — hot is fastest and priciest, cold is slowest and cheapest</p>
+          <p class="tab-hint">{{ filteredSiteTypes.length }} site types</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -698,7 +695,7 @@
     <mat-tab label="Cloud Models">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredCloudModels.length }} models · IaaS/PaaS/SaaS are service models; public/private/hybrid/community are deployment models</p>
+          <p class="tab-hint">{{ filteredCloudModels.length }} models</p>
         </div>
 
         @if (filteredCloudModels.length === 0) {
@@ -739,7 +736,7 @@
     <mat-tab label="Risk Formulas">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredRiskFormulas.length }} formulas · know SLE, ALE, ARO, and EF cold — risk-math questions are common</p>
+          <p class="tab-hint">{{ filteredRiskFormulas.length }} formulas</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">
@@ -773,7 +770,7 @@
     <mat-tab label="Compliance">
       <div class="tab-content">
         <div class="tab-hint-row">
-          <p class="tab-hint">{{ filteredComplianceFrameworks.length }} frameworks · know which industry each one applies to</p>
+          <p class="tab-hint">{{ filteredComplianceFrameworks.length }} frameworks</p>
         </div>
         <div class="table-wrap">
           <table class="ref-table">

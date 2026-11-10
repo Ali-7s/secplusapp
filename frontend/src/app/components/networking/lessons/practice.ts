@@ -9,7 +9,7 @@ import { FirewallQuestion, MatchQuestion, OrderQuestion } from '../../../models/
 const rule = (Source: string, Destination: string, Protocol: string, Port: string, Action: string) =>
   ({ Source, Destination, Protocol, Port, Action });
 
-// ── Lesson 9: firewalls ─────────────────────────────────────────────────
+// ── Lesson 8: firewalls ─────────────────────────────────────────────────
 
 export const FIREWALL_GUIDED: FirewallQuestion = {
   id: 'lesson-fw-office', domain: 3, objective: '3.2', kind: 'firewall',
@@ -197,25 +197,7 @@ export const SUBNET_GUIDED: MatchQuestion = {
   takeaway: 'For each subnet: hosts to prefix, prefix to block size and mask, start right after the previous broadcast, and the broadcast is the start plus the block minus one. The gateway is the network address plus one.',
 };
 
-// ── Lesson 3: ports, TCP and UDP ────────────────────────────────────────
-
-export const PORT_STATES: MatchQuestion = {
-  id: 'lesson-ports-states', domain: 4, objective: '4.3', kind: 'match',
-  stem: 'Classify each port from the scan reply, then pick TCP or UDP for each job.',
-  scenario: 'You scan one of your own servers. An open port answers with SYN-ACK, a closed port answers with RST (reset), and a filtered port does not answer at all.',
-  prompts: [
-    { group: 'What state is each port in?', label: 'Port 443 replied SYN-ACK', answer: 'Open', choices: ['Open', 'Closed', 'Filtered'], why: 'A SYN-ACK is the second step of the handshake, so a program is listening and ready.' },
-    { group: 'What state is each port in?', label: 'Port 25 replied RST', answer: 'Closed', choices: ['Open', 'Closed', 'Filtered'], why: 'A reset means the server is reachable but nothing is listening on that port.' },
-    { group: 'What state is each port in?', label: 'Port 3389 sent no reply at all', answer: 'Filtered', choices: ['Open', 'Closed', 'Filtered'], why: 'Silence usually means a firewall dropped the probe before it reached the server.' },
-    { group: 'TCP or UDP?', label: 'Downloading a software update', answer: 'TCP', choices: ['TCP', 'UDP'], why: 'A single missing piece would corrupt the file, so every piece must arrive and be checked.' },
-    { group: 'TCP or UDP?', label: 'A live video call', answer: 'UDP', choices: ['TCP', 'UDP'], why: 'A late piece of sound is useless, so speed matters more than resending what was lost.' },
-    { group: 'TCP or UDP?', label: 'Loading a web page', answer: 'TCP', choices: ['TCP', 'UDP'], why: 'The whole page has to arrive complete and in order.' },
-    { group: 'TCP or UDP?', label: 'A quick DNS name lookup', answer: 'UDP', choices: ['TCP', 'UDP'], why: 'It is one small question and one small answer, so setting up a connection first would only slow it down.' },
-  ],
-  takeaway: 'SYN-ACK means open, RST means closed, silence means filtered. Use TCP when everything must arrive; use UDP when speed matters more than perfection.',
-};
-
-// ── Lesson 4: layers ────────────────────────────────────────────────────
+// ── Lesson 3: layers ────────────────────────────────────────────────────
 
 export const LAYERS_WRAP: OrderQuestion = {
   id: 'lesson-layers-wrap', domain: 3, objective: '3.2', kind: 'order',
@@ -245,7 +227,7 @@ export const LAYERS_MATCH: MatchQuestion = {
   takeaway: 'Layer 2 is MAC addresses and switches, layer 3 is IP addresses and routers, layer 4 is ports, and layer 7 is the application itself.',
 };
 
-// ── Lesson 5: ports to know ─────────────────────────────────────────────
+// ── Lesson 4: ports to know ─────────────────────────────────────────────
 
 export const PORT_NUMBERS: MatchQuestion = {
   id: 'lesson-ports-numbers', domain: 4, objective: '4.5', kind: 'match',
@@ -279,7 +261,7 @@ export const PORT_PAIRS: MatchQuestion = {
   takeaway: 'Telnet to SSH, HTTP to HTTPS, FTP to SFTP, IMAP to IMAPS, LDAP to LDAPS, old SNMP to SNMPv3.',
 };
 
-// ── Lesson 6: switches and routers ──────────────────────────────────────
+// ── Lesson 5: switches and routers ──────────────────────────────────────
 
 export const DEVICES_MATCH: MatchQuestion = {
   id: 'lesson-devices-match', domain: 3, objective: '3.2', kind: 'match',
@@ -297,7 +279,7 @@ export const DEVICES_MATCH: MatchQuestion = {
   takeaway: 'Hub repeats, switch learns MAC addresses, router forwards by IP address. Port security stops MAC flooding, BPDU Guard stops rogue switches, 802.1X stops unknown devices, and DAI stops ARP poisoning.',
 };
 
-// ── Lesson 7: VLANs ─────────────────────────────────────────────────────
+// ── Lesson 6: VLANs ─────────────────────────────────────────────────────
 
 const PORT_SETTINGS = ['Access, VLAN 10 (staff)', 'Access, VLAN 20 (guests)', 'Trunk (all VLANs)', 'Shut down'];
 
@@ -334,7 +316,7 @@ export const VLAN_CONFIG: MatchQuestion = {
   takeaway: 'Devices get access ports in their VLAN, links between switches get trunks, unused ports are shut down, and the native VLAN moves to an unused number.',
 };
 
-// ── Lesson 8: the helpers ───────────────────────────────────────────────
+// ── Lesson 7: the helpers ───────────────────────────────────────────────
 
 export const HELPERS_SYMPTOMS: MatchQuestion = {
   id: 'lesson-helpers-symptoms', domain: 2, objective: '2.4', kind: 'match',
@@ -363,7 +345,7 @@ export const DNS_ORDER: OrderQuestion = {
   takeaway: 'Laptop to resolver, then root, then top-level domain, then authoritative server, then the answer comes back and is cached until its TTL runs out.',
 };
 
-// ── Lesson 10: one web request ──────────────────────────────────────────
+// ── Lesson 9: one web request ──────────────────────────────────────────
 
 export const WEB_ORDER: OrderQuestion = {
   id: 'lesson-web-order', domain: 3, objective: '3.2', kind: 'order',
@@ -379,7 +361,7 @@ export const WEB_ORDER: OrderQuestion = {
   takeaway: 'Address (DHCP), next hop (ARP), name lookup (DNS), connection (TCP), encryption (TLS), then the page (HTTP).',
 };
 
-// ── Lesson 11: hardening ────────────────────────────────────────────────
+// ── Lesson 10: hardening ────────────────────────────────────────────────
 
 export const HARDEN_ORDER: OrderQuestion = {
   id: 'lesson-harden-order', domain: 4, objective: '4.1', kind: 'order',

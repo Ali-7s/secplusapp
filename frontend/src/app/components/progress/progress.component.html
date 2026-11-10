@@ -3,9 +3,7 @@
     <mat-icon aria-hidden="true">today</mat-icon>
     <div>
       <h1>Today</h1>
-      <p>Your plan for today, then everything the app remembers about your studying.
-        @if (sync.code()) { It syncs between your devices. }
-        @else { It is saved in this browser only until you turn on sync below. }</p>
+      <p>Your plan for today and your study history.</p>
     </div>
   </div>
 
@@ -114,8 +112,6 @@
       <ul class="reasons">
         @for (reason of r.reasons; track reason) { <li>{{ reason }}</li> }
       </ul>
-      <p class="note">An estimate from your own practice: CompTIA does not publish how it scales scores. Untested objectives are listed on
-        the <a routerLink="/objectives">Objectives</a> page.</p>
     } @else {
       <p class="note">Loading your plan…</p>
     }
@@ -137,7 +133,7 @@
     <section class="card">
       <h2><mat-icon aria-hidden="true">assignment</mat-icon> Practice exams</h2>
       @if (!exams().length) {
-        <p class="note">No full exam or quick set yet. Only those two are built like the real exam, with every domain in its real share, so only their scores count toward your best, your average and the chart. Drills are listed below and feed your weak spots.</p>
+        <p class="note">No full exam or quick set yet. Drills are listed below.</p>
       } @else {
       <div class="stats">
         <div class="stat"><span class="v">{{ exams().length }}</span><span class="l">{{ exams().length === 1 ? 'exam' : 'exams' }} graded</span></div>
@@ -158,7 +154,7 @@
             </circle>
           }
         </svg>
-        <figcaption>Scaled score of each full exam and quick set, oldest on the left (last 20 shown). Drills are left out: they cover one part of the exam, so their scores do not predict the real one.</figcaption>
+        <figcaption>Full exams and quick sets, oldest on the left (last 20).</figcaption>
       </figure>
 
       <h3>By domain <span class="sub">(average of your last five full exams or quick sets)</span></h3>
@@ -238,9 +234,6 @@
   <!-- ── Flashcards ────────────────────────────────────────────────────── -->
   <section class="card">
     <h2><mat-icon aria-hidden="true">style</mat-icon> Flashcards</h2>
-    <p class="note">Every way of studying a card (Review mode, flip and cloze ratings, Quick Checks) feeds one spaced repetition
-      schedule. "Learning" cards are still on their short steps, "young" ones are reviewed less
-      than three weeks apart, and "mature" ones three weeks or more. "Due" cards are ready in Review mode.</p>
     <div class="decks">
       @for (d of [{ label: 'Acronyms', link: '/acronyms', s: acronymStats() }, { label: 'Key Terms', link: '/terms', s: termStats() }, { label: 'Reference', link: '/reference', query: { mode: 'review' }, s: refStats() }]; track d.label) {
         <a class="deck" [routerLink]="d.link" [queryParams]="d.query">
@@ -248,9 +241,6 @@
           <div class="bar"><span [style.width.%]="pct(d.s.studied, d.s.total)"></span></div>
           <div class="deck-line"><strong>{{ d.s.studied }}</strong> of {{ d.s.total }} studied · <strong>{{ d.s.due }}</strong> due now</div>
           <div class="deck-line">{{ d.s.learning }} learning · {{ d.s.young }} young · {{ d.s.mature }} mature</div>
-          @if (d.s.dump.nailed + d.s.dump.partly + d.s.dump.missed) {
-            <div class="deck-line">Brain dump: {{ d.s.dump.nailed }} nailed, {{ d.s.dump.partly }} partly, {{ d.s.dump.missed }} missed</div>
-          }
         </a>
       }
       @let ps = portStats();
@@ -291,7 +281,7 @@
   @if (progress.hasProgress()) {
     <section class="card reset">
       <h2><mat-icon aria-hidden="true">restart_alt</mat-icon> Start over</h2>
-      <p class="note">Deletes every exam result, flashcard schedule, lesson tick and brain dump rating
+      <p class="note">Deletes every exam result, flashcard schedule and lesson tick
         {{ sync.code() ? 'on all your synced devices' : 'in this browser' }}. It cannot be undone.</p>
       <div class="actions">
         <button mat-button color="warn" (click)="reset()"><mat-icon>delete_forever</mat-icon> Reset all progress</button>
@@ -317,8 +307,7 @@
           @default { <mat-icon aria-hidden="true">error</mat-icon> {{ sync.error() }} }
         }
       </p>
-      <p class="note">To use another device, open this site there and type your sync code on its Today page. Keep the
-        code somewhere safe, such as your password manager or notes: it is the only way to reach your synced progress.</p>
+      <p class="note">Type this code on another device's Today page to sync it. Keep it safe: it is the only way back to your progress.</p>
       <div class="code-row">
         <span class="code" [class.hidden]="!codeShown()" aria-label="Sync code">{{ codeShown() ? code : '••••-••••-••••' }}</span>
         <button mat-stroked-button (click)="codeShown.set(!codeShown())">
@@ -333,11 +322,8 @@
           <mat-icon>logout</mat-icon> Remove my progress from this device
         </button>
       </div>
-      <p class="note small">On a computer that is not yours, use <strong>Remove my progress from this device</strong> when you are done.</p>
     } @else {
-      <p class="note">Keep your progress safe and the same on your phone, your computer and any other device. Without
-        sync it lives only in this browser, and clearing browsing data erases it. It is encrypted with a sync code
-        before it leaves this device, so only someone with the code can read it.</p>
+      <p class="note">Without sync, progress lives only in this browser. It is encrypted with your sync code before it leaves.</p>
       <form class="code-row" (ngSubmit)="connectSync()">
         <input class="code-input" name="code" [(ngModel)]="syncCodeInput" placeholder="Your sync code"
           autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sync code" />

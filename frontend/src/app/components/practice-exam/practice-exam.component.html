@@ -14,7 +14,6 @@
         <div class="intro-icon"><mat-icon aria-hidden="true">assignment</mat-icon></div>
         <div>
           <h1>Practice Exam</h1>
-          <p>Hard, exam-style questions with PBQs first, the way CompTIA does it. Every answer you give is explained, right or wrong.</p>
         </div>
       </header>
 
@@ -46,13 +45,13 @@
             [disabled]="l === 'weak' && !weakReady">
             <span class="cc-title">{{ spec.label }}</span>
             @if (l === 'weak' && !weakReady) {
-              <span class="cc-sub">Unlocks after a few graded exams: the questions you miss and your weakest objectives land here.</span>
+              <span class="cc-sub">Unlocks after a few graded exams.</span>
             } @else {
               <span class="cc-sub">{{ totalFor(l) }} questions, {{ l === 'weak' || l === 'objective' ? 'up to ' : '' }}{{ spec.pbqs }} PBQ{{ spec.pbqs === 1 ? '' : 's' }}, {{ spec.minutes }} minutes</span>
             }
-            @if (l === 'weak' && weakReady) { <span class="cc-sub">Questions you last got wrong, then more from your weakest objectives ({{ weakObjectiveList }}).</span> }
-            @if (l === 'objective') { <span class="cc-sub">Objective {{ focusObjective }}: {{ objectiveName }}. Chosen on the Objectives page.</span> }
-            @if (l === 'network') { <span class="cc-sub">Only the networking groundwork: subnets, ports, DHCP, DNS, ARP, VLANs, firewalls. Each question links to its lesson.</span> }
+            @if (l === 'weak' && weakReady) { <span class="cc-sub">Last missed, then {{ weakObjectiveList }}.</span> }
+            @if (l === 'objective') { <span class="cc-sub">Objective {{ focusObjective }}: {{ objectiveName }}</span> }
+            @if (l === 'network') { <span class="cc-sub">Networking groundwork only.</span> }
           </button>
         }
       </div>
@@ -61,28 +60,21 @@
       <div class="choice-grid" role="radiogroup" aria-label="Exam mode">
         <button class="choice-card" role="radio" [attr.aria-checked]="mode === 'exam'" [class.on]="mode === 'exam'" (click)="mode = 'exam'">
           <span class="cc-title"><mat-icon aria-hidden="true">timer</mat-icon> Exam mode</span>
-          <span class="cc-sub">Timed. No feedback until you submit, then a full review of every question.</span>
+          <span class="cc-sub">Timed, reviewed at the end.</span>
         </button>
         <button class="choice-card" role="radio" [attr.aria-checked]="mode === 'study'" [class.on]="mode === 'study'" (click)="mode = 'study'">
           <span class="cc-title"><mat-icon aria-hidden="true">school</mat-icon> Study mode</span>
-          <span class="cc-sub">Untimed. Check each answer as you go and read why each option is right or wrong.</span>
+          <span class="cc-sub">Untimed, checked as you go.</span>
         </button>
       </div>
 
-      <ul class="tips">
-        <li>Read the last sentence first: BEST, FIRST and MOST likely decide between two answers that are both true.</li>
-        <li>PBQs give partial credit; multiple choice and select-all questions are all or nothing.</li>
-        <li>Skip a PBQ that is eating your time, flag it, and come back after the multiple choice.</li>
-        <li>The score is an estimate on CompTIA's 100 to 900 scale (750 passes). Their real scaling is not public.</li>
-      </ul>
 
       <button mat-flat-button color="primary" class="start-btn" (click)="start()">
         <mat-icon aria-hidden="true">play_arrow</mat-icon> Start {{ specs[length].label.toLowerCase() }}
       </button>
       <p class="pool-note">
-        Drawn at random from {{ pbqCount }} PBQs and {{ choiceCount }} multiple choice questions, with answer order reshuffled every time.
-        Questions you have not seen yet come first: you have seen {{ seenCount }} of {{ pool.length }} so far.
-        @if (seenCount) { <button class="link-btn" (click)="resetSeen()">Start the rotation over</button> }
+        Seen {{ seenCount }} of {{ pool.length }}; unseen questions come first.
+        @if (seenCount) { <button class="link-btn" (click)="resetSeen()">Reset</button> }
       </p>
     </section>
   }
@@ -153,7 +145,7 @@
             <ol class="reqs">
               @for (r of f.requirements; track $index) { <li>{{ r }}</li> }
             </ol>
-            <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are processed top to bottom and the first match wins. Rule N implements requirement N. In the Port column, type the number: a dash for a range, Any for every port, or N/A if the protocol has no ports.</p>
+            <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rule N carries out requirement N. Port: a number, a range with a dash, Any, or N/A.</p>
             <div class="fw-wrap">
               <table class="fw">
                 <thead><tr><th>#</th>@for (c of f.columns; track c) { <th>{{ c }}</th> }</tr></thead>
@@ -187,7 +179,7 @@
           }
           @case ('order') {
             @let o = asOrder(q);
-            <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Drag the items, or use the arrows, into the correct order. First at the top.</p>
+            <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Drag or use the arrows. First at the top.</p>
             <div class="order" cdkDropList [cdkDropListDisabled]="locked(q.id)" (cdkDropListDropped)="dropOrder(o, $event)">
               @for (idx of orderOf(o); track idx; let pos = $index) {
                 <div class="oitem" cdkDrag>

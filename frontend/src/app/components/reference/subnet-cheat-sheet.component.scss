@@ -1,7 +1,5 @@
 :host { display: block; }
 .sheet { display: flex; flex-direction: column; gap: 16px; padding: 16px 0 8px; max-width: 900px; }
-.lead { margin: 0; font-size: 15px; line-height: 1.6; color: var(--c-text);
-  a { color: var(--c-accent-solid); font-weight: 600; } }
 
 .card {
   padding: 16px 18px; border-radius: var(--r-lg); background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text);

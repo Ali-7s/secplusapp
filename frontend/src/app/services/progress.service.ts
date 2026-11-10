@@ -47,7 +47,7 @@ export class ProgressService {
   }
 
   /**
-   * A flashcard rated in flip or cloze mode (got it is Good, still learning is Again), or a Quick Check answered
+   * A flashcard rated in flip mode (got it is Good, still learning is Again), or a Quick Check answered
    * right or wrong. These happen outside Review mode's queue, so remembering a card early never pushes it out.
    */
   recordCard(kind: CardKind, name: string, known: boolean) {

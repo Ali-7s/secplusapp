@@ -10,7 +10,7 @@ import { MIXED, PortScenario, SCENARIOS, portOutcomes, trainerEntry } from './fi
 import { GeneratedRef, RuleHistory, buildTable, newTable, recordTable } from './firewall-generator';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, ROUND, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -334,5 +334,4 @@ export class PortsPageComponent {
     setTimeout(() => this.answerBox?.nativeElement.focus());
   }
 
-  readonly ROUND = ROUND;
 }

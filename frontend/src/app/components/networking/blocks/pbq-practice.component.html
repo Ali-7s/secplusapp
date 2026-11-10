@@ -34,7 +34,7 @@
         <ol class="reqs">
           @for (r of f.requirements; track $index) { <li>{{ r }}</li> }
         </ol>
-        <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rules are read top to bottom and the first match wins. Rule N carries out requirement N. In the Port column, type the number: a dash for a range, Any for every port, or N/A if the protocol has no ports.@if (givenRows) { Rule 1 is filled in for you as an example. }</p>
+        <p class="hint"><mat-icon aria-hidden="true">shield</mat-icon> Rule N carries out requirement N. Port: a number, a range with a dash, Any, or N/A.@if (givenRows) { Rule 1 is an example. }</p>
         <div class="fw-wrap">
           <table class="fw">
             <thead><tr><th>#</th>@for (c of f.columns; track c) { <th>{{ c }}</th> }</tr></thead>
@@ -71,7 +71,7 @@
       }
       @case ('order') {
         @let o = asOrder(q);
-        <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Use the arrows (or drag the items on a computer) to put them in the right order. First at the top.</p>
+        <p class="hint"><mat-icon aria-hidden="true">swap_vert</mat-icon> Drag or use the arrows. First at the top.</p>
         <div class="order" cdkDropList [cdkDropListDisabled]="checked" (cdkDropListDropped)="drop($event)">
           @for (idx of orderOf(); track idx; let pos = $index) {
             <div class="oitem" cdkDrag>

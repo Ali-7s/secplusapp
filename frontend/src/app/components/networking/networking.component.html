@@ -19,25 +19,6 @@
     <div class="count-badge">{{ doneCount(networking) }} of {{ networking.length }} done · about {{ minutes(networking) }} min</div>
   </div>
 
-  <section class="intro">
-    <h2>Why start here</h2>
-    <p>
-      Security+ assumes you already know how networks work (CompTIA recommends the Network+ course first), and many exam
-      questions only make sense once the basics click. This path starts from nothing at all: what a network is and what
-      travels across it. It then builds up, one idea at a time, to the parts of networking the exam leans on.
-    </p>
-    <ul>
-      <li><strong>You do not have to memorize the lessons.</strong> Read to understand, one short part at a time, and keep only
-        each part's <strong>Remember this</strong> box. Flashcards and Review mode do the memorizing, a few minutes a day.</li>
-      <li><strong>Stop after any part.</strong> A lesson reopens where you left off, so a long one can take several short sittings.
-        The times shown are honest estimates for someone new to this, not a pace to keep up with.</li>
-      <li><strong>Start with lesson 1 and do them in order</strong> the first time. Each lesson builds on the ones before it.</li>
-      <li><strong>No word is used before it is explained.</strong> Each lesson lists its new words in plain English, folded away to look up when one trips you up.</li>
-      <li><strong>Each lesson ends with a short check</strong> so you know whether it landed.</li>
-      <li><strong>Every device and protocol lesson ends with how to secure it.</strong> Locking things down like this is called hardening.</li>
-      <li><strong>Come back to a lesson</strong> whenever a flashcard does not make sense. Cards link to their lesson, and the cards at the end of each lesson show their definition when you hover over them.</li>
-    </ul>
-  </section>
 
   <ng-template #grid let-list>
   <ol class="lesson-grid">
@@ -72,19 +53,6 @@
     <h2><mat-icon aria-hidden="true">{{ tracks.topics.icon }}</mat-icon> {{ tracks.topics.title }}</h2>
     <div class="count-badge">{{ doneCount(topics) }} of {{ topics.length }} done · about {{ minutes(topics) }} min</div>
   </div>
-  <section class="intro">
-    <p>
-      Your courses and books already teach every objective. These topics are the ones that are hard to picture from a
-      video or a page of text, so you learn them by doing: hash some text and watch it change, choose which key locks
-      and unlocks a message, decide whether a browser should trust a certificate, follow a sign-in step by step, and
-      work through an incident one decision at a time.
-    </p>
-    <ul>
-      <li><strong>Do them in any order</strong>, whenever a topic is up in your course. Each says what it builds on.</li>
-      <li><strong>Each card shows its link to the CIA triad:</strong> the lit letters are the goals that topic protects, confidentiality, integrity or availability. Topic 1 explains the triad.</li>
-      <li><strong>Same format as the networking lessons:</strong> short parts, a <strong>Remember this</strong> box in each, and a check at the end.</li>
-    </ul>
-  </section>
   <ng-container [ngTemplateOutlet]="grid" [ngTemplateOutletContext]="{ $implicit: topics }" />
 
   <section class="after">
@@ -100,7 +68,7 @@
       </a>
       <a class="after-card" routerLink="/acronyms">
         <mat-icon aria-hidden="true">abc</mat-icon>
-        <span><strong>Acronym flashcards</strong><small>Use cloze mode to type the acronym from its description.</small></span>
+        <span><strong>Acronym flashcards</strong><small>Every SY0-701 acronym, in Flip or Review.</small></span>
       </a>
       <a class="after-card" routerLink="/terms">
         <mat-icon aria-hidden="true">menu_book</mat-icon>

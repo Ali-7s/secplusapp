@@ -1,6 +1,5 @@
 import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { ProgressService } from './progress.service';
-import { BrainDumpStore } from './brain-dump-store.service';
 import { SYNC_CONFIG } from '../sync-config';
 import {
   Sealed, SyncKeys, SyncPayload, deriveSyncKeys, formatSyncCode, mergeSynced, newSyncCode, normalizeSyncCode, seal,
@@ -32,7 +31,6 @@ class SyncError extends Error {}
 @Injectable({ providedIn: 'root' })
 export class SyncService {
   private progress = inject(ProgressService);
-  private dumpStore = inject(BrainDumpStore);
 
   readonly state = signal<SyncState>('off');
   readonly lastSynced = signal<number | null>(null);
@@ -50,7 +48,6 @@ export class SyncService {
     // Any change on this device schedules a send.
     effect(() => {
       this.progress.changes();
-      this.dumpStore.changes();
       untracked(() => this.scheduleSend());
     });
     const saved = this.readCode();
@@ -192,12 +189,11 @@ export class SyncService {
   }
 
   private localPayload(): SyncPayload {
-    return { progress: this.progress.data(), braindump: this.dumpStore.forSync() };
+    return { progress: this.progress.data() };
   }
 
   private applyLocal(payload: SyncPayload) {
     this.progress.replaceFromSync(payload.progress);
-    this.dumpStore.replaceFromSync(payload.braindump);
   }
 
   // ── Firestore (REST, so the app needs no Firebase library) ─────────────

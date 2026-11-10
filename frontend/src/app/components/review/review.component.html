@@ -35,19 +35,6 @@
         <input type="checkbox" [checked]="typing()" (change)="setTypeAnswers($event)" />
         Type each answer before it is shown
       </label>
-      <p>
-        Applies to each deck. New cards start on short learning steps (1 and 10 minutes). After that, the scheduler
-        keeps a model of how well you know each card: how long the memory lasts and how hard the card is for you.
-        It brings a card back when the chance you still remember it falls to your target recall. A higher target
-        means shorter gaps and more reviews: 95% asks for about two and a half times as many as 90%. Again sends
-        a card back to relearning.
-      </p>
-      @if (kind() === 'ref') {
-        <p>
-          A port's two cards ("which protocol?" and "which port?") never come up on the same day: once you have
-          answered one, the other waits until tomorrow.
-        </p>
-      }
     </div>
   }
 
@@ -79,8 +66,7 @@
             <p class="leech">
               <mat-icon aria-hidden="true">priority_high</mat-icon>
               <span>
-                You have forgotten this one {{ record()!.lapses }} times. Seeing it again the same way is not
-                working: give it a hook (a picture, a story, a pair it contrasts with) before you rate it.
+                Forgotten {{ record()!.lapses }} times. Give it a hook before you rate it.
                 @if (isPortCard()) { The <a routerLink="/ports">Ports trainer</a> has a hook for every port. }
               </span>
             </p>

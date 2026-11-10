@@ -15,14 +15,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Acronym, AcronymDetail, variantsSearchText } from '../../models/glossary.model';
-import { ClozeSpan, answerSpans, isAcronymClozeCorrect, maskAnswer, otherCardNamed } from '../../utils/cloze';
-import { DumpCard, acronymToDumpCard } from '../../utils/brain-dump';
+import { StudyCard, acronymToCard } from '../../utils/study-card';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonHint, lessonsForCard } from '../networking/lessons/lesson-index';
-import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
-import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
+import { FcMode, FcModeSwitchComponent } from '../review/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { isDue, smartOrder } from '../../utils/progress';
@@ -35,7 +33,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
   templateUrl: './acronyms.component.html',
   styleUrl: './acronyms.component.scss'
 })
@@ -77,19 +75,10 @@ export class AcronymsComponent implements OnInit, DoCheck {
   fcFlipped = false;
   fcDone = new Set<number>();
 
-  // Flip, cloze and brain dump are three ways through the same filtered cards.
+  // Flip and Review are two ways through the same filtered cards.
   fcMode: FcMode = 'flip';
-  /** The filtered cards in the shape brain dump mode works with. */
-  dumpCards: DumpCard[] = [];
-
-  // Cloze mode
-  fcClozeInput = '';
-  fcClozeChecked = false;
-  fcClozeCorrect = false;
-  /** Another card that a wrong answer named, to explain the near miss. */
-  fcClozeNearMiss?: Acronym;
-  private clozeMasks = new Map<string, string>();
-  private clozeReveals = new Map<string, ClozeSpan[]>();
+  /** The filtered cards in the shape Review works with. */
+  studyCards: StudyCard[] = [];
 
   ngOnInit() {
     for (const [name, answer] of this.savedQuick) {
@@ -135,7 +124,7 @@ export class AcronymsComponent implements OnInit, DoCheck {
       this.expandedAcronym = null;
     }
     this.buildDeck();
-    this.dumpCards = this.filteredAcronyms.map(acronymToDumpCard);
+    this.studyCards = this.filteredAcronyms.map(acronymToCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
   }
@@ -146,82 +135,28 @@ export class AcronymsComponent implements OnInit, DoCheck {
     this.fcReset();
   }
 
-  private fcClozeReset() {
-    this.fcClozeInput = '';
-    this.fcClozeChecked = false;
-    this.fcClozeCorrect = false;
-    this.fcClozeNearMiss = undefined;
-  }
-
-  get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
-
   setFcMode(mode: FcMode) {
     // Review answers reschedule cards, so smart order starts over with the new due dates.
     const fromReview = this.fcMode === 'review' && mode !== 'review';
     this.fcMode = mode;
     if (fromReview) this.fcReset();
     this.fcFlipped = false;
-    this.fcClozeReset();
   }
 
-  /**
-   * The description shown on a cloze card. Descriptions usually repeat the acronym ("CCMP is the encryption
-   * protocol..."), so the acronym and its expansion are blanked out until the answer has been checked.
-   */
-  clozeText(a: Acronym): string {
-    let masked = this.clozeMasks.get(a.acronym);
-    if (masked === undefined) {
-      masked = maskAnswer(a.definition, [a.acronym, a.expansion]);
-      this.clozeMasks.set(a.acronym, masked);
-    }
-    return masked;
-  }
-
-  /** The full description once checked, with the blanked words marked so it is clear where they were. */
-  clozeReveal(a: Acronym): ClozeSpan[] {
-    let spans = this.clozeReveals.get(a.acronym);
-    if (!spans) {
-      spans = answerSpans(a.definition, [a.acronym, a.expansion]);
-      this.clozeReveals.set(a.acronym, spans);
-    }
-    return spans;
-  }
-
-  /** True when the near-miss card is named in this card's description, which is usually why it was typed. */
-  nearMissMentioned(a: Acronym, other: Acronym): boolean {
-    return answerSpans(a.definition, [other.acronym, other.expansion]).some(span => span.answer);
-  }
-
-  checkAcronymCloze() {
-    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
-    this.fcClozeChecked = true;
-    const card = this.deck[this.fcIndex];
-    this.fcClozeCorrect = isAcronymClozeCorrect(this.fcClozeInput, card, this.allAcronyms);
-    this.fcClozeNearMiss = this.fcClozeCorrect ? undefined : otherCardNamed(this.fcClozeInput, card, this.allAcronyms, a => a.acronym);
-  }
-
-  fcClozeNext(known: boolean) {
-    this.rememberCard(known);
-    if (known) this.fcDone.add(this.fcIndex);
-    this.fcClozeReset();
-    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
-  }
-
-  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; this.fcClozeReset(); }
+  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; }
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
     this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
-    this.fcClozeReset();
     if (this.fcIndex < this.deck.length - 1) {
       this.fcIndex++;
     }
   }
 
   fcPrev() {
-    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; this.fcClozeReset(); }
+    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; }
   }
 
   fcReset() {
@@ -229,13 +164,11 @@ export class AcronymsComponent implements OnInit, DoCheck {
     this.fcIndex = 0;
     this.fcFlipped = false;
     this.fcDone.clear();
-    this.fcClozeReset();
   }
 
   /** Moves on without rating the card (the Next button). */
   fcSkip() {
     this.fcFlipped = false;
-    this.fcClozeReset();
     if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 
@@ -360,7 +293,8 @@ export class AcronymsComponent implements OnInit, DoCheck {
     this.fcOrder = saved.order === 'az' ? 'az' : 'smart';
     this.filter();
     this.flashcardMode = !!saved.flashcards;
-    if (saved.mode !== 'review') this.fcMode = saved.mode ?? 'flip';
+    // A session saved in a mode that no longer exists opens as Flip.
+    if (saved.mode !== 'review') this.fcMode = 'flip';
     const restored = restoreDeck(saved, this.filteredAcronyms, a => a.acronym);
     if (restored) {
       this.deck = restored.deck;

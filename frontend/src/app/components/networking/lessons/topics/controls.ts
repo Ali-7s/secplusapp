@@ -41,7 +41,7 @@ export const CONTROLS: LessonBody = {
     'Explain adaptive identity, threat scope reduction, policy-driven access control and implicit trust zones',
   ],
   blocks: [
-    recap('From topic 1: every control exists to protect **confidentiality, integrity or availability**. From Networking lesson 9: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 8: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
+    recap('From topic 1: every control exists to protect **confidentiality, integrity or availability**. From Networking lesson 8: a firewall **allows or blocks** traffic by rules, and an IDS **detects** while an IPS **prevents**. From topic 8: least privilege and attribute-based policies. This topic names the kinds of control those are, then shows how zero trust checks every request instead of trusting the network.'),
     words(
       ['Security control', 'Anything that reduces a risk: a device, a setting, a policy, a person\'s job, a lock'],
       ['Control category', 'How a control is put in place: technical, managerial, operational or physical'],

@@ -6,7 +6,7 @@
  * Card ids are saved with your progress ("ref:port:22"), so they must not change when a row's wording does.
  */
 
-import { DumpCard } from '../../utils/brain-dump';
+import { StudyCard } from '../../utils/study-card';
 import { AnswerCheck, expansionCheck, mentionAt, mentions, mentionsAny, numbersIn } from '../../utils/typed-answer';
 import {
   ACCESS_MODELS, ATTACK_FRAMEWORKS, BACKUP_TYPES, BCDR_METRICS, CLOUD_MODELS, DATA_CLASSIFICATIONS, IR_PHASES, MFA_FACTORS, PORTS,
@@ -38,7 +38,7 @@ const RATING: Record<string, string> = { secure: 'Secure', insecure: 'Weak or in
 /** Ends a table note with a full stop, so notes read as sentences on the card. */
 const sentence = (text: string) => (/[.!?]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`);
 
-const card = (c: Omit<DumpCard, 'related' | 'examContext'>): DumpCard => ({ examContext: '', related: [], ...c });
+const card = (c: Omit<StudyCard, 'related' | 'examContext'>): StudyCard => ({ examContext: '', related: [], ...c });
 
 // ── Typed answer checks ───────────────────────────────────────────────────────
 
@@ -217,7 +217,7 @@ const FORMULA_CHECKS: Record<string, AnswerCheck> = {
   'ALE (Annualized Loss Expectancy)': formulaCheck([['SLE', 'single loss expectancy'], ['ARO', 'annualized rate of occurrence', 'annualised rate of occurrence']], ['AV', 'EF']),
 };
 
-function portCards(): { toProtocol: DumpCard[]; toPort: DumpCard[] } {
+function portCards(): { toProtocol: StudyCard[]; toPort: StudyCard[] } {
   const toProtocol = PORTS.map(p => card({
     id: `port:${p.port}`,
     name: `${/[/-]/.test(p.port) ? 'Ports' : 'Port'} ${p.port}`,
@@ -266,7 +266,7 @@ const legacyCards = () => REPLACEMENTS.map(r => card({
   check: replacementCheck(r.from.name),
 }));
 
-function irCards(): DumpCard[] {
+function irCards(): StudyCard[] {
   const phases = [...IR_PHASES].sort((a, b) => a.order - b.order);
   const total = phases.length;
   const steps = phases.map((p, i) => {
@@ -462,7 +462,7 @@ const FRAMEWORK_DESCRIPTIONS: Record<string, { front: string; names: string[] }>
   'Diamond Model': { front: 'Describes an intrusion by linking four points: adversary, infrastructure, capability and victim', names: ['diamond'] },
 };
 
-function frameworkCards(): DumpCard[] {
+function frameworkCards(): StudyCard[] {
   const find = (name: string) => ATTACK_FRAMEWORKS.find(f => f.name === name)!;
   const killChain = find('Cyber Kill Chain');
   const diamond = find('Diamond Model');
@@ -506,7 +506,7 @@ function frameworkCards(): DumpCard[] {
  * Every card in the deck. Review mode deals new cards in this order, so the sections are interleaved (a day's new
  * cards are not all ports), and the two cards for one port are kept far apart so one does not give the other away.
  */
-export function referenceCards(): DumpCard[] {
+export function referenceCards(): StudyCard[] {
   const { toProtocol, toPort } = portCards();
   const half = Math.floor(toPort.length / 2);
   const lists = [
@@ -514,7 +514,7 @@ export function referenceCards(): DumpCard[] {
     metricCards(), backupCards(), raidCards(), siteCards(), cloudCards(), riskCards(), dataCards(), accessCards(), mfaCards(),
     frameworkCards(),
   ];
-  const out: DumpCard[] = [];
+  const out: StudyCard[] = [];
   for (let i = 0; out.length < lists.reduce((n, l) => n + l.length, 0); i++) {
     for (const list of lists) if (i < list.length) out.push(list[i]);
   }

@@ -9,7 +9,7 @@ export const CAPTURES_LESSON: LessonBody = {
     'Recognise a port scan, ARP poisoning, cleartext logins and a firewall drop from the packets alone',
   ],
   blocks: [
-    recap('Everything in this lesson has come up before, now seen in real packets: MAC and IP addresses and the default gateway (lesson 2), ports, TCP, UDP and the handshake (lesson 3), the layers (lesson 4), the port numbers (lesson 5), DHCP, DNS, ARP and ICMP (lesson 8), and mirror ports and firewalls (lesson 9). Lesson 10 followed one web request in words; here you watch it happen.'),
+    recap('Everything in this lesson has come up before, now seen in real packets: MAC and IP addresses and the default gateway (lesson 2), ports, TCP, UDP and the handshake, the layers (lesson 3), the port numbers (lesson 4), DHCP, DNS, ARP and ICMP (lesson 7), and mirror ports and firewalls (lesson 8). Lesson 9 followed one web request in words; here you watch it happen.'),
     words(
       ['Packet capture', 'A recording of the packets that crossed a network point, saved as a file (often .pcap) to read later'],
       ['Frame', 'One packet as it travels on the local network, with its Ethernet header of MAC addresses'],
@@ -49,7 +49,7 @@ export const CAPTURES_LESSON: LessonBody = {
     p('Conversations come in pairs, so read requests with their replies: a DNS query and its response, a SYN and its SYN-ACK (or RST), an ARP request and its reply. **An unanswered request is often the finding**: a SYN with no reply is a firewall dropping it, a ping with no reply is a host that is down or silent.'),
 
     h('Opening a packet: the layers', { objective: '4.9', keep: 'Ethernet carries MAC addresses that change at every hop; IP carries the end-to-end addresses and a TTL; TCP or UDP carries the ports; the top layer carries the protocol itself, readable only if it is not encrypted.' }),
-    p('Open a packet and it unfolds into the layers from lesson 4, outermost first. Each one answers a different question:'),
+    p('Open a packet and it unfolds into the layers from lesson 3, outermost first. Each one answers a different question:'),
     table(
       ['Layer', 'Key fields', 'What to look for'],
       [

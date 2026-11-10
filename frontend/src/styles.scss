@@ -431,7 +431,7 @@ a.lesson-link {
   &:hover { background: var(--c-surface-3); }
 }
 
-// ── Card notes: a card's exam tip and analogy (flashcards, glossary cards, brain dump) ──
+// ── Card notes: a card's exam tip and analogy (flashcards and glossary cards) ──
 .card-note {
   display: flex; align-items: flex-start; gap: 10px; margin: 0 0 8px; padding: 10px 12px; box-sizing: border-box;
   border-radius: 0 10px 10px 0; border-left: 3px solid var(--c-accent);

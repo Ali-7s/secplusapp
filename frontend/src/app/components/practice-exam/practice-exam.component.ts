@@ -122,8 +122,6 @@ export class PracticeExamComponent implements OnInit, OnDestroy {
 
   // ── Starting, saving and resuming ────────────────────────────────────────
 
-  get pbqCount(): number { return this.pool.filter(isPbq).length; }
-  get choiceCount(): number { return this.pool.length - this.pbqCount; }
   totalFor(length: ExamLength): number {
     if (length !== 'weak' && length !== 'objective') return examSize(length);
     const pool = length === 'weak' ? this.weakPool : this.objectivePool;

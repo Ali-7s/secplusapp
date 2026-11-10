@@ -27,16 +27,16 @@ export const ADDRESSES: LessonBody = {
       ['Block size', 'How many addresses one subnet holds, such as 64 for a /26'],
       ['Broadcast', 'A message sent to every device on the local network at once'],
       ['Default gateway', 'The router a device sends traffic to when the destination is on another network'],
-      ['DHCP', 'A service that hands out IP addresses to devices automatically (lesson 8)'],
+      ['DHCP', 'A service that hands out IP addresses to devices automatically (lesson 7)'],
       ['Private address', 'An address meant for use inside a network, never sent across the internet'],
-      ['NAT', 'A router feature that swaps private addresses for a public one on the way out (lesson 8)'],
+      ['NAT', 'A router feature that swaps private addresses for a public one on the way out (lesson 7)'],
       ['Spoofing', 'Faking an address so traffic seems to come from somewhere else'],
     ),
 
     h('Two addresses, two jobs', { keep: 'MAC address: built into the network card, used only on the local network. IP address: given by the network, used to reach devices anywhere.' }),
     p('Every device on a network has **two different addresses**, and they do different jobs. This trips up almost everyone at first, so take it slowly.'),
     p('**1. The MAC address.** Every network card (NIC) has a **MAC address** set at the factory. It is 48 bits long and written as six pairs of **hexadecimal** characters (hex uses the digits 0 to 9 plus the letters a to f), like `00:1A:2B:3C:4D:5E`. It identifies that one card. MAC addresses are only used to deliver data **between devices on the same local network**.'),
-    p('**2. The IP address.** A device also gets an **IP address**, such as `192.168.1.25`. This one is not built in: the network gives it to the device, usually automatically through a service called **DHCP** (lesson 8), or an administrator types it in. The IP address says **where on the network** the device sits, and it is what lets data travel **across networks and the internet**.'),
+    p('**2. The IP address.** A device also gets an **IP address**, such as `192.168.1.25`. This one is not built in: the network gives it to the device, usually automatically through a service called **DHCP** (lesson 7), or an administrator types it in. The IP address says **where on the network** the device sits, and it is what lets data travel **across networks and the internet**.'),
     analogy('Your **name** and your **mailing address**. Mail crosses the country using your mailing address (the IP address). The final hand-off at the door uses your name (the MAC address). Your name stays with you for life; your mailing address changes when you move. In the same way, a laptop keeps its MAC address but gets a new IP address on each network it joins.'),
     table(
       ['', 'MAC address', 'IP address'],
@@ -44,7 +44,7 @@ export const ADDRESSES: LessonBody = {
         ['Looks like', '`00:1A:2B:3C:4D:5E` (48 bits, in hex)', '`192.168.1.25` (IPv4, 32 bits) or `2001:db8::1` (IPv6, 128 bits)'],
         ['Comes from', 'Built into the network card (software can change it)', 'Given out by the network (DHCP) or set by an administrator'],
         ['Used to reach', 'Devices on the **same local network** only', 'Devices **anywhere**, across networks and the internet'],
-        ['Read by', 'Switches (lesson 6)', 'Routers (lesson 6)'],
+        ['Read by', 'Switches (lesson 5)', 'Routers (lesson 5)'],
         ['Faked by', 'MAC spoofing', 'IP spoofing'],
       ],
     ),
@@ -110,7 +110,7 @@ export const ADDRESSES: LessonBody = {
     exam('Security+ itself rarely asks you to subnet; that is the Network+ exam\'s job. It does expect you to **read** `10.0.0.0/8` and `192.168.1.0/24`, know what a mask does, and know that devices in different subnets need a router or firewall between them. Practice exams sometimes go further and ask you to plan subnets, which is what the next section teaches.'),
 
     h('Carving a network into subnets', { objective: '3.2', keep: 'Find the smallest block that fits the hosts, start each subnet on a multiple of its block size, and place the biggest first.', optional: 'Planning subnets is mostly a Network+ skill. Practice exams sometimes ask for it, so skip this on your first pass and come back once the rest of the course makes sense.' }),
-    p('Sometimes you are given one network and asked to split it into smaller subnets: one for staff, one for Wi-Fi, one for servers, and so on. This is called **subnetting**, and it is how real networks are separated so a firewall can sit between the groups (lesson 7). It looks like hard maths, but it only needs one table and five steps, using nothing harder than doubling and subtracting.'),
+    p('Sometimes you are given one network and asked to split it into smaller subnets: one for staff, one for Wi-Fi, one for servers, and so on. This is called **subnetting**, and it is how real networks are separated so a firewall can sit between the groups (lesson 6). It looks like hard maths, but it only needs one table and five steps, using nothing harder than doubling and subtracting.'),
     p('Everything here stays inside one /24, so only the **last octet** changes. That is what practice exams ask. Here is the table, which is also on the Reference Sheet to keep open while you practice:'),
     table(
       ['Prefix', 'Mask', 'Block size', 'Usable'],
@@ -168,7 +168,7 @@ export const ADDRESSES: LessonBody = {
 
     h('Private, public and special addresses', { objective: '3.2', keep: 'Private ranges never cross the internet: 10.x.x.x, 172.16 to 172.31, and 192.168.x.x. 127.0.0.1 means this computer; 169.254.x.x means DHCP failed.' }),
     p('Some address ranges are set aside for special uses. The most important are the **private** ranges. Anyone can use them inside their own network, but they are **never sent across the internet**. That is why millions of homes can all use `192.168.1.x` without clashing: those addresses never leave the home.'),
-    p('So how does a device with a private address reach the internet? The router swaps the private address for its own **public** address on the way out, and swaps it back for the reply. This trick is called **NAT** (network address translation), and lesson 8 shows it step by step.'),
+    p('So how does a device with a private address reach the internet? The router swaps the private address for its own **public** address on the way out, and swaps it back for the reply. This trick is called **NAT** (network address translation), and lesson 7 shows it step by step.'),
     table(
       ['Range', 'What it is', 'Notes'],
       [
@@ -197,7 +197,7 @@ export const ADDRESSES: LessonBody = {
     list(
       'IPv6 addresses are **128 bits**, written in hex with colons: `2001:db8:85a3::8a2e:370:7334`. A double colon (`::`) is shorthand for a run of zeros, and can appear once per address.',
       '`::1` is the IPv6 loopback ("this computer"), and addresses starting `fe80:` are link-local: every IPv6 device has one for talking on its own network.',
-      'IPv6 has **no broadcast** address (it sends to groups instead), and it does not use ARP (a helper from lesson 8). A protocol called **NDP** does that job.',
+      'IPv6 has **no broadcast** address (it sends to groups instead), and it does not use ARP (a helper from lesson 7). A protocol called **NDP** does that job.',
       'There are so many addresses that NAT is not needed, which means devices can be reached directly from the internet. That makes a **firewall** more important, not less.',
     ),
 
@@ -205,9 +205,9 @@ export const ADDRESSES: LessonBody = {
     p('Addresses are just numbers written in a packet\'s header, and an attacker can write anything there. Faking an address is called **spoofing**. Here is how defenders cope:'),
     list(
       '**Filter impossible addresses at the edge.** A packet arriving from the internet that claims a private, loopback or your-own-network source address must be fake, so the edge router or firewall drops it. Checking incoming traffic like this is **ingress filtering**. Checking that your own outgoing traffic only uses your real addresses is **egress filtering**.',
-      '**Tie addresses to switch ports.** Switch features such as **DHCP snooping**, **IP source guard** and **port security** (lesson 6) remember which device is plugged into which socket, so a device cannot pretend to be another one.',
+      '**Tie addresses to switch ports.** Switch features such as **DHCP snooping**, **IP source guard** and **port security** (lesson 5) remember which device is plugged into which socket, so a device cannot pretend to be another one.',
       '**Plan and record addresses.** Give servers and network equipment fixed, documented addresses, and keep an IP address plan (often in a tool called **IPAM**, IP address management), so an unknown address stands out.',
-      '**Separate by trust.** Put guests, smart devices, servers and staff in their own subnets, so a firewall can sit between them (lesson 7).',
+      '**Separate by trust.** Put guests, smart devices, servers and staff in their own subnets, so a firewall can sit between them (lesson 6).',
       '**Do not forget IPv6.** If IPv6 is switched on but nobody manages it, it can slip past controls that only cover IPv4. Secure it properly or turn it off where it is not used.',
     ),
     examPbqs('addresses', 'These come from the practice exam and are as hard as the real thing. One is a full subnet plan with five subnets: do "Carving a network into subnets" and its guided practice first, and keep the Subnetting cheat sheet open beside you. They load when you press Start.'),

@@ -12,7 +12,7 @@ export const SECURITY_DEVICES: LessonBody = {
     'Read host firewall rules and security logs, and recognize common attack patterns in them',
   ],
   blocks: [
-    recap('Packets carry source and destination **IP addresses** and **port numbers** (lessons 2 and 3). TCP sets up a **connection** with a handshake before data flows (lesson 3). **Encryption** scrambles data so only the receiver can read it (lesson 1).'),
+    recap('Packets carry source and destination **IP addresses** and **port numbers** (lesson 2). TCP sets up a **connection** with a handshake before data flows. **Encryption** scrambles data so only the receiver can read it (lesson 1).'),
     words(
       ['Firewall', 'A device or program that checks traffic against a list of rules and allows or blocks it'],
       ['Rule', 'One line in a firewall\'s list: which source, which destination, which port, and allow or block'],
@@ -33,7 +33,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
 
     h('Firewalls: the rule-based guard', { objective: '4.5', keep: 'A firewall checks its rules from the top and the first match wins. Anything not allowed is blocked (implicit deny), so specific rules go first.' }),
-    p('A **firewall** sits where traffic passes and checks each packet against a list of **rules**. Each rule names a **source** (where the traffic comes from), a **destination** (where it is going), a **port and protocol** (which service, lesson 3), and an **action**: allow or deny (block).'),
+    p('A **firewall** sits where traffic passes and checks each packet against a list of **rules**. Each rule names a **source** (where the traffic comes from), a **destination** (where it is going), a **port and protocol** (which service), and an **action**: allow or deny (block).'),
     p('Three facts decide what happens to any packet:'),
     list(
       'The firewall reads the rules **from the top down**.',
@@ -101,7 +101,7 @@ export const SECURITY_DEVICES: LessonBody = {
         ['Host-based', 'Traffic to and from one device', 'Usually yes'],
       ],
     ),
-    p('Why does a stateless filter need extra rules for replies? Remember from lesson 3 that when a server downloads an update, it uses a random high (ephemeral) port for its side, say 51514, and the reply comes back **to** that port. A stateless list has no memory of the request, so to let replies in it must allow incoming traffic to the whole range 1024 to 65535. But that rule also lets in **new** connections to any high port, such as Remote Desktop on 3389. A stateful firewall avoids this, because it only lets in replies to conversations it saw start. In cloud networks, the subnet-level **network ACLs** are usually stateless, while **security groups** on each server are stateful.'),
+    p('Why does a stateless filter need extra rules for replies? When a server downloads an update, it uses a random high (ephemeral) port for its side, say 51514, and the reply comes back **to** that port. A stateless list has no memory of the request, so to let replies in it must allow incoming traffic to the whole range 1024 to 65535. But that rule also lets in **new** connections to any high port, such as Remote Desktop on 3389. A stateful firewall avoids this, because it only lets in replies to conversations it saw start. In cloud networks, the subnet-level **network ACLs** are usually stateless, while **security groups** on each server are stateful.'),
 
     h('Host-based firewalls: inbound and outbound', { objective: '2.5', keep: 'A firewall on the device itself has inbound and outbound rules. Tight outbound rules stop a hacked server from calling out.' }),
     p('A firewall running on the device itself has one extra column in its rules: **direction**. **Inbound** rules control connections other devices open **to** this device. **Outbound** rules control connections this device starts **itself**. The address in each rule is the device at the other end, often called the **remote address**.'),
@@ -134,7 +134,7 @@ export const SECURITY_DEVICES: LessonBody = {
       [
         ['VPN concentrator', 'A device that ends many remote-access VPN connections at once', 'At the edge, often in the screened subnet, since the internet must reach it'],
         ['Honeypot', 'A decoy system that looks valuable, to attract and study attackers', 'Wherever you expect attackers to probe, such as the screened subnet for public-facing attacks'],
-        ['SIEM', 'A system that collects logs from everything and raises alerts (lesson 11)', 'With the internal servers, where every segment can send it logs'],
+        ['SIEM', 'A system that collects logs from everything and raises alerts (lesson 10)', 'With the internal servers, where every segment can send it logs'],
         ['WAF', 'A firewall for web requests', 'Inline, directly in front of the web servers'],
         ['Jump server', 'The one locked-down door for administrators', 'In the management network, next to what it manages'],
       ],
@@ -215,7 +215,7 @@ export const SECURITY_DEVICES: LessonBody = {
     ),
 
     h('Wi-Fi basics', { objective: '4.1', keep: 'Use WPA3 (or WPA2 with AES); Enterprise mode gives each user their own login through 802.1X. Watch for evil twins and rogue access points.' }),
-    p('A wireless **access point** broadcasts a network name, called the **SSID**, and connects Wi-Fi devices to the wired network (lesson 6). Wi-Fi travels through the air, so **anyone nearby can capture it**. That is why encryption is essential. The security standards, from worst to best:'),
+    p('A wireless **access point** broadcasts a network name, called the **SSID**, and connects Wi-Fi devices to the wired network (lesson 5). Wi-Fi travels through the air, so **anyone nearby can capture it**. That is why encryption is essential. The security standards, from worst to best:'),
     table(
       ['Standard', 'Verdict', 'Why'],
       [
@@ -229,7 +229,7 @@ export const SECURITY_DEVICES: LessonBody = {
     p('Each standard comes in two modes:'),
     list(
       '**Personal** mode: everyone uses one shared password. Simple, but one leaked password exposes everyone, and removing one person means changing it for all.',
-      '**Enterprise** mode: each person logs in with their own username and password or certificate, checked by a central login server (**RADIUS**, lesson 5) using **802.1X**. One person\'s access can be removed without affecting anyone else.',
+      '**Enterprise** mode: each person logs in with their own username and password or certificate, checked by a central login server (**RADIUS**, lesson 4) using **802.1X**. One person\'s access can be removed without affecting anyone else.',
     ),
     p('A few more Wi-Fi settings appear in configuration PBQs:'),
     list(
@@ -256,17 +256,17 @@ export const SECURITY_DEVICES: LessonBody = {
     table(
       ['Pattern in the log', 'What it is'],
       [
-        ['One source, **one target**, hundreds of different ports in seconds', '**Port scan**: mapping what is open on one machine (lesson 3)'],
+        ['One source, **one target**, hundreds of different ports in seconds', '**Port scan**: mapping what is open on one machine'],
         ['One source, **one port**, hundreds of different targets', '**Sweep**: hunting for every machine running one service (for example SMB on 445)'],
-        ['Huge numbers of SYNs from many sources, almost no completed handshakes', '**SYN flood**: a denial of service attack (lesson 3)'],
+        ['Huge numbers of SYNs from many sources, almost no completed handshakes', '**SYN flood**: a denial of service attack'],
         ['Small connections to the same internet address at regular intervals (every 60 seconds, say), day and night', '**Beaconing**: malware checking in with the attacker\'s server, called **command and control (C2)**'],
         ['A huge outbound transfer at an odd hour from a server that normally sends little', '**Data exfiltration**: stolen data being sent out'],
         ['A workstation trying to send email (port 25) to hundreds of internet servers, blocked', '**Spam-sending malware**, caught by egress filtering'],
         ['Many passwords tried against **one** account', '**Brute force**. If it ends with a success, the account is compromised'],
         ['**One** common password tried once against **many** accounts', '**Password spraying**: slow and spread out, to avoid account lockouts'],
         ['The same user logging in from two places too far apart for the time between them', '**Impossible travel**: someone else is using the account'],
-        ['Thousands of DNS lookups for long, random-looking subdomains', '**DNS tunneling**: data hidden inside DNS queries (lesson 8)'],
-        ['Big DNS replies flooding in that the victim never asked for', '**DNS amplification**: a reflected denial of service (lesson 8)'],
+        ['Thousands of DNS lookups for long, random-looking subdomains', '**DNS tunneling**: data hidden inside DNS queries (lesson 7)'],
+        ['Big DNS replies flooding in that the victim never asked for', '**DNS amplification**: a reflected denial of service (lesson 7)'],
       ],
     ),
     tip('Ask three questions of every log line: how many sources, how many targets, and how many ports or accounts? Most patterns fall out of those three numbers.'),

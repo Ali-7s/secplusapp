@@ -12,18 +12,18 @@ describe('FcModeSwitchComponent', () => {
     fixture.detectChanges();
   });
 
-  it('offers flip, cloze, brain dump and review', () => {
-    expect(buttons().map(b => b.querySelector('span')!.textContent)).toEqual(['Flip', 'Cloze', 'Brain dump', 'Review']);
-    expect(buttons().map(b => b.querySelector('mat-icon')!.textContent)).toEqual(['flip', 'edit_note', 'psychology', 'event_repeat']);
+  it('offers flip and review', () => {
+    expect(buttons().map(b => b.querySelector('span')!.textContent)).toEqual(['Flip', 'Review']);
+    expect(buttons().map(b => b.querySelector('mat-icon')!.textContent)).toEqual(['flip', 'event_repeat']);
   });
 
   it('marks the current mode as pressed', () => {
-    expect(buttons().map(b => b.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false']);
+    expect(buttons().map(b => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
 
-    fixture.componentRef.setInput('mode', 'dump');
+    fixture.componentRef.setInput('mode', 'review');
     fixture.detectChanges();
-    expect(buttons().map(b => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
-    expect(buttons()[2].classList).toContain('active');
+    expect(buttons().map(b => b.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    expect(buttons()[1].classList).toContain('active');
   });
 
   it('tells the page which mode was chosen', () => {
@@ -31,8 +31,7 @@ describe('FcModeSwitchComponent', () => {
     fixture.componentInstance.modeChange.subscribe((mode: FcMode) => chosen.push(mode));
 
     buttons()[1].click();
-    buttons()[2].click();
-    buttons()[3].click();
-    expect(chosen).toEqual(['cloze', 'dump', 'review']);
+    buttons()[0].click();
+    expect(chosen).toEqual(['review', 'flip']);
   });
 });

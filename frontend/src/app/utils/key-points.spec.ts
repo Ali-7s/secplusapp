@@ -1,10 +1,8 @@
 import { Acronym, Term } from '../models/glossary.model';
-import {
-  DumpCard, Rating, acronymToDumpCard, buildRubric, highlight, pickDeck, rate, shuffled, splitSentences, tally,
-  termToDumpCard,
-} from './brain-dump';
+import { Coverage, buildRubric, highlight, rate, splitSentences } from './key-points';
+import { StudyCard, acronymToCard, termToCard } from './study-card';
 
-const card = (id: string, extra: Partial<DumpCard> = {}): DumpCard => ({
+const card = (id: string, extra: Partial<StudyCard> = {}): StudyCard => ({
   id, name: id, category: 'Test', definition: 'A first sentence. A second sentence. A third one. A fourth one.',
   examContext: '', related: [], ...extra,
 });
@@ -45,7 +43,7 @@ describe('buildRubric', () => {
 });
 
 describe('rate', () => {
-  const cases: Array<[number, number, Rating]> = [
+  const cases: Array<[number, number, Coverage]> = [
     [4, 4, 'nailed'], [3, 4, 'nailed'], [2, 4, 'partly'], [1, 4, 'missed'], [0, 4, 'missed'],
     [4, 5, 'nailed'], [3, 5, 'partly'], [2, 5, 'partly'], [1, 5, 'missed'],
     [3, 3, 'nailed'], [2, 3, 'partly'], [1, 3, 'missed'],
@@ -105,51 +103,13 @@ describe('highlight', () => {
   });
 });
 
-describe('pickDeck and tally', () => {
-  const cards = ['A', 'B', 'C', 'D'].map(id => card(id));
-  const results = new Map<string, Rating>([['A', 'nailed'], ['B', 'partly'], ['C', 'missed']]);
-
-  it('"todo" skips the nailed cards and keeps new ones', () => {
-    expect(pickDeck(cards, results, 'todo').map(c => c.id)).toEqual(['B', 'C', 'D']);
-  });
-
-  it('"review" is only the cards that were missed or partly known', () => {
-    expect(pickDeck(cards, results, 'review').map(c => c.id)).toEqual(['B', 'C']);
-  });
-
-  it('"all" is every card', () => {
-    expect(pickDeck(cards, results, 'all').map(c => c.id)).toEqual(['A', 'B', 'C', 'D']);
-  });
-
-  it('counts each rating and the cards not yet tried', () => {
-    expect(tally(cards, results)).toEqual({ nailed: 1, partly: 1, missed: 1, fresh: 1 });
-  });
-
-  it('ignores results for cards outside the deck', () => {
-    expect(tally([cards[3]], results)).toEqual({ nailed: 0, partly: 0, missed: 0, fresh: 1 });
-  });
-});
-
-describe('shuffled', () => {
-  it('returns every item once without touching the original', () => {
-    const original = [1, 2, 3, 4, 5, 6, 7, 8];
-    const copy = shuffled(original);
-    expect([...copy].sort()).toEqual(original);
-    expect(original).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-  });
-
-  it('is driven by the random source', () => {
-    expect(shuffled([1, 2, 3], () => 0)).toEqual([2, 3, 1]);
-  });
-});
-
 describe('card mapping', () => {
   it('maps an acronym card, splitting the related list', () => {
     const acronym = {
       acronym: 'ACL', expansion: 'Access Control List', definition: 'd', category: 'Access Control',
       examContext: 'e', relatedAcronyms: 'DAC, MAC; NAC', detail: {} as Acronym['detail'],
     } as Acronym;
-    expect(acronymToDumpCard(acronym)).toEqual({
+    expect(acronymToCard(acronym)).toEqual({
       id: 'ACL', name: 'ACL', category: 'Access Control', expansion: 'Access Control List', definition: 'd',
       examContext: 'e', related: ['DAC', 'MAC', 'NAC'], variants: undefined,
     });
@@ -160,7 +120,7 @@ describe('card mapping', () => {
       term: 'Hashing', definition: 'd', category: 'Cryptography', examContext: 'e', analogy: 'a', relatedTerms: '',
       detail: {} as Term['detail'],
     } as Term;
-    const mapped = termToDumpCard(term);
+    const mapped = termToCard(term);
     expect(mapped.id).toBe('Hashing');
     expect(mapped.analogy).toBe('a');
     expect(mapped.expansion).toBeUndefined();

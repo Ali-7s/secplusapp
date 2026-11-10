@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { SubnetCheatSheetComponent } from './subnet-cheat-sheet.component';
 import { ReviewComponent } from '../review/review.component';
 import { ProgressService, cardKey } from '../../services/progress.service';
-import { DumpCard } from '../../utils/brain-dump';
+import { StudyCard } from '../../utils/study-card';
 import { isDueCard } from '../../utils/srs';
 import { REFERENCE_DECK_SECTIONS, referenceCards } from './reference-cards';
 import {
@@ -80,9 +80,9 @@ export class ReferenceComponent {
   reviewing = this.route.snapshot.queryParamMap.get('mode') === 'review';
   reviewSection = this.deckSections.some(s => s.key === this.route.snapshot.queryParamMap.get('deck'))
     ? this.route.snapshot.queryParamMap.get('deck')! : 'all';
-  reviewCards: DumpCard[] = this.cardsFor(this.reviewSection);
+  reviewCards: StudyCard[] = this.cardsFor(this.reviewSection);
 
-  cardsFor(section: string): DumpCard[] {
+  cardsFor(section: string): StudyCard[] {
     const label = this.deckSections.find(s => s.key === section)?.label;
     return label ? this.allRefCards.filter(c => c.category === label) : this.allRefCards;
   }

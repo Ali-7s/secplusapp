@@ -14,14 +14,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ContentService } from '../../services/content.service';
 import { Term, TermDetail, variantsSearchText } from '../../models/glossary.model';
-import { ClozeSpan, answerSpans, isTermClozeCorrect, maskAnswer, otherCardNamed } from '../../utils/cloze';
-import { DumpCard, termToDumpCard } from '../../utils/brain-dump';
+import { StudyCard, termToCard } from '../../utils/study-card';
 import { LessonMeta } from '../networking/networking.model';
 import { lessonHint, lessonsForCard } from '../networking/lessons/lesson-index';
-import { BrainDumpComponent } from '../brain-dump/brain-dump.component';
 import { ReviewComponent } from '../review/review.component';
 import { GuessToggleComponent } from '../guess-toggle/guess-toggle.component';
-import { FcMode, FcModeSwitchComponent } from '../brain-dump/fc-mode-switch.component';
+import { FcMode, FcModeSwitchComponent } from '../review/fc-mode-switch.component';
 import { rankBySearch, searchRank } from '../../utils/search-rank';
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { isDue, smartOrder } from '../../utils/progress';
@@ -34,7 +32,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatProgressBarModule,
-    MatSelectModule, MatTooltipModule, MatSlideToggleModule, BrainDumpComponent, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
+    MatSelectModule, MatTooltipModule, MatSlideToggleModule, ReviewComponent, FcModeSwitchComponent, GuessToggleComponent],
   templateUrl: './terms.component.html',
   styleUrl: './terms.component.scss'
 })
@@ -75,19 +73,10 @@ export class TermsComponent implements OnInit, DoCheck {
   fcFlipped = false;
   fcDone = new Set<number>();
 
-  // Flip, cloze and brain dump are three ways through the same filtered cards.
+  // Flip and Review are two ways through the same filtered cards.
   fcMode: FcMode = 'flip';
-  /** The filtered cards in the shape brain dump mode works with. */
-  dumpCards: DumpCard[] = [];
-
-  // Cloze mode
-  fcClozeInput = '';
-  fcClozeChecked = false;
-  fcClozeCorrect = false;
-  /** Another card that a wrong answer named, to explain the near miss. */
-  fcClozeNearMiss?: Term;
-  private clozeMasks = new Map<string, string>();
-  private clozeReveals = new Map<string, ClozeSpan[]>();
+  /** The filtered cards in the shape Review works with. */
+  studyCards: StudyCard[] = [];
 
   ngOnInit() {
     for (const [name, answer] of this.savedQuick) {
@@ -144,7 +133,7 @@ export class TermsComponent implements OnInit, DoCheck {
       this.expandedTerm = null;
     }
     this.buildDeck();
-    this.dumpCards = this.filteredTerms.map(termToDumpCard);
+    this.studyCards = this.filteredTerms.map(termToCard);
     this.fcIndex = 0;
     this.fcFlipped = false;
   }
@@ -247,7 +236,8 @@ export class TermsComponent implements OnInit, DoCheck {
     this.fcOrder = saved.order === 'az' ? 'az' : 'smart';
     this.filter();
     this.flashcardMode = !!saved.flashcards;
-    if (saved.mode !== 'review') this.fcMode = saved.mode ?? 'flip';
+    // A session saved in a mode that no longer exists opens as Flip.
+    if (saved.mode !== 'review') this.fcMode = 'flip';
     const restored = restoreDeck(saved, this.filteredTerms, t => t.term);
     if (restored) {
       this.deck = restored.deck;
@@ -306,84 +296,26 @@ export class TermsComponent implements OnInit, DoCheck {
     }, 80);
   }
 
-  private fcClozeReset() {
-    this.fcClozeInput = '';
-    this.fcClozeChecked = false;
-    this.fcClozeCorrect = false;
-    this.fcClozeNearMiss = undefined;
-  }
-
-  get fcClozeMode(): boolean { return this.fcMode === 'cloze'; }
-
   setFcMode(mode: FcMode) {
     // Review answers reschedule cards, so smart order starts over with the new due dates.
     const fromReview = this.fcMode === 'review' && mode !== 'review';
     this.fcMode = mode;
     if (fromReview) this.fcReset();
     this.fcFlipped = false;
-    this.fcClozeReset();
   }
 
-  /**
-   * The description or hint shown on a cloze card, with the term blanked out wherever the text repeats it,
-   * until the answer has been checked.
-   */
-  clozeText(t: Term, field: 'definition' | 'analogy'): string {
-    const key = `${t.term}|${field}`;
-    let masked = this.clozeMasks.get(key);
-    if (masked === undefined) {
-      masked = maskAnswer(t[field], [t.term]);
-      this.clozeMasks.set(key, masked);
-    }
-    return masked;
-  }
-
-  /** The full text once checked, with the blanked words marked so it is clear where they were. */
-  clozeReveal(t: Term, field: 'definition' | 'analogy'): ClozeSpan[] {
-    const key = `${t.term}|${field}`;
-    let spans = this.clozeReveals.get(key);
-    if (!spans) {
-      spans = answerSpans(t[field], [t.term]);
-      this.clozeReveals.set(key, spans);
-    }
-    return spans;
-  }
-
-  /** True when the near-miss card is named in this card's description, which is usually why it was typed. */
-  nearMissMentioned(t: Term, other: Term): boolean {
-    return answerSpans(t.definition, [other.term]).some(span => span.answer);
-  }
-
-  private get allTermNames() { return this.allTerms.map(t => t.term); }
-
-  checkTermCloze() {
-    if (this.fcClozeChecked || !this.fcClozeInput.trim()) return;
-    this.fcClozeChecked = true;
-    this.fcClozeCorrect = isTermClozeCorrect(this.fcClozeInput, this.deck[this.fcIndex].term, this.allTermNames);
-    this.fcClozeNearMiss = this.fcClozeCorrect ? undefined : otherCardNamed(this.fcClozeInput, this.deck[this.fcIndex], this.allTerms, t => t.term);
-  }
-
-  fcClozeNext(known: boolean) {
-    this.rememberCard(known);
-    if (known) this.fcDone.add(this.fcIndex);
-    this.fcClozeReset();
-    if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
-  }
-
-  // Carousel
-  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; this.fcClozeReset(); }
+  fcGoTo(idx: number) { this.fcIndex = idx; this.fcFlipped = false; }
   fcFlip() { this.fcFlipped = !this.fcFlipped; }
 
   fcNext(known: boolean) {
     this.rememberCard(known);
     if (known) this.fcDone.add(this.fcIndex);
     this.fcFlipped = false;
-    this.fcClozeReset();
     if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 
   fcPrev() {
-    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; this.fcClozeReset(); }
+    if (this.fcIndex > 0) { this.fcIndex--; this.fcFlipped = false; }
   }
 
   fcReset() {
@@ -391,13 +323,11 @@ export class TermsComponent implements OnInit, DoCheck {
     this.fcIndex = 0;
     this.fcFlipped = false;
     this.fcDone.clear();
-    this.fcClozeReset();
   }
 
   /** Moves on without rating the card (the Next button). */
   fcSkip() {
     this.fcFlipped = false;
-    this.fcClozeReset();
     if (this.fcIndex < this.deck.length - 1) this.fcIndex++;
   }
 

@@ -1,15 +1,12 @@
 /**
- * Guards the key points that brain dump mode checks explanations against (public/data/braindump-*.json).
+ * Guards the key points Review checks a Key Terms explanation against (public/data/key-points-terms.json).
  *
- * A card without written points still works, because brain dump falls back to the sentences of its definition,
- * but the checklist is much better with points. So these tests ask for every card to have them, and for the points
- * file not to keep entries for cards that were renamed or removed.
+ * A card without written points still works, because the checklist falls back to the sentences of its definition,
+ * but it is much better with points. So these tests ask for every card to have them, and for the points file not
+ * to keep entries for cards that were renamed or removed.
  */
-describe('brain dump key points', () => {
-  const decks = [
-    { deck: 'acronyms', key: 'acronym' },
-    { deck: 'terms', key: 'term' },
-  ] as const;
+describe('key points', () => {
+  const decks = [{ deck: 'terms', key: 'term' }] as const;
 
   const load = async <T>(path: string): Promise<T> => {
     const response = await fetch(path);
@@ -25,12 +22,12 @@ describe('brain dump key points', () => {
       beforeAll(async () => {
         const cards = await load<Array<Record<string, string>>>(`/data/${deck}.json`);
         names = cards.map(card => card[key]);
-        points = await load<Record<string, string[]>>(`/data/braindump-${deck}.json`);
+        points = await load<Record<string, string[]>>(`/data/key-points-${deck}.json`);
       });
 
       it('has points for every card', () => {
         const missing = names.filter(name => !points[name]);
-        expect(missing).withContext(`Add key points to braindump-${deck}.json for: ${missing.join(', ')}`).toEqual([]);
+        expect(missing).withContext(`Add key points to key-points-${deck}.json for: ${missing.join(', ')}`).toEqual([]);
       });
 
       it('has no points for cards that no longer exist', () => {

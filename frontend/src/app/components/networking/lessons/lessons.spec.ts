@@ -72,7 +72,7 @@ describe('lesson list', () => {
     expect(first('acr', 'VLAN')).toBe('vlans');
     expect(first('acr', 'DNS')).toBe('helpers');
     expect(first('acr', 'ARP')).toBe('helpers');
-    expect(first('acr', 'TCP')).toBe('ports-tcp-udp');
+    expect(first('acr', 'TCP')).toBe('layers');
     expect(first('term', 'Hardening')).toBe('hardening');
     expect(first('term', 'Firewall')).toBe('security-devices');
     expect(first('term', 'Port security')).toBe('devices');
@@ -82,8 +82,8 @@ describe('lesson list', () => {
     expect(first('term', 'Router')).toBe('devices');
     expect(first('term', 'Subnet')).toBe('addresses');
     expect(first('term', 'Default gateway')).toBe('addresses');
-    expect(first('term', 'Network port')).toBe('ports-tcp-udp');
-    expect(first('term', 'Three-way handshake')).toBe('ports-tcp-udp');
+    expect(first('term', 'Network port')).toBe('layers');
+    expect(first('term', 'Three-way handshake')).toBe('layers');
     expect(first('term', 'Trunk port')).toBe('vlans');
     expect(first('term', 'Encapsulation')).toBe('layers');
     expect(first('term', 'Screened subnet')).toBe('security-devices');

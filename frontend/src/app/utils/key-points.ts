@@ -1,45 +1,13 @@
 /**
- * Helpers for the brain dump flashcard mode.
- *
- * In brain dump mode the learner writes down everything they can say about an acronym or term from memory,
- * then compares it with a checklist of what a complete explanation covers. Guessing the name from a
- * description is not the same skill as explaining the idea, and this mode trains the second one.
+ * Checking an explanation written from memory. Review mode shows a Key Terms card's key points
+ * (public/data/key-points-terms.json) as a checklist: the learner ticks what their answer covered, and the share
+ * ticked limits the ratings. The words they used are highlighted in each point, as a hint.
  */
 
-import { Acronym, Term, VariantGroup } from '../models/glossary.model';
-import { AnswerCheck } from './typed-answer';
+import { StudyCard } from './study-card';
 
-export type DeckId = 'acronyms' | 'terms';
-
-/** What the learner decides about a card after comparing their explanation with the checklist. */
-export type Rating = 'missed' | 'partly' | 'nailed';
-
-/** Which cards a round goes through. */
-export type Scope = 'todo' | 'review' | 'all';
-
-/** What brain dump needs from an acronym or key-term card, so one component can serve both pages. */
-export interface DumpCard {
-  /** Unique within its deck: the acronym, or the term. */
-  id: string;
-  name: string;
-  category: string;
-  /** What the letters stand for. Acronym cards only. */
-  expansion?: string;
-  definition: string;
-  examContext: string;
-  /** The everyday comparison on a Key Terms card. */
-  analogy?: string;
-  related: string[];
-  variants?: VariantGroup[];
-  /** What to recall, shown under the name. Reference deck cards only ("Which port, and TCP or UDP?"). */
-  prompt?: string;
-  /** Labelled lines under the answer ("Example: ..."). Reference deck cards only. */
-  notes?: { label: string; text: string }[];
-  /** Marks an answer typed in Review mode. Reference deck cards with a short answer only (see typed-answer.ts). */
-  check?: AnswerCheck;
-  /** The id of this card's twin in the same deck (a port's "which protocol?" and "which port?" cards). Review mode never shows both on one day. */
-  sibling?: string;
-}
+/** How much of the checklist an answer covered. */
+export type Coverage = 'missed' | 'partly' | 'nailed';
 
 /** One line of the "a complete answer covers" checklist. */
 export interface RubricItem {
@@ -52,35 +20,6 @@ export interface RubricItem {
 export interface Segment {
   text: string;
   hit: boolean;
-}
-
-const splitRelated = (list: string): string[] =>
-  (list ?? '').split(/[,;]/).map(s => s.trim()).filter(Boolean);
-
-export function acronymToDumpCard(a: Acronym): DumpCard {
-  return {
-    id: a.acronym,
-    name: a.acronym,
-    category: a.category,
-    expansion: a.expansion,
-    definition: a.definition,
-    examContext: a.examContext,
-    related: splitRelated(a.relatedAcronyms),
-    variants: a.variants,
-  };
-}
-
-export function termToDumpCard(t: Term): DumpCard {
-  return {
-    id: t.term,
-    name: t.term,
-    category: t.category,
-    definition: t.definition,
-    examContext: t.examContext,
-    analogy: t.analogy,
-    related: splitRelated(t.relatedTerms),
-    variants: t.variants,
-  };
 }
 
 // ── Checklist ──────────────────────────────────────────────────────────────
@@ -99,7 +38,7 @@ export function splitSentences(text: string | null | undefined): string[] {
  * points written for the card. A card without written points falls back to the sentences of its definition,
  * so every card still has something to check against.
  */
-export function buildRubric(card: DumpCard, points: ReadonlyArray<string> | undefined): RubricItem[] {
+export function buildRubric(card: StudyCard, points: ReadonlyArray<string> | undefined): RubricItem[] {
   const items: RubricItem[] = [];
   if (card.expansion) items.push({ tag: 'Letters', text: card.expansion });
 
@@ -109,7 +48,7 @@ export function buildRubric(card: DumpCard, points: ReadonlyArray<string> | unde
 }
 
 /** A card counts as nailed with three quarters of the checklist, and as partly known with two fifths. */
-export function rate(covered: number, total: number): Rating {
+export function rate(covered: number, total: number): Coverage {
   if (total <= 0) return 'missed';
   if (covered * 4 >= total * 3) return 'nailed';
   return covered * 5 >= total * 2 ? 'partly' : 'missed';
@@ -204,48 +143,4 @@ export function highlight(text: string, attempt: string): Segment[] {
   flush();
   if (cursor < text.length) segments.push({ text: text.slice(cursor), hit: false });
   return segments;
-}
-
-// ── Choosing the cards for a round ─────────────────────────────────────────
-
-/** The cards a round goes through, in their current order. */
-export function pickDeck(cards: ReadonlyArray<DumpCard>, results: ReadonlyMap<string, Rating>, scope: Scope): DumpCard[] {
-  switch (scope) {
-    case 'all':
-      return [...cards];
-    case 'review':
-      return cards.filter(c => needsReview(results.get(c.id)));
-    default:
-      return cards.filter(c => results.get(c.id) !== 'nailed');
-  }
-}
-
-const needsReview = (rating: Rating | undefined): boolean => rating === 'missed' || rating === 'partly';
-
-export interface Tally {
-  nailed: number;
-  partly: number;
-  missed: number;
-  /** Cards never rated. */
-  fresh: number;
-}
-
-export function tally(cards: ReadonlyArray<DumpCard>, results: ReadonlyMap<string, Rating>): Tally {
-  const counts: Tally = { nailed: 0, partly: 0, missed: 0, fresh: 0 };
-  for (const card of cards) {
-    const rating = results.get(card.id);
-    if (rating) counts[rating]++;
-    else counts.fresh++;
-  }
-  return counts;
-}
-
-/** A shuffled copy, so the order of the alphabet stops giving the next card away. */
-export function shuffled<T>(items: ReadonlyArray<T>, random: () => number = Math.random): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
 }

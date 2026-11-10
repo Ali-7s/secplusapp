@@ -1,5 +1,5 @@
 @if (hasBoard && !disabled) {
-  <p class="hint"><mat-icon aria-hidden="true">drag_indicator</mat-icon> Drag each answer to where it belongs, or tap an answer and then tap its place. An answer can be used more than once, and some may not be used at all.</p>
+  <p class="hint"><mat-icon aria-hidden="true">drag_indicator</mat-icon> Drag or tap answers onto their places. An answer can be used more than once, or not at all.</p>
 }
 <div class="match" [class.code]="question.codeLabels">
   @for (seg of segments; track $index; let s = $index) {

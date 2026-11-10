@@ -3,7 +3,7 @@
     <div class="title"><mat-icon aria-hidden="true">hub</mat-icon> Network lab</div>
     <div class="count" aria-live="polite">{{ builtCount }} of {{ scenarios.length }} networks built</div>
   </header>
-  <p class="intro">Pick a scenario and build its network in six stages: place the devices, segment the switch, give everything an address, write the firewall rules, set up detection, then run real traffic and attacks through it. Follow the guided outline, or draw the whole network yourself from scratch. Everything is saved as you go.</p>
+  <p class="intro">Build each network in six stages, then run traffic and attacks through it.</p>
 
   <div class="tasks" role="tablist" aria-label="Scenario">
     @for (s of scenarios; track s.id) {
@@ -69,7 +69,7 @@
 
   <!-- ── Stage 1, from scratch: design the network ── -->
   @if (stage === 'place' && scratch && w.canvas) {
-    <p class="lead">Start from a blank diagram, as a network designer would. <strong>Add</strong> the switches and security devices you need, <strong>place</strong> every server, PC and access point, and <strong>cable</strong> them together. Traffic follows your cables: inside one VLAN it stays on the switches, and between VLANs it goes through the nearest router or firewall, its default gateway. An IDS cabled only to a switch sits on that switch's mirror port.</p>
+    <p class="lead"><strong>Add</strong> the switches and security devices you need, <strong>place</strong> every server, PC and access point, and <strong>cable</strong> them together. Traffic follows your cables: inside one VLAN it stays on the switches, and between VLANs it goes through the nearest router or firewall, its default gateway. An IDS cabled only to a switch sits on that switch's mirror port.</p>
     <app-lab-canvas [sc]="sc" [canvas]="w.canvas" (changed)="designEdited()" />
 
     @if (isChecked('place')) {
@@ -295,9 +295,9 @@
 
   <!-- ── Stage 4: firewall rules ── -->
   @if (stage === 'rules') {
-    <p class="lead">The firewall checks rules from the top and acts on the <strong>first match</strong>; anything no rule allows is dropped by the <strong>implicit deny</strong> at the end. A rule can name a whole zone or one device. Allow only what the requirements need. Replies to an allowed connection are let back in automatically, because the firewall is stateful.</p>
+    <p class="lead">Allow only what the requirements need. A rule can name a whole zone or one device. The firewall is stateful, so replies come back on their own.</p>
     @if (w.portMode) {
-      <p class="note"><mat-icon aria-hidden="true">pin</mat-icon><span>Rules here use <strong>port numbers only</strong>, as on a real firewall. The requirements and the traffic name the program or protocol ("SSH", "the email app reads new messages"); choosing its protocol and typing its port number is up to you. Stuck? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</span></p>
+      <p class="note"><mat-icon aria-hidden="true">pin</mat-icon><span>Rules use <strong>port numbers only</strong>: pick the protocol and type the port. Stuck? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</span></p>
     }
     @if (!sc.portsOnly) {
       <button type="button" class="toggle easy" [class.on]="!w.portMode" [attr.aria-pressed]="!w.portMode" (click)="togglePortMode()">

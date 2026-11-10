@@ -72,7 +72,7 @@ export const START: LessonBody = {
       [
         ['Which device, anywhere in the world?', '**IP address** (lesson 2)', '`192.168.1.25`'],
         ['Which device, on this local network?', '**MAC address** (lesson 2)', '`00:1A:2B:3C:4D:5E`'],
-        ['Which program on that device?', '**Port number** (lesson 3)', '`443`'],
+        ['Which program on that device?', '**Port number**', '`443`'],
       ],
     ),
     analogy('An **IP address** is like a postal address: it gets the letter to the right building anywhere in the country. A **MAC address** is like the name on the door, used for the final hand-off inside the building. A **port number** is like the apartment number, saying which resident (which program) the letter is for.'),
@@ -85,9 +85,9 @@ export const START: LessonBody = {
       ['Protocol', 'Its job, in plain words'],
       [
         ['**IP** (Internet Protocol)', 'Puts addresses on packets and gets them from network to network'],
-        ['**TCP** and **UDP**', 'Two different styles of delivering data between programs (lesson 3)'],
+        ['**TCP** and **UDP**', 'Two different styles of delivering data between programs'],
         ['**HTTP** and **HTTPS**', 'Fetching web pages. HTTPS is the secure version'],
-        ['**DNS**', 'Looking up the address that belongs to a name like `www.example.com` (lesson 8)'],
+        ['**DNS**', 'Looking up the address that belongs to a name like `www.example.com` (lesson 7)'],
       ],
     ),
     p('An **S** on the end of a protocol name usually means a **secure** version that uses **encryption**. Encryption scrambles the data so that only the intended receiver can unscramble and read it. Without encryption, data is sent in **plaintext** (also called clear text), and anyone who can see the packets can read them, including passwords.'),
@@ -100,11 +100,11 @@ export const START: LessonBody = {
     h('Local networks and the internet', { objective: '3.2', keep: 'A LAN is the network in one place; the internet is millions of networks joined by routers. A switch connects devices inside a LAN, a router connects networks.' }),
     p('A **LAN** (local area network) is the network in one place: your home, an office floor, a school. Devices on the same LAN can reach each other **directly**. Two boxes usually build a LAN:'),
     list(
-      'A **switch**: a box with many network sockets. Every wired device plugs into it, and it passes packets between them (lesson 6 shows how it knows where to send each one).',
+      'A **switch**: a box with many network sockets. Every wired device plugs into it, and it passes packets between them (lesson 5 shows how it knows where to send each one).',
       'A **wireless access point**: a box that lets Wi-Fi devices join the same network without a cable.',
     ),
     p('The **internet** is not one giant network. It is **millions of separate networks** joined together. The boxes that join one network to another are called **routers**. A router reads the destination IP address in a packet\'s header and passes the packet one step closer to the network it is going to. Each step from one router to the next is called a **hop**, and a packet crossing the internet might take 10 to 20 hops.'),
-    p('Your home "router" is really several boxes in one case: a switch (the sockets on the back), a wireless access point, a router, and a **firewall** (a guard that blocks traffic that is not allowed, covered in lesson 9). The company that connects that box to the rest of the internet is your **ISP** (internet service provider).'),
+    p('Your home "router" is really several boxes in one case: a switch (the sockets on the back), a wireless access point, a router, and a **firewall** (a guard that blocks traffic that is not allowed, covered in lesson 8). The company that connects that box to the rest of the internet is your **ISP** (internet service provider).'),
     {
       type: 'flow',
       caption: 'Loading a web page: your packets leave your LAN through your router, hop across many routers on the internet, and arrive at the web server\'s network.',
@@ -127,11 +127,11 @@ export const START: LessonBody = {
     table(
       ['Idea', 'What can go wrong', 'Defense in'],
       [
-        ['Packets travel through many devices', 'Anyone along the path can read plaintext packets', 'Encryption, lessons 5 and 10'],
+        ['Packets travel through many devices', 'Anyone along the path can read plaintext packets', 'Encryption, lessons 4 and 9'],
         ['Addresses in the header', 'Attackers can fake (**spoof**) the source address', 'Lesson 2'],
-        ['Programs listening on ports', 'Every listening program is a door an attacker can try', 'Lesson 3'],
-        ['Switches and routers', 'Whoever controls them controls the traffic', 'Lessons 6 and 11'],
-        ['The helper protocols', 'Fake answers can send you to the wrong place', 'Lesson 8'],
+        ['Programs listening on ports', 'Every listening program is a door an attacker can try', 'Lessons 4 and 10'],
+        ['Switches and routers', 'Whoever controls them controls the traffic', 'Lessons 5 and 10'],
+        ['The helper protocols', 'Fake answers can send you to the wrong place', 'Lesson 7'],
       ],
     ),
 
@@ -139,13 +139,12 @@ export const START: LessonBody = {
     p('Each lesson adds one idea on top of the ones before it, so take them in order:'),
     steps(
       '**Addresses** (lesson 2): how IP and MAC addresses work, what a subnet mask is, and how a device decides whether to send a packet directly or to the router.',
-      '**Ports, TCP and UDP** (lesson 3): how a packet reaches the right program, and the two styles of delivery.',
-      '**The layers** (lesson 4): the "OSI model" that puts everything so far into one picture, which the exam refers to constantly.',
-      '**The ports to know** (lesson 5): the port numbers you have to memorize, in sensible groups.',
-      '**Switches and routers** (lesson 6) and **VLANs** (lesson 7): the boxes that move traffic, and how one network is split into safer pieces.',
-      '**The helper protocols** (lesson 8): DHCP, DNS, ARP, ICMP and NAT, the quiet services every connection depends on.',
-      '**Firewalls, VPNs and Wi-Fi** (lesson 9), then **one web request start to finish** (lesson 10), which ties everything together.',
-      '**Hardening** (lesson 11): how to lock down network devices, which is where much of Security+ lives.',
+      '**The layers** (lesson 3): the "OSI model" that puts everything so far into one picture, which the exam refers to constantly.',
+      '**The ports to know** (lesson 4): the port numbers you have to memorize, in sensible groups.',
+      '**Switches and routers** (lesson 5) and **VLANs** (lesson 6): the boxes that move traffic, and how one network is split into safer pieces.',
+      '**The helper protocols** (lesson 7): DHCP, DNS, ARP, ICMP and NAT, the quiet services every connection depends on.',
+      '**Firewalls, VPNs and Wi-Fi** (lesson 8), then **one web request start to finish** (lesson 9), which ties everything together.',
+      '**Hardening** (lesson 10): how to lock down network devices, which is where much of Security+ lives.',
     ),
   ],
   check: [

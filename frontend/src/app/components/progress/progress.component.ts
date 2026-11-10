@@ -7,7 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { ContentService } from '../../services/content.service';
 import { CardKind, ProgressService, cardKey } from '../../services/progress.service';
-import { BrainDumpStore } from '../../services/brain-dump-store.service';
 import { SyncService } from '../../services/sync.service';
 import { DOMAIN_NAMES, ExamDomain, ExamQuestion, OBJECTIVE_NAMES } from '../../models/exam.model';
 import { EXAM_SPECS, ExamLength, PASSING_SCALED } from '../../utils/exam-engine';
@@ -17,11 +16,10 @@ import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
-import { DeckId } from '../../utils/brain-dump';
 import { MAX_LEVEL, Mastery, masteredIn } from '../ports/ports-trainer';
 import { PORTS } from '../reference/reference-data';
 
-interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number; dump: { nailed: number; partly: number; missed: number } }
+interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number }
 
 /**
  * The Today page: a plan for the day toward your exam date, a readiness estimate, and below it everything the app
@@ -37,7 +35,6 @@ interface DeckStats { total: number; studied: number; learning: number; young: n
 })
 export class ProgressComponent implements OnInit {
   private content = inject(ContentService);
-  private dumpStore = inject(BrainDumpStore);
   readonly progress = inject(ProgressService);
   readonly sync = inject(SyncService);
 
@@ -192,8 +189,8 @@ export class ProgressComponent implements OnInit {
 
   // ── Flashcards ────────────────────────────────────────────────────────
 
-  readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames(), 'acronyms'));
-  readonly termStats = computed(() => this.deckStats('term', this.termNames(), 'terms'));
+  readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames()));
+  readonly termStats = computed(() => this.deckStats('term', this.termNames()));
   readonly refStats = computed(() => this.deckStats('ref', this.refIds));
   /** The Ports trainer: how many ports are mastered and how many have been started. */
   readonly portStats = computed(() => {
@@ -202,7 +199,7 @@ export class ProgressComponent implements OnInit {
     return { total: all.length, mastered: masteredIn(m, all), started: all.filter(p => m[p] && m[p].level < MAX_LEVEL).length };
   });
 
-  private deckStats(kind: CardKind, names: string[], deck?: DeckId): DeckStats {
+  private deckStats(kind: CardKind, names: string[]): DeckStats {
     const cards = this.progress.data().cards;
     const now = Date.now();
     let studied = 0, learning = 0, young = 0, mature = 0, due = 0;
@@ -215,9 +212,7 @@ export class ProgressComponent implements OnInit {
       else young++;
       if (isDueCard(c, now)) due++;
     }
-    const dump = { nailed: 0, partly: 0, missed: 0 };
-    if (deck) for (const r of this.dumpStore.load(deck).values()) dump[r]++;
-    return { total: names.length, studied, learning, young, mature, due, dump };
+    return { total: names.length, studied, learning, young, mature, due };
   }
 
   pct(part: number, whole: number): number { return whole ? Math.round((part / whole) * 100) : 0; }
@@ -238,7 +233,7 @@ export class ProgressComponent implements OnInit {
 
   reset() {
     const where = this.sync.code() ? 'on every device you sync with' : 'in this browser';
-    if (!confirm(`This deletes all saved progress ${where}: exam history, flashcard progress, lesson progress and brain dump ratings. This cannot be undone. Delete everything?`)) return;
+    if (!confirm(`This deletes all saved progress ${where}: exam history, flashcard progress and lesson progress. This cannot be undone. Delete everything?`)) return;
     if (this.sync.code()) {
       this.progress.resetAll();
       void this.sync.syncNow().then(() => location.reload());

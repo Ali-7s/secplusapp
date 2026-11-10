@@ -11,7 +11,7 @@ export const VLANS: LessonBody = {
     'Compare VLANs with the other ways of splitting up a network',
   ],
   blocks: [
-    recap('A **switch** connects the devices on one local network, and everything plugged into it hears each other\'s **broadcasts** (one broadcast domain). Only a **router** separates networks (lesson 6). Devices on different subnets need a router between them (lesson 2).'),
+    recap('A **switch** connects the devices on one local network, and everything plugged into it hears each other\'s **broadcasts** (one broadcast domain). Only a **router** separates networks (lesson 5). Devices on different subnets need a router between them (lesson 2).'),
     words(
       ['VLAN', 'Virtual LAN: one physical switch split into several separate networks in software'],
       ['Segmentation', 'Splitting a network into separate zones so a problem in one cannot easily spread'],
@@ -27,7 +27,7 @@ export const VLANS: LessonBody = {
     ),
 
     h('What a VLAN is', { objective: '3.2', keep: 'A VLAN splits one switch into separate virtual networks. Devices in different VLANs need a router or firewall to reach each other.' }),
-    p('Lesson 6 showed that everything plugged into a switch is one network: every device hears every broadcast, and every device can reach every other. That is a problem when the guest Wi-Fi, the security cameras and the finance team\'s PCs all hang off the same switches.'),
+    p('Lesson 5 showed that everything plugged into a switch is one network: every device hears every broadcast, and every device can reach every other. That is a problem when the guest Wi-Fi, the security cameras and the finance team\'s PCs all hang off the same switches.'),
     p('A **VLAN** (virtual LAN) solves it. It lets you split one physical switch into several separate **virtual** switches, just by setting which VLAN each port belongs to. Devices in different VLANs cannot talk to each other directly, even when they are plugged into the same switch. As far as the devices can tell, they are on completely separate networks, and in practice each VLAN gets its own subnet (lesson 2).'),
     p('To get from one VLAN to another, traffic has to go through a router or a firewall, and that is exactly where rules can be applied about what may cross.'),
     analogy('One office floor with glass walls. Everybody is in the same building (the switch), but Finance and Guests sit in separate rooms with their own doors. To get from one room to the other you must go through the security desk (the router or firewall), which checks whether you are allowed.'),
@@ -70,7 +70,7 @@ export const VLANS: LessonBody = {
     p('One VLAN on a trunk is allowed to travel **without** a tag. That is the **native VLAN**, and by default it is VLAN 1. Remember that: it matters for an attack below.'),
 
     h('How VLANs talk to each other', { objective: '3.2', keep: 'VLANs separate traffic but do not filter it. The router or firewall between them is where the rules (ACLs) go.' }),
-    p('Since each VLAN is a separate network, getting from one to another needs a router, just like getting between any two networks. A router or **Layer 3 switch** (a switch that can also route, lesson 6) has a connection in each VLAN and passes traffic between them. This is called **inter-VLAN routing**.'),
+    p('Since each VLAN is a separate network, getting from one to another needs a router, just like getting between any two networks. A router or **Layer 3 switch** (a switch that can also route, lesson 5) has a connection in each VLAN and passes traffic between them. This is called **inter-VLAN routing**.'),
     p('The important part is that this crossing point is where you control what is allowed, using an **ACL** (access control list: a list of allow and block rules) or a full firewall. For example: "staff may reach the printers, guests may reach nothing internal".'),
     exam('Know that **VLANs separate traffic but do not filter it**. Once a router joins two VLANs, everything can cross unless an ACL or firewall says otherwise.'),
 
@@ -91,7 +91,7 @@ export const VLANS: LessonBody = {
       [
         ['Physical separation or air gap', 'Completely separate equipment with no connection at all (an "air gap")', 'A factory control network that is physically cut off'],
         ['Logical segmentation (VLANs or subnets with ACLs)', 'Same equipment, separate virtual networks', 'Staff, guests and servers on different VLANs'],
-        ['Screened subnet (DMZ)', 'A buffer zone between the internet and the inside, for servers the public must reach', 'A public web server (lesson 9)'],
+        ['Screened subnet (DMZ)', 'A buffer zone between the internet and the inside, for servers the public must reach', 'A public web server (lesson 8)'],
         ['Microsegmentation', 'Rules for each individual server or workload, often in virtual or cloud environments', 'A database only accepts connections from its own application server'],
       ],
     ),
