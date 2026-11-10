@@ -95,6 +95,13 @@
   </div>
   <p class="fw-help">Stuck on a port? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</p>
   <app-pbq-practice [title]="s.title" [questions]="[s]" [retryLocked]="locked(s)" (checkedResult)="onScenarioChecked(s)" />
+  @if (back; as rulesBack) {
+    <p class="fw-back" role="status">
+      <mat-icon aria-hidden="true">event_repeat</mat-icon>
+      <span class="fw-back-title">Comes back in</span>
+      @for (b of rulesBack; track b.label) { <span class="fw-chip" [class.soon]="b.soon">{{ b.label }} <strong>{{ b.when }}</strong></span> }
+    </p>
+  }
   @if (locked(s)) {
     @let other = unlockSet(s);
     <div class="fw-lock" role="status">
@@ -124,8 +131,9 @@
   @if (view === 'firewalls') {
 
     <div class="overall">
-      <div class="o-num"><strong>{{ checkedCount }}</strong> of {{ scenarios.length }} written scenarios checked · <strong>{{ masteredAll }}</strong> of {{ total }} ports mastered</div>
-      <div class="o-bar" aria-hidden="true"><div [style.width.%]="(checkedCount / scenarios.length) * 100"></div></div>
+      @let all = rules(MIXED);
+      <div class="o-num"><strong>{{ all.due }}</strong> {{ all.due === 1 ? 'rule' : 'rules' }} due · <strong>{{ all.learned }}</strong> of {{ ruleTotal }} rules learned · <strong>{{ checkedCount }}</strong> of {{ scenarios.length }} written scenarios checked</div>
+      <div class="o-bar" aria-hidden="true"><div [style.width.%]="(all.learned / ruleTotal) * 100"></div></div>
       <div class="o-acts">
         <button type="button" class="btn primary" (click)="openRandom(MIXED)"><mat-icon aria-hidden="true">shuffle</mat-icon> {{ randomUnfinished(MIXED) ? 'Continue random table' : 'Random table: every set' }}</button>
         @if (firstUnchecked; as f) {
@@ -142,7 +150,7 @@
             <button type="button" class="fw-item fw-random" (click)="openRandom(set.id)">
               <mat-icon aria-hidden="true">shuffle</mat-icon>
               <span class="fw-title">Random table</span>
-              <span class="fw-state">{{ randomUnfinished(set.id) ? 'In progress' : 'New every time' }}</span>
+              <span class="fw-state" [class.fw-due]="!randomUnfinished(set.id) && rules(set.id).due > 0">{{ randomState(set.id) }}</span>
               <mat-icon aria-hidden="true">chevron_right</mat-icon>
             </button>
           </li>

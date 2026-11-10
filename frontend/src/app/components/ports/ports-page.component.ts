@@ -1,13 +1,15 @@
 import { Component, ElementRef, ViewChild, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ProgressService } from '../../services/progress.service';
 import { PORTS, PortEntry } from '../reference/reference-data';
 import { LessonWork } from '../networking/lesson-work.service';
 import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
 import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
-import { MIXED, PortScenario, SCENARIOS, portOutcomes, trainerEntry } from './firewall-scenarios';
-import { GeneratedRef, RuleHistory, buildTable, newTable, recordTable } from './firewall-generator';
+import { MIXED, PortScenario, SCENARIOS, portOutcomes, portsRight, trainerEntry } from './firewall-scenarios';
+import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewall-generator';
+import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
+import { formatDelay } from '../../utils/srs';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
   GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
@@ -52,12 +54,18 @@ export class PortsPageComponent {
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   question: PortQuestion | null = null;
 
-  view: View = this.progress.lessonWork(SLUG, 'view') === 'firewalls' ? 'firewalls' : 'drills';
+  /** The view last used, unless a link asks for one (the Today page sends due firewall rules here with ?view=firewalls). */
+  view: View = (inject(ActivatedRoute).snapshot.queryParamMap.get('view') ?? this.progress.lessonWork(SLUG, 'view')) === 'firewalls' ? 'firewalls' : 'drills';
   scenario: PortScenario | null = this.restoreScenario();
   /** Failed written scenarios whose Try again has been earned back. */
   unlocked: Unlocked = (this.progress.lessonWork(SLUG, 'fw:unlocked') as Unlocked | undefined) ?? {};
-  /** How each rule went in earlier random tables, which decides what the next one asks. */
-  history: RuleHistory | undefined = this.progress.lessonWork(SLUG, 'fw:history') as RuleHistory | undefined;
+  /** What is remembered of each firewall rule: its spaced repetition card, which decides what the next random table asks. */
+  memory: RuleMemory = loadMemory(key => this.progress.lessonWork(SLUG, key));
+  /** The time the counts on screen were worked out for. */
+  private clock = Date.now();
+  /** When each rule of the open random table comes back, once it has been checked. */
+  back: ReturnType<typeof comesBack> | null = null;
+  readonly ruleTotal = FACTS.length;
   readonly scenarios = SCENARIOS;
   readonly MIXED = MIXED;
   readonly scenarioSets = [...GROUPS.map(g => ({ id: g.id, title: g.title })), { id: MIXED, title: 'Mixed: whole companies' }]
@@ -67,19 +75,61 @@ export class PortsPageComponent {
     this.work.slug = SLUG;
     if (this.round && !this.round.refs?.length) this.round = null;
     this.load();
+    // A view asked for by a link is remembered like one chosen here.
+    if (this.view !== (this.progress.lessonWork(SLUG, 'view') ?? 'drills')) this.progress.setLessonWork(SLUG, 'view', this.view);
+    this.adoptOldHistory();
+    this.refreshBack();
   }
+
+  /** Tables used to keep a plain history of each rule. Turn it into rule memory once, then drop it. */
+  private adoptOldHistory() {
+    const history = this.progress.lessonWork(SLUG, 'fw:history') as OldRuleHistory | undefined;
+    if (!history) return;
+    const saved: Record<string, unknown> = { 'fw:history': null };
+    if (!Object.keys(this.memory).length) {
+      this.memory = memoryFromHistory(history, port => this.mastery[trainerEntry(port) ?? '']?.at, Date.now(), this.retention);
+      for (const [fact, card] of Object.entries(this.memory)) saved[memoryKey(fact)] = card;
+    }
+    this.progress.setLessonWorks(SLUG, saved);
+  }
+
+  /** Rules follow Review mode's two settings: the recall chance to aim for, and how many new ones a day. */
+  private get retention() { return this.progress.data().review.retention; }
 
   // ── Firewall scenarios ──────────────────────────────────────────────────
 
   setView(view: View) {
     this.view = view;
+    this.clock = Date.now();
     this.progress.setLessonWork(SLUG, 'view', view);
   }
 
   openScenario(s: PortScenario | null) {
     this.scenario = s;
     this.progress.setLessonWork(SLUG, 'fw:open', s?.id ?? null);
+    this.refreshBack();
     this.toTop();
+  }
+
+  /** Rules due, new and learned among the ones this set's random table draws on. */
+  rules(set: string): RuleCounts { return ruleCounts(this.memory, factsIn(set), this.clock); }
+
+  /** What a set's random table has waiting: an unfinished table, rules due, new rules, or the time until the next is due. */
+  randomState(set: string): string {
+    if (this.randomUnfinished(set)) return 'In progress';
+    const r = this.rules(set);
+    if (r.due) return `${r.due} due`;
+    if (r.fresh) return `${r.fresh} new`;
+    return r.next ? `Next due in ${formatDelay(r.next - this.clock)}` : 'New every time';
+  }
+
+  /** Works out the "comes back" line for the open table: only a random table whose first check has been counted has one. */
+  private refreshBack() {
+    this.clock = Date.now();
+    const s = this.scenario;
+    const ref = s && s.seed !== undefined ? this.randomRef(s.set) : undefined;
+    const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
+    this.back = s && ref && ref.seed === s.seed && scored[s.id] === String(s.seed) ? comesBack(this.memory, ref.flows, this.clock) : null;
   }
 
   private savedScenario(s: PortScenario) { return this.work.get<SavedScenario>(`pbq:${s.id}`); }
@@ -101,7 +151,9 @@ export class PortsPageComponent {
   openRandom(set: string, fresh = false) {
     let ref = this.randomRef(set);
     if (!ref || fresh || !this.randomUnfinished(set)) {
-      ref = newTable(set, { level: port => this.level(port), history: this.history }, Date.now() % 2 ** 31);
+      const now = Date.now();
+      const newLeft = newRulesLeft(this.memory, this.progress.data().review.newPerDay, now);
+      ref = newTable(set, { level: port => this.level(port), memory: this.memory, now, newLeft }, now % 2 ** 31);
       this.progress.setLessonWork(SLUG, `fw:gen:${set}`, ref);
       this.work.clear(`pbq:gen-${set}`);
     }
@@ -162,11 +214,14 @@ export class PortsPageComponent {
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: mark });
 
+    // Each rule of a random table is rated like a Review card, which sets when it comes back.
     const ref = written ? undefined : this.randomRef(s.set);
-    if (ref && ref.seed === s.seed && ref.flows.length === graded.parts.length) {
-      this.history = recordTable(this.history, ref.flows, graded.parts.map(p => p.ok));
-      this.progress.setLessonWork(SLUG, 'fw:history', this.history);
+    if (ref && ref.seed === s.seed && ref.flows.length === s.rows.length) {
+      const changed = rateTable(this.memory, ref.flows, portsRight(s, this.savedScenario(s)?.answer?.cells), now, this.retention);
+      this.memory = { ...this.memory, ...changed };
+      this.progress.setLessonWorks(SLUG, Object.fromEntries(Object.entries(changed).map(([fact, card]) => [memoryKey(fact), card])));
     }
+    this.refreshBack();
   }
 
   // ── Overview ────────────────────────────────────────────────────────────

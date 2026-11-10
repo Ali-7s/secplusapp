@@ -43,6 +43,8 @@ export interface PlanInput {
   missedQuestions: number;
   /** Study activity per local day. */
   days: Record<string, number>;
+  /** Firewall rules in the Ports trainer whose review time has come. */
+  rulesDue?: number;
 }
 
 export interface TaskLink {
@@ -180,14 +182,19 @@ export function planTasks(input: PlanInput, phase: Phase, daysLeft: number | nul
   }
 
   const due = input.decks.reduce((s, d) => s + d.due, 0);
+  const rules = input.rulesDue ?? 0;
   const reviewDecks = input.decks.filter(d => d.due > 0);
+  const waiting = [due ? `${due} due card${due === 1 ? '' : 's'}` : '', rules ? `${rules} ${due ? '' : 'due '}firewall rule${rules === 1 ? '' : 's'}` : ''].filter(Boolean);
   tasks.push({
-    id: 'reviews', icon: 'event_repeat', done: due === 0,
-    title: due ? `Review ${due} due card${due === 1 ? '' : 's'}` : 'Reviews: all caught up',
-    detail: due
-      ? 'Cards spaced repetition says you are about to forget. Do these first; they take the least time for the most memory.'
-      : 'Nothing is due right now. Cards you have studied come back here when it is time.',
-    links: reviewDecks.map(d => ({ label: `${d.label} (${d.due})`, path: d.path, query: { mode: 'review' } })),
+    id: 'reviews', icon: 'event_repeat', done: !waiting.length,
+    title: waiting.length ? `Review ${waiting.join(' and ')}` : 'Reviews: all caught up',
+    detail: waiting.length
+      ? 'What spaced repetition says you are about to forget. Do these first; they take the least time for the most memory.'
+      : 'Nothing is due right now. Cards and firewall rules you have studied come back here when it is time.',
+    links: [
+      ...reviewDecks.map(d => ({ label: `${d.label} (${d.due})`, path: d.path, query: { mode: 'review' } })),
+      ...(rules ? [{ label: `Firewall rules (${rules})`, path: '/ports', query: { view: 'firewalls' } }] : []),
+    ],
   });
 
   if (phase === 'learn' || phase === 'none' || phase === 'past') {

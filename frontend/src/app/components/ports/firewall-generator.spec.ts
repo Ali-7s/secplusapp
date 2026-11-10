@@ -2,19 +2,42 @@ import { NetDiagram } from '../../models/exam.model';
 import { gradeQuestion, isAnswered } from '../../utils/exam-engine';
 import { ICON_H, ICON_W, narrowLayout, wideLayout } from '../practice-exam/network-diagram';
 import { PORTS } from '../reference/reference-data';
-import { FLOWS, LOOKALIKES, RuleHistory, buildTable, need, newTable, recordTable } from './firewall-generator';
+import { SrsCard } from '../../utils/srs';
+import { FACTS, FLOWS, LOOKALIKES, NEW_PER_TABLE, RuleMemory, TableContext, buildTable, factOf, newTable, setOfFact } from './firewall-generator';
+import { rateTable } from './firewall-memory';
 import { MIXED, portNumbers } from './firewall-scenarios';
 import { GROUPS } from './ports-trainer';
+import { seededRandom } from '../../utils/exam-engine';
 
 const SETS = [...GROUPS.map(g => g.id), MIXED];
 const SEEDS = Array.from({ length: 60 }, (_, i) => 1000 + i * 7919);
 const NEW = { level: () => 0 };
 const KNOWN = { level: () => 4 };
-const table = (set: string, seed: number) => buildTable(newTable(set, NEW, seed));
 const flow = (id: string) => FLOWS.find(f => f.id === id)!;
-/** A history in which these rules were asked in one table each, in this order, all right unless listed as missed. */
-const historyOf = (tables: string[][], missed: string[] = []): RuleHistory =>
-  tables.reduce<RuleHistory | undefined>((h, ids) => recordTable(h, ids, ids.map(id => !missed.includes(id))), undefined)!;
+const MIN = 60_000, DAY = 86_400_000;
+const NOW = Date.UTC(2026, 10, 10, 9);
+/** A learned rule: last answered `ago` days back, with this many days of stability, so it was due after about that long. */
+const learned = (stability: number, ago: number): SrsCard => ({
+  state: 'review', step: 0, interval: stability, ease: 2.5, due: NOW - ago * DAY + stability * DAY, reps: 3, lapses: 0, right: 3, wrong: 0,
+  at: NOW - ago * DAY, first: NOW - 30 * DAY, stability, difficulty: 5, last: NOW - ago * DAY,
+});
+const memoryOf = (facts: string[], card: (fact: string, i: number) => SrsCard): RuleMemory => Object.fromEntries(facts.map((f, i) => [f, card(f, i)]));
+/** Every rule learned and far from due. */
+const allRested = () => memoryOf(FACTS, () => learned(60, 1));
+/** A learner partway through: some rules new, some due, some resting, different for every seed. */
+const partway = (seed: number): TableContext => {
+  const rand = seededRandom(seed);
+  const memory: RuleMemory = {};
+  for (const fact of FACTS) {
+    const r = rand();
+    if (r < 0.3) memory[fact] = learned(2 + rand() * 5, 8 + rand() * 20);
+    else if (r < 0.6) memory[fact] = learned(30, rand() * 5);
+  }
+  return { level: () => Math.floor(rand() * 5), memory, now: NOW };
+};
+/** New learners and learners partway through, so the checks below meet many different tables. */
+const table = (set: string, seed: number) => buildTable(newTable(set, seed % 2 ? partway(seed) : NEW, seed));
+const factsOf = (set: string, ctx: TableContext, seed: number) => newTable(set, { now: NOW, ...ctx }, seed).flows.map(factOf);
 const transports = (proto: string) => (proto === 'TCP and UDP' ? ['TCP', 'UDP'] : [proto]);
 
 describe('firewall table generator', () => {
@@ -85,69 +108,132 @@ describe('firewall table generator', () => {
     }
   });
 
-  it('asks about the weakest ports first', () => {
-    const level = (port: string) => (port === '993' ? 0 : 4);
-    let hits = 0;
-    for (const seed of SEEDS) if (newTable('mail', { level }, seed).flows.includes('imaps')) hits++;
-    expect(hits).toBe(SEEDS.length);
-  });
+  describe('choosing rules by spaced repetition', () => {
+    const share = (set: string, ctx: TableContext, fact: string) => SEEDS.filter(seed => factsOf(set, ctx, seed).includes(fact)).length / SEEDS.length;
 
-  describe('choosing by what earlier tables showed', () => {
-    const share = (set: string, ctx: Parameters<typeof newTable>[1], id: string) => SEEDS.filter(seed => newTable(set, ctx, seed).flows.includes(id)).length / SEEDS.length;
-
-    it('records each rule of a checked table', () => {
-      const h = recordTable(recordTable(undefined, ['ssh', 'rdp'], [true, false]), ['rdp', 'vnc'], [true, true]);
-      expect(h.n).toBe(2);
-      expect(h.rules['ssh']).toEqual({ asked: 1, missed: 0, ok: true, at: 1 });
-      expect(h.rules['rdp']).toEqual({ asked: 2, missed: 1, ok: true, at: 2 });
-      expect(h.rules['vnc']).toEqual({ asked: 1, missed: 0, ok: true, at: 2 });
+    it('gives rules that ask for the same fact one memory, under names that never change', () => {
+      // These names are saved with the learner's progress. Add new facts; never rename or reuse one.
+      expect(FACTS).toEqual([
+        'ssh', 'sftp', 'telnet', 'rdp', 'vnc', 'https-in', 'http', 'alt-http', 'alt-https',
+        'dns', 'dns-zone', 'dot', 'dhcp', 'dhcp-reply', 'ntp',
+        'smtp-in', 'submission', 'smtps', 'pop3', 'pop3s', 'imap', 'imaps',
+        'smb', 'tftp', 'ftp', 'ftp-data', 'ftps', 'ftps-data', 'nb-name', 'nb-dgram', 'nb-session',
+        'kerberos', 'ldap', 'ldaps', 'radius', 'radius-acct', 'tacacs',
+        'snmp', 'snmp-trap', 'syslog', 'syslog-tls', 'ping',
+        'ike', 'natt', 'esp', 'ah', 'l2tp', 'pptp', 'ovpn-udp', 'ovpn-tcp', 'wireguard',
+        'mssql', 'oracle', 'mysql', 'rpc', 'bgp', 'nntp', 'sip', 'sips', 'mqtt', 'mqtts',
+      ]);
+      expect(factOf('telnet-block')).toBe('telnet');
+      expect(factOf('pptp-block')).toBe('pptp');
+      expect(factOf('https-out')).toBe('https-in');
+      expect(factOf('https-app')).toBe('https-in');
+      // Same port, different thing to know.
+      expect(factOf('sftp')).not.toBe(factOf('ssh'));
+      expect(factOf('ovpn-tcp')).not.toBe(factOf('ovpn-udp'));
+      for (const f of FLOWS) {
+        const fact = flow(factOf(f.id));
+        expect([fact.set, fact.label, fact.proto, fact.port]).withContext(f.id).toEqual([f.set, f.label, f.proto, f.port]);
+      }
     });
 
-    it('ranks a missed rule above a new one, and a new one above one already right', () => {
-      const history = historyOf([['ldap', 'ldaps'], ['ssh']], ['ldap']);
-      const ctx = { level: () => 2, history };
-      expect(need(flow('ldap'), ctx)).toBeGreaterThan(need(flow('radius'), ctx));
-      expect(need(flow('radius'), ctx)).toBeGreaterThan(need(flow('ldaps'), ctx));
+    it('never asks for one fact twice in a table', () => {
+      for (const set of SETS) {
+        for (const seed of SEEDS) {
+          const facts = factsOf(set, partway(seed), seed);
+          expect(new Set(facts).size).withContext(`${set} ${seed}`).toBe(facts.length);
+        }
+      }
     });
 
-    it('brings a missed rule back in mixed tables', () => {
-      const history = historyOf([['bgp', 'ssh'], ['dns']], ['bgp']);
-      expect(share(MIXED, { level: () => 4, history }, 'bgp')).toBeGreaterThan(0.8);
-      expect(share(MIXED, KNOWN, 'bgp')).toBeLessThan(0.4);
-    });
-
-    it('holds a missed rule back while it is still the latest table, then brings it back harder', () => {
-      const justNow = { level: () => 2, history: historyOf([['bgp']], ['bgp']) };
-      const later = { level: () => 2, history: historyOf([['bgp'], ['dns']], ['bgp']) };
-      expect(need(flow('bgp'), later)).toBeGreaterThan(need(flow('bgp'), justNow));
-    });
-
-    it('rests the rules the latest table got right', () => {
-      const last = newTable(MIXED, NEW, 77).flows;
-      const history = historyOf([last]);
-      let repeats = 0;
-      for (const seed of SEEDS) repeats += newTable(MIXED, { level: () => 0, history }, seed).flows.filter(id => last.includes(id)).length;
-      expect(repeats).toBe(0);
-    });
-
-    it('lets a rule that was right long ago earn its way back', () => {
-      const tables = [['bgp'], ...Array.from({ length: 12 }, () => ['dns'])];
-      expect(need(flow('bgp'), { level: () => 4, history: historyOf(tables) })).toBeGreaterThan(need(flow('bgp'), { level: () => 4, history: historyOf(tables.slice(0, 2)) }));
-    });
-
-    it('asks look-alike rules together when one of them is shaky', () => {
-      expect(new Set(LOOKALIKES.flat().filter(id => !FLOWS.some(f => f.id === id)))).toEqual(new Set());
-      const level = (port: string) => (port === '993' ? 0 : 4);
-      // Everything but IMAPS is known and was right in an earlier table, so only the pairing can pull POP3S in.
-      const history = historyOf([FLOWS.map(f => f.id).filter(id => id !== 'imaps'), ['ping']]);
-      expect(share(MIXED, { level, history }, 'pop3s')).toBeGreaterThan(0.7);
-      expect(share(MIXED, { level: () => 4, history }, 'pop3s')).toBeLessThan(0.3);
-    });
-
-    it('keeps a mixed table spread over several sets', () => {
+    it('starts a new learner on the most-tested sets, the same rules whatever the seed', () => {
       for (const seed of SEEDS) {
-        const sets = newTable(MIXED, NEW, seed).flows.map(id => flow(id).set);
-        for (const s of new Set(sets)) expect(sets.filter(x => x === s).length).withContext(`${seed} ${s}`).toBeLessThanOrEqual(3);
+        expect(new Set(factsOf(MIXED, NEW, seed))).withContext(String(seed)).toEqual(new Set(['ssh', 'telnet', 'rdp', 'https-in', 'http', 'alt-http', 'dns']));
+      }
+    });
+
+    it('brings missed rules straight back, and lets new rules in only where there is room', () => {
+      for (const seed of SEEDS.slice(0, 20)) {
+        const first = newTable(MIXED, { ...NEW, now: NOW }, seed).flows;
+        const right = first.map((_, i) => i >= 4);
+        const memory = rateTable({}, first, right, NOW);
+        const next = factsOf(MIXED, { ...NEW, memory }, seed + 1);
+        for (const id of first.slice(0, 4)) expect(next).withContext(`${seed} ${id}`).toContain(factOf(id));
+        const fresh = next.filter(f => !memory[f]).length;
+        expect(fresh).withContext(String(seed)).toBeGreaterThan(0);
+        expect(fresh).withContext(String(seed)).toBeLessThanOrEqual(NEW_PER_TABLE);
+      }
+    });
+
+    it('leaves no room for new rules while a full table of missed ones is waiting', () => {
+      const first = newTable(MIXED, { ...NEW, now: NOW }, 5).flows;
+      const memory = rateTable({}, first, first.map(() => false), NOW);
+      for (const seed of SEEDS) expect(new Set(factsOf(MIXED, { ...NEW, memory }, seed))).toEqual(new Set(first.map(factOf)));
+    });
+
+    it('introduces at most three new rules while it has others to ask', () => {
+      const memory = memoryOf(FACTS.filter((_, i) => i % 3 === 0), () => learned(60, 1));
+      for (const seed of SEEDS) expect(factsOf(MIXED, { ...NEW, memory }, seed).filter(f => !memory[f]).length).withContext(String(seed)).toBe(NEW_PER_TABLE);
+      // The same in a set's own table, as long as the set has learned rules to fill it with.
+      const other = FACTS.filter(f => setOfFact(f) === 'other');
+      const mostly = memoryOf(other.slice(4), () => learned(60, 1));
+      for (const seed of SEEDS) expect(factsOf('other', { ...NEW, memory: mostly }, seed).filter(f => !mostly[f]).length).withContext(String(seed)).toBe(NEW_PER_TABLE);
+    });
+
+    it('stops introducing new rules once today\'s limit is reached', () => {
+      const memory = memoryOf(FACTS.filter((_, i) => i % 2 === 0), () => learned(60, 1));
+      for (const seed of SEEDS) {
+        expect(factsOf(MIXED, { ...NEW, memory, newLeft: 0 }, seed).filter(f => !memory[f]).length).withContext(String(seed)).toBe(0);
+        expect(factsOf(MIXED, { ...NEW, memory, newLeft: 1 }, seed).filter(f => !memory[f]).length).withContext(String(seed)).toBe(1);
+      }
+    });
+
+    it('asks the due rules most likely forgotten first', () => {
+      const files = FACTS.filter(f => setOfFact(f) === 'files');
+      // All due, each last answered a day earlier than the one before: the later in the list, the more forgotten.
+      const memory = memoryOf(files, (_, i) => learned(2, 3 + i));
+      for (const seed of SEEDS) expect(new Set(factsOf('files', { ...NEW, memory }, seed))).withContext(String(seed)).toEqual(new Set(files.slice(-6)));
+    });
+
+    it('lets a learned rule rest until it is due', () => {
+      const due = FACTS.filter(f => setOfFact(f) === 'mail' || setOfFact(f) === 'vpn');
+      const memory = { ...memoryOf(due, () => learned(2, 9)), bgp: learned(10, 2) };
+      expect(share(MIXED, { ...NEW, memory }, 'bgp')).toBe(0);
+      // Eleven days on it is overdue, and by then more forgotten than rules learned a moment ago.
+      const later = { ...memoryOf(due, () => learned(60, 0)), bgp: learned(10, 13) };
+      expect(share(MIXED, { ...NEW, memory: later }, 'bgp')).toBe(1);
+    });
+
+    it('asks look-alike rules together when one of them is being relearned', () => {
+      expect(new Set(LOOKALIKES.flat().filter(id => !FLOWS.some(f => f.id === id)))).toEqual(new Set());
+      const rested = allRested();
+      // IMAPS was just missed, so its secure and plain neighbors come along although they are not due.
+      const lapsed = { ...rested, ...rateTable(rested, ['imaps'], [false], NOW - 15 * MIN) };
+      for (const seed of SEEDS) {
+        const facts = factsOf(MIXED, { ...NEW, memory: lapsed }, seed);
+        expect(facts).withContext(String(seed)).toContain('imaps');
+        expect(facts.filter(f => f === 'pop3s' || f === 'imap').length).withContext(String(seed)).toBe(2);
+      }
+      expect(share(MIXED, { ...NEW, memory: rested }, 'pop3s')).toBeLessThan(0.4);
+    });
+
+    it('keeps a mixed table spread over several sets, but never by leaving a due rule out', () => {
+      for (const seed of SEEDS) {
+        for (const ctx of [NEW, { ...NEW, memory: allRested() }]) {
+          const sets = factsOf(MIXED, ctx, seed).map(setOfFact);
+          for (const s of new Set(sets)) expect(sets.filter(x => x === s).length).withContext(`${seed} ${s}`).toBeLessThanOrEqual(3);
+        }
+      }
+      const mail = FACTS.filter(f => setOfFact(f) === 'mail');
+      const memory = { ...allRested(), ...memoryOf(mail, () => learned(2, 9)) };
+      expect(new Set(factsOf(MIXED, { ...NEW, memory }, 3))).toEqual(new Set(mail));
+    });
+
+    it('asks a set\'s own rules before anyone else\'s, even when others are due', () => {
+      const memory = memoryOf(FACTS.filter(f => setOfFact(f) !== 'web'), () => learned(2, 9));
+      for (const seed of SEEDS) {
+        const facts = factsOf('web', { ...NEW, memory }, seed);
+        expect(facts.filter(f => setOfFact(f) === 'web').length).withContext(String(seed)).toBe(4);
+        expect(facts.length).withContext(String(seed)).toBe(6);
       }
     });
   });

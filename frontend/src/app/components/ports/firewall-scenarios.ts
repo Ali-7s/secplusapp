@@ -449,17 +449,23 @@ export function trainerEntry(port: string): string | undefined {
 }
 
 /**
- * How each trainer port went in a checked table: right only if every rule using it had both Protocol and Port right.
- * The Source, Destination and Action do not count here, because this is about knowing the port.
+ * Rule by rule, whether both the Protocol and the Port were right. The Source, Destination and Action do not count
+ * here, because this is about knowing the port.
  */
+export function portsRight(q: FirewallQuestion, cells: Record<string, string>[] | undefined): boolean[] {
+  return q.rows.map((row, r) => {
+    const cell = cells?.[r] ?? {};
+    return (cell['Protocol'] ?? '') === row.answer['Protocol'] && normalizePort(cell['Port'] ?? '') === normalizePort(row.answer['Port']);
+  });
+}
+
+/** How each trainer port went in a checked table: right only if every rule using it had both Protocol and Port right. */
 export function portOutcomes(q: FirewallQuestion, cells: Record<string, string>[] | undefined): { port: string; right: boolean }[] {
+  const right = portsRight(q, cells);
   const seen = new Map<string, boolean>();
   q.rows.forEach((row, r) => {
     const port = trainerEntry(row.answer['Port']);
-    if (!port) return;
-    const cell = cells?.[r] ?? {};
-    const right = (cell['Protocol'] ?? '') === row.answer['Protocol'] && normalizePort(cell['Port'] ?? '') === normalizePort(row.answer['Port']);
-    seen.set(port, (seen.get(port) ?? true) && right);
+    if (port) seen.set(port, (seen.get(port) ?? true) && right[r]);
   });
-  return [...seen].map(([port, right]) => ({ port, right }));
+  return [...seen].map(([port, ok]) => ({ port, right: ok }));
 }

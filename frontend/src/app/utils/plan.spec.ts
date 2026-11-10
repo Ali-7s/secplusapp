@@ -61,6 +61,15 @@ describe('study plan', () => {
     expect(plan.tasks[2].links[0].query).toEqual({ length: 'quick' });
   });
 
+  it('lists firewall rules that are due with the due cards', () => {
+    const both = buildPlan(input({ decks: [deck({ due: 12 })], rulesDue: 5 }), 0, 28).tasks[0];
+    expect(both.title).toBe('Review 12 due cards and 5 firewall rules');
+    expect(both.links[1]).toEqual({ label: 'Firewall rules (5)', path: '/ports', query: { view: 'firewalls' } });
+    const rulesOnly = buildPlan(input({ rulesDue: 1 }), 0, 28).tasks[0];
+    expect([rulesOnly.title, rulesOnly.done, rulesOnly.links.length]).toEqual(['Review 1 due firewall rule', false, 1]);
+    expect(buildPlan(input({ rulesDue: 0 }), 0, 28).tasks[0].done).toBeTrue();
+  });
+
   it('asks for full exams in the review window and drills untested objectives', () => {
     const plan = buildPlan(input({ examDate: day(10), exams: [exam('quick', 700, NOW - 5 * DAY)], untestedObjectives: ['4.2', '5.6'] }), 26, 28);
     expect(plan.tasks.map(t => t.id)).toEqual(['reviews', 'practice', 'objective']);

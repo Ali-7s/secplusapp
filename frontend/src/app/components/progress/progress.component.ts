@@ -17,6 +17,7 @@ import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
 import { MAX_LEVEL, Mastery, masteredIn } from '../ports/ports-trainer';
+import { savedRuleCounts } from '../ports/rule-cards';
 import { PORTS } from '../reference/reference-data';
 
 interface DeckStats { total: number; studied: number; learning: number; young: number; mature: number; due: number }
@@ -108,6 +109,7 @@ export class ProgressComponent implements OnInit {
       untestedObjectives: this.untestedObjectives(),
       missedQuestions: this.missedCount(),
       days: d.days,
+      rulesDue: this.portStats().rules.due,
     }, this.objectives().length, Object.keys(OBJECTIVE_NAMES).length);
   });
 
@@ -192,11 +194,12 @@ export class ProgressComponent implements OnInit {
   readonly acronymStats = computed(() => this.deckStats('acr', this.acronymNames()));
   readonly termStats = computed(() => this.deckStats('term', this.termNames()));
   readonly refStats = computed(() => this.deckStats('ref', this.refIds));
-  /** The Ports trainer: how many ports are mastered and how many have been started. */
+  /** The Ports trainer: how many ports are mastered and started, and how its firewall rules stand in their spaced repetition. */
   readonly portStats = computed(() => {
     const m = (this.progress.lessonWork('ports-trainer', 'mastery') as Mastery | undefined) ?? {};
     const all = PORTS.map(p => p.port);
-    return { total: all.length, mastered: masteredIn(m, all), started: all.filter(p => m[p] && m[p].level < MAX_LEVEL).length };
+    const rules = savedRuleCounts(this.progress.lessonRecord('ports-trainer')?.work, Date.now());
+    return { total: all.length, mastered: masteredIn(m, all), started: all.filter(p => m[p] && m[p].level < MAX_LEVEL).length, rules };
   });
 
   private deckStats(kind: CardKind, names: string[]): DeckStats {

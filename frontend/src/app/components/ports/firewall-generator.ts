@@ -1,17 +1,20 @@
 /**
- * Builds a new firewall table every time, so nothing can be memorized by position: the ports chosen, the hosts, the
- * addresses and the wording all change. Each rule is worded one of two ways: `plain` names the protocol the way exam
- * simulations do ("Allow LDAP queries from ..."), and `job` only describes what is needed. Neither ever gives the number.
+ * Builds a new firewall table every time, so nothing can be memorized by position: the hosts, the addresses and the
+ * wording all change. Each rule is worded one of two ways: `plain` names the protocol the way exam simulations do
+ * ("Allow LDAP queries from ..."), and `job` only describes what is needed. Neither ever gives the number.
  *
- * Which rules a table asks is decided by need (see `need`): weak ports and rules missed in earlier tables come first,
- * rules never asked come before rules already right, a rule just answered right rests, and a shaky rule brings its
- * look-alikes into the same table. The better a port is known, the more often its rule only describes the job.
+ * Which rules a table asks is decided by spaced repetition, the same FSRS-6 memory model Review mode uses (see
+ * utils/srs.ts). Every rule has its own memory, and a table is put together like a review session: rules that are due
+ * come first, the ones most likely forgotten ahead of the rest, then a few new rules, then rules that are nearly due.
+ * A rule being learned brings its look-alikes into the same table. The better a port is known, the more often its
+ * rule only describes the job.
  *
  * A table is rebuilt from a small GeneratedRef, so a refresh brings back exactly the same one.
  */
 
 import { NetHost, NetZone } from '../../models/exam.model';
 import { seededRandom, shuffled } from '../../utils/exam-engine';
+import { SrsCard, recallNow } from '../../utils/srs';
 import { AH, BOTH, Draft, ESP, ICMP, MIXED, NO_PORT, PortScenario, Rule, TCP, UDP, build, trainerEntry } from './firewall-scenarios';
 import { GROUPS, MAX_LEVEL } from './ports-trainer';
 
@@ -403,6 +406,33 @@ export const FLOWS: Flow[] = [
 
 const flowById = new Map(FLOWS.map(f => [f.id, f]));
 
+/**
+ * Rules that ask for the same thing share one memory: allowing Telnet and blocking Telnet both come down to "Telnet is
+ * TCP 23". That shared thing is a fact, named after the first rule that asks for it (an allow rule if there is one).
+ * Fact names are saved with the learner's progress, so they must never change (the spec keeps the list).
+ */
+const factKey = (f: Flow) => `${f.label}|${f.proto}|${f.port}`;
+const firstAsking = new Map<string, string>();
+for (const f of [...FLOWS.filter(x => !x.action), ...FLOWS]) if (!firstAsking.has(factKey(f))) firstAsking.set(factKey(f), f.id);
+
+/** The fact a rule asks for. */
+export const factOf = (flowId: string): string => {
+  const f = flowById.get(flowId);
+  return f ? firstAsking.get(factKey(f))! : flowId;
+};
+/** Every fact, in the order new ones are introduced: the most-tested sets first. */
+export const FACTS: string[] = [...new Set(FLOWS.map(f => factOf(f.id)))];
+const rulesAsking = new Map(FACTS.map(fact => [fact, FLOWS.filter(f => factOf(f.id) === fact)]));
+/** The trainer set a fact belongs to. */
+export const setOfFact = (fact: string) => flowById.get(fact)?.set;
+/** How feedback names a fact ("SSH", "DNS zone transfers"). */
+export const factLabel = (fact: string) => flowById.get(fact)?.label ?? fact;
+/** The port a fact is about, or NO_PORT. */
+export const factPort = (fact: string) => flowById.get(fact)?.port ?? NO_PORT;
+
+/** What is remembered about each rule, by fact: a spaced repetition card. A fact with none is new. */
+export type RuleMemory = Record<string, SrsCard>;
+
 const ORGS = ['A credit union', 'A regional hospital', 'A school district', 'A law firm', 'A shipping company', 'A retail chain', 'A manufacturer', 'A city government', 'A software startup', 'An insurance agency'];
 const FIREWALLS = ['FW-EDGE', 'FW-CORE', 'FW-MAIN', 'FW-HQ', 'FW-PERIMETER'];
 
@@ -433,42 +463,29 @@ export const LOOKALIKES: string[][] = [
   ['ike', 'natt'], ['esp', 'ah'], ['l2tp', 'pptp'], ['ovpn-udp', 'wireguard'],
   ['mssql', 'oracle', 'mysql'], ['sip', 'sips'], ['mqtt', 'mqtts'],
 ];
-const lookalikesOf = (id: string) => [...new Set(LOOKALIKES.filter(g => g.includes(id)).flat())].filter(x => x !== id);
-
-/** How a rule went in earlier random tables. `at` is the number of the table that last asked it. */
-export interface RuleStat { asked: number; missed: number; ok: boolean; at: number }
-/** What earlier random tables showed about each rule. `n` counts the tables checked so far. */
-export interface RuleHistory { n: number; rules: Record<string, RuleStat> }
-
-/** Adds a checked table to the history. `ok` says, rule by rule, whether the whole rule was right. */
-export function recordTable(history: RuleHistory | undefined, flows: string[], ok: boolean[]): RuleHistory {
-  const n = (history?.n ?? 0) + 1;
-  const rules = { ...(history?.rules ?? {}) };
-  flows.forEach((id, i) => {
-    const cur = rules[id] ?? { asked: 0, missed: 0, ok: true, at: 0 };
-    rules[id] = { asked: cur.asked + 1, missed: cur.missed + (ok[i] ? 0 : 1), ok: !!ok[i], at: n };
-  });
-  return { n, rules };
-}
+/** The facts a fact gets mixed up with. */
+const lookalikesOf = (fact: string) => [...new Set(LOOKALIKES.map(g => g.map(factOf)).filter(g => g.includes(fact)).flat())].filter(x => x !== fact);
 
 export interface TableContext {
-  /** A trainer port's level, from 0 to MAX_LEVEL. */
+  /** A trainer port's level, from 0 to MAX_LEVEL. It only decides how often a rule is worded vaguely. */
   level: (trainerPort: string) => number;
-  history?: RuleHistory;
+  /** Each rule's memory. Without it every rule is new. */
+  memory?: RuleMemory;
+  now?: number;
+  /** New rules that may still be introduced today (the daily limit Review mode uses). */
+  newLeft?: number;
 }
 
-const NEVER_ASKED = 1.5;
-/** A missed rule comes back, most strongly once another table has come between. */
-const MISSED = 4;
-const MISSED_LAST_TABLE = 1;
-/** A rule answered right slowly earns its way back, over this many tables. */
-const RESTED = 1.5;
-const RESTED_AFTER = 9;
-/** A rule answered right in the latest table rests for the next one. */
-const JUST_RIGHT = 3;
-const LOOKALIKE = 2.5;
-/** Chance added to every rule, so two tables from the same history still differ. */
-const LUCK = 2;
+/** A table introduces at most this many new rules while it has anything else to ask. */
+export const NEW_PER_TABLE = 3;
+/** A table takes a few minutes to fill in, so a rule that falls due within this time is due by the time it is answered. */
+const FILLING_IN = 2 * 60 * 1000;
+/** A rule in its learning steps may be asked this long before it is due, as in Review mode. */
+const LEARN_AHEAD = 20 * 60 * 1000;
+/** A rule in its learning steps brings at most this many look-alikes that are not due yet. */
+const LOOKALIKES_PULLED = 2;
+/** Rules that are not due are ranked by recall chance, give or take this much, so two such tables differ. */
+const LUCK = 0.03;
 /** How often a rule only describes the job, by its port's level. Rules with no port use the middle. */
 const VAGUE_AT = [0.4, 0.5, 0.6, 0.7, 0.8];
 
@@ -477,43 +494,83 @@ const levelOf = (f: Flow, ctx: TableContext): number | undefined => {
   return entry ? Math.min(MAX_LEVEL, Math.max(0, ctx.level(entry))) : undefined;
 };
 
-/** How much a rule needs asking: the higher, the sooner. */
-export function need(f: Flow, ctx: TableContext): number {
-  const weak = MAX_LEVEL - (levelOf(f, ctx) ?? MAX_LEVEL / 2);
-  const stat = ctx.history?.rules[f.id];
-  if (!stat) return weak + NEVER_ASKED;
-  const since = ctx.history!.n - stat.at;
-  if (!stat.ok) return weak + (since ? MISSED : MISSED_LAST_TABLE);
-  return weak + Math.min(RESTED, since * RESTED / RESTED_AFTER) - (since ? 0 : JUST_RIGHT);
-}
-
-/** A rule not yet solid: a port at level 2 or below, or a rule missed the last time it was asked. */
-function shaky(f: Flow, ctx: TableContext): boolean {
-  const stat = ctx.history?.rules[f.id];
-  return (stat ? !stat.ok : false) || (levelOf(f, ctx) ?? (stat ? MAX_LEVEL : 0)) <= 2;
-}
-
-/** Chooses a new table's rules by need, with some chance so tables differ. A set's table fills up from other sets. */
+/**
+ * Chooses a new table's rules the way a review session chooses cards:
+ * 1. rules in their learning steps that are due (a rule just missed is, a minute later), the longest-waiting first;
+ * 2. learned rules that are due, the ones most likely forgotten first;
+ * 3. look-alikes of any rule chosen so far that is still in its learning steps, if they have been met before, so the
+ *    table makes you tell them apart;
+ * 4. new rules in their fixed order, at most NEW_PER_TABLE and within today's limit;
+ * 5. rules in their learning steps that are nearly due, then learned rules by how close they are to forgotten.
+ * Only when all of that leaves the table short does it take more new rules than the limits allow.
+ *
+ * A set's table asks that set's rules first and fills up from the others. A mixed table spreads over the sets (at
+ * most MIXED_PER_SET from one), though never by leaving a due rule out.
+ */
 export function newTable(set: string, ctx: TableContext, seed: number): GeneratedRef {
   const rand = seededRandom(seed);
-  const score = new Map(FLOWS.map(f => [f.id, need(f, ctx) + rand() * LUCK]));
+  const now = ctx.now ?? Date.now();
+  const memory = ctx.memory ?? {};
   const mixed = set === MIXED;
   const size = mixed ? MIXED_SIZE : SET_SIZE;
+  const luck = new Map(FACTS.map(fact => [fact, rand() * LUCK]));
+  const recall = (fact: string) => recallNow(memory[fact], now) ?? 0;
+
+  const isNew = (fact: string) => !memory[fact];
+  const inSteps = (fact: string) => !!memory[fact] && memory[fact].state !== 'review';
+  const isDue = (fact: string) => !!memory[fact] && memory[fact].due <= now + FILLING_IN;
+  const byDue = (a: string, b: string) => memory[a].due - memory[b].due;
+  const byRecall = (a: string, b: string) => recall(a) - recall(b) || byDue(a, b);
+  const byRecallRoughly = (a: string, b: string) => recall(a) + luck.get(a)! - (recall(b) + luck.get(b)!);
+
   const chosen: Flow[] = [];
-  const take = (pool: Flow[]) => {
-    const left = [...pool];
-    while (chosen.length < size) {
-      const open = left.filter(f => !chosen.some(c => clashes(c, f)) && (!mixed || chosen.filter(c => c.set === f.set).length < MIXED_PER_SET));
-      if (!open.length) return;
-      const best = open.reduce((a, b) => (score.get(b.id)! > score.get(a.id)! ? b : a));
-      chosen.push(best);
-      left.splice(left.indexOf(best), 1);
-      // A shaky rule brings its look-alikes with it, so the table makes you tell them apart.
-      if (shaky(best, ctx)) for (const id of lookalikesOf(best.id)) score.set(id, score.get(id)! + LOOKALIKE);
+  const asked = new Set<string>();
+  /** Adds rules for these facts, in order, while the table has room. `spread` keeps a mixed table from leaning on one set. */
+  const take = (facts: string[], opts: { limit?: number; spread?: boolean } = {}) => {
+    let added = 0;
+    for (const fact of facts) {
+      if (chosen.length >= size || added >= (opts.limit ?? size)) break;
+      if (asked.has(fact)) continue;
+      const open = rulesAsking.get(fact)!.filter(f => !chosen.some(c => clashes(c, f)));
+      if (!open.length) continue;
+      if (opts.spread && chosen.filter(c => c.set === open[0].set).length >= MIXED_PER_SET) continue;
+      chosen.push(open[Math.floor(rand() * open.length)]);
+      asked.add(fact);
+      added++;
     }
   };
-  take(FLOWS.filter(f => mixed || f.set === set));
-  if (!mixed) take(FLOWS.filter(f => f.set !== set));
+
+  const due = (facts: string[]) => {
+    const waiting = facts.filter(isDue);
+    return [...waiting.filter(inSteps).sort(byDue), ...waiting.filter(f => !inSteps(f)).sort(byRecall)];
+  };
+  const nearlyDue = (facts: string[]) => facts.filter(f => inSteps(f) && !isDue(f) && memory[f].due <= now + LEARN_AHEAD).sort(byDue);
+  const notDue = (facts: string[]) => facts.filter(f => !isNew(f) && !isDue(f)).sort(byRecallRoughly);
+
+  const own = FACTS.filter(fact => mixed || setOfFact(fact) === set);
+  const spread = mixed;
+
+  take(due(own), { spread });
+  if (spread) take(due(own));
+
+  // A rule still being learned (or relearned) brings along the look-alikes already met, never ones that would be new.
+  const alike = [...new Set([...asked].filter(inSteps).flatMap(lookalikesOf))].filter(fact => own.includes(fact) && !isNew(fact));
+  take(alike.sort(byRecall), { limit: LOOKALIKES_PULLED });
+
+  const fresh = own.filter(isNew);
+  take(fresh, { limit: Math.max(0, Math.min(NEW_PER_TABLE, ctx.newLeft ?? NEW_PER_TABLE)), spread });
+
+  for (const facts of [nearlyDue(own), notDue(own)]) take(facts, { spread });
+  if (spread) for (const facts of [nearlyDue(own), notDue(own)]) take(facts);
+  // Nothing else of its own to ask: go past the limits on new rules rather than leave the table short.
+  take(fresh, { spread });
+  if (spread) take(fresh);
+
+  if (!mixed) {
+    const others = FACTS.filter(fact => !own.includes(fact));
+    for (const facts of [due(others), nearlyDue(others), notDue(others), others.filter(isNew)]) take(facts);
+  }
+
   const flows = shuffled(chosen, rand);
   return { set, seed, flows: flows.map(f => f.id), vague: flows.map(f => rand() < VAGUE_AT[levelOf(f, ctx) ?? MAX_LEVEL / 2]) };
 }

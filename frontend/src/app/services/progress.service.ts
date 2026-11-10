@@ -184,6 +184,15 @@ export class ProgressService {
     });
   }
 
+  /** Saves several pieces of a lesson's work in one go, each under its own key. */
+  setLessonWorks(slug: string, values: Record<string, unknown>) {
+    const at = Date.now();
+    this.update(d => {
+      const work = (this.lesson(d, slug).work ??= {});
+      for (const [key, value] of Object.entries(values)) work[key] = { v: value == null ? null : structuredClone(value), at };
+    });
+  }
+
   lessonRecord(slug: string): LessonRecord | undefined {
     return this.state().lessons[slug];
   }
