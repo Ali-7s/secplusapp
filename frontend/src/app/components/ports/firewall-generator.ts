@@ -1,8 +1,11 @@
 /**
  * Builds a new firewall table every time, so nothing can be memorized by position: the ports chosen, the hosts, the
- * addresses and the wording all change. Each rule is worded one of two ways at random: `plain` names the protocol the
- * way exam simulations do ("Allow LDAP queries from ..."), and `job` only describes what is needed. Neither
- * ever gives the number.
+ * addresses and the wording all change. Each rule is worded one of two ways: `plain` names the protocol the way exam
+ * simulations do ("Allow LDAP queries from ..."), and `job` only describes what is needed. Neither ever gives the number.
+ *
+ * Which rules a table asks is decided by need (see `need`): weak ports and rules missed in earlier tables come first,
+ * rules never asked come before rules already right, a rule just answered right rests, and a shaky rule brings its
+ * look-alikes into the same table. The better a port is known, the more often its rule only describes the job.
  *
  * A table is rebuilt from a small GeneratedRef, so a refresh brings back exactly the same one.
  */
@@ -10,7 +13,7 @@
 import { NetHost, NetZone } from '../../models/exam.model';
 import { seededRandom, shuffled } from '../../utils/exam-engine';
 import { AH, BOTH, Draft, ESP, ICMP, MIXED, NO_PORT, PortScenario, Rule, TCP, UDP, build, trainerEntry } from './firewall-scenarios';
-import { GROUPS } from './ports-trainer';
+import { GROUPS, MAX_LEVEL } from './ports-trainer';
 
 type ZoneKey = 'corp' | 'guest' | 'dmz' | 'servers' | 'mgmt' | 'devices' | 'voice' | 'iot';
 
@@ -403,11 +406,13 @@ const flowById = new Map(FLOWS.map(f => [f.id, f]));
 const ORGS = ['A credit union', 'A regional hospital', 'A school district', 'A law firm', 'A shipping company', 'A retail chain', 'A manufacturer', 'A city government', 'A software startup', 'An insurance agency'];
 const FIREWALLS = ['FW-EDGE', 'FW-CORE', 'FW-MAIN', 'FW-HQ', 'FW-PERIMETER'];
 
-/** What a generated table is rebuilt from. */
-export interface GeneratedRef { set: string; seed: number; flows: string[] }
+/** What a generated table is rebuilt from. `vague` says, rule by rule, whether it only describes the job. */
+export interface GeneratedRef { set: string; seed: number; flows: string[]; vague?: boolean[] }
 
 const SET_SIZE = 6;
 const MIXED_SIZE = 7;
+/** A mixed table takes at most this many rules from one set. */
+const MIXED_PER_SET = 3;
 
 /** Two rules that would clash or repeat: the same service twice, or an allow and a block on one port (first match would win). */
 function clashes(a: Flow, b: Flow): boolean {
@@ -416,23 +421,101 @@ function clashes(a: Flow, b: Flow): boolean {
   return a.proto === b.proto || a.action !== b.action;
 }
 
-/** Chooses a new table's rules: the weakest ports most often, with some chance so tables differ. */
-export function newTable(set: string, level: (trainerPort: string) => number, seed: number): GeneratedRef {
+/** Rules that get mixed up with each other: one job plain and encrypted, or neighbors that split a job between them. */
+export const LOOKALIKES: string[][] = [
+  ['ssh', 'telnet'], ['sftp', 'ftps'], ['rdp', 'vnc'],
+  ['http', 'https-in'], ['alt-http', 'alt-https'],
+  ['dns', 'dns-zone', 'dot'], ['dhcp', 'dhcp-reply'],
+  ['smtp-in', 'submission', 'smtps'], ['pop3', 'imap'], ['pop3s', 'imaps'], ['pop3', 'pop3s'], ['imap', 'imaps'],
+  ['ftp', 'ftp-data'], ['ftps', 'ftps-data'], ['tftp', 'ftp'], ['nb-name', 'nb-dgram', 'nb-session'], ['smb', 'nb-session'],
+  ['ldap', 'ldaps'], ['radius', 'radius-acct'], ['radius', 'tacacs'], ['kerberos', 'ldap'],
+  ['snmp', 'snmp-trap'], ['syslog', 'syslog-tls'],
+  ['ike', 'natt'], ['esp', 'ah'], ['l2tp', 'pptp'], ['ovpn-udp', 'wireguard'],
+  ['mssql', 'oracle', 'mysql'], ['sip', 'sips'], ['mqtt', 'mqtts'],
+];
+const lookalikesOf = (id: string) => [...new Set(LOOKALIKES.filter(g => g.includes(id)).flat())].filter(x => x !== id);
+
+/** How a rule went in earlier random tables. `at` is the number of the table that last asked it. */
+export interface RuleStat { asked: number; missed: number; ok: boolean; at: number }
+/** What earlier random tables showed about each rule. `n` counts the tables checked so far. */
+export interface RuleHistory { n: number; rules: Record<string, RuleStat> }
+
+/** Adds a checked table to the history. `ok` says, rule by rule, whether the whole rule was right. */
+export function recordTable(history: RuleHistory | undefined, flows: string[], ok: boolean[]): RuleHistory {
+  const n = (history?.n ?? 0) + 1;
+  const rules = { ...(history?.rules ?? {}) };
+  flows.forEach((id, i) => {
+    const cur = rules[id] ?? { asked: 0, missed: 0, ok: true, at: 0 };
+    rules[id] = { asked: cur.asked + 1, missed: cur.missed + (ok[i] ? 0 : 1), ok: !!ok[i], at: n };
+  });
+  return { n, rules };
+}
+
+export interface TableContext {
+  /** A trainer port's level, from 0 to MAX_LEVEL. */
+  level: (trainerPort: string) => number;
+  history?: RuleHistory;
+}
+
+const NEVER_ASKED = 1.5;
+/** A missed rule comes back, most strongly once another table has come between. */
+const MISSED = 4;
+const MISSED_LAST_TABLE = 1;
+/** A rule answered right slowly earns its way back, over this many tables. */
+const RESTED = 1.5;
+const RESTED_AFTER = 9;
+/** A rule answered right in the latest table rests for the next one. */
+const JUST_RIGHT = 3;
+const LOOKALIKE = 2.5;
+/** Chance added to every rule, so two tables from the same history still differ. */
+const LUCK = 2;
+/** How often a rule only describes the job, by its port's level. Rules with no port use the middle. */
+const VAGUE_AT = [0.4, 0.5, 0.6, 0.7, 0.8];
+
+const levelOf = (f: Flow, ctx: TableContext): number | undefined => {
+  const entry = trainerEntry(f.port);
+  return entry ? Math.min(MAX_LEVEL, Math.max(0, ctx.level(entry))) : undefined;
+};
+
+/** How much a rule needs asking: the higher, the sooner. */
+export function need(f: Flow, ctx: TableContext): number {
+  const weak = MAX_LEVEL - (levelOf(f, ctx) ?? MAX_LEVEL / 2);
+  const stat = ctx.history?.rules[f.id];
+  if (!stat) return weak + NEVER_ASKED;
+  const since = ctx.history!.n - stat.at;
+  if (!stat.ok) return weak + (since ? MISSED : MISSED_LAST_TABLE);
+  return weak + Math.min(RESTED, since * RESTED / RESTED_AFTER) - (since ? 0 : JUST_RIGHT);
+}
+
+/** A rule not yet solid: a port at level 2 or below, or a rule missed the last time it was asked. */
+function shaky(f: Flow, ctx: TableContext): boolean {
+  const stat = ctx.history?.rules[f.id];
+  return (stat ? !stat.ok : false) || (levelOf(f, ctx) ?? (stat ? MAX_LEVEL : 0)) <= 2;
+}
+
+/** Chooses a new table's rules by need, with some chance so tables differ. A set's table fills up from other sets. */
+export function newTable(set: string, ctx: TableContext, seed: number): GeneratedRef {
   const rand = seededRandom(seed);
-  const rankOf = new Map(FLOWS.map(f => {
-    const entry = trainerEntry(f.port);
-    return [f.id, (entry ? level(entry) : 2) + rand() * 2] as const;
-  }));
-  const ranked = (list: Flow[]) => [...list].sort((a, b) => rankOf.get(a.id)! - rankOf.get(b.id)!);
-  const size = set === MIXED ? MIXED_SIZE : SET_SIZE;
-  const own = ranked(FLOWS.filter(f => set === MIXED || f.set === set));
-  const others = ranked(FLOWS.filter(f => set !== MIXED && f.set !== set));
+  const score = new Map(FLOWS.map(f => [f.id, need(f, ctx) + rand() * LUCK]));
+  const mixed = set === MIXED;
+  const size = mixed ? MIXED_SIZE : SET_SIZE;
   const chosen: Flow[] = [];
-  for (const f of [...own, ...others]) {
-    if (chosen.length >= size) break;
-    if (!chosen.some(c => clashes(c, f))) chosen.push(f);
-  }
-  return { set, seed, flows: shuffled(chosen.map(f => f.id), rand) };
+  const take = (pool: Flow[]) => {
+    const left = [...pool];
+    while (chosen.length < size) {
+      const open = left.filter(f => !chosen.some(c => clashes(c, f)) && (!mixed || chosen.filter(c => c.set === f.set).length < MIXED_PER_SET));
+      if (!open.length) return;
+      const best = open.reduce((a, b) => (score.get(b.id)! > score.get(a.id)! ? b : a));
+      chosen.push(best);
+      left.splice(left.indexOf(best), 1);
+      // A shaky rule brings its look-alikes with it, so the table makes you tell them apart.
+      if (shaky(best, ctx)) for (const id of lookalikesOf(best.id)) score.set(id, score.get(id)! + LOOKALIKE);
+    }
+  };
+  take(FLOWS.filter(f => mixed || f.set === set));
+  if (!mixed) take(FLOWS.filter(f => f.set !== set));
+  const flows = shuffled(chosen, rand);
+  return { set, seed, flows: flows.map(f => f.id), vague: flows.map(f => rand() < VAGUE_AT[levelOf(f, ctx) ?? MAX_LEVEL / 2]) };
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -441,7 +524,8 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function buildTable(ref: GeneratedRef): PortScenario {
   const rand = seededRandom(ref.seed ^ 0x5bd1e995);
   const pick = <T>(list: readonly T[]) => list[Math.floor(rand() * list.length)];
-  const flows = ref.flows.map(id => flowById.get(id)).filter((f): f is Flow => !!f);
+  const picked = ref.flows.map((id, i) => ({ f: flowById.get(id), vague: ref.vague?.[i] })).filter((x): x is { f: Flow; vague: boolean | undefined } => !!x.f);
+  const flows = picked.map(x => x.f);
 
   // Where each host sits in this table, and which hosts are in it.
   const zoneOf = new Map<string, ZoneKey>();
@@ -508,8 +592,9 @@ export function buildTable(ref: GeneratedRef): PortScenario {
     return `the ${HOSTS[k].name}${showZone ? ` in the ${ZONE_NAMES[zoneOf.get(k)!]}` : ''}`;
   };
 
-  const rules: Rule[] = resolved.map(({ f, from, to }) => {
-    const template = pick(rand() < 0.5 ? f.plain : f.job);
+  const rules: Rule[] = resolved.map(({ f, from, to }, i) => {
+    // A table saved before the wording was chosen with the rules still tosses a coin here.
+    const template = pick((picked[i].vague ?? rand() >= 0.5) ? f.job : f.plain);
     const fromText = say(from, false), toText = say(to, true);
     const need = capitalize(template.replace(/\{from\}/g, fromText).replace(/\{to\}/g, toText)) + '.';
     return { need, from: nameOf(from), to: nameOf(to), proto: f.proto, port: f.port, action: f.action, why: f.why };

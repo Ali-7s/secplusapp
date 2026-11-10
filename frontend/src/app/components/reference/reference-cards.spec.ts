@@ -26,6 +26,17 @@ describe('Reference deck', () => {
     }
   });
 
+  it('says what every port is used for, in a few words and then in full', () => {
+    for (const p of PORTS) {
+      expect(p.role.trim().split(/\s+/).length).withContext(p.port).toBeLessThanOrEqual(12);
+      expect(p.role).withContext(p.port).not.toMatch(/\.$/);
+      expect(p.use.trim().split(/\s+/).length).withContext(p.port).toBeGreaterThanOrEqual(20);
+      expect(p.use).withContext(p.port).toMatch(/\.$/);
+      expect(cards.find(c => c.id === `port:${p.port}`)?.notes?.[0].text).withContext(p.port).toContain(p.role);
+    }
+    expect(new Set(PORTS.map(p => p.role)).size).toBe(PORTS.length);
+  });
+
   it('covers every listed section and nothing else', () => {
     const labels = REFERENCE_DECK_SECTIONS.map(s => s.label);
     for (const label of labels) expect(cards.some(c => c.category === label)).withContext(label).toBeTrue();

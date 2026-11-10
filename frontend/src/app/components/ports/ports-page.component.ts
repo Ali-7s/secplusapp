@@ -7,7 +7,8 @@ import { LessonWork } from '../networking/lesson-work.service';
 import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
 import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
 import { MIXED, PortScenario, SCENARIOS, portOutcomes, trainerEntry } from './firewall-scenarios';
-import { GeneratedRef, buildTable, newTable } from './firewall-generator';
+import { GeneratedRef, RuleHistory, buildTable, newTable, recordTable } from './firewall-generator';
+import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
   GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, ROUND, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
 } from './ports-trainer';
@@ -53,6 +54,10 @@ export class PortsPageComponent {
 
   view: View = this.progress.lessonWork(SLUG, 'view') === 'firewalls' ? 'firewalls' : 'drills';
   scenario: PortScenario | null = this.restoreScenario();
+  /** Failed written scenarios whose Try again has been earned back. */
+  unlocked: Unlocked = (this.progress.lessonWork(SLUG, 'fw:unlocked') as Unlocked | undefined) ?? {};
+  /** How each rule went in earlier random tables, which decides what the next one asks. */
+  history: RuleHistory | undefined = this.progress.lessonWork(SLUG, 'fw:history') as RuleHistory | undefined;
   readonly scenarios = SCENARIOS;
   readonly MIXED = MIXED;
   readonly scenarioSets = [...GROUPS.map(g => ({ id: g.id, title: g.title })), { id: MIXED, title: 'Mixed: whole companies' }]
@@ -96,7 +101,7 @@ export class PortsPageComponent {
   openRandom(set: string, fresh = false) {
     let ref = this.randomRef(set);
     if (!ref || fresh || !this.randomUnfinished(set)) {
-      ref = newTable(set, port => this.level(port), Date.now() % 2 ** 31);
+      ref = newTable(set, { level: port => this.level(port), history: this.history }, Date.now() % 2 ** 31);
       this.progress.setLessonWork(SLUG, `fw:gen:${set}`, ref);
       this.work.clear(`pbq:gen-${set}`);
     }
@@ -116,15 +121,39 @@ export class PortsPageComponent {
   }
   get firstUnchecked(): PortScenario | undefined { return SCENARIOS.find(s => !this.savedScenario(s)?.checked); }
 
+  private failed(s: PortScenario) { const right = this.rulesRight(s); return right !== null && right < s.rows.length; }
+
+  /**
+   * A written scenario checked with a mistake cannot be tried again until every rule is right on a table from a
+   * different category (see firewall-locks.ts).
+   */
+  locked(s: PortScenario) { return s.seed === undefined && this.failed(s) && !this.unlocked[s.id]; }
+
+  categoryTitle(set: string) { return this.scenarioSets.find(x => x.id === set)?.title ?? ''; }
+
+  /** The category offered for unlocking a scenario: the other set whose ports are weakest. */
+  unlockSet(s: PortScenario): string {
+    const average = (g: PortGroup) => g.ports.reduce((sum, p) => sum + this.level(p), 0) / g.ports.length;
+    return GROUPS.filter(g => g.id !== s.set).reduce((a, b) => (average(b) < average(a) ? b : a)).id;
+  }
+
   /**
    * A random table counts toward the ports' levels once, on its first check. So does a written scenario, but only
    * ever once: after that it may just be remembered. A second try comes after reading the answers, so it shows
    * nothing about memory and must neither raise a level nor drop one.
    */
   onScenarioChecked(s: PortScenario) {
-    const mark = s.seed === undefined ? 'done' : String(s.seed);
+    const written = s.seed === undefined;
+    const mark = written ? 'done' : String(s.seed);
     const scored = (this.progress.lessonWork(SLUG, 'fw:scored') as Record<string, string> | undefined) ?? {};
-    if (s.seed === undefined ? scored[s.id] : scored[s.id] === mark) return;
+    const first = written ? !scored[s.id] : scored[s.id] !== mark;
+    const graded = gradeQuestion(s, this.savedScenario(s)?.answer);
+
+    this.unlocked = unlockedAfter(this.unlocked, { id: s.id, set: s.set, written, perfect: graded.correct, first },
+      SCENARIOS.filter(x => this.failed(x)).map(x => ({ id: x.id, set: x.set })));
+    this.progress.setLessonWork(SLUG, 'fw:unlocked', this.unlocked);
+    if (!first) return;
+
     const now = Date.now();
     for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
       this.mastery = updateMastery(this.mastery, port, right, now, this.practiced);
@@ -132,6 +161,12 @@ export class PortsPageComponent {
     this.recordPractice(s.set, s.rows.map(r => trainerEntry(r.answer['Port'])).filter((p): p is string => !!p), now);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: mark });
+
+    const ref = written ? undefined : this.randomRef(s.set);
+    if (ref && ref.seed === s.seed && ref.flows.length === graded.parts.length) {
+      this.history = recordTable(this.history, ref.flows, graded.parts.map(p => p.ok));
+      this.progress.setLessonWork(SLUG, 'fw:history', this.history);
+    }
   }
 
   // ── Overview ────────────────────────────────────────────────────────────

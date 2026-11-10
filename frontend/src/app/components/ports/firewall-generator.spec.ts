@@ -2,13 +2,19 @@ import { NetDiagram } from '../../models/exam.model';
 import { gradeQuestion, isAnswered } from '../../utils/exam-engine';
 import { ICON_H, ICON_W, narrowLayout, wideLayout } from '../practice-exam/network-diagram';
 import { PORTS } from '../reference/reference-data';
-import { FLOWS, buildTable, newTable } from './firewall-generator';
+import { FLOWS, LOOKALIKES, RuleHistory, buildTable, need, newTable, recordTable } from './firewall-generator';
 import { MIXED, portNumbers } from './firewall-scenarios';
 import { GROUPS } from './ports-trainer';
 
 const SETS = [...GROUPS.map(g => g.id), MIXED];
 const SEEDS = Array.from({ length: 60 }, (_, i) => 1000 + i * 7919);
-const table = (set: string, seed: number) => buildTable(newTable(set, () => 0, seed));
+const NEW = { level: () => 0 };
+const KNOWN = { level: () => 4 };
+const table = (set: string, seed: number) => buildTable(newTable(set, NEW, seed));
+const flow = (id: string) => FLOWS.find(f => f.id === id)!;
+/** A history in which these rules were asked in one table each, in this order, all right unless listed as missed. */
+const historyOf = (tables: string[][], missed: string[] = []): RuleHistory =>
+  tables.reduce<RuleHistory | undefined>((h, ids) => recordTable(h, ids, ids.map(id => !missed.includes(id))), undefined)!;
 const transports = (proto: string) => (proto === 'TCP and UDP' ? ['TCP', 'UDP'] : [proto]);
 
 describe('firewall table generator', () => {
@@ -40,7 +46,7 @@ describe('firewall table generator', () => {
 
   it('rebuilds exactly the same table from its ref, so a refresh changes nothing', () => {
     for (const set of SETS) {
-      const ref = newTable(set, () => 0, 4242);
+      const ref = newTable(set, NEW, 4242);
       expect(buildTable(JSON.parse(JSON.stringify(ref)))).withContext(set).toEqual(buildTable(ref));
     }
   });
@@ -52,17 +58,28 @@ describe('firewall table generator', () => {
     }
   });
 
-  it('uses both exam-style wording and vague wording', () => {
-    const needs = SETS.flatMap(set => SEEDS.flatMap(seed => table(set, seed).requirements));
-    const named = needs.filter(n => /^(Allow|Block) /.test(n)).length;
-    expect(named).toBeGreaterThan(needs.length * 0.3);
-    expect(named).toBeLessThan(needs.length * 0.7);
+  it('uses both exam-style wording and vague wording, and gets vaguer as the ports are learned', () => {
+    const named = (ctx: { level: () => number }) => {
+      const needs = SETS.flatMap(set => SEEDS.flatMap(seed => buildTable(newTable(set, ctx, seed)).requirements));
+      return needs.filter(n => /^(Allow|Block) /.test(n)).length / needs.length;
+    };
+    expect(named(NEW)).toBeGreaterThan(0.5);
+    expect(named(NEW)).toBeLessThan(0.7);
+    expect(named(KNOWN)).toBeGreaterThan(0.12);
+    expect(named(KNOWN)).toBeLessThan(0.3);
+  });
+
+  it('still rebuilds a table saved before the wording was stored with it', () => {
+    const { vague, ...old } = newTable('mail', NEW, 4242);
+    expect(vague?.length).toBe(old.flows.length);
+    expect(buildTable(old)).toEqual(buildTable(JSON.parse(JSON.stringify(old))));
+    expect(buildTable(old).rows.length).toBe(old.flows.length);
   });
 
   it('stays mostly on the chosen set', () => {
     for (const g of GROUPS) {
       for (const seed of SEEDS) {
-        const own = newTable(g.id, () => 0, seed).flows.filter(id => FLOWS.find(f => f.id === id)!.set === g.id);
+        const own = newTable(g.id, NEW, seed).flows.filter(id => flow(id).set === g.id);
         expect(own.length).withContext(`${g.id} ${seed}`).toBeGreaterThanOrEqual(4);
       }
     }
@@ -71,8 +88,68 @@ describe('firewall table generator', () => {
   it('asks about the weakest ports first', () => {
     const level = (port: string) => (port === '993' ? 0 : 4);
     let hits = 0;
-    for (const seed of SEEDS) if (newTable('mail', level, seed).flows.includes('imaps')) hits++;
+    for (const seed of SEEDS) if (newTable('mail', { level }, seed).flows.includes('imaps')) hits++;
     expect(hits).toBe(SEEDS.length);
+  });
+
+  describe('choosing by what earlier tables showed', () => {
+    const share = (set: string, ctx: Parameters<typeof newTable>[1], id: string) => SEEDS.filter(seed => newTable(set, ctx, seed).flows.includes(id)).length / SEEDS.length;
+
+    it('records each rule of a checked table', () => {
+      const h = recordTable(recordTable(undefined, ['ssh', 'rdp'], [true, false]), ['rdp', 'vnc'], [true, true]);
+      expect(h.n).toBe(2);
+      expect(h.rules['ssh']).toEqual({ asked: 1, missed: 0, ok: true, at: 1 });
+      expect(h.rules['rdp']).toEqual({ asked: 2, missed: 1, ok: true, at: 2 });
+      expect(h.rules['vnc']).toEqual({ asked: 1, missed: 0, ok: true, at: 2 });
+    });
+
+    it('ranks a missed rule above a new one, and a new one above one already right', () => {
+      const history = historyOf([['ldap', 'ldaps'], ['ssh']], ['ldap']);
+      const ctx = { level: () => 2, history };
+      expect(need(flow('ldap'), ctx)).toBeGreaterThan(need(flow('radius'), ctx));
+      expect(need(flow('radius'), ctx)).toBeGreaterThan(need(flow('ldaps'), ctx));
+    });
+
+    it('brings a missed rule back in mixed tables', () => {
+      const history = historyOf([['bgp', 'ssh'], ['dns']], ['bgp']);
+      expect(share(MIXED, { level: () => 4, history }, 'bgp')).toBeGreaterThan(0.8);
+      expect(share(MIXED, KNOWN, 'bgp')).toBeLessThan(0.4);
+    });
+
+    it('holds a missed rule back while it is still the latest table, then brings it back harder', () => {
+      const justNow = { level: () => 2, history: historyOf([['bgp']], ['bgp']) };
+      const later = { level: () => 2, history: historyOf([['bgp'], ['dns']], ['bgp']) };
+      expect(need(flow('bgp'), later)).toBeGreaterThan(need(flow('bgp'), justNow));
+    });
+
+    it('rests the rules the latest table got right', () => {
+      const last = newTable(MIXED, NEW, 77).flows;
+      const history = historyOf([last]);
+      let repeats = 0;
+      for (const seed of SEEDS) repeats += newTable(MIXED, { level: () => 0, history }, seed).flows.filter(id => last.includes(id)).length;
+      expect(repeats).toBe(0);
+    });
+
+    it('lets a rule that was right long ago earn its way back', () => {
+      const tables = [['bgp'], ...Array.from({ length: 12 }, () => ['dns'])];
+      expect(need(flow('bgp'), { level: () => 4, history: historyOf(tables) })).toBeGreaterThan(need(flow('bgp'), { level: () => 4, history: historyOf(tables.slice(0, 2)) }));
+    });
+
+    it('asks look-alike rules together when one of them is shaky', () => {
+      expect(new Set(LOOKALIKES.flat().filter(id => !FLOWS.some(f => f.id === id)))).toEqual(new Set());
+      const level = (port: string) => (port === '993' ? 0 : 4);
+      // Everything but IMAPS is known and was right in an earlier table, so only the pairing can pull POP3S in.
+      const history = historyOf([FLOWS.map(f => f.id).filter(id => id !== 'imaps'), ['ping']]);
+      expect(share(MIXED, { level, history }, 'pop3s')).toBeGreaterThan(0.7);
+      expect(share(MIXED, { level: () => 4, history }, 'pop3s')).toBeLessThan(0.3);
+    });
+
+    it('keeps a mixed table spread over several sets', () => {
+      for (const seed of SEEDS) {
+        const sets = newTable(MIXED, NEW, seed).flows.map(id => flow(id).set);
+        for (const s of new Set(sets)) expect(sets.filter(x => x === s).length).withContext(`${seed} ${s}`).toBeLessThanOrEqual(3);
+      }
+    });
   });
 
   it('builds sound tables for every set', () => {

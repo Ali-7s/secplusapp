@@ -167,7 +167,7 @@ export class ReferenceComponent {
     return this.PORTS.filter(p =>
       p.port.includes(q) || p.protocol.toLowerCase().includes(q) ||
       p.service.toLowerCase().includes(q) || p.notes.toLowerCase().includes(q) ||
-      p.transport.toLowerCase().includes(q)
+      p.transport.toLowerCase().includes(q) || p.role.toLowerCase().includes(q) || p.use.toLowerCase().includes(q)
     );
   }
 

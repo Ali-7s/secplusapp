@@ -90,9 +90,9 @@
               <tr>
                 <th>Port</th>
                 <th>Protocol / Service</th>
+                <th>What it is used for</th>
                 <th>Transport</th>
                 <th>Status</th>
-                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -103,9 +103,9 @@
                     <span class="proto-name">{{ row.protocol }}</span>
                     <span class="svc-desc">{{ row.service }}</span>
                   </td>
+                  <td class="use-cell"><strong>{{ row.role }}</strong>{{ row.use }}<span class="sec-note">{{ row.notes }}</span></td>
                   <td class="mono">{{ row.transport }}</td>
                   <td><span class="badge" [class]="row.status">{{ statusLabel(row.status) }}</span></td>
-                  <td class="notes-cell">{{ row.notes }}</td>
                 </tr>
               }
               @if (filteredPorts.length === 0) {

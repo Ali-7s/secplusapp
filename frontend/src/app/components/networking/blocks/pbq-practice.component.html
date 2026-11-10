@@ -121,7 +121,7 @@
         <button mat-flat-button color="primary" [disabled]="!ready" (click)="check()">Check my answer</button>
         @if (!ready) { <span class="todo">Fill in every box to check.</span> }
       } @else {
-        <button mat-stroked-button (click)="reset()"><mat-icon>refresh</mat-icon> Try again</button>
+        <button mat-stroked-button [disabled]="retryLocked" (click)="reset()"><mat-icon>{{ retryLocked ? 'lock' : 'refresh' }}</mat-icon> Try again{{ retryLocked ? ' (locked)' : '' }}</button>
       }
       @if (list.length > 1) {
         <span class="spacer"></span>

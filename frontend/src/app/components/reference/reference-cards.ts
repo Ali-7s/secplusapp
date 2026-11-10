@@ -225,7 +225,7 @@ function portCards(): { toProtocol: DumpCard[]; toPort: DumpCard[] } {
     category: label('ports'),
     expansion: `${p.protocol} (${p.transport})`,
     definition: `${p.service}. ${sentence(p.notes)}`,
-    notes: [{ label: 'Rated', text: RATING[p.status] }],
+    notes: [{ label: 'Used for', text: `${p.role}. ${p.use}` }, { label: 'Rated', text: RATING[p.status] }],
     check: protocolCheck(p.port),
     sibling: `proto:${p.protocol}`,
   }));
@@ -236,7 +236,7 @@ function portCards(): { toProtocol: DumpCard[]; toPort: DumpCard[] } {
     category: label('ports'),
     expansion: `${p.transport} ${p.port}`,
     definition: `${p.service}. ${sentence(p.notes)}`,
-    notes: [{ label: 'Rated', text: RATING[p.status] }],
+    notes: [{ label: 'Used for', text: `${p.role}. ${p.use}` }, { label: 'Rated', text: RATING[p.status] }],
     check: portCheck(p.port, p.transport),
     sibling: `port:${p.port}`,
   }));

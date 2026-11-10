@@ -40,6 +40,8 @@ export class PbqPracticeComponent implements OnChanges {
   @Input() fromLesson = '';
   /** Firewall tables: pre-fill and lock this many rows as a worked example. */
   @Input() given = 0;
+  /** Keeps a checked answer from being cleared and tried again. The page that sets it says what unlocks it. */
+  @Input() retryLocked = false;
   /** Fires each time an answer is checked, with the share of parts right (0 to 1). */
   @Output() checkedResult = new EventEmitter<{ id: string; fraction: number }>();
 
@@ -106,6 +108,7 @@ export class PbqPracticeComponent implements OnChanges {
 
   /** Clears the answers, including the saved ones. */
   reset() {
+    if (this.retryLocked) return;
     this.blank();
     if (this.q) this.work?.clear(`pbq:${this.q.id}`);
   }

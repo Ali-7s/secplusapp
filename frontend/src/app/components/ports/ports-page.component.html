@@ -45,6 +45,7 @@
               @if (a.note) { {{ a.note }} }
             </p>
             <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
+            <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
             @if (hookForQuestion(q); as hook) { <p class="hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
             <div class="v-acts">
               @if (!a.right && !q.choices) { <button type="button" class="btn ghost" (click)="override()">My answer was right</button> }
@@ -93,7 +94,17 @@
     <span class="sub">@if (s.seed !== undefined) { New every time } @else { Scenario {{ scenarios.indexOf(s) + 1 }} of {{ scenarios.length }} }</span>
   </div>
   <p class="fw-help">Stuck on a port? The <a routerLink="/reference" [queryParams]="{ tab: 'ports' }">Reference Sheet's port list</a> has them all.</p>
-  <app-pbq-practice [title]="s.title" [questions]="[s]" (checkedResult)="onScenarioChecked(s)" />
+  <app-pbq-practice [title]="s.title" [questions]="[s]" [retryLocked]="locked(s)" (checkedResult)="onScenarioChecked(s)" />
+  @if (locked(s)) {
+    @let other = unlockSet(s);
+    <div class="fw-lock" role="status">
+      <mat-icon aria-hidden="true">lock</mat-icon>
+      <div>
+        <p><strong>Try again is locked.</strong> Get every rule right on a table from a different category and it opens. Tables in {{ categoryTitle(s.set) }} don't count, and neither does a second try at a random table.</p>
+        <button type="button" class="btn" (click)="openRandom(other)"><mat-icon aria-hidden="true">shuffle</mat-icon> Random table: {{ categoryTitle(other) }}</button>
+      </div>
+    </div>
+  }
   <div class="v-acts fw-next">
     <span class="spacer"></span>
     @if (s.seed !== undefined) {
@@ -115,8 +126,8 @@
       <h2>How it works</h2>
       <ul>
         <li>Each table is a network and a list of rules to write. <strong>Choose the protocol and type the port from memory</strong>: the question never gives you the number.</li>
-        <li><strong>Random tables are new every time</strong>: different ports, hosts, addresses and wording, with your weakest ports asked most, so there is nothing to memorize. Some rules name the protocol and some only describe the job.</li>
-        <li><strong>Written scenarios</strong> are fixed networks that cover every port and protocol in this trainer.</li>
+        <li><strong>Random tables are new every time</strong>: different ports, hosts, addresses and wording, so there is nothing to memorize. They ask your weakest ports and the rules you missed before, rest the ones you just got right, and put look-alike protocols in the same table. The higher a port's level, the more often its rule only describes the job instead of naming the protocol.</li>
+        <li><strong>Written scenarios</strong> are fixed networks that cover every port and protocol in this trainer. <strong>Miss a rule and Try again locks</strong> until you get every rule right on a table from a different category. Tables in the same category never unlock it, and there is no timer to wait out.</li>
         <li>Your first check of a random table <strong>counts toward your port levels</strong>, just like a drill. A written scenario counts only the first time, since after that you may just remember it. A port counts as right only if every rule using it had both the protocol and the port right. Checking a table also counts as finishing its set, so it lets other sets' ports go up again.</li>
       </ul>
     </section>
@@ -150,11 +161,11 @@
               <button type="button" class="fw-item" (click)="openScenario(item)">
                 <span class="fw-title">{{ item.title }}</span>
                 <span class="fw-state" [class.fw-perfect]="right === item.rows.length" [class.fw-partly]="right !== null && right < item.rows.length">
-                  @if (right !== null) { {{ right }} of {{ item.rows.length }} rules right }
+                  @if (right !== null) { {{ right }} of {{ item.rows.length }} rules right{{ locked(item) ? ' · locked' : '' }} }
                   @else if (isBegun(item)) { In progress · {{ item.rows.length }} rules }
                   @else { {{ item.rows.length }} rules }
                 </span>
-                <mat-icon aria-hidden="true">chevron_right</mat-icon>
+                <mat-icon aria-hidden="true">{{ locked(item) ? 'lock' : 'chevron_right' }}</mat-icon>
               </button>
             </li>
           }
@@ -165,7 +176,7 @@
   <section class="intro">
     <h2>How it works</h2>
     <ul>
-      <li><strong>Learn a set</strong> of four to eight ports that do the same kind of job, with a memory hook for each.</li>
+      <li><strong>Learn a set</strong> of three to eight ports that do the same kind of job. Each one says what it is used for and how it differs from its neighbors, with a memory hook.</li>
       <li><strong>Drill it</strong> in rounds of {{ ROUND }}: port to name, name to port, TCP or UDP, the secure replacement, and which port a situation needs.</li>
       <li>A right answer moves a port up a level, but <strong>only once an hour, and only after you've finished a different set</strong> since it last went up. A miss drops it two. Recalling a port minutes after reading it only shows it looks familiar, so <strong>mastered</strong> (level 4) means you got it right four times, each at least an hour apart with another set in between. Come back later to move ports up.</li>
       <li>Set rounds slip in three ports from sets you have already started, so you cannot answer by elimination, and older sets keep coming back. Rounds ask about your weakest ports most.</li>
@@ -212,6 +223,7 @@
               <li>
                 <div class="l-top"><span class="l-port mono">{{ e.port }}</span><strong>{{ e.protocol }}</strong>
                   <span class="tag">{{ e.transport }}</span><span class="tag" [attr.data-status]="e.status">{{ rating(e) }}</span></div>
+                <div class="l-use"><strong>{{ e.role }}.</strong> {{ e.use }}</div>
                 <div class="l-sub">{{ e.service }}. {{ e.notes }}</div>
               </li>
             }
