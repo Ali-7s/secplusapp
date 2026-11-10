@@ -28,7 +28,7 @@
           </select>
         </label>
       </div>
-      <app-review [cards]="reviewCards" kind="ref" />
+      <app-review [cards]="reviewCards" kind="ref" (answered)="onReviewed($event)" (undone)="onReviewUndone()" />
     </div>
   } @else {
 

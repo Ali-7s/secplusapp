@@ -174,7 +174,7 @@
   } @else {
 
   <div class="overall">
-    <div class="o-num"><strong>{{ masteredAll }}</strong> of {{ total }} ports mastered</div>
+    <div class="o-num"><strong>{{ masteredCore }}</strong> of {{ coreTotal }} core ports mastered · <strong>{{ masteredAll }}</strong> of {{ total }} in all</div>
     <div class="o-bar" aria-hidden="true"><div [style.width.%]="(masteredAll / total) * 100"></div></div>
     <div class="o-acts">
       <button type="button" class="btn primary" (click)="start('weak')"><mat-icon aria-hidden="true">bolt</mat-icon> {{ started ? 'Drill my weakest' : 'Start with the first sets' }}</button>
@@ -195,7 +195,7 @@
         </div>
         <div class="chips" aria-label="Mastery of each port">
           @for (p of g.ports; track p) {
-            <span class="chip mono" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4'">{{ p }}</span>
+            <span class="chip mono" [class.core]="isCore(p)" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4' + (isCore(p) ? ', core port' : '')">{{ p }}</span>
           }
         </div>
         @if (waiting(g)) {
@@ -211,7 +211,8 @@
               @let e = entryOf(p);
               <li>
                 <div class="l-top"><span class="l-port mono">{{ e.port }}</span><strong>{{ e.protocol }}</strong>
-                  <span class="tag">{{ e.transport }}</span><span class="tag" [attr.data-status]="e.status">{{ rating(e) }}</span></div>
+                  <span class="tag">{{ e.transport }}</span><span class="tag" [attr.data-status]="e.status">{{ rating(e) }}</span>
+                  @if (e.core) { <span class="tag core">Core</span> }</div>
                 <div class="l-use"><strong>{{ e.role }}.</strong> {{ e.use }}</div>
                 <div class="l-sub">{{ e.service }}. {{ e.notes }}</div>
               </li>
@@ -229,6 +230,7 @@
     <span class="chip mono" data-level="0">0</span> new
     <span class="chip mono" data-level="2">2</span> learning
     <span class="chip mono" data-level="4">4</span> mastered
+    <span class="chip mono core" data-level="0">22</span> core port
   </p>
   }
 }

@@ -51,6 +51,16 @@ describe('Reference deck', () => {
     }
   });
 
+  it('deals the core ports before the rest, in both directions', () => {
+    for (const prefix of ['port:', 'proto:']) {
+      const inOrder = cards.filter(c => c.id.startsWith(prefix)).map(c => PORTS.find(p => c.id === `port:${p.port}` || c.id === `proto:${p.protocol}`)!);
+      expect(inOrder.length).toBe(PORTS.length);
+      const firstOther = inOrder.findIndex(p => !p.core);
+      expect(firstOther).withContext(prefix).toBe(PORTS.filter(p => p.core).length);
+      expect(inOrder.slice(firstOther).some(p => p.core)).withContext(prefix).toBeFalse();
+    }
+  });
+
   describe('typed answers', () => {
     const byId = (id: string) => cards.find(c => c.id === id)!;
     const mark = (id: string, typed: string) => byId(id).check!(typed).right;

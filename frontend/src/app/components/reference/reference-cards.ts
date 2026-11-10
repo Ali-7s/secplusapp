@@ -217,8 +217,11 @@ const FORMULA_CHECKS: Record<string, AnswerCheck> = {
   'ALE (Annualized Loss Expectancy)': formulaCheck([['SLE', 'single loss expectancy'], ['ARO', 'annualized rate of occurrence', 'annualised rate of occurrence']], ['AV', 'EF']),
 };
 
+/** The ports in the order Review mode meets them: the core ones first (see PortEntry.core), as the Ports trainer does. */
+const coreFirst = [...PORTS.filter(p => p.core), ...PORTS.filter(p => !p.core)];
+
 function portCards(): { toProtocol: StudyCard[]; toPort: StudyCard[] } {
-  const toProtocol = PORTS.map(p => card({
+  const toProtocol = coreFirst.map(p => card({
     id: `port:${p.port}`,
     name: `${/[/-]/.test(p.port) ? 'Ports' : 'Port'} ${p.port}`,
     prompt: 'Which protocol uses it?',
@@ -229,7 +232,7 @@ function portCards(): { toProtocol: StudyCard[]; toPort: StudyCard[] } {
     check: protocolCheck(p.port),
     sibling: `proto:${p.protocol}`,
   }));
-  const toPort = PORTS.map(p => card({
+  const toPort = coreFirst.map(p => card({
     id: `proto:${p.protocol}`,
     name: p.protocol,
     prompt: 'Which port, and TCP or UDP?',
@@ -504,13 +507,16 @@ function frameworkCards(): StudyCard[] {
 
 /**
  * Every card in the deck. Review mode deals new cards in this order, so the sections are interleaved (a day's new
- * cards are not all ports), and the two cards for one port are kept far apart so one does not give the other away.
+ * cards are not all ports), and the two cards for one port are kept far apart so one does not give the other away:
+ * the "which port?" cards are turned half way round, the core ports among themselves and the rest among themselves.
  */
 export function referenceCards(): StudyCard[] {
   const { toProtocol, toPort } = portCards();
-  const half = Math.floor(toPort.length / 2);
+  // Half rounded up: with an odd count, rounding down would leave some pairs a card short of a day apart.
+  const turned = (list: StudyCard[]) => { const half = Math.ceil(list.length / 2); return [...list.slice(half), ...list.slice(0, half)]; };
+  const core = PORTS.filter(p => p.core).length;
   const lists = [
-    toProtocol, [...toPort.slice(half), ...toPort.slice(0, half)], legacyCards(), wirelessCards(), irCards(),
+    toProtocol, [...turned(toPort.slice(0, core)), ...turned(toPort.slice(core))], legacyCards(), wirelessCards(), irCards(),
     metricCards(), backupCards(), raidCards(), siteCards(), cloudCards(), riskCards(), dataCards(), accessCards(), mfaCards(),
     frameworkCards(),
   ];

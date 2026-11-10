@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, input, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, input, output, signal, untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -63,6 +63,9 @@ export class ReviewComponent {
   /** The cards on offer, already narrowed by the page's search and category filters. */
   readonly cards = input.required<StudyCard[]>();
   readonly kind = input.required<CardKind>();
+  /** Each rated card, and each rating taken back, for a page whose cards are also tracked somewhere else. */
+  readonly answered = output<{ id: string; rating: Rating }>();
+  readonly undone = output<string>();
 
   readonly progress = inject(ProgressService);
   private readonly content = inject(ContentService);
@@ -307,6 +310,7 @@ export class ReviewComponent {
     try { localStorage.removeItem(this.draftKey()); } catch { /* storage unavailable */ }
     this.canUndo.set(true);
     this.progress.answerCard(this.kind(), card.id, rating);
+    this.answered.emit({ id: card.id, rating });
     this.reviewedThisSession.update(n => n + 1);
     this.revealedId.set(null);
     // Cleared here too: when the same card comes straight back, the screen does not change cards.
@@ -322,6 +326,7 @@ export class ReviewComponent {
     const last = this.lastAnswer;
     if (!last) return;
     this.progress.restoreCard(this.kind(), last.name, last.card, last.review);
+    this.undone.emit(last.name);
     this.lastAnswer = null;
     this.canUndo.set(false);
     this.reviewedThisSession.update(n => Math.max(0, n - 1));

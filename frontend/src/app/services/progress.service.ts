@@ -59,6 +59,24 @@ export class ProgressService {
     });
   }
 
+  /**
+   * Several cards answered at once somewhere other than Review mode, such as the ports a checked firewall table
+   * asked about. An answer marked `review` was typed, checked and tested the whole card, so it counts as a review
+   * even when the card was not due yet; the others follow the rule above.
+   */
+  recordCards(kind: CardKind, answers: { name: string; known: boolean; review?: boolean }[]) {
+    if (!answers.length) return;
+    const now = Date.now();
+    this.update(d => {
+      for (const a of answers) {
+        const key = cardKey(kind, a.name);
+        const opts = { retention: d.review.retention, id: key };
+        d.cards[key] = a.review ? schedule(d.cards[key], a.known ? 'good' : 'again', now, opts) : answerOutsideQueue(d.cards[key], a.known ? 'good' : 'again', now, opts);
+      }
+      this.studied(d, now, answers.length);
+    });
+  }
+
   /** An answer in Review mode. A card seen for the first time counts toward today's new-card limit. */
   answerCard(kind: CardKind, name: string, rating: Rating) {
     const key = cardKey(kind, name);

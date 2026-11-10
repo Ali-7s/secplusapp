@@ -19,7 +19,7 @@ import { NetHost, NetZone } from '../../models/exam.model';
 import { seededRandom, shuffled } from '../../utils/exam-engine';
 import { SrsCard, recallNow } from '../../utils/srs';
 import { AH, BOTH, Draft, ESP, ICMP, MIXED, NO_PORT, PortScenario, Rule, TCP, UDP, build, trainerEntry } from './firewall-scenarios';
-import { GROUPS, MAX_LEVEL } from './ports-trainer';
+import { GROUPS, MAX_LEVEL, isCore } from './ports-trainer';
 
 type ZoneKey = 'corp' | 'guest' | 'dmz' | 'servers' | 'mgmt' | 'devices' | 'voice' | 'iot';
 
@@ -425,8 +425,21 @@ export const factOf = (flowId: string): string => {
   const f = flowById.get(flowId);
   return f ? firstAsking.get(factKey(f))! : flowId;
 };
-/** Every fact, in the order new ones are introduced: the most-tested sets first. */
-export const FACTS: string[] = [...new Set(FLOWS.map(f => factOf(f.id)))];
+/** The transport a fact is about. */
+export const factProto = (fact: string) => flowById.get(fact)?.proto ?? '';
+/**
+ * A fact about one of the ports the exam leans on most. Ping counts too: that ICMP has no port is asked often, though
+ * it has no entry of its own in the port list.
+ */
+export const isCoreFact = (fact: string) => {
+  const f = flowById.get(fact);
+  if (!f) return false;
+  const entry = trainerEntry(f.port);
+  return entry ? isCore(entry) : f.proto === ICMP;
+};
+const inFlowOrder: string[] = [...new Set(FLOWS.map(f => factOf(f.id)))];
+/** Every fact, in the order new ones are introduced: the core ports first, set by set (most-tested sets first), then the rest. */
+export const FACTS: string[] = [...inFlowOrder.filter(isCoreFact), ...inFlowOrder.filter(f => !isCoreFact(f))];
 const rulesAsking = new Map(FACTS.map(fact => [fact, FLOWS.filter(f => factOf(f.id) === fact)]));
 /** The trainer set a fact belongs to. */
 export const setOfFact = (fact: string) => flowById.get(fact)?.set;

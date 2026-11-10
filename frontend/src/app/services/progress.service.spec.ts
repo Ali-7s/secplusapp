@@ -75,6 +75,24 @@ describe('ProgressService with the app open in two tabs', () => {
     expect(stored().lessons['backups']).toBeUndefined();
   });
 
+  it('records several cards answered elsewhere at once, and counts only whole, checked answers as early reviews', () => {
+    const day = 86_400_000;
+    const learned = { state: 'review' as const, step: 0, interval: 10, ease: 2.5, due: Date.now() + 5 * day, reps: 3, lapses: 0, right: 3, wrong: 0, at: Date.now() - 5 * day, stability: 10, difficulty: 5, last: Date.now() - 5 * day };
+    otherTabSaves(otherTabCopy(d => { d.cards['ref:proto:RDP'] = { ...learned }; d.cards['ref:proto:SSH / SFTP / SCP'] = { ...learned }; d.cards['ref:proto:Telnet'] = { ...learned }; }));
+
+    progress.recordCards('ref', [{ name: 'proto:RDP', known: true, review: true }, { name: 'proto:SSH / SFTP / SCP', known: true }, { name: 'proto:Telnet', known: false }, { name: 'proto:DNS', known: true }]);
+
+    // A whole answer reviews the card although it was not due; a partial one is only counted.
+    expect(progress.card('ref', 'proto:RDP')!.due).toBeGreaterThan(learned.due);
+    expect(progress.card('ref', 'proto:SSH / SFTP / SCP')!.due).toBe(learned.due);
+    expect(progress.card('ref', 'proto:SSH / SFTP / SCP')!.right).toBe(4);
+    expect(progress.card('ref', 'proto:Telnet')!.state).toBe('relearning');
+    expect(progress.card('ref', 'proto:DNS')!.state).toBe('learning');
+    // Nothing answered here used up Review mode's new cards for today.
+    expect(progress.newLeftToday('ref')).toBe(progress.data().review.newPerDay);
+    progress.recordCards('ref', []);
+  });
+
   it('ignores other keys', () => {
     progress.setLessonWork('crypto', 'hashlab', { text: 'mine' });
     window.dispatchEvent(new StorageEvent('storage', { key: 'sp-theme', newValue: 'dark' }));

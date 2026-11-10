@@ -151,6 +151,15 @@ export interface PortQuestion extends QRef {
 }
 
 export const entryOf = (port: string): PortEntry => PORTS.find(p => p.port === port)!;
+
+/** The ports the exam leans on most (see PortEntry.core). */
+export const CORE_PORTS: string[] = PORTS.filter(p => p.core).map(p => p.port);
+export const isCore = (port: string) => CORE_PORTS.includes(port);
+/** Every port in the order to start learning them: core ports first, set by set, then the rest. */
+export const startOrder = (): string[] => {
+  const all = GROUPS.flatMap(g => g.ports);
+  return [...all.filter(isCore), ...all.filter(p => !isCore(p))];
+};
 export const shortName = (e: PortEntry) => PORT_NAMES[e.port]?.[0] ?? e.protocol;
 const ends = (port: string) => port.split(/[/-]/).map(Number);
 const rangeOf = (port: string) => {

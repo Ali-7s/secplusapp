@@ -13,7 +13,8 @@ import { SubnetCheatSheetComponent } from './subnet-cheat-sheet.component';
 import { ReviewComponent } from '../review/review.component';
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { StudyCard } from '../../utils/study-card';
-import { isDueCard } from '../../utils/srs';
+import { Rating, isDueCard } from '../../utils/srs';
+import { PortLinks } from '../ports/port-links.service';
 import { REFERENCE_DECK_SECTIONS, referenceCards } from './reference-cards';
 import {
   ACCESS_MODELS, ATTACK_FRAMEWORKS, AUTH_PROTOCOLS, BACKUP_TYPES, BCDR_METRICS, CIPHERS, CLOUD_MODELS, COMPLIANCE_FRAMEWORKS,
@@ -68,6 +69,19 @@ export class ReferenceComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly progress = inject(ProgressService);
+  private readonly portLinks = inject(PortLinks);
+  /** Takes the last Review answer back out of the Ports trainer, if it was on a port card. */
+  private undoPortLink: (() => void) | null = null;
+
+  /** A port card rated in Review mode counts in the Ports trainer too: the port's level and its firewall rules. */
+  onReviewed(answer: { id: string; rating: Rating }) {
+    this.undoPortLink = this.portLinks.reviewed(answer.id, answer.rating !== 'again');
+  }
+
+  onReviewUndone() {
+    this.undoPortLink?.();
+    this.undoPortLink = null;
+  }
 
   selectedTab = Math.max(0, this.sections.findIndex(sec => sec.key === this.route.snapshot.queryParamMap.get('tab')));
 

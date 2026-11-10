@@ -10,9 +10,10 @@ import { MIXED, PortScenario, SCENARIOS, portOutcomes, portsRight, trainerEntry 
 import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewall-generator';
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
 import { formatDelay } from '../../utils/srs';
+import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, updateMastery,
+  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, startOrder, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -47,6 +48,10 @@ export class PortsPageComponent {
   readonly levels = Array.from({ length: MAX_LEVEL + 1 }, (_, i) => i);
   readonly shortName = shortName;
   readonly entryOf = entryOf;
+  readonly isCore = isCore;
+  readonly coreTotal = CORE_PORTS.length;
+  /** A drill answer's firewall rules as they were before it, so overruling a wrong mark can put them back. */
+  private rulesBefore: RuleMemory | null = null;
   learning = new Set<string>();
 
   mastery: Mastery = (this.progress.lessonWork(SLUG, 'mastery') as Mastery | undefined) ?? {};
@@ -91,6 +96,23 @@ export class PortsPageComponent {
       for (const [fact, card] of Object.entries(this.memory)) saved[memoryKey(fact)] = card;
     }
     this.progress.setLessonWorks(SLUG, saved);
+  }
+
+  private saveRules(rules: RuleMemory) {
+    const cards = Object.entries(rules);
+    if (cards.length) this.progress.setLessonWorks(SLUG, Object.fromEntries(cards.map(([fact, card]) => [memoryKey(fact), card])));
+  }
+
+  /**
+   * A drill answer about a port's number also counts for its firewall rules. It gives the number but not the whole
+   * rule, so a right answer only starts rules that were new (the next table then asks them instead of treating them
+   * as new), and a wrong one sends them back.
+   */
+  private linkDrillToRules(q: PortQuestion, right: boolean, now: number) {
+    if (q.kind !== 'number' && q.kind !== 'situation') return;
+    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.retention);
+    this.memory = { ...this.memory, ...changed };
+    this.saveRules(changed);
   }
 
   /** Rules follow Review mode's two settings: the recall chance to aim for, and how many new ones a day. */
@@ -217,9 +239,15 @@ export class PortsPageComponent {
     // Each rule of a random table is rated like a Review card, which sets when it comes back.
     const ref = written ? undefined : this.randomRef(s.set);
     if (ref && ref.seed === s.seed && ref.flows.length === s.rows.length) {
-      const changed = rateTable(this.memory, ref.flows, portsRight(s, this.savedScenario(s)?.answer?.cells), now, this.retention);
+      const right = portsRight(s, this.savedScenario(s)?.answer?.cells);
+      const changed = rateTable(this.memory, ref.flows, right, now, this.retention);
       this.memory = { ...this.memory, ...changed };
-      this.progress.setLessonWorks(SLUG, Object.fromEntries(Object.entries(changed).map(([fact, card]) => [memoryKey(fact), card])));
+      this.saveRules(changed);
+      // The same answers count on each port's Review card, so Review mode does not ask again what a table just showed.
+      this.progress.recordCards('ref', tableCredits(ref.flows, right).flatMap(c => {
+        const name = reviewCardOf(c.port);
+        return name ? [{ name, known: c.right, review: c.full }] : [];
+      }));
     }
     this.refreshBack();
   }
@@ -240,6 +268,7 @@ export class PortsPageComponent {
   isOutside(port: string) { const g = GROUPS.find(x => x.id === this.round?.set); return !!g && !g.ports.includes(port); }
   mastered(g: PortGroup) { return masteredIn(this.mastery, g.ports); }
   get masteredAll() { return masteredIn(this.mastery, PORTS.map(p => p.port)); }
+  get masteredCore() { return masteredIn(this.mastery, CORE_PORTS); }
   get started() { return Object.keys(this.mastery).length > 0; }
   weakCount() { return PORTS.filter(p => this.level(p.port) < MAX_LEVEL).length; }
 
@@ -269,7 +298,7 @@ export class PortsPageComponent {
       const weak = PORTS.map(p => p.port).filter(p => this.level(p) < MAX_LEVEL);
       // Weakest first: ports already started but not mastered, else the next set not yet begun.
       const begun = weak.filter(p => this.mastery[p]);
-      ports = begun.length >= 4 ? begun : [...begun, ...GROUPS.flatMap(g => g.ports).filter(p => weak.includes(p) && !begun.includes(p))].slice(0, 8);
+      ports = begun.length >= 4 ? begun : [...begun, ...startOrder().filter(p => weak.includes(p) && !begun.includes(p))].slice(0, 8);
       if (!ports.length) ports = PORTS.map(p => p.port);
     } else if (set === 'all') ports = PORTS.map(p => p.port);
     else ports = GROUPS.find(g => g.id === set)!.ports;
@@ -307,6 +336,8 @@ export class PortsPageComponent {
     this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, v.right);
+    this.rulesBefore = this.memory;
+    this.linkDrillToRules(q, v.right, now);
     if (r.answers.filter(Boolean).length === r.refs.length) this.recordPractice(r.set, r.refs.map(x => x.port), now);
     this.saveRound();
     setTimeout(() => this.nextBtn?.nativeElement.focus());
@@ -322,7 +353,20 @@ export class PortsPageComponent {
     this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, true);
+    this.overruleRules(q);
     this.saveRound();
+  }
+
+  /** Puts the port's firewall rules back as they were before the wrong mark, then counts the answer as right. */
+  private overruleRules(q: PortQuestion) {
+    const before = this.rulesBefore;
+    this.rulesBefore = null;
+    if (!before || (q.kind !== 'number' && q.kind !== 'situation')) return;
+    const restored: Record<string, unknown> = {};
+    for (const fact of factsOfEntry(q.port)) restored[memoryKey(fact)] = before[fact] ?? null;
+    this.progress.setLessonWorks(SLUG, restored);
+    this.memory = before;
+    this.linkDrillToRules(q, true, Date.now());
   }
 
   next() {

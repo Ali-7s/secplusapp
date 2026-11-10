@@ -3,7 +3,7 @@ import { gradeQuestion, isAnswered } from '../../utils/exam-engine';
 import { ICON_H, ICON_W, narrowLayout, wideLayout } from '../practice-exam/network-diagram';
 import { PORTS } from '../reference/reference-data';
 import { SrsCard } from '../../utils/srs';
-import { FACTS, FLOWS, HOST_SHARE, LOOKALIKES, NEW_PER_TABLE, RuleMemory, TableContext, buildTable, factOf, fitsHostTable, newTable, setOfFact } from './firewall-generator';
+import { FACTS, FLOWS, HOST_SHARE, LOOKALIKES, NEW_PER_TABLE, RuleMemory, TableContext, buildTable, factOf, fitsHostTable, isCoreFact, newTable, setOfFact } from './firewall-generator';
 import { rateTable } from './firewall-memory';
 import { MIXED, portNumbers } from './firewall-scenarios';
 import { GROUPS } from './ports-trainer';
@@ -138,8 +138,8 @@ describe('firewall table generator', () => {
     const share = (set: string, ctx: TableContext, fact: string) => SEEDS.filter(seed => factsOf(set, ctx, seed).includes(fact)).length / SEEDS.length;
 
     it('gives rules that ask for the same fact one memory, under names that never change', () => {
-      // These names are saved with the learner's progress. Add new facts; never rename or reuse one.
-      expect(FACTS).toEqual([
+      // These names are saved with the learner's progress. Add new facts; never rename or reuse one. (Their order may change.)
+      expect([...FACTS].sort()).toEqual([
         'ssh', 'sftp', 'telnet', 'rdp', 'vnc', 'https-in', 'http', 'alt-http', 'alt-https',
         'dns', 'dns-zone', 'dot', 'dhcp', 'dhcp-reply', 'ntp',
         'smtp-in', 'submission', 'smtps', 'pop3', 'pop3s', 'imap', 'imaps',
@@ -148,7 +148,7 @@ describe('firewall table generator', () => {
         'snmp', 'snmp-trap', 'syslog', 'syslog-tls', 'ping',
         'ike', 'natt', 'esp', 'ah', 'l2tp', 'pptp', 'ovpn-udp', 'ovpn-tcp', 'wireguard',
         'mssql', 'oracle', 'mysql', 'rpc', 'bgp', 'nntp', 'sip', 'sips', 'mqtt', 'mqtts',
-      ]);
+      ].sort());
       expect(factOf('telnet-block')).toBe('telnet');
       expect(factOf('pptp-block')).toBe('pptp');
       expect(factOf('https-out')).toBe('https-in');
@@ -171,10 +171,25 @@ describe('firewall table generator', () => {
       }
     });
 
-    it('starts a new learner on the most-tested sets, the same rules whatever the seed', () => {
+    it('starts a new learner on core ports from the most-tested sets, the same rules whatever the seed', () => {
       for (const seed of SEEDS) {
-        expect(new Set(factsOf(MIXED, NEW, seed))).withContext(String(seed)).toEqual(new Set(['ssh', 'telnet', 'rdp', 'https-in', 'http', 'alt-http', 'dns']));
+        expect(new Set(factsOf(MIXED, NEW, seed))).withContext(String(seed)).toEqual(new Set(['ssh', 'telnet', 'rdp', 'https-in', 'http', 'dns', 'dns-zone']));
       }
+    });
+
+    it('introduces every core rule before any other', () => {
+      // A learner who keeps getting everything right: each table's rules rest for weeks, and new ones keep arriving.
+      let memory: RuleMemory = {};
+      const met: string[] = [];
+      for (let i = 0; i < 40 && met.length < FACTS.length; i++) {
+        for (const fact of factsOf(MIXED, { ...NEW, memory }, 500 + i)) {
+          if (!memory[fact]) met.push(fact);
+          memory = { ...memory, [fact]: learned(60, 1) };
+        }
+      }
+      const firstExtra = met.findIndex(f => !isCoreFact(f));
+      expect(firstExtra).toBe(FACTS.filter(isCoreFact).length);
+      expect(met.slice(firstExtra).some(isCoreFact)).toBeFalse();
     });
 
     it('brings missed rules straight back, and lets new rules in only where there is room', () => {
