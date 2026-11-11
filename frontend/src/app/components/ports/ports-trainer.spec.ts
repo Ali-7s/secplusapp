@@ -132,29 +132,34 @@ describe('Ports trainer', () => {
     expect(markPracticed({ web: 1 }, ['remote'], 5)).toEqual({ web: 1, remote: 5 });
   });
 
-  it('asks a set round about that set only, even when other sets are weaker', () => {
-    const remote = GROUPS[0].ports;
+  it('asks every port of a set once, and nothing from other sets', () => {
     const started: Mastery = { '80': { level: 0, right: 0, wrong: 3, at: 1 }, '443': { level: 0, right: 0, wrong: 1, at: 2 } };
-    for (let s = 1; s <= 20; s++) {
-      const round = pickRound(remote, started, seeded(s));
-      expect(round.length).toBe(ROUND);
-      expect(round.every(r => remote.includes(r.port))).withContext(String(s)).toBeTrue();
+    for (const g of GROUPS) {
+      for (let s = 1; s <= 20; s++) {
+        const round = pickRound(g.ports, started, seeded(s)).map(r => r.port);
+        expect([...round].sort()).withContext(`${g.id} ${s}`).toEqual([...g.ports].sort());
+      }
     }
   });
 
-  it('never asks the same port twice in a row, and asks weak ports most', () => {
-    const ports = ['22', '23', '3389', '5900'];
-    const m: Mastery = { '22': { level: 4, right: 4, wrong: 0, at: 0 }, '23': { level: 4, right: 4, wrong: 0, at: 0 }, '3389': { level: 4, right: 4, wrong: 0, at: 0 } };
-    const counts: Record<string, number> = {};
+  it('asks each port at most once when there are more ports than questions, and picks weak ports most', () => {
+    const known = Object.fromEntries(all.slice(0, 20).map(p => [p, { level: 4, right: 4, wrong: 0, at: 0 }])) as Mastery;
+    let weak = 0;
     for (let s = 1; s <= 30; s++) {
-      const round = pickRound(ports, m, seeded(s));
-      expect(round.length).toBe(10);
-      round.forEach((r, i) => {
-        if (i) expect(r.port).not.toBe(round[i - 1].port);
-        counts[r.port] = (counts[r.port] ?? 0) + 1;
-      });
+      const round = pickRound(all, known, seeded(s)).map(r => r.port);
+      expect(round.length).toBe(ROUND);
+      expect(new Set(round).size).toBe(ROUND);
+      weak += round.filter(p => !known[p]).length;
     }
-    expect(counts['5900']).toBeGreaterThan(counts['22']);
+    expect(weak / (30 * ROUND)).toBeGreaterThan(0.8);
+  });
+
+  it('asks a port a different way from last time', () => {
+    for (const asked of ['name', 'number', 'situation'] as QKind[]) {
+      const m = updateMastery({}, '22', false, 1, {}, asked);
+      expect(m['22'].asked).toBe(asked);
+      for (let s = 1; s <= 20; s++) expect(pickRound(['22'], m, seeded(s))[0].kind).withContext(`${asked} ${s}`).not.toBe(asked);
+    }
   });
 
   it('keeps new ports to the easy kinds', () => {

@@ -57,7 +57,7 @@
       </div>
     } @else if (finished) {
       <div class="done">
-        <h2><mat-icon aria-hidden="true">{{ score >= 8 ? 'emoji_events' : 'fact_check' }}</mat-icon> {{ score }} of {{ round.refs.length }} right</h2>
+        <h2><mat-icon aria-hidden="true">{{ score >= round.refs.length * 0.8 ? 'emoji_events' : 'fact_check' }}</mat-icon> {{ score }} of {{ round.refs.length }} right</h2>
         <ul class="moves">
           @for (c of changes(); track c.port) {
             <li><span class="mono">{{ c.port }}</span> {{ c.name }}

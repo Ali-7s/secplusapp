@@ -259,8 +259,8 @@ export function kindsFor(port: string): QKind[] {
 
 // ── Mastery ───────────────────────────────────────────────────────────────
 
-/** `rose` is when the level last went up: a level rises at most once an hour. */
-export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number }
+/** `rose` is when the level last went up: a level rises at most once an hour. `asked` is how a drill last asked it. */
+export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number; asked?: QKind }
 export type Mastery = Record<string, PortMastery>;
 export const MAX_LEVEL = 4;
 
@@ -305,7 +305,7 @@ export const markPracticed = (practiced: Practiced, sets: string[], now: number)
  * since the last rise: recalling a port minutes after reading it shows it is familiar, not that it is learned.
  * A wrong answer drops it two levels at any time.
  */
-export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced): Mastery {
+export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced, asked?: QKind): Mastery {
   const cur = m[port] ?? { level: 0, right: 0, wrong: 0, at: 0 };
   let next: PortMastery;
   if (right) {
@@ -314,7 +314,7 @@ export function updateMastery(m: Mastery, port: string, right: boolean, now: num
   } else {
     next = { ...cur, level: Math.max(0, cur.level - 2), wrong: cur.wrong + 1, at: now };
   }
-  return { ...m, [port]: next };
+  return { ...m, [port]: asked ? { ...next, asked } : next };
 }
 
 export const levelOf = (m: Mastery, port: string) => m[port]?.level ?? 0;
@@ -325,28 +325,35 @@ export const masteredIn = (m: Mastery, ports: string[]) => ports.filter(p => lev
 export const ROUND = 10;
 
 /**
- * Picks a round: weaker ports more often (and ports that rose in the last hour less often), never the same port twice
- * in a row, and the easy directions first for ports not yet learned (port to name and back), the harder kinds once a
- * port is known.
+ * Picks a round that asks each port once, so a set smaller than a round gives a shorter round instead of repeats.
+ * When there are more ports than questions, weaker ports (and not ones that rose in the last hour) are likelier to
+ * make the cut. The order is shuffled, so it says nothing about which ports are weak.
  */
 export function pickRound(ports: string[], m: Mastery, random: () => number = Math.random, size = ROUND, now = Date.now()): QRef[] {
-  if (!ports.length) return [];
-  const out: QRef[] = [];
-  const asked = new Map<string, QKind[]>();
-  for (let i = 0; i < size; i++) {
-    const pool = ports.filter(p => ports.length === 1 || p !== out[i - 1]?.port);
-    const weights = pool.map(p => (MAX_LEVEL + 1 - levelOf(m, p)) ** 2 / (1 + (asked.get(p)?.length ?? 0)) * (roseRecently(m, p, now) ? 0.4 : 1));
+  const pool = [...new Set(ports)];
+  const chosen: string[] = [];
+  while (chosen.length < size && pool.length) {
+    const weights = pool.map(p => (MAX_LEVEL + 1 - levelOf(m, p)) ** 2 * (roseRecently(m, p, now) ? 0.4 : 1));
     let r = random() * weights.reduce((a, b) => a + b, 0);
     let k = 0;
     while (k < pool.length - 1 && (r -= weights[k]) > 0) k++;
-    const port = pool[k];
-    const level = levelOf(m, port);
-    const kinds = kindsFor(port).filter(x => level >= 2 || x === 'name' || x === 'number' || x === 'situation');
-    const used = asked.get(port) ?? [];
-    const fresh = kinds.filter(x => !used.includes(x));
-    const choice = (fresh.length ? fresh : kinds)[Math.floor(random() * (fresh.length ? fresh.length : kinds.length))];
-    asked.set(port, [...used, choice]);
-    out.push({ kind: choice, port });
+    chosen.push(pool.splice(k, 1)[0]);
   }
-  return out;
+  for (let i = chosen.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
+  }
+  return chosen.map(port => ({ port, kind: nextKind(port, m, random) }));
+}
+
+/**
+ * How to ask a port this time: a different way from last time, and only the easy directions (port to name and back,
+ * or a situation) until it is known.
+ */
+function nextKind(port: string, m: Mastery, random: () => number): QKind {
+  const level = levelOf(m, port);
+  const kinds = kindsFor(port).filter(x => level >= 2 || x === 'name' || x === 'number' || x === 'situation');
+  const fresh = kinds.filter(x => x !== m[port]?.asked);
+  const from = fresh.length ? fresh : kinds;
+  return from[Math.floor(random() * from.length)];
 }

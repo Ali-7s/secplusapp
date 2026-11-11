@@ -331,7 +331,7 @@ export class PortsPageComponent {
     const before = this.level(q.port);
     r.answers[r.i] = { typed, right: v.right, note: v.note, before };
     const now = Date.now();
-    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced);
+    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced, q.kind);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, v.right);
     this.rulesBefore = this.memory;
@@ -348,7 +348,7 @@ export class PortsPageComponent {
     a.right = true;
     a.note = undefined;
     const m = { ...this.mastery, [q.port]: { ...(this.mastery[q.port] ?? { level: 0, right: 0, wrong: 1, at: 0 }), level: a.before, wrong: Math.max(0, (this.mastery[q.port]?.wrong ?? 1) - 1) } };
-    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced);
+    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced, q.kind);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, true);
     this.overruleRules(q);
