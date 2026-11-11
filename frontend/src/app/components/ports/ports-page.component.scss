@@ -24,15 +24,19 @@
 .g-count { flex: none; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 12px; background: var(--c-surface-3); color: var(--c-text); &.all { background: var(--c-success-light); } }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
 .chip {
-  display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--c-border-dark);
-  background: var(--c-surface-2); color: var(--c-text);
+  display: inline-flex; flex-direction: column; align-items: stretch; gap: 4px; font-size: 13px; font-weight: 700; padding: 4px 8px 6px;
+  border-radius: 6px; border: 1px solid var(--c-border-dark); background: var(--c-surface-2); color: var(--c-text); text-align: center;
   &[data-level='1'] { background: color-mix(in srgb, var(--c-success-light) 35%, var(--c-surface-2)); }
   &[data-level='2'] { background: color-mix(in srgb, var(--c-success-light) 60%, var(--c-surface-2)); }
   &[data-level='3'] { background: var(--c-success-light); }
-  &[data-level='4'] { background: var(--c-success-light); border-color: var(--c-success); box-shadow: inset 0 -3px 0 var(--c-success); }
+  &[data-level='4'] { background: var(--c-success-light); border-color: var(--c-success); }
   // A core port carries a bar on its left, which leaves the level colors alone.
   &.core { box-shadow: inset 3px 0 0 var(--c-primary-mid); padding-left: 10px; }
-  &.core[data-level='4'] { box-shadow: inset 3px 0 0 var(--c-primary-mid), inset 0 -3px 0 var(--c-success); }
+}
+// The level as four bars under the port number.
+.c-pips {
+  display: flex; gap: 3px; min-width: 38px;
+  i { flex: 1; height: 5px; border-radius: 2px; background: var(--c-border-dark); &.on { background: var(--c-success); } }
 }
 .g-acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .learn {
@@ -41,6 +45,7 @@
 }
 .l-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--c-text); }
 .l-port { font-size: 15px; font-weight: 800; color: var(--c-primary); min-width: 64px; }
+.l-level { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--c-text-2); }
 .tag {
   font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: var(--c-surface-3); color: var(--c-text);
   &[data-status='secure'] { background: var(--c-success-light); }
@@ -67,6 +72,14 @@
   &.right { border-color: var(--c-success); }
   &.wrong { border-color: var(--c-error); }
 }
+.q-top { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; }
+.q-level {
+  display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 800;
+  background: var(--c-surface-2); border: 1px solid var(--c-border); color: var(--c-text);
+  &.up { background: var(--c-success-light); border-color: var(--c-success); }
+  &.down { background: var(--c-error-light); border-color: var(--c-error); }
+}
+.held { margin: 0; font-size: 13.5px; color: var(--c-text-2); }
 .kind { display: inline-block; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--c-primary-mid); }
 .prompt { margin: 6px 0 14px; font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--c-text); }
 .answer-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -102,7 +115,7 @@
   li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--c-text); .mono { font-weight: 800; min-width: 64px; } }
 }
 .lv-row { display: inline-flex; gap: 3px; }
-.pip { width: 14px; height: 8px; border-radius: 3px; background: var(--c-surface-3); &.on { background: var(--c-success); } &.lost { background: var(--c-error); } }
+.pip { width: 14px; height: 8px; border-radius: 3px; background: var(--c-border-dark); &.on { background: var(--c-success); } &.lost { background: var(--c-error); } }
 .review {
   font-size: 13.5px; color: var(--c-text);
   summary { cursor: pointer; font-weight: 700; color: var(--c-primary-mid); }

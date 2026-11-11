@@ -18,8 +18,17 @@
 
     @if (question; as q) {
       @let a = answered;
+      @let lv = cardLevel(q);
       <div class="card" [class.right]="a?.right" [class.wrong]="a && !a.right">
-        <span class="kind">{{ q.label }}</span>
+        <div class="q-top">
+          <span class="kind">{{ q.label }}</span>
+          <span class="q-level" [class.up]="lv.to > lv.from" [class.down]="lv.to < lv.from">
+            <span class="lv-row" aria-hidden="true">
+              @for (l of levels; track l) { <span class="pip" [class.on]="l <= lv.to" [class.lost]="l > lv.to && l <= lv.from"></span> }
+            </span>
+            {{ lv.text }}
+          </span>
+        </div>
         <p class="prompt" id="port-prompt">{{ q.prompt }}</p>
 
         @if (q.choices) {
@@ -44,6 +53,7 @@
               <strong>{{ a.right ? 'Right.' : 'Not quite.' }}</strong>
               @if (a.note) { {{ a.note }} }
             </p>
+            @if (lv.held) { <p class="held">Stays at level {{ lv.to }}: {{ lv.held }}.</p> }
             <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
             <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
             @if (hookForQuestion(q); as hook) { <p class="card-note hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
@@ -195,7 +205,10 @@
         </div>
         <div class="chips" aria-label="Mastery of each port">
           @for (p of g.ports; track p) {
-            <span class="chip mono" [class.core]="isCore(p)" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4' + (isCore(p) ? ', core port' : '')">{{ p }}</span>
+            <span class="chip mono" [class.core]="isCore(p)" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4' + (isCore(p) ? ', core port' : '')">
+              {{ p }}<span class="sr-only">, level {{ level(p) }} of 4</span>
+              <span class="c-pips" aria-hidden="true">@for (l of levels; track l) { <i [class.on]="l <= level(p)"></i> }</span>
+            </span>
           }
         </div>
         @if (waiting(g)) {
@@ -211,6 +224,7 @@
               @let e = entryOf(p);
               <li>
                 <div class="l-top"><span class="l-port mono">{{ e.port }}</span><strong>{{ e.protocol }}</strong>
+                  <span class="l-level"><span class="lv-row" aria-hidden="true">@for (l of levels; track l) { <span class="pip" [class.on]="l <= level(p)"></span> }</span> Level {{ level(p) }}</span>
                   <span class="tag">{{ e.transport }}</span><span class="tag" [attr.data-status]="e.status">{{ rating(e) }}</span>
                   @if (e.core) { <span class="tag core">Core</span> }</div>
                 <div class="l-use"><strong>{{ e.role }}.</strong> {{ e.use }}</div>
@@ -227,10 +241,11 @@
   </ol>
 
   <p class="legend">
-    <span class="chip mono" data-level="0">0</span> new
-    <span class="chip mono" data-level="2">2</span> learning
-    <span class="chip mono" data-level="4">4</span> mastered
-    <span class="chip mono core" data-level="0">22</span> core port
+    @for (s of legend; track s.label) {
+      <span class="chip mono" [class.core]="s.core" [attr.data-level]="s.level" aria-hidden="true">22
+        <span class="c-pips">@for (l of levels; track l) { <i [class.on]="l <= s.level"></i> }</span>
+      </span> {{ s.label }}
+    }
   </p>
   }
 }

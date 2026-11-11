@@ -45,11 +45,15 @@ export class PortsPageComponent {
 
   readonly groups = GROUPS;
   readonly total = PORTS.length;
-  readonly levels = Array.from({ length: MAX_LEVEL + 1 }, (_, i) => i);
   readonly shortName = shortName;
   readonly entryOf = entryOf;
   readonly isCore = isCore;
   readonly coreTotal = CORE_PORTS.length;
+  /** One bar per level, for the level bars on chips and cards. */
+  readonly levels = Array.from({ length: MAX_LEVEL }, (_, i) => i + 1);
+  readonly legend = [
+    { level: 0, label: 'new' }, { level: 2, label: 'level 2 of 4' }, { level: MAX_LEVEL, label: 'mastered' }, { level: 0, label: 'core port', core: true },
+  ];
   /** A drill answer's firewall rules as they were before it, so overruling a wrong mark can put them back. */
   private rulesBefore: RuleMemory | null = null;
   learning = new Set<string>();
@@ -410,9 +414,27 @@ export class PortsPageComponent {
   }
 
   private heldNote(port: string): string {
+    const why = this.heldReason(port);
+    return why && `same (${why})`;
+  }
+
+  /** Why a right answer would not raise this port now. */
+  private heldReason(port: string): string {
     if (this.level(port) >= MAX_LEVEL) return '';
-    if (this.waitsForOtherSet(port)) return 'same (do a different set first)';
-    return roseRecently(this.mastery, port, Date.now()) ? 'same (already went up in the last hour)' : '';
+    if (this.waitsForOtherSet(port)) return 'do a different set first';
+    return roseRecently(this.mastery, port, Date.now()) ? 'already went up in the last hour' : '';
+  }
+
+  /** The level on the question card: the port's level, and once answered, where it moved from and why it stayed. */
+  cardLevel(q: PortQuestion) {
+    const a = this.answered;
+    const to = this.level(q.port);
+    const from = a ? a.before : to;
+    return {
+      from, to,
+      text: from === to ? `Level ${to} of ${MAX_LEVEL}` : `Level ${from} → ${to}`,
+      held: a?.right && from === to ? this.heldReason(q.port) : '',
+    };
   }
 
   /** The round's ports include some that need a different set before they can go up again. */
