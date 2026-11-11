@@ -13,7 +13,7 @@ import { formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setRound, setsPracticed, shortName, startOrder, updateMastery,
+  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setsPracticed, shortName, startOrder, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -265,7 +265,6 @@ export class PortsPageComponent {
     this.progress.setLessonWork(SLUG, 'practiced', this.practiced);
   }
 
-  isOutside(port: string) { const g = GROUPS.find(x => x.id === this.round?.set); return !!g && !g.ports.includes(port); }
   mastered(g: PortGroup) { return masteredIn(this.mastery, g.ports); }
   get masteredAll() { return masteredIn(this.mastery, PORTS.map(p => p.port)); }
   get masteredCore() { return masteredIn(this.mastery, CORE_PORTS); }
@@ -302,8 +301,7 @@ export class PortsPageComponent {
       if (!ports.length) ports = PORTS.map(p => p.port);
     } else if (set === 'all') ports = PORTS.map(p => p.port);
     else ports = GROUPS.find(g => g.id === set)!.ports;
-    const group = GROUPS.some(g => g.id === set);
-    this.round = { set, refs: group ? setRound(ports, this.mastery) : pickRound(ports, this.mastery), i: 0, answers: [], typed: '' };
+    this.round = { set, refs: pickRound(ports, this.mastery), i: 0, answers: [], typed: '' };
     this.load();
     this.saveRound();
     this.toTop();

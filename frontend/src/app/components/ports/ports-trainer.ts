@@ -286,10 +286,7 @@ export function needsOtherSet(m: Mastery, port: string, practiced: Practiced): b
   return !Object.entries(practiced).some(([set, at]) => set !== own && at > rose);
 }
 
-/**
- * Which sets a finished practice counts for. A set's own round counts only for that set, because the few ports mixed
- * in from other sets are not practicing them. A practice across sets counts for each set it asked enough about.
- */
+/** Which sets a finished practice counts for: a set's own round, or each set a practice across sets asked enough about. */
 export function setsPracticed(set: string, ports: string[]): string[] {
   if (GROUPS.some(g => g.id === set)) return [set];
   const counts = new Map<string, number>();
@@ -352,25 +349,4 @@ export function pickRound(ports: string[], m: Mastery, random: () => number = Ma
     out.push({ kind: choice, port });
   }
   return out;
-}
-
-/** How many questions of a set's round come from ports outside the set. */
-export const MIX_IN = 3;
-
-/**
- * A round for one set, with a few ports from other sets already started mixed in, so an answer cannot be found
- * by elimination ("it must be one of these four") and older sets keep coming back.
- */
-export function setRound(setPorts: string[], m: Mastery, random: () => number = Math.random, now = Date.now()): QRef[] {
-  const others = Object.keys(m).filter(p => !setPorts.includes(p))
-    .sort((a, b) => levelOf(m, a) - levelOf(m, b) || m[a].at - m[b].at)
-    .slice(0, 6);
-  const k = others.length ? MIX_IN : 0;
-  const own = pickRound(setPorts, m, random, ROUND - k, now);
-  if (!k) return own;
-  const mixed = pickRound(others, m, random, k, now);
-  // Spread the outside questions through the round: after the 2nd, 5th and 8th of the set's own.
-  const out: QRef[] = [];
-  own.forEach((q, i) => { out.push(q); if ((i + 1) % 3 === 2 && mixed.length) out.push(mixed.shift()!); });
-  return [...out, ...mixed];
 }

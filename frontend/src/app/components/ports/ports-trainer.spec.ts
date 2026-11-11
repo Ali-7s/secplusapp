@@ -1,7 +1,7 @@
 import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
-  GROUPS, MAX_LEVEL, MIX_IN, Mastery, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, markPracticed, needsOtherSet, pickRound, setRound, setsPracticed, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, markPracticed, needsOtherSet, pickRound, setsPracticed, updateMastery,
 } from './ports-trainer';
 
 /** A seeded random, so round tests are repeatable. */
@@ -132,19 +132,14 @@ describe('Ports trainer', () => {
     expect(markPracticed({ web: 1 }, ['remote'], 5)).toEqual({ web: 1, remote: 5 });
   });
 
-  it('mixes ports from other started sets into a set round, spread out', () => {
+  it('asks a set round about that set only, even when other sets are weaker', () => {
     const remote = GROUPS[0].ports;
-    const started: Mastery = { '80': { level: 1, right: 1, wrong: 0, at: 1 }, '443': { level: 0, right: 0, wrong: 1, at: 2 }, '53': { level: 2, right: 2, wrong: 0, at: 3 } };
+    const started: Mastery = { '80': { level: 0, right: 0, wrong: 3, at: 1 }, '443': { level: 0, right: 0, wrong: 1, at: 2 } };
     for (let s = 1; s <= 20; s++) {
-      const round = setRound(remote, started, seeded(s));
+      const round = pickRound(remote, started, seeded(s));
       expect(round.length).toBe(ROUND);
-      const outside = round.map((r, i) => (remote.includes(r.port) ? -1 : i)).filter(i => i >= 0);
-      expect(outside.length).toBe(MIX_IN);
-      for (let i = 1; i < outside.length; i++) expect(outside[i] - outside[i - 1]).toBeGreaterThan(1);
-      round.forEach((r, i) => { if (i) expect(r.port).not.toBe(round[i - 1].port); });
+      expect(round.every(r => remote.includes(r.port))).withContext(String(s)).toBeTrue();
     }
-    // Before any other set is started, the round is the set alone.
-    expect(setRound(remote, {}, seeded(3)).every(r => remote.includes(r.port))).toBeTrue();
   });
 
   it('never asks the same port twice in a row, and asks weak ports most', () => {

@@ -100,12 +100,13 @@ export const PORT_NAMES: Record<string, string[]> = {
 export function protocolCheck(port: string): AnswerCheck {
   const own = PORT_NAMES[port] ?? [];
   return typed => {
-    for (const [other, names] of Object.entries(PORT_NAMES)) {
-      if (other === port) continue;
-      // "SMTP" inside "SMTP submission" is part of this port's own name, not a different answer.
-      const wrong = names.find(n => !own.includes(n) && mentions(typed, n) && !own.some(o => mentions(o, n) && mentions(typed, o)));
-      if (wrong) return { right: false, note: `${wrong} is port ${other}.` };
-    }
+    // "SMTP" inside "SMTP submission" is part of this port's own name, not a different answer.
+    const wrong = Object.entries(PORT_NAMES).filter(([other]) => other !== port).flatMap(([other, names]) => names
+      .filter(n => !own.includes(n) && mentions(typed, n) && !own.some(o => mentions(o, n) && mentions(typed, o)))
+      .map(name => ({ name, other })));
+    // Name the most specific one: "SMTP submission" is 587, not the SMTP inside it.
+    const named = wrong.reduce<(typeof wrong)[number] | undefined>((a, b) => (!a || b.name.length > a.name.length ? b : a), undefined);
+    if (named) return { right: false, note: `${named.name} is port ${named.other}.` };
     return own.some(n => mentions(typed, n)) ? { right: true } : { right: false };
   };
 }

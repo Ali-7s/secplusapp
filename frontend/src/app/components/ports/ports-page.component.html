@@ -19,7 +19,7 @@
     @if (question; as q) {
       @let a = answered;
       <div class="card" [class.right]="a?.right" [class.wrong]="a && !a.right">
-        <span class="kind">{{ q.label }}@if (isOutside(q.port)) { <span class="from-other">· from another set</span> }</span>
+        <span class="kind">{{ q.label }}</span>
         <p class="prompt" id="port-prompt">{{ q.prompt }}</p>
 
         @if (q.choices) {
@@ -46,7 +46,7 @@
             </p>
             <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
             <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
-            @if (hookForQuestion(q); as hook) { <p class="hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
+            @if (hookForQuestion(q); as hook) { <p class="card-note hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
             <div class="v-acts">
               @if (!a.right && !q.choices) { <button type="button" class="btn ghost" (click)="override()">My answer was right</button> }
               <span class="spacer"></span>

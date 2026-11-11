@@ -80,6 +80,8 @@ describe('Reference deck', () => {
       expect(mark('port:587', 'SMTP submission')).toBeTrue();
       expect(mark('port:25', 'SMTP')).toBeTrue();
       expect(mark('port:995', 'POP3')).toBeFalse();
+      expect(byId('port:389').check!('SMTP Submission').note).toBe('SMTP submission is port 587.');
+      expect(byId('port:636').check!('IMAP over TLS').note).toBe('IMAP over TLS is port 993.');
     });
 
     it('wants the port number and TCP or UDP, and nothing extra', () => {
