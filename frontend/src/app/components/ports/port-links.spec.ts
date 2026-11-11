@@ -7,7 +7,7 @@ import { FACTS, RuleMemory, isCoreFact } from './firewall-generator';
 import { loadMemory, rateTable } from './firewall-memory';
 import { answersOf, creditReview, creditRule, creditRules, entryOfCard, entryOfFact, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { PortLinks } from './port-links.service';
-import { CORE_PORTS, GROUPS, Mastery, isCore, startOrder } from './ports-trainer';
+import { CORE_PORTS, GROUPS, Mastery, PARTS, isCore, startOrder } from './ports-trainer';
 import { memoryKey } from './rule-cards';
 
 const MIN = 60_000, DAY = 86_400_000;
@@ -105,6 +105,14 @@ describe('links between drills, Review cards and firewall rules', () => {
     it('applies to every rule of the port', () => {
       expect(Object.keys(creditRules({}, '67/68', true, 'partial', NOW))).toEqual(['dhcp', 'dhcp-reply']);
       expect(Object.keys(creditRules({}, '3389', false, 'partial', NOW))).toEqual(['rdp']);
+    });
+
+    it('applies only to the rules on one number when the answer was about that number', () => {
+      expect(Object.keys(creditRules({}, '67/68', true, 'partial', NOW, undefined, 68))).toEqual(['dhcp-reply']);
+      expect(Object.keys(creditRules({}, '161/162', false, 'partial', NOW, undefined, 161))).toEqual(['snmp']);
+      for (const [port, parts] of Object.entries(PARTS)) {
+        for (const p of parts) expect(Object.keys(creditRules({}, port, true, 'partial', NOW, undefined, p.n)).length).withContext(`${p.n}`).toBe(1);
+      }
     });
   });
 

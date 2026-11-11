@@ -41,7 +41,7 @@ export const GROUPS: PortGroup[] = [
   {
     id: 'files', title: 'Files and sharing', blurb: 'Moving files, and Windows sharing.',
     ports: ['20', '21', '69', '445', '137-139', '989/990'],
-    hooks: ['FTP is 21 for commands and 20 for data: the data port is one below.', 'TFTP is 69, trivial: no login at all.', 'SMB is 445, the Windows file share; NetBIOS (137 to 139) is its old helper.', 'FTPS lives at 989 and 990, just below the secure mail ports.'],
+    hooks: ['FTP is 21 for commands and 20 for data: the data port is one below.', 'TFTP is 69, trivial: no login at all.', 'SMB is 445, the Windows file share; NetBIOS (137 to 139) is its old helper.', 'FTPS lives at 989 and 990, just below the secure mail ports: commands on 990, data one below on 989, as in FTP.'],
   },
   {
     id: 'directory', title: 'Directory and sign-in', blurb: 'Who users are, and checking their logins.',
@@ -74,7 +74,6 @@ export const SITUATIONS: Record<string, string> = {
   '25': 'Two mail servers hand email to each other across the internet.',
   '49': 'Routers check administrators\' logins against a central server that also authorizes and logs every command, encrypting the whole packet.',
   '53': 'Laptops must turn names such as shop.example into IP addresses.',
-  '67/68': 'Laptops plugged into the network must get an IP address automatically.',
   '69': 'IP phones download their configuration at startup from a server with no login and no encryption.',
   '80': 'An old web server still serves an unencrypted site, and the firewall must allow it.',
   '88': 'Windows domain users sign in and receive tickets from the domain controller.',
@@ -82,9 +81,7 @@ export const SITUATIONS: Record<string, string> = {
   '119': 'A legacy server shares newsgroup articles.',
   '123': 'Every server must keep its clock in sync, or domain sign-ins start failing.',
   '135': 'Windows machines manage each other with remote procedure calls, starting at the endpoint mapper.',
-  '137-139': 'Very old Windows file sharing looks up computer names and opens sessions with a legacy protocol suite.',
   '143': 'A mail app reads mail while leaving it on the server, without encryption.',
-  '161/162': 'A monitoring server polls switches for their counters, and the switches send alerts back on their own.',
   '179': 'Two internet providers exchange routes between their networks.',
   '389': 'An application looks up users and groups in the company directory, unencrypted.',
   '443': 'Staff must be able to browse secure websites.',
@@ -95,7 +92,6 @@ export const SITUATIONS: Record<string, string> = {
   '587': 'Staff mail apps send outgoing mail to the company\'s mail server, upgrading to encryption with STARTTLS.',
   '636': 'An application must query the company directory over an encrypted connection.',
   '853': 'Laptops must encrypt their name lookups with TLS so nobody on the network can read or change them.',
-  '989/990': 'A partner insists on FTP, but wrapped in TLS from the start.',
   '993': 'Phones read company mail securely, leaving it on the server.',
   '995': 'An old mail app must download mail over an encrypted connection.',
   '1194': 'Remote staff connect through an open-source, TLS-based VPN, usually over UDP.',
@@ -103,18 +99,58 @@ export const SITUATIONS: Record<string, string> = {
   '1521': 'An application must reach an Oracle database.',
   '1701': 'A VPN uses a layer 2 tunnelling protocol with no encryption of its own, so it is paired with IPsec.',
   '1723': 'An audit finds an old VPN that relies on MS-CHAPv2 and is considered broken. Which port is it on?',
-  '1812/1813': 'Wi-Fi access points check 802.1X logins against a central AAA server, and send it accounting records.',
-  '1883/8883': 'IoT sensors publish their readings to a lightweight message broker.',
   '3306': 'A web shop must reach its open-source MySQL-compatible database.',
   '3389': 'Administrators open a Windows server\'s full graphical desktop remotely.',
   '4500': 'An IPsec VPN must cross a NAT router, so it wraps its traffic in UDP.',
-  '5060/5061': 'Desk phones set up calls with the phone system (the signalling, not the audio).',
   '5900': 'Support staff view and control a desktop with a screen-sharing protocol that is often unencrypted.',
   '6514': 'Logs must reach the SIEM encrypted, over a reliable connection.',
   '8080': 'A web proxy listens on the usual alternative HTTP port.',
   '8443': 'An appliance\'s admin page uses HTTPS on the usual alternative port.',
   '51820': 'A modern, minimal VPN with a tiny attack surface runs over UDP.',
 };
+
+/** One number of a port whose numbers do different jobs. `label` finishes "Which port is for …?". */
+export interface PortPart { n: number; label: string; situation: string }
+
+/** Ports whose numbers do different jobs. Their questions ask one number at a time, so the answer is always one number. */
+export const PARTS: Record<string, PortPart[]> = {
+  '67/68': [
+    { n: 67, label: 'the DHCP server', situation: 'A DHCP server waits for laptops asking for an IP address. Which port does the server listen on?' },
+    { n: 68, label: 'the DHCP client', situation: 'A laptop with no IP address yet waits for the DHCP server\'s offer. Which port does the laptop listen on?' },
+  ],
+  '137-139': [
+    { n: 137, label: 'the NetBIOS name service', situation: 'A very old Windows PC looks up another computer by its NetBIOS name.' },
+    { n: 138, label: 'the NetBIOS datagram service', situation: 'Very old Windows PCs broadcast announcements to each other over NetBIOS, without a connection.' },
+    { n: 139, label: 'the NetBIOS session service', situation: 'A very old Windows PC opens a file-sharing session the legacy NetBIOS way, not straight over 445.' },
+  ],
+  '161/162': [
+    { n: 161, label: 'SNMP polling', situation: 'A monitoring server asks a switch for its interface counters. Which port does the switch answer on?' },
+    { n: 162, label: 'SNMP traps', situation: 'A switch tells the monitoring server that a fan failed, without being asked. Which port does the monitoring server listen on?' },
+  ],
+  '989/990': [
+    { n: 990, label: 'FTPS commands', situation: 'A partner\'s FTPS client logs in and sends its commands, inside TLS from the start. Which port carries the commands?' },
+    { n: 989, label: 'FTPS data', situation: 'An FTPS transfer sends the file itself on its own encrypted connection. Which port carries the file?' },
+  ],
+  '1812/1813': [
+    { n: 1812, label: 'RADIUS authentication', situation: 'Wi-Fi access points check each 802.1X login with the central RADIUS server.' },
+    { n: 1813, label: 'RADIUS accounting', situation: 'A VPN gateway reports to the RADIUS server when each user connected and for how long.' },
+  ],
+  '1883/8883': [
+    { n: 1883, label: 'MQTT without encryption', situation: 'IoT sensors on an isolated network publish their readings to a message broker, unencrypted.' },
+    { n: 8883, label: 'MQTT over TLS', situation: 'IoT sensors publish their readings to a message broker over TLS.' },
+  ],
+  '5060/5061': [
+    { n: 5060, label: 'SIP without encryption', situation: 'Desk phones set up calls with the phone system in cleartext (the signalling, not the audio).' },
+    { n: 5061, label: 'SIP over TLS', situation: 'Desk phones set up calls with the phone system over TLS (the signalling, not the audio).' },
+  ],
+};
+
+/** The kinds asked one number at a time for a port in PARTS. */
+const PER_NUMBER: QKind[] = ['name', 'number', 'situation'];
+
+/** The number a question asks about, for a port whose numbers do different jobs. */
+export const partOf = (ref: QRef): PortPart | undefined =>
+  PER_NUMBER.includes(ref.kind) ? PARTS[ref.port]?.[ref.part ?? 0] : undefined;
 
 /** Plaintext protocols and the ports that replace them. */
 export const SECURE_SWAPS: Record<string, { to: number[]; name: string }> = {
@@ -137,8 +173,8 @@ export const SECURE_SWAPS: Record<string, { to: number[]; name: string }> = {
 
 export type QKind = 'name' | 'number' | 'transport' | 'secure' | 'situation';
 
-/** What is saved for a question, so a round can be rebuilt after a refresh. */
-export interface QRef { kind: QKind; port: string }
+/** What is saved for a question, so a round can be rebuilt after a refresh. `part` picks a number of a port in PARTS. */
+export interface QRef { kind: QKind; port: string; part?: number }
 
 export interface PortQuestion extends QRef {
   label: string;
@@ -168,16 +204,35 @@ const rangeOf = (port: string) => {
 };
 const transportAnswer = (t: string) => (t.includes('/') ? 'Both' : t);
 
-/** "Port 22: which protocol?" */
-function nameQ(e: PortEntry): PortQuestion {
+/** "Port 22: which protocol?", or "Port 68: which protocol?" for one number of a pair. */
+function nameQ(e: PortEntry, ref: QRef): PortQuestion {
   return {
-    kind: 'name', port: e.port, label: 'Port to name', prompt: `Port ${e.port}: which protocol?`,
+    ...ref, label: 'Port to name', prompt: `Port ${partOf(ref)?.n ?? e.port}: which protocol?`,
     answer: e.protocol, check: protocolCheck(e.port), card: `port:${e.port}`,
   };
 }
 
+/** Right with this one number and nothing else; a neighbour from the same port gets told what it is for. */
+function oneNumberCheck(port: string, part: PortPart) {
+  return (typed: string): Verdict => {
+    const got = numbersIn(typed);
+    if (!got.length) return { right: false };
+    const bad = got.find(n => n !== part.n);
+    if (bad === undefined) return { right: true };
+    const sibling = PARTS[port].find(p => p.n === bad);
+    return { right: false, note: sibling ? `${bad} is for ${sibling.label}.` : `${bad} is ${portName(bad) ?? 'not it'}.` };
+  };
+}
+
 /** "SSH: which port?" Right with every port it uses, and nothing else. */
-function numberQ(e: PortEntry): PortQuestion {
+function numberQ(e: PortEntry, ref: QRef): PortQuestion {
+  const part = partOf(ref);
+  if (part) {
+    return {
+      ...ref, label: 'Name to port', prompt: `Which port is for ${part.label}?`,
+      answer: String(part.n), card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
+    };
+  }
   const need = ends(e.port);
   const allowed = rangeOf(e.port);
   return {
@@ -218,7 +273,14 @@ function secureQ(e: PortEntry): PortQuestion {
   };
 }
 
-function situationQ(e: PortEntry): PortQuestion {
+function situationQ(e: PortEntry, ref: QRef): PortQuestion {
+  const part = partOf(ref);
+  if (part) {
+    return {
+      ...ref, label: 'Which port?', prompt: part.situation,
+      answer: `${part.n} (${shortName(e)})`, card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
+    };
+  }
   const allowed = rangeOf(e.port);
   return {
     kind: 'situation', port: e.port, label: 'Which port?', prompt: SITUATIONS[e.port],
@@ -241,26 +303,29 @@ export function portName(n: number): string | undefined {
 export function buildQuestion(ref: QRef): PortQuestion {
   const e = entryOf(ref.port);
   switch (ref.kind) {
-    case 'name': return nameQ(e);
-    case 'number': return numberQ(e);
+    case 'name': return nameQ(e, ref);
+    case 'number': return numberQ(e, ref);
     case 'transport': return transportQ(e);
     case 'secure': return secureQ(e);
-    case 'situation': return situationQ(e);
+    case 'situation': return situationQ(e, ref);
   }
 }
 
 /** The kinds of question a port can be asked. */
 export function kindsFor(port: string): QKind[] {
   const k: QKind[] = ['name', 'number', 'transport'];
-  if (SITUATIONS[port]) k.push('situation');
+  if (SITUATIONS[port] || PARTS[port]) k.push('situation');
   if (SECURE_SWAPS[port]) k.push('secure');
   return k;
 }
 
 // ── Mastery ───────────────────────────────────────────────────────────────
 
-/** `rose` is when the level last went up: a level rises at most once an hour. `asked` is how a drill last asked it. */
-export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number; asked?: QKind }
+/**
+ * `rose` is when the level last went up: a level rises at most once an hour. `asked` is how a drill last asked it,
+ * and `askedPart` which of its numbers (for a port in PARTS).
+ */
+export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number; asked?: QKind; askedPart?: number }
 export type Mastery = Record<string, PortMastery>;
 export const MAX_LEVEL = 4;
 
@@ -305,7 +370,7 @@ export const markPracticed = (practiced: Practiced, sets: string[], now: number)
  * since the last rise: recalling a port minutes after reading it shows it is familiar, not that it is learned.
  * A wrong answer drops it two levels at any time.
  */
-export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced, asked?: QKind): Mastery {
+export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced, asked?: QRef): Mastery {
   const cur = m[port] ?? { level: 0, right: 0, wrong: 0, at: 0 };
   let next: PortMastery;
   if (right) {
@@ -314,7 +379,7 @@ export function updateMastery(m: Mastery, port: string, right: boolean, now: num
   } else {
     next = { ...cur, level: Math.max(0, cur.level - 2), wrong: cur.wrong + 1, at: now };
   }
-  return { ...m, [port]: asked ? { ...next, asked } : next };
+  return { ...m, [port]: asked ? { ...next, asked: asked.kind, askedPart: asked.part } : next };
 }
 
 export const levelOf = (m: Mastery, port: string) => m[port]?.level ?? 0;
@@ -343,17 +408,21 @@ export function pickRound(ports: string[], m: Mastery, random: () => number = Ma
     const j = Math.floor(random() * (i + 1));
     [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
   }
-  return chosen.map(port => ({ port, kind: nextKind(port, m, random) }));
+  return chosen.map(port => nextAsk(port, m, random));
 }
 
 /**
- * How to ask a port this time: a different way from last time, and only the easy directions (port to name and back,
- * or a situation) until it is known.
+ * How to ask a port this time: a different way from last time (and about its other number, for a port in PARTS),
+ * and only the easy directions (port to name and back, or a situation) until it is known.
  */
-function nextKind(port: string, m: Mastery, random: () => number): QKind {
+function nextAsk(port: string, m: Mastery, random: () => number): QRef {
   const level = levelOf(m, port);
   const kinds = kindsFor(port).filter(x => level >= 2 || x === 'name' || x === 'number' || x === 'situation');
-  const fresh = kinds.filter(x => x !== m[port]?.asked);
-  const from = fresh.length ? fresh : kinds;
+  const parts = PARTS[port];
+  const asks: QRef[] = kinds.flatMap(kind => (parts && PER_NUMBER.includes(kind) ? parts.map((_, part) => ({ kind, port, part })) : [{ kind, port }]));
+  const last = m[port];
+  const otherKind = asks.filter(a => a.kind !== last?.asked);
+  const otherPart = otherKind.filter(a => a.part === undefined || a.part !== last?.askedPart);
+  const from = otherPart.length ? otherPart : otherKind.length ? otherKind : asks;
   return from[Math.floor(random() * from.length)];
 }

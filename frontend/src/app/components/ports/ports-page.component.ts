@@ -13,7 +13,7 @@ import { formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, pickRound, roseRecently, setsPracticed, shortName, startOrder, updateMastery,
+  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, partOf, pickRound, roseRecently, setsPracticed, shortName, startOrder, updateMastery,
 } from './ports-trainer';
 
 interface Answered { typed: string; right: boolean; note?: string; before: number }
@@ -110,7 +110,7 @@ export class PortsPageComponent {
    */
   private linkDrillToRules(q: PortQuestion, right: boolean, now: number) {
     if (q.kind !== 'number' && q.kind !== 'situation') return;
-    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.retention);
+    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.retention, partOf(q)?.n);
     this.memory = { ...this.memory, ...changed };
     this.saveRules(changed);
   }
@@ -331,7 +331,7 @@ export class PortsPageComponent {
     const before = this.level(q.port);
     r.answers[r.i] = { typed, right: v.right, note: v.note, before };
     const now = Date.now();
-    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced, q.kind);
+    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced, q);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, v.right);
     this.rulesBefore = this.memory;
@@ -348,7 +348,7 @@ export class PortsPageComponent {
     a.right = true;
     a.note = undefined;
     const m = { ...this.mastery, [q.port]: { ...(this.mastery[q.port] ?? { level: 0, right: 0, wrong: 1, at: 0 }), level: a.before, wrong: Math.max(0, (this.mastery[q.port]?.wrong ?? 1) - 1) } };
-    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced, q.kind);
+    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced, q);
     this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     if (q.card) this.progress.recordCard('ref', q.card, true);
     this.overruleRules(q);

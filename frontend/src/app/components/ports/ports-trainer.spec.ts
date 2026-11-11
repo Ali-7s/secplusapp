@@ -1,7 +1,7 @@
 import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
-  GROUPS, MAX_LEVEL, Mastery, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, markPracticed, needsOtherSet, pickRound, setsPracticed, updateMastery,
+  GROUPS, MAX_LEVEL, Mastery, PARTS, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, levelOf, markPracticed, needsOtherSet, pickRound, setsPracticed, updateMastery,
 } from './ports-trainer';
 
 /** A seeded random, so round tests are repeatable. */
@@ -30,28 +30,60 @@ describe('Ports trainer', () => {
   });
 
   it('has a situation for every port, and swaps only for ports that need one', () => {
-    for (const p of all) expect(SITUATIONS[p]).withContext(p).toBeTruthy();
+    for (const p of all) expect(SITUATIONS[p] ?? PARTS[p]).withContext(p).toBeTruthy();
     for (const p of Object.keys(SECURE_SWAPS)) {
       expect(all).withContext(p).toContain(p);
       expect(SECURE_SWAPS[p].to).withContext(p).not.toContain(Number(p));
     }
   });
 
+  it('asks a port with several numbers about one at a time, so every typed answer fits a phone\'s number pad', () => {
+    for (const p of all.filter(x => /[/-]/.test(x))) {
+      const parts = PARTS[p];
+      expect(parts).withContext(p).toBeDefined();
+      const [a, b] = p.split(/[/-]/).map(Number);
+      const numbers = p.includes('-') ? Array.from({ length: b - a + 1 }, (_, i) => a + i) : [a, b];
+      expect(parts.map(x => x.n).sort((x, y) => x - y)).withContext(p).toEqual(numbers);
+      expect(new Set(parts.map(x => x.situation)).size).withContext(p).toBe(parts.length);
+    }
+    expect(Object.keys(PARTS).every(p => all.includes(p))).toBeTrue();
+  });
+
   it('accepts the right answer to every question it can ask', () => {
     for (const p of PORTS) {
       for (const kind of kindsFor(p.port)) {
-        const q = buildQuestion({ kind, port: p.port });
-        const right: Record<QKind, string> = {
-          name: PORT_NAMES[p.port]?.[0] ?? p.protocol,
-          number: p.port.split(/[/-]/).join(' and '),
-          transport: q.answer,
-          secure: String(SECURE_SWAPS[p.port]?.to[0]),
-          situation: p.port.split(/[/-]/)[0],
-        };
-        expect(q.check(right[kind]).right).withContext(`${kind} ${p.port}: "${right[kind]}"`).toBeTrue();
-        expect(q.prompt.trim()).withContext(`${kind} ${p.port}`).toBeTruthy();
+        for (const part of PARTS[p.port] && kind !== 'transport' && kind !== 'secure' ? PARTS[p.port].map((_, i) => i) : [undefined]) {
+          const q = buildQuestion({ kind, port: p.port, part });
+          const n = part === undefined ? p.port : String(PARTS[p.port][part].n);
+          const right: Record<QKind, string> = {
+            name: PORT_NAMES[p.port]?.[0] ?? p.protocol,
+            number: n,
+            transport: q.answer,
+            secure: String(SECURE_SWAPS[p.port]?.to[0]),
+            situation: n,
+          };
+          const at = `${kind} ${p.port} ${part ?? ''}: "${right[kind]}"`;
+          expect(q.check(right[kind]).right).withContext(at).toBeTrue();
+          expect(q.prompt.trim()).withContext(at).toBeTruthy();
+          if (part !== undefined && kind !== 'name') expect(q.prompt).withContext(at).not.toContain(n);
+        }
       }
     }
+  });
+
+  it('marks the other number of a pair wrong, and says what that number is for', () => {
+    const client = buildQuestion({ kind: 'situation', port: '67/68', part: 1 });
+    expect(client.check('68').right).toBeTrue();
+    expect(client.check('67').right).toBeFalse();
+    expect(client.check('67').note).toBe('67 is for the DHCP server.');
+    expect(client.check('6768').right).toBeFalse();
+    const traps = buildQuestion({ kind: 'number', port: '161/162', part: 1 });
+    expect(traps.prompt).toBe('Which port is for SNMP traps?');
+    expect(traps.check('161').note).toBe('161 is for SNMP polling.');
+    expect(traps.check('161 162').right).toBeFalse();
+    expect(buildQuestion({ kind: 'name', port: '1812/1813', part: 1 }).prompt).toBe('Port 1813: which protocol?');
+    // A round saved before pairs were split still opens, on the first number.
+    expect(buildQuestion({ kind: 'number', port: '67/68' }).answer).toBe('67');
   });
 
   it('rejects clear wrong answers', () => {
@@ -156,9 +188,21 @@ describe('Ports trainer', () => {
 
   it('asks a port a different way from last time', () => {
     for (const asked of ['name', 'number', 'situation'] as QKind[]) {
-      const m = updateMastery({}, '22', false, 1, {}, asked);
+      const m = updateMastery({}, '22', false, 1, {}, { kind: asked, port: '22' });
       expect(m['22'].asked).toBe(asked);
       for (let s = 1; s <= 20; s++) expect(pickRound(['22'], m, seeded(s))[0].kind).withContext(`${asked} ${s}`).not.toBe(asked);
+    }
+  });
+
+  it('asks about the other number of a pair next time', () => {
+    for (const part of [0, 1]) {
+      const m = updateMastery({}, '67/68', true, 1, {}, { kind: 'situation', port: '67/68', part });
+      expect(m['67/68'].askedPart).toBe(part);
+      for (let s = 1; s <= 20; s++) {
+        const next = pickRound(['67/68'], m, seeded(s))[0];
+        expect(next.kind).withContext(`${part} ${s}`).not.toBe('situation');
+        expect(next.part).withContext(`${part} ${s}`).toBe(1 - part);
+      }
     }
   });
 

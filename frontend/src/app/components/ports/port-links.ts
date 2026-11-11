@@ -57,10 +57,14 @@ export function creditRule(card: SrsCard | undefined, right: boolean, evidence: 
   return schedule(card, 'good', now, opts);
 }
 
-/** The rule cards changed by an answer about a trainer port given in a drill or in Review mode. */
-export function creditRules(memory: RuleMemory, port: string, right: boolean, evidence: Evidence, now: number, retention?: number): RuleMemory {
+/**
+ * The rule cards changed by an answer about a trainer port given in a drill or in Review mode. `only` narrows it to
+ * the rules on one of the port's numbers, when the question asked about that number alone (DHCP's client port, 68).
+ */
+export function creditRules(memory: RuleMemory, port: string, right: boolean, evidence: Evidence, now: number, retention?: number, only?: number): RuleMemory {
   const changed: RuleMemory = {};
-  for (const fact of factsOfEntry(port)) changed[fact] = creditRule(memory[fact], right, evidence, now, { retention, id: memoryKey(fact) });
+  const facts = factsOfEntry(port).filter(fact => only === undefined || factPort(fact) === String(only));
+  for (const fact of facts) changed[fact] = creditRule(memory[fact], right, evidence, now, { retention, id: memoryKey(fact) });
   return changed;
 }
 
