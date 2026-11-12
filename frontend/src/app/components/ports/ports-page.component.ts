@@ -14,7 +14,7 @@ import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-li
 import { CardLookup, adoptOldLevels, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
+  Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PORT_HOOKS, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
 } from './ports-trainer';
 
 /**
@@ -297,11 +297,6 @@ export class PortsPageComponent {
     else this.learning.add(g.id);
   }
 
-  hookFor(g: PortGroup, port: string): string | undefined {
-    const n = port.split(/[/-]/)[0];
-    return g.hooks.find(h => new RegExp(`\\b${n}\\b`).test(h));
-  }
-
   rating(e: PortEntry) {
     return e.status === 'secure' ? 'Encrypted' : e.status === 'insecure' ? 'Cleartext' : e.status === 'deprecated' ? 'Do not use' : 'Depends';
   }
@@ -478,10 +473,7 @@ export class PortsPageComponent {
     return `Stays at level ${to}. Next review in ${when}.`;
   }
 
-  hookForQuestion(q: PortQuestion) {
-    const g = GROUPS.find(x => x.ports.includes(q.port))!;
-    return this.hookFor(g, q.port);
-  }
+  hookForQuestion(q: PortQuestion) { return PORT_HOOKS[q.port]; }
 
   private saveRound() {
     this.progress.setLessonWork(SLUG, 'round', this.round ? JSON.parse(JSON.stringify(this.round)) : null);

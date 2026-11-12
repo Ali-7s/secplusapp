@@ -109,6 +109,61 @@ export const SITUATIONS: Record<string, string> = {
   '51820': 'A modern, minimal VPN with a tiny attack surface runs over UDP.',
 };
 
+/**
+ * The memory hook shown after a drill question. Each names only its own port's numbers, never another port's, not
+ * even as sums ("853 is 53 with an 8 in front"): a set's ports are drilled together, and the hint after one question
+ * must not answer another. The set hooks, which tie ports together, are for the Learn view.
+ */
+export const PORT_HOOKS: Record<string, string> = {
+  '20': 'FTP-DATA is 20: the file itself travels here, in the clear.',
+  '21': 'FTP is 21: the commands and the login, in the clear.',
+  '22': 'SSH is 22: read the two S\'s in SSH as two 2s.',
+  '23': 'Telnet is 23: the old remote login where every keystroke, password included, can be read.',
+  '25': 'SMTP is 25: mail servers passing mail on to each other.',
+  '49': 'TACACS+ is a lone 49: admins logging in to network devices.',
+  '53': 'DNS is 53, on UDP for lookups and TCP for big answers and zone transfers.',
+  '67/68': 'DHCP: the server gets the lower number, 67; the client 68.',
+  '69': 'TFTP is 69, trivial: no login at all.',
+  '80': 'HTTP is 80: the open web, a round number with nothing locked.',
+  '88': 'Kerberos is 88, two loops like two tickets.',
+  '110': 'POP3 is 110: pull the mail down, then delete it from the server.',
+  '119': 'NNTP (newsgroups) is 119.',
+  '123': 'NTP is 123, "one two three", like counting the seconds.',
+  '135': 'Windows RPC is 135: the endpoint mapper that hands out other ports.',
+  '137-139': 'NetBIOS is 137 to 139: names on 137, broadcasts on 138, sessions on 139.',
+  '143': 'IMAP is 143: the mailbox stays on the server, the same on every device.',
+  '161/162': 'SNMP: 161 asks, 162 tells (devices send traps on 162).',
+  '179': 'BGP is 179: the routers of internet providers swapping routes.',
+  '389': 'LDAP is 389: questions to the directory, readable on the wire.',
+  '443': 'HTTPS is 443: the padlock port behind every login page.',
+  '445': 'SMB is 445, the Windows file share.',
+  '465': 'SMTPS is 465: sending mail encrypted from the first byte.',
+  '500': 'IKE is UDP 500: two VPN gateways agree on keys before anything is encrypted.',
+  '514': 'Syslog is 514 over UDP: logs sent and forgotten, readable by anyone.',
+  '587': 'SMTP Submission is 587: your mail app logs in and hands over what you send.',
+  '636': 'LDAPS is 636, a number that reads the same backwards.',
+  '853': 'DNS over TLS is 853: encrypted lookups on a port of their own, so a firewall can see them.',
+  '989/990': 'FTPS: commands on 990, data one below on 989.',
+  '993': 'IMAPS is 993: the synced mailbox, inside TLS.',
+  '995': 'POP3S is 995: download-and-delete, inside TLS.',
+  '1194': 'OpenVPN is 1194: "11 94", the open-source tunnel.',
+  '1433': 'SQL Server is 1433: databases sit in the thousands.',
+  '1521': 'Oracle DB is 1521: databases sit in the thousands.',
+  '1701': 'L2TP is 1701: an old tunnel that needs IPsec to be secure.',
+  '1723': 'PPTP is 1723: an old tunnel whose encryption is broken.',
+  '1812/1813': 'RADIUS is 1812 for logins and 1813 for accounting.',
+  '1883/8883': 'MQTT is 1883, or 8883 with TLS: the 1 becomes an 8.',
+  '3306': 'MySQL is 3306: databases sit in the thousands.',
+  '3389': 'RDP is 3389: "33 89", the Windows desktop.',
+  '4500': 'NAT-T is UDP 4500: IPsec wrapped up so it gets through NAT.',
+  '5060/5061': 'SIP is 5060, or 5061 with TLS: one up for the locked version.',
+  '5900': 'VNC is 5900, screen sharing that is often unencrypted.',
+  '6514': 'Syslog over TLS is 6514: logs that arrive unread and unchanged.',
+  '8080': 'HTTP-Alt is 8080, "eighty-eighty": where web proxies and test sites listen.',
+  '8443': 'HTTPS-Alt is 8443: the encrypted side door to an appliance\'s admin page.',
+  '51820': 'WireGuard is 51820, the newest and leanest of the tunnels.',
+};
+
 /** One number of a port whose numbers do different jobs. `label` finishes "Which port is for …?". */
 export interface PortPart { n: number; label: string; situation: string }
 
@@ -121,7 +176,7 @@ export const PARTS: Record<string, PortPart[]> = {
   '137-139': [
     { n: 137, label: 'the NetBIOS name service', situation: 'A very old Windows PC looks up another computer by its NetBIOS name.' },
     { n: 138, label: 'the NetBIOS datagram service', situation: 'Very old Windows PCs broadcast announcements to each other over NetBIOS, without a connection.' },
-    { n: 139, label: 'the NetBIOS session service', situation: 'A very old Windows PC opens a file-sharing session the legacy NetBIOS way, not straight over 445.' },
+    { n: 139, label: 'the NetBIOS session service', situation: 'A very old Windows PC opens a file-sharing session the legacy NetBIOS way, not with SMB straight over TCP.' },
   ],
   '161/162': [
     { n: 161, label: 'SNMP polling', situation: 'A monitoring server asks a switch for its interface counters. Which port does the switch answer on?' },

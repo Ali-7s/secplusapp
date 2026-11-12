@@ -1,7 +1,7 @@
 import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
-  Asked, GROUPS, MAX_LEVEL, PARTS, PortState, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, pickRound,
+  Asked, GROUPS, MAX_LEVEL, PARTS, PORT_HOOKS, PortState, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, pickRound,
 } from './ports-trainer';
 
 /** A seeded random, so round tests are repeatable. */
@@ -81,6 +81,27 @@ describe('Ports trainer', () => {
     expect(buildQuestion({ kind: 'name', port: '1812/1813', part: 1 }).prompt).toBe('Port 1813: which protocol?');
     // A round saved before pairs were split still opens, on the first number.
     expect(buildQuestion({ kind: 'number', port: '67/68' }).answer).toBe('67');
+  });
+
+  it('never gives away another port\'s number, in a question or in what is shown after it', () => {
+    const numbersOf = (port: string) => {
+      const [a, b] = port.split(/[/-]/).map(Number);
+      return port.includes('-') ? Array.from({ length: b - a + 1 }, (_, i) => String(a + i)) : port.split('/');
+    };
+    const owner = new Map(PORTS.flatMap(p => numbersOf(p.port).map(n => [n, p.port] as const)));
+    for (const p of PORTS) {
+      const own = new Set(numbersOf(p.port));
+      const hook = PORT_HOOKS[p.port];
+      expect(hook).withContext(p.port).toBeTruthy();
+      expect(numbersOf(p.port).some(n => new RegExp(`\\b${n}\\b`).test(hook ?? ''))).withContext(`${p.port} hook names its number`).toBeTrue();
+      const prompts = kindsFor(p.port).flatMap(kind =>
+        (PARTS[p.port] ? PARTS[p.port].map((_, i) => i) : [undefined]).map(part => buildQuestion({ kind, port: p.port, part }).prompt));
+      for (const text of [...prompts, p.notes, p.role, p.use, hook ?? '']) {
+        const others = (text.match(/\b\d{2,5}\b/g) ?? []).filter(n => owner.has(n) && !own.has(n));
+        expect(others).withContext(`${p.port}: "${text}"`).toEqual([]);
+      }
+    }
+    expect(Object.keys(PORT_HOOKS).every(p => all.includes(p))).toBeTrue();
   });
 
   it('rejects clear wrong answers', () => {
