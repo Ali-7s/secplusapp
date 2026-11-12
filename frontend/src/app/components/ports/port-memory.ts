@@ -6,7 +6,8 @@
  *
  * Its level, 0 to 4, is read from the weaker of the two cards:
  * - 0: never studied;
- * - 1: in its first learning steps (1 and 10 minutes) after a right answer, or relearning after a miss;
+ * - 1: in its first learning steps after a right answer (in the drills 1 minute, then 20 minutes and a round of
+ *   another set: DRILL_LEARN_STEPS), or relearning after a miss;
  * - 2: learned, but recall would fall below 90% within a week;
  * - 3: it would last a week or more;
  * - 4, mastered: three weeks or more.
@@ -15,7 +16,7 @@
 import { ProgressService, cardKey } from '../../services/progress.service';
 import { ScheduleOptions, SrsCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
 import { PORTS } from '../reference/reference-data';
-import { Asked, MAX_LEVEL, PortState, QKind, entryOf } from './ports-trainer';
+import { Asked, GROUPS, MAX_LEVEL, PortState, QKind, entryOf } from './ports-trainer';
 
 /** Finds a Reference deck card by its id ("port:22"). */
 export type CardLookup = (id: string) => SrsCard | undefined;
@@ -24,6 +25,13 @@ export type CardLookup = (id: string) => SrsCard | undefined;
 export const nameCard = (port: string) => `port:${port}`;
 /** "SSH: which port, and TCP or UDP?" */
 export const numberCard = (port: string) => `proto:${entryOf(port).protocol}`;
+
+/**
+ * A new port's learning steps in the drills: 1 minute, then 20 (Review mode keeps 1 and 10). The last step also
+ * needs a finished round of another set since the one before, so a port reaches level 2 only when it is recalled
+ * twenty minutes later with other ports in between, not while it is fresh in mind.
+ */
+export const DRILL_LEARN_STEPS = [60_000, 20 * 60_000];
 
 /** The stability, in days, a card needs for level 3 and for level 4. */
 export const LEVEL_DAYS = { 3: 7, 4: 21 } as const;
@@ -79,16 +87,52 @@ export function lastAnswered(port: string, cardOf: CardLookup): number | undefin
  * two cases, where only the answer is counted:
  * - the question asked for part of the card only (TCP or UDP, without the number);
  * - the card is in a learning step that is not due yet, so drilling a new set three times in five minutes cannot rush
- *   it through its steps.
+ *   it through its steps;
+ * - the card is at its last learning step and no round of another set has been finished since the step before
+ *   (`otherSet` false), so it stays at level 1, and due, until one has.
  * A learned card answered before it is due is still a review: the memory model gives it less credit the fresher it is.
  * Returns null when nothing changes (a partial answer about a card never studied).
  */
-export function drillAnswer(card: SrsCard | undefined, kind: QKind, right: boolean, now: number, opts: ScheduleOptions = {}): { card: SrsCard; review: boolean } | null {
-  if (!right) return { card: schedule(card, 'again', now, opts), review: true };
+export function drillAnswer(
+  card: SrsCard | undefined, kind: QKind, right: boolean, now: number, opts: ScheduleOptions = {}, otherSet = true,
+): { card: SrsCard; review: boolean } | null {
+  const o = { ...opts, learnSteps: DRILL_LEARN_STEPS };
+  if (!right) return { card: schedule(card, 'again', now, o), review: true };
   const partial = kind === 'transport';
   const waiting = !!card && card.state !== 'review' && card.due > now;
-  if (partial || waiting) return card ? { card: { ...card, right: card.right + 1, at: now }, review: false } : null;
-  return { card: schedule(card, 'good', now, opts), review: true };
+  if (partial || waiting || (atLastStep(card) && !otherSet)) return card ? { card: { ...card, right: card.right + 1, at: now }, review: false } : null;
+  return { card: schedule(card, 'good', now, o), review: true };
+}
+
+/** A new card whose next right answer would graduate it, to level 2. */
+export const atLastStep = (card: SrsCard | undefined) => card?.state === 'learning' && card.step + 1 >= DRILL_LEARN_STEPS.length;
+
+/** The set a port is in. */
+export const groupOf = (port: string) => GROUPS.find(g => g.ports.includes(port))?.id;
+
+/** In a round across sets, how many of a set's ports it must ask before it counts as a round of that set. */
+const MIN_TO_COUNT = 2;
+
+/** The sets a finished round counts for: a set round its own set, a round across sets each set it asked enough of. */
+export function setsPracticed(set: string, ports: string[]): string[] {
+  if (GROUPS.some(g => g.id === set)) return [set];
+  const counts = new Map<string, number>();
+  for (const p of ports) {
+    const g = groupOf(p);
+    if (g) counts.set(g, (counts.get(g) ?? 0) + 1);
+  }
+  return [...counts].filter(([, n]) => n >= MIN_TO_COUNT).map(([g]) => g);
+}
+
+/**
+ * Whether a round of a set other than the port's own was finished after the card's last step, given when each set's
+ * last round finished. A card never studied needs none.
+ */
+export function otherSetSince(port: string, card: SrsCard | undefined, practiced: Record<string, number>): boolean {
+  if (!card) return true;
+  const since = card.last ?? card.at;
+  const own = groupOf(port);
+  return Object.entries(practiced).some(([set, at]) => set !== own && at > since);
 }
 
 // ── Levels from before the drills used FSRS ──────────────────────────────────

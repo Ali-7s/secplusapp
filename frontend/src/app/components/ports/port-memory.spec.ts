@@ -2,7 +2,8 @@ import { SrsCard, schedule } from '../../utils/srs';
 import { referenceCards } from '../reference/reference-cards';
 import { PORTS } from '../reference/reference-data';
 import {
-  CardLookup, OldPortLevel, askedFromOldLevels, cardLevel, cardsFromOldLevels, drillAnswer, isDue, isNew, nameCard, nextDue, numberCard, portLevel, portState, urgency,
+  CardLookup, OldPortLevel, askedFromOldLevels, cardLevel, cardsFromOldLevels, drillAnswer, isDue, isNew, nameCard, nextDue, numberCard, otherSetSince, portLevel, portState,
+  setsPracticed, urgency,
 } from './port-memory';
 import { MAX_LEVEL } from './ports-trainer';
 
@@ -47,15 +48,44 @@ describe('Port memory', () => {
       expect(first.review).toBeTrue();
       expect(cardLevel(first.card)).toBe(1);
 
-      const rushed = drillAnswer(first.card, 'name', true, NOW + 2 * MIN)!;
-      expect(rushed.review).withContext('the 10 minute step is not due yet').toBeFalse();
+      expect(first.card.due).withContext('the drills\' last step is 20 minutes').toBe(NOW + 20 * MIN);
+
+      const rushed = drillAnswer(first.card, 'name', true, NOW + 12 * MIN)!;
+      expect(rushed.review).withContext('the 20 minute step is not due yet').toBeFalse();
       expect(rushed.card.due).toBe(first.card.due);
       expect(rushed.card.right).toBe(first.card.right + 1);
 
-      const graduated = drillAnswer(first.card, 'name', true, NOW + 12 * MIN)!;
+      const graduated = drillAnswer(first.card, 'name', true, NOW + 21 * MIN)!;
       expect(graduated.review).toBeTrue();
       expect(graduated.card.state).toBe('review');
       expect(cardLevel(graduated.card)).toBe(2);
+    });
+
+    it('takes a new port to level 2 only after a round of another set since its last step', () => {
+      const first = drillAnswer(undefined, 'number', true, NOW)!.card;
+      const held = drillAnswer(first, 'number', true, NOW + 25 * MIN, {}, false)!;
+      expect(held.review).toBeFalse();
+      expect(held.card.state).toBe('learning');
+      expect(cardLevel(held.card)).toBe(1);
+      expect(held.card.due).withContext('still due, so it comes back').toBeLessThanOrEqual(NOW + 25 * MIN);
+      expect(cardLevel(drillAnswer(held.card, 'number', true, NOW + 30 * MIN, {}, true)!.card)).toBe(2);
+      // Only the last step waits for another set: the first right answer and a miss never do.
+      expect(drillAnswer(undefined, 'number', true, NOW, {}, false)!.review).toBeTrue();
+      expect(drillAnswer(first, 'number', false, NOW + 25 * MIN, {}, false)!.card.step).toBe(0);
+    });
+
+    it('knows whether another set was finished since a card\'s last step', () => {
+      const card = drillAnswer(undefined, 'name', true, NOW)!.card;
+      expect(otherSetSince('25', card, {})).toBeFalse();
+      expect(otherSetSince('25', card, { mail: NOW + 5 * MIN })).withContext('its own set does not count').toBeFalse();
+      expect(otherSetSince('25', card, { names: NOW - MIN })).withContext('before the step does not count').toBeFalse();
+      expect(otherSetSince('25', card, { names: NOW + 5 * MIN })).toBeTrue();
+      expect(otherSetSince('25', undefined, {})).toBeTrue();
+    });
+
+    it('counts a round for its own set, or for each set a mixed round asked two or more of', () => {
+      expect(setsPracticed('mail', ['25', '587'])).toEqual(['mail']);
+      expect(setsPracticed('due', ['25', '587', '53', '22', '23', '3389']).sort()).toEqual(['mail', 'remote']);
     });
 
     it('sends a card back on a miss, whenever it comes', () => {

@@ -11,7 +11,9 @@ import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewal
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
 import { SrsCard, formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
-import { CardLookup, adoptOldLevels, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
+import {
+  CardLookup, adoptOldLevels, atLastStep, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed, urgency,
+} from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import { LOCK_AFTER, SetPractices, afterAnswer, afterOverrule, afterRound, isRested, lockedSets } from './set-breaks';
 import {
@@ -79,6 +81,8 @@ export class PortsPageComponent {
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   /** Each set's misses and lock, so a day does not go on one set (set-breaks.ts). */
   sets: SetPractices = (this.progress.lessonWork(SLUG, 'sets') as SetPractices | undefined) ?? {};
+  /** When a round of each set was last finished: a new port's last learning step needs one of another set first. */
+  practiced: Record<string, number> = (this.progress.lessonWork(SLUG, 'practicedAt') as Record<string, number> | undefined) ?? {};
   readonly LOCK_AFTER = LOCK_AFTER;
   question: PortQuestion | null = null;
 
@@ -405,7 +409,7 @@ export class PortsPageComponent {
 
   /** Saves a drill answer on the Review card it asks about. True when it was a review, false when it only counted. */
   private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1): boolean {
-    const result = drillAnswer(card, q.kind, right, now, { retention: this.retention, id: cardKey('ref', id) });
+    const result = drillAnswer(card, q.kind, right, now, { retention: this.retention, id: cardKey('ref', id) }, otherSetSince(q.port, card, this.practiced));
     this.progress.saveCards('ref', { [id]: result?.card ?? card ?? null }, count);
     return !!result?.review;
   }
@@ -439,6 +443,11 @@ export class PortsPageComponent {
     if (!r || !this.answered) return;
     r.i++;
     r.typed = '';
+    if (this.finished) {
+      const now = Date.now();
+      this.practiced = { ...this.practiced, ...Object.fromEntries(setsPracticed(r.set, r.refs.map(x => x.port)).map(set => [set, now])) };
+      this.progress.setLessonWork(SLUG, 'practicedAt', this.practiced);
+    }
     if (this.finished && r.rested !== undefined) {
       const opened = afterRound(this.sets, r.set, r.rested);
       r.opened = Object.keys(opened).map(id => this.setTitle(id));
@@ -500,9 +509,16 @@ export class PortsPageComponent {
     if (!card) return '';
     const when = formatDelay(Math.max(0, card.due - Date.now()));
     if (!a.right) return `Next review in ${when}.`;
+    const needsOther = atLastStep(card) && !otherSetSince(q.port, card, this.practiced);
     if (!a.review) {
-      return q.kind === 'transport' ? `This asked only TCP or UDP, so the level stays. Next review in ${when}.` : `Still learning: the next step is in ${when}, so the level stays.`;
+      if (q.kind === 'transport') return `This asked only TCP or UDP, so the level stays. Next review in ${when}.`;
+      if (needsOther) {
+        return card.due > Date.now() ? `Still learning: it can reach level 2 in ${when}, after a round of another set.`
+          : 'Still learning: finish a round of another set, then a right answer here takes it to level 2.';
+      }
+      return `Still learning: the next step is in ${when}, so the level stays.`;
     }
+    if (needsOther) return `Next step in ${when}, after a round of another set.`;
     if (to > from) return `Next review in ${when}.`;
     // The level is the weaker card's, so a right answer on the stronger one leaves it.
     if (cardLevel(card) > to) {

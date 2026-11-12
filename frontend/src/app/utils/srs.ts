@@ -173,6 +173,8 @@ export interface ScheduleOptions {
   retention?: number;
   /** The card's progress key, which seeds the fuzz. Without it intervals are not fuzzed. */
   id?: string;
+  /** A new card's learning steps, if not LEARN_STEPS (the Ports trainer's drills wait longer before the last one). */
+  learnSteps?: number[];
 }
 
 /** The card after answering it with `rating` at time `now`. */
@@ -217,7 +219,7 @@ export function schedule(card: SrsCard | undefined, rating: Rating, now: number,
   }
 
   // Learning (first time) or relearning (after a lapse).
-  const steps = base.state === 'relearning' ? RELEARN_STEPS : LEARN_STEPS;
+  const steps = base.state === 'relearning' ? RELEARN_STEPS : opts.learnSteps ?? LEARN_STEPS;
   switch (rating) {
     case 'again':
       return { ...next, step: 0, due: now + steps[0] };

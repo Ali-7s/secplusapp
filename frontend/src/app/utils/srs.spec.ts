@@ -43,6 +43,14 @@ describe('spaced repetition scheduler', () => {
     expect(c.due - (NOW + 10 * MIN)).toBe(2 * DAY);
   });
 
+  it('takes other learning steps when asked, and keeps relearning as it is', () => {
+    const steps = [MIN, 20 * MIN];
+    const c = schedule(undefined, 'good', NOW, { learnSteps: steps });
+    expect(c.due - NOW).toBe(20 * MIN);
+    expect(schedule(c, 'again', NOW + 21 * MIN, { learnSteps: steps }).due - (NOW + 21 * MIN)).toBe(MIN);
+    expect(schedule(memoryCard(10, 5, 10), 'again', NOW, { learnSteps: steps }).due - NOW).toBe(10 * MIN);
+  });
+
   it('labels the buttons for a new card with its learning steps', () => {
     expect(previewIntervals(undefined, NOW)).toEqual({ again: '1m', hard: '6m', good: '10m', easy: '8d' });
   });
