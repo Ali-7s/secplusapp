@@ -13,6 +13,7 @@ import { SrsCard, formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { CardLookup, adoptOldLevels, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
+import { LOCK_AFTER, SetPractices, afterAnswer, afterOverrule, afterRound, isRested, lockedSets } from './set-breaks';
 import {
   Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PORT_HOOKS, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
 } from './ports-trainer';
@@ -24,7 +25,13 @@ import {
 interface Answered { typed: string; right: boolean; note?: string; before: number; card?: string; cardBefore?: SrsCard | null; review?: boolean }
 
 /** A round in progress. Saved after every answer, so a refresh lands on the same question. */
-interface Round { set: string; refs: QRef[]; i: number; answers: Answered[]; typed: string }
+interface Round {
+  set: string; refs: QRef[]; i: number; answers: Answered[]; typed: string;
+  /** A set round whose set had not been drilled for an hour when it began, so finishing it opens locked sets. */
+  rested?: boolean;
+  /** The locked sets it opened, once finished. */
+  opened?: string[];
+}
 
 const SLUG = 'ports-trainer';
 /** How many ports a round of new ports starts with. */
@@ -70,6 +77,9 @@ export class PortsPageComponent {
   /** A port's Review cards, which hold what the drills remember of it. */
   private readonly cardOf: CardLookup = id => this.progress.data().cards[cardKey('ref', id)];
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
+  /** Each set's misses and lock, so a day does not go on one set (set-breaks.ts). */
+  sets: SetPractices = (this.progress.lessonWork(SLUG, 'sets') as SetPractices | undefined) ?? {};
+  readonly LOCK_AFTER = LOCK_AFTER;
   question: PortQuestion | null = null;
 
   /** The view last used, unless a link asks for one (the Today page sends due firewall rules here with ?view=firewalls). */
@@ -278,8 +288,28 @@ export class PortsPageComponent {
   due(port: string) { return isDue(port, this.cardOf, Date.now()); }
   dueIn(g: PortGroup) { return g.ports.filter(p => this.due(p)).length; }
   get dueAll() { return PORTS.filter(p => this.due(p.port)).length; }
+  /** Due ports outside locked sets, which the main drill can ask. */
+  get dueOpen() { return this.openPorts().filter(p => this.due(p)).length; }
   /** Ports never studied, in the order to start them: core ports first. */
-  private newPorts() { return startOrder().filter(p => isNew(p, this.cardOf)); }
+  private newPorts() { return startOrder().filter(p => isNew(p, this.cardOf) && !this.lockedPort(p)); }
+
+  // ── Breaks between sets ─────────────────────────────────────────────────
+
+  private get lockedIds() { return lockedSets(this.sets, GROUPS.map(g => g.id)); }
+  isLocked(set: string) { return this.lockedIds.has(set); }
+  private lockedPort(port: string) { return GROUPS.some(g => g.ports.includes(port) && this.isLocked(g.id)); }
+  private openPorts() { return PORTS.map(p => p.port).filter(p => !this.lockedPort(p)); }
+  /** Misses in a set's drills since its last break. */
+  misses(set: string) { return isRested(this.sets[set], Date.now()) ? 0 : this.sets[set]?.misses ?? 0; }
+  /** The locked sets a round of this one would open: it is not locked and has not been drilled for an hour. */
+  opens(g: PortGroup): string[] {
+    if (this.isLocked(g.id) || !isRested(this.sets[g.id], Date.now())) return [];
+    return GROUPS.filter(x => this.isLocked(x.id)).map(x => x.title);
+  }
+  private saveSets(changed: SetPractices) {
+    this.sets = { ...this.sets, ...changed };
+    this.progress.setLessonWork(SLUG, 'sets', this.sets);
+  }
   /** How long until the next port falls due, when none is due now. */
   get nextDueIn(): string | null {
     const next = Math.min(...PORTS.map(p => nextDue(p.port, this.cardOf) ?? Infinity));
@@ -310,7 +340,7 @@ export class PortsPageComponent {
 
   /** The overview's main drill: ports due for review, else ports not started yet, else none until something falls due. */
   get mainDrill(): { set: 'due' | 'new'; label: string } | null {
-    const due = this.dueAll;
+    const due = this.dueOpen;
     if (due) return { set: 'due', label: `Drill what's due (${due})` };
     return this.newPorts().length ? { set: 'new', label: this.started ? 'Learn new ports' : 'Start with the first ports' } : null;
   }
@@ -318,15 +348,17 @@ export class PortsPageComponent {
   start(set: string) {
     const now = Date.now();
     let ports: string[];
+    if (this.isLocked(set)) return;
     if (set === 'due') {
       // The ports closest to forgotten first.
-      ports = PORTS.map(p => p.port).filter(p => isDue(p, this.cardOf, now))
+      ports = this.openPorts().filter(p => isDue(p, this.cardOf, now))
         .sort((a, b) => urgency(a, this.cardOf, now) - urgency(b, this.cardOf, now)).slice(0, ROUND);
     } else if (set === 'new') ports = this.newPorts().slice(0, NEW_AT_ONCE);
-    else if (set === 'all') ports = PORTS.map(p => p.port);
+    else if (set === 'all') ports = this.openPorts();
     else ports = GROUPS.find(g => g.id === set)?.ports ?? [];
     if (!ports.length) return;
     this.round = { set, refs: pickRound(ports, p => portState(p, this.cardOf, now, this.asked[p])), i: 0, answers: [], typed: '' };
+    if (GROUPS.some(g => g.id === set)) this.round.rested = isRested(this.sets[set], now);
     this.load();
     this.saveRound();
     this.toTop();
@@ -366,6 +398,7 @@ export class PortsPageComponent {
     this.progress.setLessonWork(SLUG, 'asked', this.asked);
     this.rulesBefore = this.memory;
     this.linkDrillToRules(q, v.right, now);
+    if (r.rested !== undefined) this.saveSets({ [r.set]: afterAnswer(this.sets[r.set], v.right, now) });
     this.saveRound();
     setTimeout(() => this.nextBtn?.nativeElement.focus());
   }
@@ -384,6 +417,7 @@ export class PortsPageComponent {
     a.right = true;
     a.note = undefined;
     if (a.card) a.review = this.answerCard(q, a.card, a.cardBefore ?? undefined, true, Date.now(), 0);
+    if (r.rested !== undefined && this.sets[r.set]) this.saveSets({ [r.set]: afterOverrule(this.sets[r.set]) });
     this.overruleRules(q);
     this.saveRound();
   }
@@ -405,6 +439,11 @@ export class PortsPageComponent {
     if (!r || !this.answered) return;
     r.i++;
     r.typed = '';
+    if (this.finished && r.rested !== undefined) {
+      const opened = afterRound(this.sets, r.set, r.rested);
+      r.opened = Object.keys(opened).map(id => this.setTitle(id));
+      this.saveSets(opened);
+    }
     this.load();
     this.saveRound();
     this.focusAnswer();

@@ -10,7 +10,7 @@
   <section class="drill" aria-label="Drill">
     <header class="d-head">
       <div class="d-title"><span class="set">{{ setTitle(round.set) }}</span>
-        @if (!finished) { <span class="sub">Question {{ round.i + 1 }} of {{ round.refs.length }} · {{ score }} right</span> }
+        @if (!finished) { <span class="sub">Question {{ round.i + 1 }} of {{ round.refs.length }} · {{ score }} right@if (round.rested !== undefined && misses(round.set); as m) { · <span [class.lock-near]="m >= LOCK_AFTER - 3">{{ m >= LOCK_AFTER ? 'set locks after this round' : m + ' of ' + LOCK_AFTER + ' misses before a break' }}</span> }</span> }
       </div>
       <button type="button" class="btn ghost" (click)="exit()"><mat-icon aria-hidden="true">close</mat-icon> {{ finished ? 'Back to the sets' : 'Stop' }}</button>
     </header>
@@ -87,9 +87,13 @@
             }
           </ol>
         </details>
+        @if (round.opened?.length) { <p class="lock-line open"><mat-icon aria-hidden="true">lock_open</mat-icon> {{ round.opened!.join(' and ') }} {{ round.opened!.length > 1 ? 'are' : 'is' }} open again.</p> }
+        @if (isLocked(round.set)) {
+          <p class="lock-line"><mat-icon aria-hidden="true">lock</mat-icon> {{ setTitle(round.set) }} is locked after {{ LOCK_AFTER }} misses. Finish a round of a set you haven't drilled in the last hour to open it.</p>
+        }
         <div class="v-acts">
-          <button type="button" class="btn primary" (click)="start(round.set)"><mat-icon aria-hidden="true">replay</mat-icon> Another round</button>
-          <button type="button" class="btn" (click)="exit()">Back to the sets</button>
+          @if (!isLocked(round.set)) { <button type="button" class="btn primary" (click)="start(round.set)"><mat-icon aria-hidden="true">replay</mat-icon> Another round</button> }
+          <button type="button" class="btn" [class.primary]="isLocked(round.set)" (click)="exit()">Back to the sets</button>
         </div>
       </div>
     }
@@ -202,7 +206,8 @@
             <h2>{{ g.title }}</h2>
             <p>{{ g.blurb }}</p>
           </div>
-          @if (dueIn(g); as d) { <span class="g-due">{{ d }} due</span> }
+          @if (isLocked(g.id)) { <span class="g-lock"><mat-icon aria-hidden="true">lock</mat-icon> Locked</span> }
+          @else if (dueIn(g)) { <span class="g-due">{{ dueIn(g) }} due</span> }
           <span class="g-count" [class.all]="mastered(g) === g.ports.length">{{ mastered(g) }}/{{ g.ports.length }}</span>
         </div>
         <div class="chips" aria-label="Mastery of each port">
@@ -215,8 +220,10 @@
         </div>
         <div class="g-acts">
           <button type="button" class="btn" (click)="toggleLearn(g)" [attr.aria-expanded]="learning.has(g.id)"><mat-icon aria-hidden="true">menu_book</mat-icon> {{ learning.has(g.id) ? 'Hide' : 'Learn' }}</button>
-          <button type="button" class="btn primary" (click)="start(g.id)"><mat-icon aria-hidden="true">fitness_center</mat-icon> Drill this set</button>
+          @if (!isLocked(g.id)) { <button type="button" class="btn primary" (click)="start(g.id)"><mat-icon aria-hidden="true">fitness_center</mat-icon> Drill this set</button> }
+          @if (opens(g).length) { <span class="g-opens"><mat-icon aria-hidden="true">lock_open</mat-icon> Opens {{ opens(g).join(', ') }}</span> }
         </div>
+        @if (isLocked(g.id)) { <p class="lock-line"><mat-icon aria-hidden="true">lock</mat-icon> Locked after {{ LOCK_AFTER }} misses. Finish a round of a set you haven't drilled in the last hour to open it.</p> }
         @if (learning.has(g.id)) {
           <ul class="learn">
             @for (p of g.ports; track p) {
