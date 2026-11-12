@@ -7,6 +7,7 @@ import { FACTS, RuleMemory, isCoreFact } from './firewall-generator';
 import { loadMemory, rateTable } from './firewall-memory';
 import { answersOf, creditReview, creditRule, creditRules, entryOfCard, entryOfFact, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { PortLinks } from './port-links.service';
+import { adoptOldLevels } from './port-memory';
 import { CORE_PORTS, GROUPS, PARTS, isCore, startOrder } from './ports-trainer';
 import { memoryKey } from './rule-cards';
 
@@ -161,13 +162,12 @@ describe('links between drills, Review cards and firewall rules', () => {
   it('turns the drills\' old levels into Review cards once, and drops them', () => {
     localStorage.removeItem('sp-progress');
     const progress = TestBed.inject(ProgressService);
-    const links = TestBed.inject(PortLinks);
     const at = Date.now() - DAY;
     progress.setLessonWorks('ports-trainer', {
       mastery: { '22': { level: 4, right: 6, wrong: 0, at, asked: 'number' }, '23': { level: 1, right: 1, wrong: 1, at } },
       practiced: { remote: at },
     });
-    links.adoptOldLevels();
+    adoptOldLevels(progress);
     const card = (id: string) => progress.data().cards[cardKey('ref', id)];
     expect(card('port:22')?.state).toBe('review');
     expect(card('proto:SSH / SFTP / SCP')?.state).toBe('review');
@@ -176,7 +176,7 @@ describe('links between drills, Review cards and firewall rules', () => {
     expect(progress.lessonWork('ports-trainer', 'practiced')).toBeFalsy();
     expect(progress.lessonWork('ports-trainer', 'asked')).toEqual({ '22': { kind: 'number' } });
     const saved = card('port:22');
-    links.adoptOldLevels();
+    adoptOldLevels(progress);
     expect(card('port:22')).toEqual(saved);
     localStorage.removeItem('sp-progress');
   });

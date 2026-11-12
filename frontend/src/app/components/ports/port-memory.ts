@@ -12,6 +12,7 @@
  * - 4, mastered: three weeks or more.
  */
 
+import { ProgressService, cardKey } from '../../services/progress.service';
 import { ScheduleOptions, SrsCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
 import { PORTS } from '../reference/reference-data';
 import { Asked, MAX_LEVEL, PortState, QKind, entryOf } from './ports-trainer';
@@ -132,4 +133,19 @@ export function cardsFromOldLevels(old: Record<string, OldPortLevel>, cardOf: Ca
 /** How the drills last asked each port, carried over from the old levels. */
 export function askedFromOldLevels(old: Record<string, OldPortLevel>): Record<string, Asked> {
   return Object.fromEntries(Object.entries(old).filter(([, o]) => o?.asked).map(([port, o]) => [port, o.askedPart === undefined ? { kind: o.asked! } : { kind: o.asked!, part: o.askedPart }]));
+}
+
+/**
+ * The drills used to keep their own level for each port. Turns those levels into the port's Review cards once (only
+ * where a card is weaker than the old level), then drops them, with the record of which sets were practiced. It lives
+ * here rather than in PortLinks so the Progress page can run it without loading the firewall rules.
+ */
+export function adoptOldLevels(progress: ProgressService) {
+  const slug = 'ports-trainer';
+  const old = progress.lessonWork(slug, 'mastery') as Record<string, OldPortLevel> | null | undefined;
+  if (!old || typeof old !== 'object') return;
+  const cards = progress.data().cards;
+  progress.saveCards('ref', cardsFromOldLevels(old, id => cards[cardKey('ref', id)], Date.now()));
+  const asked = (progress.lessonWork(slug, 'asked') as Record<string, Asked> | undefined) ?? {};
+  progress.setLessonWorks(slug, { mastery: null, practiced: null, asked: { ...askedFromOldLevels(old), ...asked } });
 }

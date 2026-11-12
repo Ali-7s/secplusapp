@@ -17,8 +17,7 @@ import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
 import { MAX_LEVEL } from '../ports/ports-trainer';
-import { isDue, isNew, portLevel } from '../ports/port-memory';
-import { PortLinks } from '../ports/port-links.service';
+import { adoptOldLevels, isDue, isNew, portLevel } from '../ports/port-memory';
 import { savedRuleCounts } from '../ports/rule-cards';
 import { PORTS } from '../reference/reference-data';
 
@@ -40,8 +39,7 @@ export class ProgressComponent implements OnInit {
   private content = inject(ContentService);
   readonly progress = inject(ProgressService);
   /** Port levels come from the Review cards; levels the drills kept before that are turned into cards first. */
-  private readonly portLinks = inject(PortLinks);
-  constructor() { this.portLinks.adoptOldLevels(); }
+  constructor() { adoptOldLevels(this.progress); }
   readonly sync = inject(SyncService);
 
   readonly passing = PASSING_SCALED;

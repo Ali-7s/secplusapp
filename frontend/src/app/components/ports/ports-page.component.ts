@@ -11,8 +11,7 @@ import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewal
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
 import { SrsCard, formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
-import { PortLinks } from './port-links.service';
-import { CardLookup, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
+import { CardLookup, adoptOldLevels, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
   Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
@@ -66,7 +65,6 @@ export class PortsPageComponent {
   private rulesBefore: RuleMemory | null = null;
   learning = new Set<string>();
 
-  private links = inject(PortLinks);
   /** How each port was last asked, so the next round asks it another way. */
   asked: Record<string, Asked> = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
   /** A port's Review cards, which hold what the drills remember of it. */
@@ -93,7 +91,7 @@ export class PortsPageComponent {
 
   constructor() {
     this.work.slug = SLUG;
-    this.links.adoptOldLevels();
+    adoptOldLevels(this.progress);
     this.asked = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
     if (this.round && !this.round.refs?.length) this.round = null;
     this.load();

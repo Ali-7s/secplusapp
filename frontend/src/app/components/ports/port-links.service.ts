@@ -1,10 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { ProgressService, cardKey } from '../../services/progress.service';
+import { ProgressService } from '../../services/progress.service';
 import { SrsCard } from '../../utils/srs';
 import { loadMemory } from './firewall-memory';
 import { creditReview } from './port-links';
-import { OldPortLevel, askedFromOldLevels, cardsFromOldLevels } from './port-memory';
-import { Asked } from './ports-trainer';
 import { memoryKey } from './rule-cards';
 
 const SLUG = 'ports-trainer';
@@ -28,19 +26,5 @@ export class PortLinks {
     const before: Record<string, SrsCard | null> = Object.fromEntries(changed.map(([fact]) => [memoryKey(fact), memory[fact] ?? null]));
     this.progress.setLessonWorks(SLUG, Object.fromEntries(changed.map(([fact, card]) => [memoryKey(fact), card])));
     return () => this.progress.setLessonWorks(SLUG, before);
-  }
-
-  /**
-   * The drills used to keep their own level for each port. Turns those levels into the port's Review cards once
-   * (only where a card is weaker than the old level), then drops them, with the record of which sets were practiced.
-   */
-  adoptOldLevels() {
-    const old = this.progress.lessonWork(SLUG, 'mastery') as Record<string, OldPortLevel> | null | undefined;
-    if (!old || typeof old !== 'object') return;
-    const cards = this.progress.data().cards;
-    const adopted = cardsFromOldLevels(old, id => cards[cardKey('ref', id)], Date.now());
-    this.progress.saveCards('ref', adopted);
-    const asked = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
-    this.progress.setLessonWorks(SLUG, { mastery: null, practiced: null, asked: { ...askedFromOldLevels(old), ...asked } });
   }
 }
