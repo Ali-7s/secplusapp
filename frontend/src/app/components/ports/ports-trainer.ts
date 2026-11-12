@@ -275,7 +275,7 @@ function oneNumberCheck(port: string, part: PortPart) {
     const bad = got.find(n => n !== part.n);
     if (bad === undefined) return { right: true };
     const sibling = PARTS[port].find(p => p.n === bad);
-    return { right: false, note: sibling ? `${bad} is for ${sibling.label}.` : `${bad} is ${portName(bad) ?? 'not it'}.` };
+    return { right: false, note: sibling ? `${bad} is for ${sibling.label}.` : wrongNumber(bad, 'not it') };
   };
 }
 
@@ -296,7 +296,7 @@ function numberQ(e: PortEntry, ref: QRef): PortQuestion {
     check: typed => {
       const got = numbersIn(typed);
       const extra = got.find(n => !allowed.includes(n));
-      if (extra !== undefined) return { right: false, note: extra ? `${extra} is ${portName(extra) ?? 'not one of its ports'}.` : undefined };
+      if (extra !== undefined) return { right: false, note: extra ? wrongNumber(extra, 'not one of its ports') : undefined };
       const missing = need.filter(n => !got.includes(n));
       if (missing.length) return { right: false, note: got.length ? `It uses ${need.join(' and ')}.` : undefined };
       return { right: true };
@@ -323,7 +323,7 @@ function secureQ(e: PortEntry): PortQuestion {
       const got = numbersIn(typed);
       if (!got.length) return { right: false };
       const bad = got.find(n => !s.to.includes(n));
-      return bad !== undefined ? { right: false, note: bad === Number(e.port) ? 'That is the insecure one.' : `${bad} is ${portName(bad) ?? 'not a replacement'}.` } : { right: true };
+      return bad !== undefined ? { right: false, note: bad === Number(e.port) ? 'That is the insecure one.' : wrongNumber(bad, 'not a replacement') } : { right: true };
     },
   };
 }
@@ -344,15 +344,17 @@ function situationQ(e: PortEntry, ref: QRef): PortQuestion {
       const got = numbersIn(typed);
       if (!got.length) return { right: false };
       const bad = got.find(n => !allowed.includes(n));
-      return bad !== undefined ? { right: false, note: `${bad} is ${portName(bad) ?? 'not it'}.` } : { right: true };
+      return bad !== undefined ? { right: false, note: wrongNumber(bad, 'not it') } : { right: true };
     },
   };
 }
 
-/** The protocol a port number belongs to, for "that is port X" notes. */
-export function portName(n: number): string | undefined {
-  const e = PORTS.find(p => rangeOf(p.port).includes(n));
-  return e ? shortName(e) : undefined;
+/**
+ * The note for a wrong number. It says when the number is another protocol's port, but not whose: "23 is Telnet"
+ * would answer the question that asks for Telnet.
+ */
+function wrongNumber(n: number, otherwise: string): string {
+  return PORTS.some(p => rangeOf(p.port).includes(n)) ? `${n} is another protocol's port.` : `${n} is ${otherwise}.`;
 }
 
 export function buildQuestion(ref: QRef): PortQuestion {

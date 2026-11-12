@@ -75,13 +75,13 @@ describe('Reference deck', () => {
 
     it('rejects another port\'s protocol, and a list of guesses', () => {
       expect(mark('port:443', 'HTTP')).toBeFalse();
-      expect(byId('port:443').check!('HTTP').note).toBe('HTTP is port 80.');
+      expect(byId('port:443').check!('HTTP').note).toBe('HTTP uses a different port.');
       expect(mark('port:22', 'telnet ssh ftp')).toBeFalse();
       expect(mark('port:587', 'SMTP submission')).toBeTrue();
       expect(mark('port:25', 'SMTP')).toBeTrue();
       expect(mark('port:995', 'POP3')).toBeFalse();
-      expect(byId('port:389').check!('SMTP Submission').note).toBe('SMTP submission is port 587.');
-      expect(byId('port:636').check!('IMAP over TLS').note).toBe('IMAP over TLS is port 993.');
+      expect(byId('port:389').check!('SMTP Submission').note).toBe('SMTP submission uses a different port.');
+      expect(byId('port:636').check!('IMAP over TLS').note).toBe('IMAP over TLS uses a different port.');
     });
 
     it('wants the port number and TCP or UDP, and nothing extra', () => {

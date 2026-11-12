@@ -27,6 +27,7 @@ describe('Port memory', () => {
   it('reads a level from a card: new, learning, learned, a week, three weeks', () => {
     expect(cardLevel(undefined)).toBe(0);
     expect(cardLevel(schedule(undefined, 'good', NOW))).toBe(1);
+    expect(cardLevel(schedule(undefined, 'again', NOW))).withContext('missed the first time: started, but no level').toBe(0);
     expect(cardLevel({ ...learned(10), state: 'relearning' })).toBe(1);
     expect(cardLevel(learned(2.3))).toBe(2);
     expect(cardLevel(learned(7))).toBe(3);

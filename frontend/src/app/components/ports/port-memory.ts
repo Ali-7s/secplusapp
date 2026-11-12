@@ -6,7 +6,7 @@
  *
  * Its level, 0 to 4, is read from the weaker of the two cards:
  * - 0: never studied;
- * - 1: in its first learning steps (1 and 10 minutes), or relearning after a miss;
+ * - 1: in its first learning steps (1 and 10 minutes) after a right answer, or relearning after a miss;
  * - 2: learned, but recall would fall below 90% within a week;
  * - 3: it would last a week or more;
  * - 4, mastered: three weeks or more.
@@ -30,7 +30,8 @@ export const LEVEL_DAYS = { 3: 7, 4: 21 } as const;
 
 export function cardLevel(card: SrsCard | undefined): number {
   if (!card) return 0;
-  if (card.state !== 'review') return 1;
+  // A first answer that was wrong starts the card but is no level yet.
+  if (card.state !== 'review') return card.right > 0 ? 1 : 0;
   const s = stabilityOf(card);
   return s >= LEVEL_DAYS[4] ? MAX_LEVEL : s >= LEVEL_DAYS[3] ? 3 : 2;
 }

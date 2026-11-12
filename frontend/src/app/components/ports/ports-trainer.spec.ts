@@ -11,6 +11,12 @@ function seeded(seed: number) {
 
 describe('Ports trainer', () => {
   const all = PORTS.map(p => p.port);
+  /** Every number a port uses: "137-139" is 137, 138 and 139. */
+  const numbersOf = (port: string) => {
+    const [a, b] = port.split(/[/-]/).map(Number);
+    return port.includes('-') ? Array.from({ length: b - a + 1 }, (_, i) => String(a + i)) : port.split('/');
+  };
+  const partsOf = (port: string) => (PARTS[port] ? PARTS[port].map((_, i) => i) : [undefined]);
 
   it('puts every port in exactly one set', () => {
     const grouped = GROUPS.flatMap(g => g.ports);
@@ -84,10 +90,6 @@ describe('Ports trainer', () => {
   });
 
   it('never gives away another port\'s number, in a question or in what is shown after it', () => {
-    const numbersOf = (port: string) => {
-      const [a, b] = port.split(/[/-]/).map(Number);
-      return port.includes('-') ? Array.from({ length: b - a + 1 }, (_, i) => String(a + i)) : port.split('/');
-    };
     const owner = new Map(PORTS.flatMap(p => numbersOf(p.port).map(n => [n, p.port] as const)));
     for (const p of PORTS) {
       const own = new Set(numbersOf(p.port));
@@ -104,11 +106,33 @@ describe('Ports trainer', () => {
     expect(Object.keys(PORT_HOOKS).every(p => all.includes(p))).toBeTrue();
   });
 
+  it('says another port\'s answer is wrong without saying whose it is', () => {
+    const escape = (x: string) => x.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    for (const p of PORTS) {
+      for (const kind of kindsFor(p.port).filter(k => k !== 'transport')) {
+        for (const part of partsOf(p.port)) {
+          const q = buildQuestion({ kind, port: p.port, part });
+          for (const o of PORTS.filter(x => x.port !== p.port)) {
+            const names = [...(PORT_NAMES[o.port] ?? []), o.protocol];
+            const tries = kind === 'name' ? names : numbersOf(o.port);
+            for (const typed of tries) {
+              const note = q.check(typed).note ?? '';
+              const at = `${kind} ${p.port} ${part ?? ''}, typed "${typed}": "${note}"`;
+              if (kind === 'name') expect(numbersOf(o.port).filter(n => new RegExp(`\\b${n}\\b`).test(note))).withContext(at).toEqual([]);
+              else expect(names.filter(n => new RegExp(`(^|\\W)${escape(n)}($|\\W)`, 'i').test(note))).withContext(at).toEqual([]);
+            }
+          }
+        }
+      }
+    }
+  });
+
   it('rejects clear wrong answers', () => {
     expect(buildQuestion({ kind: 'name', port: '5900' }).check('RDP').right).toBeFalse();
     const ssh = buildQuestion({ kind: 'number', port: '22' });
     expect(ssh.check('23').right).toBeFalse();
-    expect(ssh.check('23').note).toContain('Telnet');
+    expect(ssh.check('23').note).toBe('23 is another protocol\'s port.');
+    expect(ssh.check('5800').note).toBe('5800 is not one of its ports.');
     const telnet = buildQuestion({ kind: 'secure', port: '23' });
     expect(telnet.check('23').right).toBeFalse();
     expect(telnet.check('').right).toBeFalse();

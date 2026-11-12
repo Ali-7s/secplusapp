@@ -104,9 +104,10 @@ export function protocolCheck(port: string): AnswerCheck {
     const wrong = Object.entries(PORT_NAMES).filter(([other]) => other !== port).flatMap(([other, names]) => names
       .filter(n => !own.includes(n) && mentions(typed, n) && !own.some(o => mentions(o, n) && mentions(typed, o)))
       .map(name => ({ name, other })));
-    // Name the most specific one: "SMTP submission" is 587, not the SMTP inside it.
+    // Name the most specific one: "SMTP submission", not the SMTP inside it.
     const named = wrong.reduce<(typeof wrong)[number] | undefined>((a, b) => (!a || b.name.length > a.name.length ? b : a), undefined);
-    if (named) return { right: false, note: `${named.name} is port ${named.other}.` };
+    // Not which port it is: that would answer the card that asks for it.
+    if (named) return { right: false, note: `${named.name} uses a different port.` };
     return own.some(n => mentions(typed, n)) ? { right: true } : { right: false };
   };
 }
