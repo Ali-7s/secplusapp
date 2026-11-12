@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/favicon.ico", "/favicon.svg", "/apple-touch-icon.png", "/*.css", "/*.js"]
+      }
+    },
+    {
+      "name": "data",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/data/*.json"]
+      }
+    },
+    {
+      "name": "fonts",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/media/material-icons-latin-400-normal-*.woff2",
+          "/media/roboto-latin-*.woff2",
+          "/media/roboto-math-*.woff2",
+          "/media/roboto-symbols-*.woff2"
+        ]
+      }
+    },
+    {
+      "name": "other-fonts",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": ["/media/**"]
+      }
+    }
+  ]
+}

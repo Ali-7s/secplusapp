@@ -2,6 +2,11 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild, inject, signal 
 import { DOCUMENT } from '@angular/common';
 
 const KEY = 'sp-cover';
+
+/** Whether the cover is up in this tab (it stays up through a reload). */
+export function coverIsOn(): boolean {
+  try { return sessionStorage.getItem(KEY) === '1'; } catch { return false; }
+}
 /** A plain magnifier, so the tab's icon gives nothing away. */
 const COVER_ICON = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#5f6368" stroke-width="2.4"/><path d="M15 15l6 6" stroke="#5f6368" stroke-width="2.6" stroke-linecap="round"/></svg>');
@@ -41,8 +46,7 @@ export class CoverComponent implements OnInit {
   private saved: { title: string; icons: [HTMLLinkElement, string | null][] } | null = null;
 
   ngOnInit() {
-    let was = false;
-    try { was = sessionStorage.getItem(KEY) === '1'; } catch { /* storage unavailable */ }
+    const was = coverIsOn();
     if (was) this.show();
   }
 

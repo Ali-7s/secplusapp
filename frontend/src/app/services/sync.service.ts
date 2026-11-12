@@ -27,6 +27,8 @@ class SyncError extends Error {}
  *
  * Every save first fetches the cloud copy, combines it with this device's (see mergeSynced) and writes only if
  * the cloud copy has not changed in the meantime, so two devices saving at once never lose each other's work.
+ * To use little data, each check first asks only for the copy's version stamp, and downloads the copy itself only
+ * when another device has saved since this one last synced.
  */
 @Injectable({ providedIn: 'root' })
 export class SyncService {
@@ -43,6 +45,8 @@ export class SyncService {
   private again = false;
   private sendTimer?: ReturnType<typeof setTimeout>;
   private checkTimer?: ReturnType<typeof setInterval>;
+  /** The cloud copy as of the last sync, so a check that finds the same version stamp needs no download. */
+  private known: Remote | null = null;
 
   constructor() {
     // Any change on this device schedules a send.
@@ -134,6 +138,7 @@ export class SyncService {
     document.removeEventListener('visibilitychange', this.onVisible);
     window.removeEventListener('online', this.onVisible);
     this.keys = null;
+    this.known = null;
     this.code.set(null);
     this.state.set('off');
     this.error.set(null);
@@ -177,13 +182,15 @@ export class SyncService {
   /** Fetch, combine, keep the result here, and send it if the cloud copy differs. Retries if another device saved first. */
   private async syncOnce(keys: SyncKeys) {
     for (let attempt = 0; attempt < 4; attempt++) {
-      const remote = await this.fetch(keys);
+      const remote = await this.fetchIfChanged(keys);
+      if (keys !== this.keys) return;
       const local = this.localPayload();
       const merged = remote ? mergeSynced(local, remote.payload) : local;
       const mergedText = stableStringify(merged);
       if (mergedText !== stableStringify(local)) this.applyLocal(merged);
-      if (remote && mergedText === stableStringify(remote.payload)) return;
-      if (await this.write(keys, merged, remote?.updateTime)) return;
+      if (remote && mergedText === stableStringify(remote.payload)) { this.known = remote; return; }
+      const updateTime = await this.write(keys, merged, remote?.updateTime);
+      if (updateTime) { if (keys === this.keys) this.known = { payload: merged, updateTime }; return; }
     }
     throw new SyncError('Another device kept saving at the same moment. Sync will try again shortly.');
   }
@@ -203,6 +210,17 @@ export class SyncService {
     return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/sync/${keys.id}?key=${apiKey}${params}`;
   }
 
+  /** The cloud copy: the one kept from the last sync if its version stamp has not moved, else downloaded. */
+  private async fetchIfChanged(keys: SyncKeys): Promise<Remote | null> {
+    const known = this.known;
+    if (!known) return this.fetch(keys);
+    const res = await fetch(this.url(keys, '&mask.fieldPaths=v'), { cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw await this.failure(res);
+    const { updateTime } = await res.json() as { updateTime: string };
+    return updateTime === known.updateTime ? known : this.fetch(keys);
+  }
+
   private async fetch(keys: SyncKeys): Promise<Remote | null> {
     const res = await fetch(this.url(keys), { cache: 'no-store' });
     if (res.status === 404) return null;
@@ -216,13 +234,17 @@ export class SyncService {
     }
   }
 
-  /** Writes only if the cloud copy is still the one combined with; returns false when another device saved first. */
-  private async write(keys: SyncKeys, payload: SyncPayload, updateTime?: string): Promise<boolean> {
+  /**
+   * Writes only if the cloud copy is still the one combined with. Returns the new copy's version stamp, or null when
+   * another device saved first.
+   */
+  private async write(keys: SyncKeys, payload: SyncPayload, updateTime?: string): Promise<string | null> {
     const sealed = await seal(keys, payload);
     const precondition = updateTime
       ? `&currentDocument.updateTime=${encodeURIComponent(updateTime)}`
       : '&currentDocument.exists=false';
-    const res = await fetch(this.url(keys, precondition), {
+    // The reply carries only the version stamp (`mask`), not the copy just sent.
+    const res = await fetch(this.url(keys, precondition + '&mask.fieldPaths=v'), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: {
@@ -232,11 +254,11 @@ export class SyncService {
         z: { booleanValue: sealed.z },
       } }),
     });
-    if (res.ok) return true;
+    if (res.ok) return (await res.json() as { updateTime: string }).updateTime;
     if (res.status === 400 || res.status === 409) {
       const body = await res.clone().json().catch(() => null) as { error?: { status?: string } } | null;
       const status = body?.error?.status;
-      if (status === 'FAILED_PRECONDITION' || status === 'ALREADY_EXISTS' || status === 'ABORTED') return false;
+      if (status === 'FAILED_PRECONDITION' || status === 'ALREADY_EXISTS' || status === 'ABORTED') return null;
     }
     throw await this.failure(res);
   }

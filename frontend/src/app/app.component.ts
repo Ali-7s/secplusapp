@@ -11,6 +11,7 @@ import { MatListModule } from '@angular/material/list';
 import { THEMES, ThemeService } from './services/theme.service';
 import { CoverComponent } from './components/cover/cover.component';
 import { SyncService } from './services/sync.service';
+import { AppUpdateService } from './services/app-update.service';
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
 @Component({
@@ -29,6 +30,8 @@ export class AppComponent {
   constructor() {
     // Starts syncing on page load when this device has a sync code.
     inject(SyncService);
+    // Moves to a new version of the site when one has downloaded.
+    inject(AppUpdateService);
     // The page scrolls inside the side-nav content, not the window, so the router's own scroll reset never
     // fires. Start each new page at the top; a query change on the same page (a search box) keeps its place.
     let lastPath = '';
