@@ -1,7 +1,7 @@
 /**
  * What ties the three places a port is practiced to each other, so an answer in one counts in the others:
- * - the drills, which give each port a level;
- * - the Reference deck's Review cards ("SSH: which port, and TCP or UDP?");
+ * - the drills and Review mode, which share the port's two Reference deck cards ("SSH: which port, and TCP or
+ *   UDP?"), and its level comes from those (port-memory.ts);
  * - the firewall rules of the random tables, each with its own spaced repetition card (see firewall-memory.ts).
  *
  * How much an answer counts elsewhere depends on how much of the thing it tested:
@@ -16,7 +16,6 @@ import { PORTS } from '../reference/reference-data';
 import { FACTS, RuleMemory, factOf, factPort, factProto } from './firewall-generator';
 import { trainerEntry } from './firewall-scenarios';
 import { memoryKey } from './rule-cards';
-import { Mastery, Practiced, updateMastery } from './ports-trainer';
 
 export type Evidence = 'full' | 'partial';
 
@@ -86,16 +85,14 @@ export function tableCredits(flows: string[], right: boolean[]): { port: string;
   return [...asked].map(([port, seen]) => ({ port, right: seen.right, full: seen.right && seen.answers.size === answersOf(port).length }));
 }
 
-export interface TrainerState { mastery: Mastery; practiced: Practiced; memory: RuleMemory }
-
 /**
- * A Review mode answer on one of the Reference deck's port cards, carried over to the trainer: the port's level, and
- * for a card that asks for the number, its firewall rules. Returns only what changed.
+ * A Review mode answer on one of the Reference deck's port cards, carried over to the port's firewall rules when the
+ * card asks for the number. (The port's level needs nothing: it is read from the card itself.) Returns the rules
+ * that changed, or null for a card that is not about a port.
  */
-export function creditReview(state: TrainerState, cardId: string, right: boolean, now: number, retention?: number): { mastery: Mastery; rules: RuleMemory } | null {
+export function creditReview(memory: RuleMemory, cardId: string, right: boolean, now: number, retention?: number): RuleMemory | null {
   const entry = entryOfCard(cardId);
   if (!entry) return null;
-  const mastery = updateMastery(state.mastery, entry.port, right, now, state.practiced);
   const evidence: Evidence = answersOf(entry.port).length <= 1 ? 'full' : 'partial';
-  return { mastery, rules: entry.asksNumber ? creditRules(state.memory, entry.port, right, evidence, now, retention) : {} };
+  return entry.asksNumber ? creditRules(memory, entry.port, right, evidence, now, retention) : {};
 }

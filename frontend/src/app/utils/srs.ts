@@ -137,6 +137,9 @@ export function recallNow(card: SrsCard | undefined, now: number): number | null
   return m ? recallChance((now - m.last) / DAY, m.s) : 0;
 }
 
+/** Days until recall of a studied card falls to 90% (its interval on old SM-2 records, 0 in their first steps). */
+export const stabilityOf = (card: SrsCard) => memoryOf(card)?.s ?? 0;
+
 /** The card's difficulty for you, 1 to 10, on old records too. */
 export const difficultyOf = (card: SrsCard) => card.difficulty ?? difficultyFromEase(card.ease);
 

@@ -16,7 +16,9 @@ import { DeckState, Plan, buildPlan, localDate } from '../../utils/plan';
 import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
-import { MAX_LEVEL, Mastery, masteredIn } from '../ports/ports-trainer';
+import { MAX_LEVEL } from '../ports/ports-trainer';
+import { isDue, isNew, portLevel } from '../ports/port-memory';
+import { PortLinks } from '../ports/port-links.service';
 import { savedRuleCounts } from '../ports/rule-cards';
 import { PORTS } from '../reference/reference-data';
 
@@ -37,6 +39,9 @@ interface DeckStats { total: number; studied: number; learning: number; young: n
 export class ProgressComponent implements OnInit {
   private content = inject(ContentService);
   readonly progress = inject(ProgressService);
+  /** Port levels come from the Review cards; levels the drills kept before that are turned into cards first. */
+  private readonly portLinks = inject(PortLinks);
+  constructor() { this.portLinks.adoptOldLevels(); }
   readonly sync = inject(SyncService);
 
   readonly passing = PASSING_SCALED;
@@ -196,10 +201,16 @@ export class ProgressComponent implements OnInit {
   readonly refStats = computed(() => this.deckStats('ref', this.refIds));
   /** The Ports trainer: how many ports are mastered and started, and how its firewall rules stand in their spaced repetition. */
   readonly portStats = computed(() => {
-    const m = (this.progress.lessonWork('ports-trainer', 'mastery') as Mastery | undefined) ?? {};
-    const all = PORTS.map(p => p.port);
-    const rules = savedRuleCounts(this.progress.lessonRecord('ports-trainer')?.work, Date.now());
-    return { total: all.length, mastered: masteredIn(m, all), started: all.filter(p => m[p] && m[p].level < MAX_LEVEL).length, rules };
+    const cards = this.progress.data().cards;
+    const cardOf = (id: string) => cards[cardKey('ref', id)];
+    const now = Date.now();
+    const levels = PORTS.map(p => portLevel(p.port, cardOf));
+    const rules = savedRuleCounts(this.progress.lessonRecord('ports-trainer')?.work, now);
+    return {
+      total: levels.length, mastered: levels.filter(l => l >= MAX_LEVEL).length,
+      started: PORTS.filter((p, i) => !isNew(p.port, cardOf) && levels[i] < MAX_LEVEL).length,
+      due: PORTS.filter(p => isDue(p.port, cardOf, now)).length, rules,
+    };
   });
 
   private deckStats(kind: CardKind, names: string[]): DeckStats {

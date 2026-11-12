@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ProgressService } from '../../services/progress.service';
+import { ProgressService, cardKey } from '../../services/progress.service';
 import { SrsCard } from '../../utils/srs';
 import { referenceCards } from '../reference/reference-cards';
 import { PORTS } from '../reference/reference-data';
@@ -7,7 +7,7 @@ import { FACTS, RuleMemory, isCoreFact } from './firewall-generator';
 import { loadMemory, rateTable } from './firewall-memory';
 import { answersOf, creditReview, creditRule, creditRules, entryOfCard, entryOfFact, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import { PortLinks } from './port-links.service';
-import { CORE_PORTS, GROUPS, Mastery, PARTS, isCore, startOrder } from './ports-trainer';
+import { CORE_PORTS, GROUPS, PARTS, isCore, startOrder } from './ports-trainer';
 import { memoryKey } from './rule-cards';
 
 const MIN = 60_000, DAY = 86_400_000;
@@ -126,46 +126,58 @@ describe('links between drills, Review cards and firewall rules', () => {
   });
 
   describe('a Review mode answer on a port card', () => {
-    const state = (memory: RuleMemory = {}, mastery: Mastery = {}) => ({ mastery, practiced: {}, memory });
-
-    it('moves the port\'s level, and reviews its rules when the card asks for the number', () => {
+    it('reviews the port\'s rules when the card asks for the number', () => {
       const learned = learnedAt('rdp', NOW - 3 * DAY);
-      const change = creditReview(state({ rdp: learned }), 'proto:RDP', true, NOW)!;
-      expect(change.mastery['3389'].level).toBe(1);
-      expect(change.rules['rdp'].due).toBeGreaterThan(learned.due);
-
-      const missed = creditReview(state({ rdp: learned }, { '3389': { level: 3, right: 3, wrong: 0, at: 0 } }), 'proto:RDP', false, NOW)!;
-      expect(missed.mastery['3389'].level).toBe(1);
-      expect(missed.rules['rdp'].state).toBe('relearning');
+      expect(creditReview({ rdp: learned }, 'proto:RDP', true, NOW)!['rdp'].due).toBeGreaterThan(learned.due);
+      expect(creditReview({ rdp: learned }, 'proto:RDP', false, NOW)!['rdp'].state).toBe('relearning');
     });
 
     it('leaves the rules alone when the card asks for the name, and only starts them when the port splits into several', () => {
-      const byName = creditReview(state(), 'port:3389', true, NOW)!;
-      expect(byName.mastery['3389'].level).toBe(1);
-      expect(byName.rules).toEqual({});
-
+      expect(creditReview({}, 'port:3389', true, NOW)).toEqual({});
       const learned = learnedAt('dns', NOW - 3 * DAY);
-      const split = creditReview(state({ dns: learned }), 'proto:DNS', true, NOW)!;
-      expect(split.rules['dns'].due).toBe(learned.due);
-      expect(split.rules['dns-zone'].state).toBe('learning');
-      expect(creditReview(state(), 'raid:RAID 5', true, NOW)).toBeNull();
+      const split = creditReview({ dns: learned }, 'proto:DNS', true, NOW)!;
+      expect(split['dns'].due).toBe(learned.due);
+      expect(split['dns-zone'].state).toBe('learning');
+      expect(creditReview({}, 'raid:RAID 5', true, NOW)).toBeNull();
     });
 
     it('is saved to the trainer and can be taken back', () => {
       localStorage.removeItem('sp-progress');
       const progress = TestBed.inject(ProgressService);
       const links = TestBed.inject(PortLinks);
-      const read = () => ({ mastery: progress.lessonWork('ports-trainer', 'mastery') as Mastery | undefined, memory: loadMemory(key => progress.lessonWork('ports-trainer', key)) });
+      const read = () => loadMemory(key => progress.lessonWork('ports-trainer', key));
 
       const undo = links.reviewed('proto:RDP', false)!;
-      expect(read().mastery!['3389'].wrong).toBe(1);
-      expect(read().memory['rdp'].wrong).toBe(1);
+      expect(read()['rdp'].wrong).toBe(1);
       undo();
-      expect(read().mastery).toEqual({});
-      expect(read().memory).toEqual({});
-      expect(progress.lessonWork('ports-trainer', memoryKey('rdp'))).toBeUndefined();
+      expect(read()).toEqual({});
+      expect(progress.lessonWork('ports-trainer', memoryKey('rdp'))).toBeFalsy();
+      expect(links.reviewed('port:3389', true)).not.toBeNull();
       expect(links.reviewed('raid:RAID 5', true)).toBeNull();
       localStorage.removeItem('sp-progress');
     });
+  });
+
+  it('turns the drills\' old levels into Review cards once, and drops them', () => {
+    localStorage.removeItem('sp-progress');
+    const progress = TestBed.inject(ProgressService);
+    const links = TestBed.inject(PortLinks);
+    const at = Date.now() - DAY;
+    progress.setLessonWorks('ports-trainer', {
+      mastery: { '22': { level: 4, right: 6, wrong: 0, at, asked: 'number' }, '23': { level: 1, right: 1, wrong: 1, at } },
+      practiced: { remote: at },
+    });
+    links.adoptOldLevels();
+    const card = (id: string) => progress.data().cards[cardKey('ref', id)];
+    expect(card('port:22')?.state).toBe('review');
+    expect(card('proto:SSH / SFTP / SCP')?.state).toBe('review');
+    expect(card('port:23')?.state).toBe('learning');
+    expect(progress.lessonWork('ports-trainer', 'mastery')).toBeFalsy();
+    expect(progress.lessonWork('ports-trainer', 'practiced')).toBeFalsy();
+    expect(progress.lessonWork('ports-trainer', 'asked')).toEqual({ '22': { kind: 'number' } });
+    const saved = card('port:22');
+    links.adoptOldLevels();
+    expect(card('port:22')).toEqual(saved);
+    localStorage.removeItem('sp-progress');
   });
 });

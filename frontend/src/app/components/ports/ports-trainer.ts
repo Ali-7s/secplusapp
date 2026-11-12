@@ -1,7 +1,7 @@
 /**
  * The ports trainer: ports learned in small sets by job, then drilled five ways (port to name, name to port,
- * TCP or UDP, the secure replacement, and which port a situation needs). Each port has a mastery level from
- * 0 to 4; rounds favour the weakest ports. Answers also feed the Reference deck's spaced repetition schedule.
+ * TCP or UDP, the secure replacement, and which port a situation needs). Answers are reviews of the port's two
+ * Reference deck cards, scheduled by FSRS-6, and the port's level from 0 to 4 comes from those cards (port-memory.ts).
  */
 
 import { PORTS, PortEntry } from '../reference/reference-data';
@@ -253,7 +253,7 @@ function transportQ(e: PortEntry): PortQuestion {
   const want = transportAnswer(e.transport);
   return {
     kind: 'transport', port: e.port, label: 'TCP or UDP', prompt: `${shortName(e)} on port ${e.port}: TCP, UDP or both?`,
-    choices: ['TCP', 'UDP', 'Both'], answer: want,
+    choices: ['TCP', 'UDP', 'Both'], answer: want, card: `proto:${e.protocol}`,
     check: typed => ({ right: typed.trim().toLowerCase() === want.toLowerCase() }),
   };
 }
@@ -319,71 +319,21 @@ export function kindsFor(port: string): QKind[] {
   return k;
 }
 
-// ── Mastery ───────────────────────────────────────────────────────────────
+// ── Levels ────────────────────────────────────────────────────────────────
 
-/**
- * `rose` is when the level last went up: a level rises at most once an hour. `asked` is how a drill last asked it,
- * and `askedPart` which of its numbers (for a port in PARTS).
- */
-export interface PortMastery { level: number; right: number; wrong: number; at: number; rose?: number; asked?: QKind; askedPart?: number }
-export type Mastery = Record<string, PortMastery>;
+/** A port's level runs from 0 (new) to 4 (mastered). It comes from the port's Review cards: see port-memory.ts. */
 export const MAX_LEVEL = 4;
 
-/** How long after a rise a port's level can rise again. */
-export const RISE_GAP_MS = 3_600_000;
+/** How a drill last asked a port, so the next round asks it another way (and about its other number, for PARTS). */
+export interface Asked { kind: QKind; part?: number }
 
-/** Whether this port moved up within the last hour, so another right answer now will not raise it. */
-export const roseRecently = (m: Mastery, port: string, now: number) => now - (m[port]?.rose ?? 0) < RISE_GAP_MS;
-
-/** When each set was last practiced, meaning a finished round or a checked firewall table. */
-export type Practiced = Record<string, number>;
-
-/** In a practice that spans sets, how many questions a set needs before it counts as practiced. */
-const MIN_TO_COUNT = 2;
-
-export const groupOf = (port: string) => GROUPS.find(g => g.ports.includes(port))?.id;
-
-/** Whether this port went up and no different set has been practiced since, so it may still be fresh in mind. */
-export function needsOtherSet(m: Mastery, port: string, practiced: Practiced): boolean {
-  const rose = m[port]?.rose;
-  if (rose === undefined) return false;
-  const own = groupOf(port);
-  return !Object.entries(practiced).some(([set, at]) => set !== own && at > rose);
+/** What a round needs to know about a port. */
+export interface PortState {
+  level: number;
+  /** Which of its two cards wants a review now, being new or due: "port 22: which protocol?" and "SSH: which port?". */
+  wants: { name: boolean; number: boolean };
+  asked?: Asked;
 }
-
-/** Which sets a finished practice counts for: a set's own round, or each set a practice across sets asked enough about. */
-export function setsPracticed(set: string, ports: string[]): string[] {
-  if (GROUPS.some(g => g.id === set)) return [set];
-  const counts = new Map<string, number>();
-  for (const p of ports) {
-    const g = groupOf(p);
-    if (g) counts.set(g, (counts.get(g) ?? 0) + 1);
-  }
-  return [...counts].filter(([, n]) => n >= MIN_TO_COUNT).map(([g]) => g);
-}
-
-export const markPracticed = (practiced: Practiced, sets: string[], now: number): Practiced =>
-  ({ ...practiced, ...Object.fromEntries(sets.map(s => [s, now])) });
-
-/**
- * A right answer raises the level by one, but only once an hour and only after a different set has been practiced
- * since the last rise: recalling a port minutes after reading it shows it is familiar, not that it is learned.
- * A wrong answer drops it two levels at any time.
- */
-export function updateMastery(m: Mastery, port: string, right: boolean, now: number, practiced: Practiced, asked?: QRef): Mastery {
-  const cur = m[port] ?? { level: 0, right: 0, wrong: 0, at: 0 };
-  let next: PortMastery;
-  if (right) {
-    const rise = !roseRecently(m, port, now) && !needsOtherSet(m, port, practiced) && cur.level < MAX_LEVEL;
-    next = { ...cur, level: rise ? cur.level + 1 : cur.level, right: cur.right + 1, at: now, ...(rise ? { rose: now } : {}) };
-  } else {
-    next = { ...cur, level: Math.max(0, cur.level - 2), wrong: cur.wrong + 1, at: now };
-  }
-  return { ...m, [port]: asked ? { ...next, asked: asked.kind, askedPart: asked.part } : next };
-}
-
-export const levelOf = (m: Mastery, port: string) => m[port]?.level ?? 0;
-export const masteredIn = (m: Mastery, ports: string[]) => ports.filter(p => levelOf(m, p) >= MAX_LEVEL).length;
 
 // ── Rounds ────────────────────────────────────────────────────────────────
 
@@ -391,14 +341,17 @@ export const ROUND = 10;
 
 /**
  * Picks a round that asks each port once, so a set smaller than a round gives a shorter round instead of repeats.
- * When there are more ports than questions, weaker ports (and not ones that rose in the last hour) are likelier to
- * make the cut. The order is shuffled, so it says nothing about which ports are weak.
+ * When there are more ports than questions, weaker ports and ports with a card due are likelier to make the cut.
+ * The order is shuffled, so it says nothing about which ports are weak.
  */
-export function pickRound(ports: string[], m: Mastery, random: () => number = Math.random, size = ROUND, now = Date.now()): QRef[] {
+export function pickRound(ports: string[], stateOf: (port: string) => PortState, random: () => number = Math.random, size = ROUND): QRef[] {
   const pool = [...new Set(ports)];
   const chosen: string[] = [];
   while (chosen.length < size && pool.length) {
-    const weights = pool.map(p => (MAX_LEVEL + 1 - levelOf(m, p)) ** 2 * (roseRecently(m, p, now) ? 0.4 : 1));
+    const weights = pool.map(p => {
+      const st = stateOf(p);
+      return (MAX_LEVEL + 1 - st.level) ** 2 * (st.wants.name || st.wants.number ? 3 : 1);
+    });
     let r = random() * weights.reduce((a, b) => a + b, 0);
     let k = 0;
     while (k < pool.length - 1 && (r -= weights[k]) > 0) k++;
@@ -408,21 +361,27 @@ export function pickRound(ports: string[], m: Mastery, random: () => number = Ma
     const j = Math.floor(random() * (i + 1));
     [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
   }
-  return chosen.map(port => nextAsk(port, m, random));
+  return chosen.map(port => nextAsk(port, stateOf(port), random));
 }
 
+/** The kinds asked before a port is known: port to name and back, or a situation. */
+const EASY: QKind[] = ['name', 'number', 'situation'];
+
 /**
- * How to ask a port this time: a different way from last time (and about its other number, for a port in PARTS),
- * and only the easy directions (port to name and back, or a situation) until it is known.
+ * How to ask a port this time. A card that is new or due gets the review: the name question for "port 22: which
+ * protocol?", a number or situation question for "SSH: which port?". Otherwise any kind its level allows. Either way
+ * a different kind from last time, and its other number for a port in PARTS.
  */
-function nextAsk(port: string, m: Mastery, random: () => number): QRef {
-  const level = levelOf(m, port);
-  const kinds = kindsFor(port).filter(x => level >= 2 || x === 'name' || x === 'number' || x === 'situation');
+function nextAsk(port: string, st: PortState, random: () => number): QRef {
+  const kinds = kindsFor(port).filter(x => st.level >= 2 || EASY.includes(x));
+  const reviews = (k: QKind) => (k === 'name' ? st.wants.name : (k === 'number' || k === 'situation') && st.wants.number);
+  const wanted = kinds.filter(reviews);
   const parts = PARTS[port];
-  const asks: QRef[] = kinds.flatMap(kind => (parts && PER_NUMBER.includes(kind) ? parts.map((_, part) => ({ kind, port, part })) : [{ kind, port }]));
-  const last = m[port];
-  const otherKind = asks.filter(a => a.kind !== last?.asked);
-  const otherPart = otherKind.filter(a => a.part === undefined || a.part !== last?.askedPart);
+  const asks: QRef[] = (wanted.length ? wanted : kinds)
+    .flatMap(kind => (parts && PER_NUMBER.includes(kind) ? parts.map((_, part) => ({ kind, port, part })) : [{ kind, port }]));
+  const last = st.asked;
+  const otherKind = asks.filter(a => a.kind !== last?.kind);
+  const otherPart = otherKind.filter(a => a.part === undefined || a.part !== last?.part);
   const from = otherPart.length ? otherPart : otherKind.length ? otherKind : asks;
   return from[Math.floor(random() * from.length)];
 }

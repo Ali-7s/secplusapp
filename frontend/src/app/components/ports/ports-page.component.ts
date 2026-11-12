@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { ProgressService } from '../../services/progress.service';
+import { ProgressService, cardKey } from '../../services/progress.service';
 import { PORTS, PortEntry } from '../reference/reference-data';
 import { LessonWork } from '../networking/lesson-work.service';
 import { PbqPracticeComponent } from '../networking/blocks/pbq-practice.component';
@@ -9,25 +9,33 @@ import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
 import { MIXED, PortScenario, SCENARIOS, portOutcomes, portsRight, trainerEntry } from './firewall-scenarios';
 import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewall-generator';
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
-import { formatDelay } from '../../utils/srs';
+import { SrsCard, formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
+import { PortLinks } from './port-links.service';
+import { CardLookup, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, portLevel, portState, urgency } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import {
-  CORE_PORTS, GROUPS, MAX_LEVEL, Mastery, PortGroup, PortQuestion, Practiced, QRef, buildQuestion, entryOf, isCore, levelOf, markPracticed, masteredIn, needsOtherSet, partOf, pickRound, roseRecently, setsPracticed, shortName, startOrder, updateMastery,
+  Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
 } from './ports-trainer';
 
-interface Answered { typed: string; right: boolean; note?: string; before: number }
+/**
+ * An answer in a round. `card` is the Review card it was a review of (none for the secure replacement), with the card
+ * as it was before, so overruling a wrong mark can redo it. `review` is false when it only counted the answer.
+ */
+interface Answered { typed: string; right: boolean; note?: string; before: number; card?: string; cardBefore?: SrsCard | null; review?: boolean }
 
 /** A round in progress. Saved after every answer, so a refresh lands on the same question. */
 interface Round { set: string; refs: QRef[]; i: number; answers: Answered[]; typed: string }
 
 const SLUG = 'ports-trainer';
+/** How many ports a round of new ports starts with. */
+const NEW_AT_ONCE = 5;
 
 type View = 'drills' | 'firewalls';
 /** A firewall scenario's state, as PbqPracticeComponent saves it. */
 interface SavedScenario { answer?: ExamAnswer; checked?: boolean }
 
-/** Ports in small sets by job: learn a set, drill it five ways, and watch each port's mastery grow. */
+/** Ports in small sets by job: learn a set, drill it five ways, and watch each port's level grow. */
 @Component({
   selector: 'app-ports-page',
   standalone: true,
@@ -52,14 +60,17 @@ export class PortsPageComponent {
   /** One bar per level, for the level bars on chips and cards. */
   readonly levels = Array.from({ length: MAX_LEVEL }, (_, i) => i + 1);
   readonly legend = [
-    { level: 0, label: 'new' }, { level: 2, label: 'level 2 of 4' }, { level: MAX_LEVEL, label: 'mastered' }, { level: 0, label: 'core port', core: true },
+    { level: 0, label: 'new' }, { level: 2, label: 'level 2 of 4' }, { level: MAX_LEVEL, label: 'mastered' }, { level: 2, label: 'due', due: true }, { level: 0, label: 'core port', core: true },
   ];
   /** A drill answer's firewall rules as they were before it, so overruling a wrong mark can put them back. */
   private rulesBefore: RuleMemory | null = null;
   learning = new Set<string>();
 
-  mastery: Mastery = (this.progress.lessonWork(SLUG, 'mastery') as Mastery | undefined) ?? {};
-  practiced: Practiced = (this.progress.lessonWork(SLUG, 'practiced') as Practiced | undefined) ?? {};
+  private links = inject(PortLinks);
+  /** How each port was last asked, so the next round asks it another way. */
+  asked: Record<string, Asked> = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
+  /** A port's Review cards, which hold what the drills remember of it. */
+  private readonly cardOf: CardLookup = id => this.progress.data().cards[cardKey('ref', id)];
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   question: PortQuestion | null = null;
 
@@ -82,6 +93,8 @@ export class PortsPageComponent {
 
   constructor() {
     this.work.slug = SLUG;
+    this.links.adoptOldLevels();
+    this.asked = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
     if (this.round && !this.round.refs?.length) this.round = null;
     this.load();
     // A view asked for by a link is remembered like one chosen here.
@@ -96,7 +109,8 @@ export class PortsPageComponent {
     if (!history) return;
     const saved: Record<string, unknown> = { 'fw:history': null };
     if (!Object.keys(this.memory).length) {
-      this.memory = memoryFromHistory(history, port => this.mastery[trainerEntry(port) ?? '']?.at, Date.now(), this.retention);
+      const lastAt = (port: string) => { const entry = trainerEntry(port); return entry ? lastAnswered(entry, this.cardOf) : undefined; };
+      this.memory = memoryFromHistory(history, lastAt, Date.now(), this.retention);
       for (const [fact, card] of Object.entries(this.memory)) saved[memoryKey(fact)] = card;
     }
     this.progress.setLessonWorks(SLUG, saved);
@@ -216,8 +230,8 @@ export class PortsPageComponent {
   }
 
   /**
-   * A random table counts toward the ports' levels once, on its first check. So does a written scenario, but only
-   * ever once: after that it may just be remembered. A second try comes after reading the answers, so it shows
+   * A random table counts toward the ports' Review cards once, on its first check. So does a written scenario, but
+   * only ever once: after that it may just be remembered. A second try comes after reading the answers, so it shows
    * nothing about memory and must neither raise a level nor drop one.
    */
   onScenarioChecked(s: PortScenario) {
@@ -233,12 +247,15 @@ export class PortsPageComponent {
     if (!first) return;
 
     const now = Date.now();
-    for (const { port, right } of portOutcomes(s, this.savedScenario(s)?.answer?.cells)) {
-      this.mastery = updateMastery(this.mastery, port, right, now, this.practiced);
-    }
-    this.recordPractice(s.set, s.rows.map(r => trainerEntry(r.answer['Port'])).filter((p): p is string => !!p), now);
-    this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
     this.progress.setLessonWork(SLUG, 'fw:scored', { ...scored, [s.id]: mark });
+    if (written) {
+      // A written scenario's rows are not rules with memory of their own: its answers count on the Review cards the
+      // way an answer outside Review mode does (a miss in full, a right answer only starts a new card).
+      this.progress.recordCards('ref', portOutcomes(s, this.savedScenario(s)?.answer?.cells).flatMap(o => {
+        const name = reviewCardOf(o.port);
+        return name ? [{ name, known: o.right }] : [];
+      }));
+    }
 
     // Each rule of a random table is rated like a Review card, which sets when it comes back.
     const ref = written ? undefined : this.randomRef(s.set);
@@ -258,22 +275,24 @@ export class PortsPageComponent {
 
   // ── Overview ────────────────────────────────────────────────────────────
 
-  level(port: string) { return levelOf(this.mastery, port); }
-
-  private waitsForOtherSet(port: string) { return this.level(port) < MAX_LEVEL && needsOtherSet(this.mastery, port, this.practiced); }
-  /** Some of this set's ports can't go up again until a different set is practiced. */
-  waiting(g: PortGroup) { return g.ports.some(p => this.waitsForOtherSet(p)); }
-
-  private recordPractice(set: string, ports: string[], now: number) {
-    this.practiced = markPracticed(this.practiced, setsPracticed(set, ports), now);
-    this.progress.setLessonWork(SLUG, 'practiced', this.practiced);
+  level(port: string) { return portLevel(port, this.cardOf); }
+  /** A started port with a Review card due (or its other card still new). */
+  due(port: string) { return isDue(port, this.cardOf, Date.now()); }
+  dueIn(g: PortGroup) { return g.ports.filter(p => this.due(p)).length; }
+  get dueAll() { return PORTS.filter(p => this.due(p.port)).length; }
+  /** Ports never studied, in the order to start them: core ports first. */
+  private newPorts() { return startOrder().filter(p => isNew(p, this.cardOf)); }
+  /** How long until the next port falls due, when none is due now. */
+  get nextDueIn(): string | null {
+    const next = Math.min(...PORTS.map(p => nextDue(p.port, this.cardOf) ?? Infinity));
+    return Number.isFinite(next) ? formatDelay(Math.max(0, next - Date.now())) : null;
   }
 
-  mastered(g: PortGroup) { return masteredIn(this.mastery, g.ports); }
-  get masteredAll() { return masteredIn(this.mastery, PORTS.map(p => p.port)); }
-  get masteredCore() { return masteredIn(this.mastery, CORE_PORTS); }
-  get started() { return Object.keys(this.mastery).length > 0; }
-  weakCount() { return PORTS.filter(p => this.level(p.port) < MAX_LEVEL).length; }
+  private masteredIn(ports: string[]) { return ports.filter(p => this.level(p) >= MAX_LEVEL).length; }
+  mastered(g: PortGroup) { return this.masteredIn(g.ports); }
+  get masteredAll() { return this.masteredIn(PORTS.map(p => p.port)); }
+  get masteredCore() { return this.masteredIn(CORE_PORTS); }
+  get started() { return PORTS.some(p => !isNew(p.port, this.cardOf)); }
 
   toggleLearn(g: PortGroup) {
     if (this.learning.has(g.id)) this.learning.delete(g.id);
@@ -292,20 +311,29 @@ export class PortsPageComponent {
   // ── Rounds ──────────────────────────────────────────────────────────────
 
   setTitle(id: string) {
-    return id === 'weak' ? 'Your weakest ports' : id === 'all' ? 'Every port' : GROUPS.find(g => g.id === id)?.title ?? '';
+    const titles: Record<string, string> = { due: 'Due for review', new: 'New ports', weak: 'Your weakest ports', all: 'Every port' };
+    return titles[id] ?? GROUPS.find(g => g.id === id)?.title ?? '';
+  }
+
+  /** The overview's main drill: ports due for review, else ports not started yet, else none until something falls due. */
+  get mainDrill(): { set: 'due' | 'new'; label: string } | null {
+    const due = this.dueAll;
+    if (due) return { set: 'due', label: `Drill what's due (${due})` };
+    return this.newPorts().length ? { set: 'new', label: this.started ? 'Learn new ports' : 'Start with the first ports' } : null;
   }
 
   start(set: string) {
+    const now = Date.now();
     let ports: string[];
-    if (set === 'weak') {
-      const weak = PORTS.map(p => p.port).filter(p => this.level(p) < MAX_LEVEL);
-      // Weakest first: ports already started but not mastered, else the next set not yet begun.
-      const begun = weak.filter(p => this.mastery[p]);
-      ports = begun.length >= 4 ? begun : [...begun, ...startOrder().filter(p => weak.includes(p) && !begun.includes(p))].slice(0, 8);
-      if (!ports.length) ports = PORTS.map(p => p.port);
-    } else if (set === 'all') ports = PORTS.map(p => p.port);
-    else ports = GROUPS.find(g => g.id === set)!.ports;
-    this.round = { set, refs: pickRound(ports, this.mastery), i: 0, answers: [], typed: '' };
+    if (set === 'due') {
+      // The ports closest to forgotten first.
+      ports = PORTS.map(p => p.port).filter(p => isDue(p, this.cardOf, now))
+        .sort((a, b) => urgency(a, this.cardOf, now) - urgency(b, this.cardOf, now)).slice(0, ROUND);
+    } else if (set === 'new') ports = this.newPorts().slice(0, NEW_AT_ONCE);
+    else if (set === 'all') ports = PORTS.map(p => p.port);
+    else ports = GROUPS.find(g => g.id === set)?.ports ?? [];
+    if (!ports.length) return;
+    this.round = { set, refs: pickRound(ports, p => portState(p, this.cardOf, now, this.asked[p])), i: 0, answers: [], typed: '' };
     this.load();
     this.saveRound();
     this.toTop();
@@ -332,29 +360,37 @@ export class PortsPageComponent {
     const typed = choice ?? r.typed;
     if (!typed.trim()) return;
     const v = q.check(typed);
-    const before = this.level(q.port);
-    r.answers[r.i] = { typed, right: v.right, note: v.note, before };
     const now = Date.now();
-    this.mastery = updateMastery(this.mastery, q.port, v.right, now, this.practiced, q);
-    this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
-    if (q.card) this.progress.recordCard('ref', q.card, v.right);
+    const a: Answered = { typed, right: v.right, note: v.note, before: this.level(q.port) };
+    if (q.card) {
+      const cardBefore = this.cardOf(q.card);
+      Object.assign(a, { card: q.card, cardBefore: cardBefore ?? null, review: this.answerCard(q, q.card, cardBefore, v.right, now) });
+    } else {
+      this.progress.saveCards('ref', {}, 1);
+    }
+    r.answers[r.i] = a;
+    this.asked = { ...this.asked, [q.port]: q.part === undefined ? { kind: q.kind } : { kind: q.kind, part: q.part } };
+    this.progress.setLessonWork(SLUG, 'asked', this.asked);
     this.rulesBefore = this.memory;
     this.linkDrillToRules(q, v.right, now);
-    if (r.answers.filter(Boolean).length === r.refs.length) this.recordPractice(r.set, r.refs.map(x => x.port), now);
     this.saveRound();
     setTimeout(() => this.nextBtn?.nativeElement.focus());
   }
 
-  /** Overrule a wrong mark (a typo, or an answer the checker did not know). */
+  /** Saves a drill answer on the Review card it asks about. True when it was a review, false when it only counted. */
+  private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1): boolean {
+    const result = drillAnswer(card, q.kind, right, now, { retention: this.retention, id: cardKey('ref', id) });
+    this.progress.saveCards('ref', { [id]: result?.card ?? card ?? null }, count);
+    return !!result?.review;
+  }
+
+  /** Overrule a wrong mark (a typo, or an answer the checker did not know): the card is answered again from before. */
   override() {
     const r = this.round, q = this.question, a = this.answered;
     if (!r || !q || !a || a.right) return;
     a.right = true;
     a.note = undefined;
-    const m = { ...this.mastery, [q.port]: { ...(this.mastery[q.port] ?? { level: 0, right: 0, wrong: 1, at: 0 }), level: a.before, wrong: Math.max(0, (this.mastery[q.port]?.wrong ?? 1) - 1) } };
-    this.mastery = updateMastery(m, q.port, true, Date.now(), this.practiced, q);
-    this.progress.setLessonWork(SLUG, 'mastery', this.mastery);
-    if (q.card) this.progress.recordCard('ref', q.card, true);
+    if (a.card) a.review = this.answerCard(q, a.card, a.cardBefore ?? undefined, true, Date.now(), 0);
     this.overruleRules(q);
     this.saveRound();
   }
@@ -405,40 +441,44 @@ export class PortsPageComponent {
     return r.refs.map((ref, i) => ({ q: buildQuestion(ref), a: r.answers[i] as Answered | undefined }));
   }
 
-  /** Ports in the round, with the level they started at and where they ended. */
+  /** Ports in the round, with the level they started at, where they ended, and when they come back. */
   changes() {
     const r = this.round!;
     const first = new Map<string, number>();
     r.refs.forEach((ref, i) => { if (!first.has(ref.port) && r.answers[i]) first.set(ref.port, r.answers[i].before); });
-    return [...first].map(([port, from]) => ({ port, name: shortName(entryOf(port)), from, to: this.level(port), held: this.heldNote(port) }));
+    const now = Date.now();
+    return [...first].map(([port, from]) => {
+      const next = nextDue(port, this.cardOf);
+      const back = next === undefined ? '' : next <= now ? 'due now' : `back in ${formatDelay(next - now)}`;
+      return { port, name: shortName(entryOf(port)), from, to: this.level(port), back };
+    });
   }
 
-  private heldNote(port: string): string {
-    const why = this.heldReason(port);
-    return why && `same (${why})`;
-  }
-
-  /** Why a right answer would not raise this port now. */
-  private heldReason(port: string): string {
-    if (this.level(port) >= MAX_LEVEL) return '';
-    if (this.waitsForOtherSet(port)) return 'do a different set first';
-    return roseRecently(this.mastery, port, Date.now()) ? 'already went up in the last hour' : '';
-  }
-
-  /** The level on the question card: the port's level, and once answered, where it moved from and why it stayed. */
+  /** The level on the question card: the port's level, and once answered, where it moved from and what happens next. */
   cardLevel(q: PortQuestion) {
     const a = this.answered;
     const to = this.level(q.port);
     const from = a ? a.before : to;
-    return {
-      from, to,
-      text: from === to ? `Level ${to} of ${MAX_LEVEL}` : `Level ${from} → ${to}`,
-      held: a?.right && from === to ? this.heldReason(q.port) : '',
-    };
+    return { from, to, text: from === to ? `Level ${to} of ${MAX_LEVEL}` : `Level ${from} → ${to}`, after: a ? this.afterNote(q, a, from, to) : '' };
   }
 
-  /** The round's ports include some that need a different set before they can go up again. */
-  roundWaits() { return this.changes().some(c => this.waitsForOtherSet(c.port)); }
+  /** What an answer did: when its card comes back, and why the level stayed where it was. */
+  private afterNote(q: PortQuestion, a: Answered, from: number, to: number): string {
+    const card = a.card ? this.cardOf(a.card) : undefined;
+    if (!card) return '';
+    const when = formatDelay(Math.max(0, card.due - Date.now()));
+    if (!a.right) return `Next review in ${when}.`;
+    if (!a.review) {
+      return q.kind === 'transport' ? `This asked only TCP or UDP, so the level stays. Next review in ${when}.` : `Still learning: the next step is in ${when}, so the level stays.`;
+    }
+    if (to > from) return `Next review in ${when}.`;
+    // The level is the weaker card's, so a right answer on the stronger one leaves it.
+    if (cardLevel(card) > to) {
+      const other = a.card === `port:${q.port}` ? `${shortName(entryOf(q.port))}: which port?` : `Port ${q.port}: which protocol?`;
+      return `Stays at level ${to} until "${other}" catches up. Next review in ${when}.`;
+    }
+    return `Stays at level ${to}. Next review in ${when}.`;
+  }
 
   hookForQuestion(q: PortQuestion) {
     const g = GROUPS.find(x => x.ports.includes(q.port))!;

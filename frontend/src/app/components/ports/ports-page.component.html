@@ -53,7 +53,7 @@
               <strong>{{ a.right ? 'Right.' : 'Not quite.' }}</strong>
               @if (a.note) { {{ a.note }} }
             </p>
-            @if (lv.held) { <p class="held">Stays at level {{ lv.to }}: {{ lv.held }}.</p> }
+            @if (lv.after) { <p class="held">{{ lv.after }}</p> }
             <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
             <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
             @if (hookForQuestion(q); as hook) { <p class="card-note hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
@@ -71,16 +71,13 @@
         <ul class="moves">
           @for (c of changes(); track c.port) {
             <li><span class="mono">{{ c.port }}</span> {{ c.name }}
-              <span class="lv-row" [attr.aria-label]="'mastery ' + c.from + ' to ' + c.to + ' of 4'">
-                @for (l of [1, 2, 3, 4]; track l) { <span class="pip" [class.on]="l <= c.to" [class.lost]="l > c.to && l <= c.from"></span> }
+              <span class="lv-row" [attr.aria-label]="'level ' + c.from + ' to ' + c.to + ' of 4'">
+                @for (l of levels; track l) { <span class="pip" [class.on]="l <= c.to" [class.lost]="l > c.to && l <= c.from"></span> }
               </span>
-              <span class="sub">{{ c.to > c.from ? 'up' : c.to < c.from ? 'down' : c.held || 'same' }}</span>
+              <span class="sub">{{ c.to > c.from ? 'up' : c.to < c.from ? 'down' : 'same' }}@if (c.back) { · {{ c.back }} }</span>
             </li>
           }
         </ul>
-        @if (roundWaits()) {
-          <p class="g-wait"><mat-icon aria-hidden="true">swap_horiz</mat-icon> Do a different set next. These ports can't go up again until you've finished one.</p>
-        }
         <details class="review">
           <summary>See every answer</summary>
           <ol>
@@ -184,10 +181,14 @@
   } @else {
 
   <div class="overall">
-    <div class="o-num"><strong>{{ masteredCore }}</strong> of {{ coreTotal }} core ports mastered · <strong>{{ masteredAll }}</strong> of {{ total }} in all</div>
+    <div class="o-num"><strong>{{ masteredCore }}</strong> of {{ coreTotal }} core ports mastered · <strong>{{ masteredAll }}</strong> of {{ total }} in all · <strong>{{ dueAll }}</strong> due</div>
     <div class="o-bar" aria-hidden="true"><div [style.width.%]="(masteredAll / total) * 100"></div></div>
     <div class="o-acts">
-      <button type="button" class="btn primary" (click)="start('weak')"><mat-icon aria-hidden="true">bolt</mat-icon> {{ started ? 'Drill my weakest' : 'Start with the first sets' }}</button>
+      @if (mainDrill; as m) {
+        <button type="button" class="btn primary" (click)="start(m.set)"><mat-icon aria-hidden="true">{{ m.set === 'due' ? 'event_repeat' : 'bolt' }}</mat-icon> {{ m.label }}</button>
+      } @else {
+        <span class="o-none"><mat-icon aria-hidden="true">event_available</mat-icon> Nothing due@if (nextDueIn; as n) { · next in {{ n }} }</span>
+      }
       <button type="button" class="btn" (click)="start('all')"><mat-icon aria-hidden="true">shuffle</mat-icon> Mixed: every port</button>
     </div>
   </div>
@@ -201,19 +202,17 @@
             <h2>{{ g.title }}</h2>
             <p>{{ g.blurb }}</p>
           </div>
+          @if (dueIn(g); as d) { <span class="g-due">{{ d }} due</span> }
           <span class="g-count" [class.all]="mastered(g) === g.ports.length">{{ mastered(g) }}/{{ g.ports.length }}</span>
         </div>
         <div class="chips" aria-label="Mastery of each port">
           @for (p of g.ports; track p) {
-            <span class="chip mono" [class.core]="isCore(p)" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4' + (isCore(p) ? ', core port' : '')">
-              {{ p }}<span class="sr-only">, level {{ level(p) }} of 4</span>
+            <span class="chip mono" [class.core]="isCore(p)" [class.due]="due(p)" [attr.data-level]="level(p)" [attr.title]="shortName(entryOf(p)) + ': level ' + level(p) + ' of 4' + (due(p) ? ', due' : '') + (isCore(p) ? ', core port' : '')">
+              {{ p }}<span class="sr-only">, level {{ level(p) }} of 4{{ due(p) ? ', due' : '' }}</span>
               <span class="c-pips" aria-hidden="true">@for (l of levels; track l) { <i [class.on]="l <= level(p)"></i> }</span>
             </span>
           }
         </div>
-        @if (waiting(g)) {
-          <p class="g-wait"><mat-icon aria-hidden="true">swap_horiz</mat-icon> Do a different set next, or these ports can't go up again.</p>
-        }
         <div class="g-acts">
           <button type="button" class="btn" (click)="toggleLearn(g)" [attr.aria-expanded]="learning.has(g.id)"><mat-icon aria-hidden="true">menu_book</mat-icon> {{ learning.has(g.id) ? 'Hide' : 'Learn' }}</button>
           <button type="button" class="btn primary" (click)="start(g.id)"><mat-icon aria-hidden="true">fitness_center</mat-icon> Drill this set</button>
@@ -242,7 +241,7 @@
 
   <p class="legend">
     @for (s of legend; track s.label) {
-      <span class="chip mono" [class.core]="s.core" [attr.data-level]="s.level" aria-hidden="true">22
+      <span class="chip mono" [class.core]="s.core" [class.due]="s.due" [attr.data-level]="s.level" aria-hidden="true">22
         <span class="c-pips">@for (l of levels; track l) { <i [class.on]="l <= s.level"></i> }</span>
       </span> {{ s.label }}
     }

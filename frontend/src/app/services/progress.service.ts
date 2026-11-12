@@ -111,6 +111,22 @@ export class ProgressService {
     });
   }
 
+  /**
+   * Cards worked out elsewhere, saved as they are: the Ports trainer schedules a port's Reference cards by its own
+   * rules (see port-memory.ts). `answers` counts toward today's study activity; null removes a card.
+   */
+  saveCards(kind: CardKind, cards: Record<string, CardRecord | null>, answers = 0) {
+    if (!Object.keys(cards).length && !answers) return;
+    this.update(d => {
+      for (const [name, card] of Object.entries(cards)) {
+        const key = cardKey(kind, name);
+        if (card) d.cards[key] = card;
+        else delete d.cards[key];
+      }
+      if (answers) this.studied(d, Date.now(), answers);
+    });
+  }
+
   /** New cards Review mode may still introduce today in a deck. */
   newLeftToday(kind: CardKind): number {
     const a = this.state().review;
