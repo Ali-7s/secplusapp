@@ -9,6 +9,14 @@
       "cwd": "/Users/ali/Desktop/comptia/frontend"
     },
     {
+      "name": "frontend-test",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--port", "4201", "--host", "127.0.0.1"],
+      "port": 4201,
+      "url": "http://127.0.0.1:4201",
+      "cwd": "/Users/ali/Desktop/comptia/frontend"
+    },
+    {
       "name": "frontend-static-build",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-s", "dist/frontend/browser", "-l", "4202"],

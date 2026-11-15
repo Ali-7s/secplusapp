@@ -1,8 +1,9 @@
 import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
-  Asked, GROUPS, MAX_LEVEL, PARTS, PORT_HOOKS, PortState, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, pickRound,
+  Asked, GROUPS, MAX_LEVEL, PARTS, PORT_HOOKS, PortState, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, pickRound, transportCard,
 } from './ports-trainer';
+import { TRANSPORT_WHY } from './transport-why';
 
 /** A seeded random, so round tests are repeatable. */
 function seeded(seed: number) {
@@ -98,7 +99,7 @@ describe('Ports trainer', () => {
       expect(numbersOf(p.port).some(n => new RegExp(`\\b${n}\\b`).test(hook ?? ''))).withContext(`${p.port} hook names its number`).toBeTrue();
       const prompts = kindsFor(p.port).flatMap(kind =>
         (PARTS[p.port] ? PARTS[p.port].map((_, i) => i) : [undefined]).map(part => buildQuestion({ kind, port: p.port, part }).prompt));
-      for (const text of [...prompts, p.notes, p.role, p.use, hook ?? '']) {
+      for (const text of [...prompts, p.notes, p.role, p.use, hook ?? '', TRANSPORT_WHY[p.port] ?? '']) {
         const others = (text.match(/\b\d{2,5}\b/g) ?? []).filter(n => owner.has(n) && !own.has(n));
         expect(others).withContext(`${p.port}: "${text}"`).toEqual([]);
       }
@@ -139,19 +140,27 @@ describe('Ports trainer', () => {
     expect(buildQuestion({ kind: 'transport', port: '22' }).check('UDP').right).toBeFalse();
   });
 
-  it('counts answers in the Reference deck', () => {
+  it('counts answers in the Reference deck, and TCP or UDP on a card of its own', () => {
     const ids = new Set(referenceCards().map(c => c.id));
     for (const p of PORTS) {
       for (const kind of kindsFor(p.port)) {
         const card = buildQuestion({ kind, port: p.port }).card;
-        if (card) expect(ids.has(card)).withContext(card).toBeTrue();
+        if (kind === 'transport') expect(card).toBe(transportCard(p.port));
+        else if (card) expect(ids.has(card)).withContext(card).toBeTrue();
       }
     }
   });
 
+  it('says why each port uses TCP, UDP or both', () => {
+    expect(Object.keys(TRANSPORT_WHY).sort()).toEqual([...all].sort());
+    for (const p of PORTS) expect(TRANSPORT_WHY[p.port].length).withContext(p.port).toBeGreaterThan(40);
+  });
+
   /** A port's state for a round: its level, which cards want a review, and how it was last asked. */
-  const st = (level: number, wants = { name: false, number: false }, asked?: Asked): PortState => ({ level, wants, asked });
-  const fresh = () => st(0, { name: true, number: true });
+  type Wants = PortState['wants'];
+  const none: Wants = { name: false, number: false, transport: false };
+  const st = (level: number, wants: Partial<Wants> = {}, asked?: Asked): PortState => ({ level, wants: { ...none, ...wants }, asked });
+  const fresh = () => st(0, { name: 'new', number: 'new', transport: 'new' });
 
   it('asks every port of a set once, and nothing from other sets', () => {
     for (const g of GROUPS) {
@@ -166,7 +175,7 @@ describe('Ports trainer', () => {
     const known = new Set(all.slice(0, 20));
     let weak = 0;
     for (let s = 1; s <= 30; s++) {
-      const round = pickRound(all, p => (known.has(p) ? st(MAX_LEVEL) : st(1, { name: true, number: false })), seeded(s)).map(r => r.port);
+      const round = pickRound(all, p => (known.has(p) ? st(MAX_LEVEL) : st(1, { name: 'due' })), seeded(s)).map(r => r.port);
       expect(round.length).toBe(ROUND);
       expect(new Set(round).size).toBe(ROUND);
       weak += round.filter(p => !known.has(p)).length;
@@ -176,8 +185,8 @@ describe('Ports trainer', () => {
 
   it('asks about the card that is due: the name for "port 22: which protocol?", a number or situation for "SSH: which port?"', () => {
     for (let s = 1; s <= 30; s++) {
-      expect(pickRound(['22'], () => st(3, { name: true, number: false }), seeded(s))[0].kind).toBe('name');
-      expect(['number', 'situation']).toContain(pickRound(['22'], () => st(3, { name: false, number: true }), seeded(s))[0].kind);
+      expect(pickRound(['22'], () => st(3, { name: 'due' }), seeded(s))[0].kind).toBe('name');
+      expect(['number', 'situation']).toContain(pickRound(['22'], () => st(3, { number: 'due' }), seeded(s))[0].kind);
     }
     // With nothing due, a known port may be asked any way at all, TCP or UDP and its secure replacement included.
     const kinds = new Set(Array.from({ length: 60 }, (_, s) => pickRound(['23'], () => st(3), seeded(s + 1))[0].kind));
@@ -186,24 +195,35 @@ describe('Ports trainer', () => {
 
   it('asks a port a different way from last time', () => {
     for (const kind of ['name', 'number', 'situation'] as QKind[]) {
-      for (let s = 1; s <= 20; s++) expect(pickRound(['22'], () => st(0, { name: true, number: true }, { kind }), seeded(s))[0].kind).withContext(`${kind} ${s}`).not.toBe(kind);
+      for (let s = 1; s <= 20; s++) expect(pickRound(['22'], () => st(0, { name: 'new', number: 'new', transport: 'new' }, { kind }), seeded(s))[0].kind).withContext(`${kind} ${s}`).not.toBe(kind);
     }
   });
 
   it('asks about the other number of a pair next time', () => {
     for (const part of [0, 1]) {
       for (let s = 1; s <= 20; s++) {
-        const next = pickRound(['67/68'], () => st(1, { name: true, number: true }, { kind: 'situation', part }), seeded(s))[0];
+        const next = pickRound(['67/68'], () => st(1, { name: 'due', number: 'due' }, { kind: 'situation', part }), seeded(s))[0];
         expect(next.kind).withContext(`${part} ${s}`).not.toBe('situation');
         expect(next.part).withContext(`${part} ${s}`).toBe(1 - part);
       }
     }
   });
 
-  it('keeps new ports to the easy kinds', () => {
+  it('asks new ports anything but their secure replacement, TCP or UDP included', () => {
+    const kinds = new Set<QKind>();
     for (let s = 1; s <= 10; s++) {
-      for (const r of pickRound(all, fresh, seeded(s))) expect(['name', 'number', 'situation']).toContain(r.kind);
-      for (const r of pickRound(all, () => st(1), seeded(s))) expect(['name', 'number', 'situation']).toContain(r.kind);
+      for (const r of pickRound(all, fresh, seeded(s))) kinds.add(r.kind);
+      for (const r of pickRound(all, () => st(1), seeded(s))) kinds.add(r.kind);
+    }
+    expect(kinds).toEqual(new Set<QKind>(['name', 'number', 'situation', 'transport']));
+  });
+
+  it('asks TCP or UDP when its card is new or due, but a due review first', () => {
+    for (let s = 1; s <= 30; s++) {
+      expect(pickRound(['22'], () => st(MAX_LEVEL, { transport: 'new' }), seeded(s))[0].kind).toBe('transport');
+      expect(pickRound(['22'], () => st(MAX_LEVEL, { transport: 'due', name: 'due' }, { kind: 'name' }), seeded(s))[0].kind).toBe('transport');
+      expect(pickRound(['22'], () => st(2, { transport: 'new', name: 'due' }), seeded(s))[0].kind).toBe('name');
+      expect(['number', 'situation']).toContain(pickRound(['22'], () => st(2, { transport: 'new', number: 'due' }), seeded(s))[0].kind);
     }
   });
 });

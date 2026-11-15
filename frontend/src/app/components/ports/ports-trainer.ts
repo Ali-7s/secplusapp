@@ -237,11 +237,18 @@ export interface PortQuestion extends QRef {
   choices?: string[];
   answer: string;
   check: (typed: string) => Verdict;
-  /** The Reference deck card this answer counts for. */
+  /** The card this answer counts for: a Reference deck card, or the port's TCP or UDP card (transportCard). */
   card?: string;
 }
 
 export const entryOf = (port: string): PortEntry => PORTS.find(p => p.port === port)!;
+
+/**
+ * "SSH on 22: TCP, UDP or both?" has a card of its own, scheduled like the Review cards but kept in the trainer's
+ * work (under this key), not in the Reference deck. It has no say in the port's level.
+ */
+export const transportCard = (port: string) => `tr:${port}`;
+export const isTransportCard = (id: string) => id.startsWith('tr:');
 
 /** The ports the exam leans on most (see PortEntry.core). */
 export const CORE_PORTS: string[] = PORTS.filter(p => p.core).map(p => p.port);
@@ -308,7 +315,7 @@ function transportQ(e: PortEntry): PortQuestion {
   const want = transportAnswer(e.transport);
   return {
     kind: 'transport', port: e.port, label: 'TCP or UDP', prompt: `${shortName(e)} on port ${e.port}: TCP, UDP or both?`,
-    choices: ['TCP', 'UDP', 'Both'], answer: want, card: `proto:${e.protocol}`,
+    choices: ['TCP', 'UDP', 'Both'], answer: want, card: transportCard(e.port),
     check: typed => ({ right: typed.trim().toLowerCase() === want.toLowerCase() }),
   };
 }
@@ -384,11 +391,14 @@ export const MAX_LEVEL = 4;
 /** How a drill last asked a port, so the next round asks it another way (and about its other number, for PARTS). */
 export interface Asked { kind: QKind; part?: number }
 
+/** Whether a card wants a review: never studied ('new'), due ('due'), or not yet (false). */
+export type Want = 'new' | 'due' | false;
+
 /** What a round needs to know about a port. */
 export interface PortState {
   level: number;
-  /** Which of its two cards wants a review now, being new or due: "port 22: which protocol?" and "SSH: which port?". */
-  wants: { name: boolean; number: boolean };
+  /** Which of its cards want a review: "port 22: which protocol?", "SSH: which port?" and "SSH: TCP, UDP or both?". */
+  wants: { name: Want; number: Want; transport: Want };
   asked?: Asked;
 }
 
@@ -407,7 +417,7 @@ export function pickRound(ports: string[], stateOf: (port: string) => PortState,
   while (chosen.length < size && pool.length) {
     const weights = pool.map(p => {
       const st = stateOf(p);
-      return (MAX_LEVEL + 1 - st.level) ** 2 * (st.wants.name || st.wants.number ? 3 : 1);
+      return (MAX_LEVEL + 1 - st.level) ** 2 * (st.wants.name || st.wants.number || st.wants.transport ? 3 : 1);
     });
     let r = random() * weights.reduce((a, b) => a + b, 0);
     let k = 0;
@@ -421,18 +431,26 @@ export function pickRound(ports: string[], stateOf: (port: string) => PortState,
   return chosen.map(port => nextAsk(port, stateOf(port), random));
 }
 
-/** The kinds asked before a port is known: port to name and back, or a situation. */
-const EASY: QKind[] = ['name', 'number', 'situation'];
+/** The kinds asked before a port is known: all but its secure replacement. */
+const EASY: QKind[] = ['name', 'number', 'situation', 'transport'];
+
+/** Whether the card a kind of question reviews wants a review. */
+function wantOf(kind: QKind, st: PortState): Want {
+  if (kind === 'name') return st.wants.name;
+  if (kind === 'number' || kind === 'situation') return st.wants.number;
+  return kind === 'transport' ? st.wants.transport : false;
+}
 
 /**
- * How to ask a port this time. A card that is new or due gets the review: the name question for "port 22: which
- * protocol?", a number or situation question for "SSH: which port?". Otherwise any kind its level allows. Either way
- * a different kind from last time, and its other number for a port in PARTS.
+ * How to ask a port this time. A card that is due gets the review, else one never studied: the name question for
+ * "port 22: which protocol?", a number or situation question for "SSH: which port?", and TCP or UDP for its own card.
+ * Otherwise any kind its level allows. Either way a different kind from last time, and its other number for a port
+ * in PARTS.
  */
 function nextAsk(port: string, st: PortState, random: () => number): QRef {
   const kinds = kindsFor(port).filter(x => st.level >= 2 || EASY.includes(x));
-  const reviews = (k: QKind) => (k === 'name' ? st.wants.name : (k === 'number' || k === 'situation') && st.wants.number);
-  const wanted = kinds.filter(reviews);
+  const due = kinds.filter(k => wantOf(k, st) === 'due');
+  const wanted = due.length ? due : kinds.filter(k => wantOf(k, st) === 'new');
   const parts = PARTS[port];
   const asks: QRef[] = (wanted.length ? wanted : kinds)
     .flatMap(kind => (parts && PER_NUMBER.includes(kind) ? parts.map((_, part) => ({ kind, port, part })) : [{ kind, port }]));

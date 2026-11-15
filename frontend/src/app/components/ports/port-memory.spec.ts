@@ -5,7 +5,7 @@ import {
   CardLookup, OldPortLevel, askedFromOldLevels, cardLevel, cardsFromOldLevels, drillAnswer, isDue, isNew, nameCard, nextDue, numberCard, otherSetSince, portLevel, portState,
   setsPracticed, urgency,
 } from './port-memory';
-import { MAX_LEVEL } from './ports-trainer';
+import { MAX_LEVEL, transportCard } from './ports-trainer';
 
 const MIN = 60_000, DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 11, 9);
@@ -44,38 +44,38 @@ describe('Port memory', () => {
 
   describe('a drill answer', () => {
     it('steps a new card through its learning steps, but not faster than the steps allow', () => {
-      const first = drillAnswer(undefined, 'name', true, NOW)!;
+      const first = drillAnswer(undefined, true, NOW)!;
       expect(first.review).toBeTrue();
       expect(cardLevel(first.card)).toBe(1);
 
       expect(first.card.due).withContext('the drills\' last step is 20 minutes').toBe(NOW + 20 * MIN);
 
-      const rushed = drillAnswer(first.card, 'name', true, NOW + 12 * MIN)!;
+      const rushed = drillAnswer(first.card, true, NOW + 12 * MIN)!;
       expect(rushed.review).withContext('the 20 minute step is not due yet').toBeFalse();
       expect(rushed.card.due).toBe(first.card.due);
       expect(rushed.card.right).toBe(first.card.right + 1);
 
-      const graduated = drillAnswer(first.card, 'name', true, NOW + 21 * MIN)!;
+      const graduated = drillAnswer(first.card, true, NOW + 21 * MIN)!;
       expect(graduated.review).toBeTrue();
       expect(graduated.card.state).toBe('review');
       expect(cardLevel(graduated.card)).toBe(2);
     });
 
     it('takes a new port to level 2 only after a round of another set since its last step', () => {
-      const first = drillAnswer(undefined, 'number', true, NOW)!.card;
-      const held = drillAnswer(first, 'number', true, NOW + 25 * MIN, {}, false)!;
+      const first = drillAnswer(undefined, true, NOW)!.card;
+      const held = drillAnswer(first, true, NOW + 25 * MIN, {}, false)!;
       expect(held.review).toBeFalse();
       expect(held.card.state).toBe('learning');
       expect(cardLevel(held.card)).toBe(1);
       expect(held.card.due).withContext('still due, so it comes back').toBeLessThanOrEqual(NOW + 25 * MIN);
-      expect(cardLevel(drillAnswer(held.card, 'number', true, NOW + 30 * MIN, {}, true)!.card)).toBe(2);
+      expect(cardLevel(drillAnswer(held.card, true, NOW + 30 * MIN, {}, true)!.card)).toBe(2);
       // Only the last step waits for another set: the first right answer and a miss never do.
-      expect(drillAnswer(undefined, 'number', true, NOW, {}, false)!.review).toBeTrue();
-      expect(drillAnswer(first, 'number', false, NOW + 25 * MIN, {}, false)!.card.step).toBe(0);
+      expect(drillAnswer(undefined, true, NOW, {}, false)!.review).toBeTrue();
+      expect(drillAnswer(first, false, NOW + 25 * MIN, {}, false)!.card.step).toBe(0);
     });
 
     it('knows whether another set was finished since a card\'s last step', () => {
-      const card = drillAnswer(undefined, 'name', true, NOW)!.card;
+      const card = drillAnswer(undefined, true, NOW)!.card;
       expect(otherSetSince('25', card, {})).toBeFalse();
       expect(otherSetSince('25', card, { mail: NOW + 5 * MIN })).withContext('its own set does not count').toBeFalse();
       expect(otherSetSince('25', card, { names: NOW - MIN })).withContext('before the step does not count').toBeFalse();
@@ -89,31 +89,23 @@ describe('Port memory', () => {
     });
 
     it('sends a card back on a miss, whenever it comes', () => {
-      const missed = drillAnswer(learned(30), 'number', false, NOW)!;
+      const missed = drillAnswer(learned(30), false, NOW)!;
       expect(missed.card.state).toBe('relearning');
       expect(cardLevel(missed.card)).toBe(1);
-      expect(drillAnswer(learned(30), 'transport', false, NOW)!.card.state).toBe('relearning');
     });
 
-    it('counts TCP or UDP alone without moving the schedule', () => {
-      const card = learned(5, 2 * DAY);
-      const r = drillAnswer(card, 'transport', true, NOW)!;
-      expect(r.review).toBeFalse();
-      expect(r.card.due).toBe(card.due);
-      expect(drillAnswer(undefined, 'transport', true, NOW)).toBeNull();
-    });
 
     it('gives an early review less credit than one on time', () => {
       const card = learned(10, 2 * DAY);
-      const early = drillAnswer(card, 'name', true, NOW)!.card;
-      const onTime = drillAnswer(card, 'name', true, card.due)!.card;
+      const early = drillAnswer(card, true, NOW)!.card;
+      const onTime = drillAnswer(card, true, card.due)!.card;
       expect(early.stability!).toBeGreaterThan(10);
       expect(early.stability!).toBeLessThan(onTime.stability!);
     });
 
     it('cannot master a port in one day, however often it is drilled', () => {
       let card: SrsCard | undefined;
-      for (let m = 0; m < 12 * 60; m += 15) card = drillAnswer(card, 'name', true, NOW + m * MIN)!.card;
+      for (let m = 0; m < 12 * 60; m += 15) card = drillAnswer(card, true, NOW + m * MIN)!.card;
       expect(cardLevel(card)).toBe(2);
     });
 
@@ -121,7 +113,7 @@ describe('Port memory', () => {
       let card: SrsCard | undefined;
       let t = NOW;
       for (let i = 0; i < 20 && cardLevel(card) < MAX_LEVEL; i++) {
-        card = drillAnswer(card, 'name', true, t)!.card;
+        card = drillAnswer(card, true, t)!.card;
         t = Math.max(card.due, t + MIN);
       }
       expect(cardLevel(card)).toBe(MAX_LEVEL);
@@ -143,7 +135,20 @@ describe('Port memory', () => {
     expect(urgency('80', cards, NOW)).toBeLessThan(urgency('22', cards, NOW));
     expect(nextDue('22', cards)).toBe(NOW - 2 * DAY);
     const st = portState('22', cards, NOW);
-    expect(st.wants).toEqual({ name: true, number: false });
+    expect(st.wants).toEqual({ name: 'due', number: false, transport: 'new' });
+  });
+
+  it('gives TCP or UDP its own card, which never moves the level', () => {
+    const strong = { [nameCard('22')]: learned(30), [numberCard('22')]: learned(30) };
+    const missed = drillAnswer(learned(30), false, NOW).card;
+    const cards = lookup({ ...strong, [transportCard('22')]: missed });
+    expect(portLevel('22', cards)).withContext('a TCP or UDP miss').toBe(MAX_LEVEL);
+    expect(portState('22', cards, NOW + 11 * MIN).wants).toEqual({ name: false, number: false, transport: 'due' });
+    expect(isDue('22', cards, NOW + 11 * MIN)).withContext('its TCP or UDP card is due').toBeTrue();
+    expect(nextDue('22', cards)).toBe(missed.due);
+    expect(isDue('22', lookup(strong), NOW)).withContext('never asked TCP or UDP: not due because of it').toBeFalse();
+    expect(isDue('25', lookup({ [transportCard('25')]: missed }), NOW + 11 * MIN)).withContext('a new port answered only TCP or UDP').toBeTrue();
+    expect(isNew('25', lookup({ [transportCard('25')]: missed }))).toBeTrue();
   });
 
   describe('levels from before the drills used FSRS', () => {

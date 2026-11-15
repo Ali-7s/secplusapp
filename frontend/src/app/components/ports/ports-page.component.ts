@@ -12,17 +12,21 @@ import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromH
 import { SrsCard, formatDelay } from '../../utils/srs';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import {
-  CardLookup, adoptOldLevels, atLastStep, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed, urgency,
+  CardLookup, adoptOldLevels, atLastStep, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed,
+  trainerCards, urgency,
 } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
 import { LOCK_AFTER, SetPractices, afterAnswer, afterOverrule, afterRound, isRested, lockedSets } from './set-breaks';
 import {
-  Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PORT_HOOKS, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, partOf, pickRound, shortName, startOrder,
+  Asked, CORE_PORTS, GROUPS, MAX_LEVEL, PORT_HOOKS, PortGroup, PortQuestion, QRef, ROUND, buildQuestion, entryOf, isCore, isTransportCard, partOf, pickRound,
+  shortName, startOrder,
 } from './ports-trainer';
+import { TRANSPORT_WHY } from './transport-why';
 
 /**
- * An answer in a round. `card` is the Review card it was a review of (none for the secure replacement), with the card
- * as it was before, so overruling a wrong mark can redo it. `review` is false when it only counted the answer.
+ * An answer in a round. `card` is the card it was a review of (none for the secure replacement): a Review card, or the
+ * port's TCP or UDP card. It is kept with the card as it was before, so overruling a wrong mark can redo it. `review`
+ * is false when it only counted the answer.
  */
 interface Answered { typed: string; right: boolean; note?: string; before: number; card?: string; cardBefore?: SrsCard | null; review?: boolean }
 
@@ -76,8 +80,8 @@ export class PortsPageComponent {
 
   /** How each port was last asked, so the next round asks it another way. */
   asked: Record<string, Asked> = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
-  /** A port's Review cards, which hold what the drills remember of it. */
-  private readonly cardOf: CardLookup = id => this.progress.data().cards[cardKey('ref', id)];
+  /** A port's cards, which hold what the drills remember of it: its two Review cards and its TCP or UDP card. */
+  private readonly cardOf: CardLookup = trainerCards(this.progress);
   round: Round | null = (this.progress.lessonWork(SLUG, 'round') as Round | undefined) ?? null;
   /** Each set's misses and lock, so a day does not go on one set (set-breaks.ts). */
   sets: SetPractices = (this.progress.lessonWork(SLUG, 'sets') as SetPractices | undefined) ?? {};
@@ -407,11 +411,19 @@ export class PortsPageComponent {
     setTimeout(() => this.nextBtn?.nativeElement.focus());
   }
 
-  /** Saves a drill answer on the Review card it asks about. True when it was a review, false when it only counted. */
+  /** Saves a drill answer on the card it asks about. True when it was a review, false when it only counted. */
   private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1): boolean {
-    const result = drillAnswer(card, q.kind, right, now, { retention: this.retention, id: cardKey('ref', id) }, otherSetSince(q.port, card, this.practiced));
-    this.progress.saveCards('ref', { [id]: result?.card ?? card ?? null }, count);
-    return !!result?.review;
+    const transport = isTransportCard(id);
+    const fuzzId = transport ? `${SLUG}:${id}` : cardKey('ref', id);
+    const result = drillAnswer(card, right, now, { retention: this.retention, id: fuzzId }, otherSetSince(q.port, card, this.practiced));
+    if (transport) {
+      // Kept in the trainer's work; the answer still counts in the day's reviews.
+      this.progress.setLessonWork(SLUG, id, result.card);
+      this.progress.saveCards('ref', {}, count);
+    } else {
+      this.progress.saveCards('ref', { [id]: result.card }, count);
+    }
+    return result.review;
   }
 
   /** Overrule a wrong mark (a typo, or an answer the checker did not know): the card is answered again from before. */
@@ -508,10 +520,14 @@ export class PortsPageComponent {
     const card = a.card ? this.cardOf(a.card) : undefined;
     if (!card) return '';
     const when = formatDelay(Math.max(0, card.due - Date.now()));
-    if (!a.right) return `Next review in ${when}.`;
     const needsOther = atLastStep(card) && !otherSetSince(q.port, card, this.practiced);
+    if (a.card && isTransportCard(a.card)) {
+      if (!a.right || a.review) return `TCP or UDP has its own schedule, so the level stays. Next review in ${when}.`;
+      if (needsOther) return card.due > Date.now() ? `Still learning: next step in ${when}, after a round of another set.` : 'Still learning: finish a round of another set, then answer it again.';
+      return `Still learning: the next step is in ${when}.`;
+    }
+    if (!a.right) return `Next review in ${when}.`;
     if (!a.review) {
-      if (q.kind === 'transport') return `This asked only TCP or UDP, so the level stays. Next review in ${when}.`;
       if (needsOther) {
         return card.due > Date.now() ? `Still learning: it can reach level 2 in ${when}, after a round of another set.`
           : 'Still learning: finish a round of another set, then a right answer here takes it to level 2.';
@@ -529,6 +545,8 @@ export class PortsPageComponent {
   }
 
   hookForQuestion(q: PortQuestion) { return PORT_HOOKS[q.port]; }
+  /** Why the port uses TCP, UDP or both, shown after a TCP or UDP question instead of what the port is for. */
+  transportWhy(q: PortQuestion) { return TRANSPORT_WHY[q.port]; }
 
   private saveRound() {
     this.progress.setLessonWork(SLUG, 'round', this.round ? JSON.parse(JSON.stringify(this.round)) : null);

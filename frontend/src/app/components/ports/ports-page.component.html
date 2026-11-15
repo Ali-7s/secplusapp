@@ -54,9 +54,14 @@
               @if (a.note) { {{ a.note }} }
             </p>
             @if (lv.after) { <p class="held">{{ lv.after }}</p> }
-            <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
-            <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
-            @if (hookForQuestion(q); as hook) { <p class="card-note hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
+            @if (q.kind === 'transport') {
+              <p class="ans">Answer: <strong>{{ q.answer }}</strong></p>
+              <p class="use"><strong>Why {{ q.answer === 'Both' ? 'both' : q.answer }}.</strong> {{ transportWhy(q) }}</p>
+            } @else {
+              <p class="ans">Answer: <strong [class.mono]="q.answer.length < 28">{{ q.answer }}</strong>&ngsp;<span class="sub">· {{ entryOf(q.port).transport }} {{ entryOf(q.port).port }} · {{ entryOf(q.port).notes }}</span></p>
+              <p class="use"><strong>{{ entryOf(q.port).role }}.</strong> {{ entryOf(q.port).use }}</p>
+              @if (hookForQuestion(q); as hook) { <p class="card-note hook"><mat-icon aria-hidden="true">lightbulb</mat-icon> {{ hook }}</p> }
+            }
             <div class="v-acts">
               @if (!a.right && !q.choices) { <button type="button" class="btn ghost" (click)="override()">My answer was right</button> }
               <span class="spacer"></span>

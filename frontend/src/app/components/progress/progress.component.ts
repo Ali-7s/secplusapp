@@ -17,7 +17,7 @@ import { SY0_701_RETIRES } from '../../content/objectives';
 import { LESSON_META, TRACKS, lessonLabel, trackLessons } from '../networking/lessons/lesson-index';
 import { referenceCards } from '../reference/reference-cards';
 import { MAX_LEVEL } from '../ports/ports-trainer';
-import { adoptOldLevels, isDue, isNew, portLevel } from '../ports/port-memory';
+import { adoptOldLevels, isDue, isNew, portLevel, trainerCards } from '../ports/port-memory';
 import { savedRuleCounts } from '../ports/rule-cards';
 import { PORTS } from '../reference/reference-data';
 
@@ -199,8 +199,7 @@ export class ProgressComponent implements OnInit {
   readonly refStats = computed(() => this.deckStats('ref', this.refIds));
   /** The Ports trainer: how many ports are mastered and started, and how its firewall rules stand in their spaced repetition. */
   readonly portStats = computed(() => {
-    const cards = this.progress.data().cards;
-    const cardOf = (id: string) => cards[cardKey('ref', id)];
+    const cardOf = trainerCards(this.progress);
     const now = Date.now();
     const levels = PORTS.map(p => portLevel(p.port, cardOf));
     const rules = savedRuleCounts(this.progress.lessonRecord('ports-trainer')?.work, now);

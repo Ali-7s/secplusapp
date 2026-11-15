@@ -4,7 +4,10 @@
  * is a review of one of them, so a port answered in a drill is not asked again in Review mode until it is due, and
  * the other way round.
  *
- * Its level, 0 to 4, is read from the weaker of the two cards:
+ * The drills add a third card, "SSH on 22: TCP, UDP or both?" (transportCard), kept in the trainer's work. It is
+ * scheduled the same way, but has no say in the level.
+ *
+ * Its level, 0 to 4, is read from the weaker of the two Review cards:
  * - 0: never studied;
  * - 1: in its first learning steps after a right answer (in the drills 1 minute, then 20 minutes and a round of
  *   another set: DRILL_LEARN_STEPS), or relearning after a miss;
@@ -14,12 +17,22 @@
  */
 
 import { ProgressService, cardKey } from '../../services/progress.service';
-import { ScheduleOptions, SrsCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
+import { ScheduleOptions, SrsCard, isDueCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
 import { PORTS } from '../reference/reference-data';
-import { Asked, GROUPS, MAX_LEVEL, PortState, QKind, entryOf } from './ports-trainer';
+import { Asked, GROUPS, MAX_LEVEL, PortState, QKind, Want, entryOf, isTransportCard, transportCard } from './ports-trainer';
 
-/** Finds a Reference deck card by its id ("port:22"). */
+/** Finds a port's card by its id: a Reference deck card ("port:22"), or a TCP or UDP card ("tr:22"). */
 export type CardLookup = (id: string) => SrsCard | undefined;
+
+/** Where the Ports trainer keeps its work, the TCP or UDP cards among it. */
+export const TRAINER_SLUG = 'ports-trainer';
+
+/** Looks up a port's cards: Review cards in the Reference deck, TCP or UDP cards in the trainer's work. */
+export function trainerCards(progress: ProgressService): CardLookup {
+  return id => (isTransportCard(id)
+    ? (progress.lessonWork(TRAINER_SLUG, id) as SrsCard | null | undefined) ?? undefined
+    : progress.data().cards[cardKey('ref', id)]);
+}
 
 /** "Port 22: which protocol?" */
 export const nameCard = (port: string) => `port:${port}`;
@@ -49,30 +62,42 @@ const cardsOf = (port: string, cardOf: CardLookup) => [cardOf(nameCard(port)), c
 export const portLevel = (port: string, cardOf: CardLookup) => Math.min(...cardsOf(port, cardOf).map(cardLevel));
 
 /** A card wants a review when it is new or due. */
-const wants = (card: SrsCard | undefined, now: number) => !card || card.due <= now;
+const want = (card: SrsCard | undefined, now: number): Want => (!card ? 'new' : card.due <= now ? 'due' : false);
+const wants = (card: SrsCard | undefined, now: number) => !!want(card, now);
 
 export function portState(port: string, cardOf: CardLookup, now: number, asked?: Asked): PortState {
   const [name, number] = cardsOf(port, cardOf);
-  return { level: Math.min(cardLevel(name), cardLevel(number)), wants: { name: wants(name, now), number: wants(number, now) }, asked };
+  return {
+    level: Math.min(cardLevel(name), cardLevel(number)),
+    wants: { name: want(name, now), number: want(number, now), transport: want(cardOf(transportCard(port)), now) },
+    asked,
+  };
 }
 
-/** A port already started with a card that wants a review: one due, or its other card still new. */
+/**
+ * A port with a card that wants a review: started, with a Review card due or its other one still new, or with its TCP
+ * or UDP card due. A TCP or UDP card never studied does not make a port due; rounds ask it when the port comes up.
+ */
 export function isDue(port: string, cardOf: CardLookup, now: number): boolean {
   const [name, number] = cardsOf(port, cardOf);
-  return (!!name || !!number) && (wants(name, now) || wants(number, now));
+  return ((!!name || !!number) && (wants(name, now) || wants(number, now))) || isDueCard(cardOf(transportCard(port)), now);
 }
 
 /** A port never studied in either direction. */
 export const isNew = (port: string, cardOf: CardLookup) => cardsOf(port, cardOf).every(c => !c);
 
-/** How close to forgotten a due port is: the lowest recall chance among its due cards (a new one counts as 1). */
+/**
+ * How close to forgotten a due port is: the lowest recall chance among its due cards (a new Review card counts as 1).
+ */
 export function urgency(port: string, cardOf: CardLookup, now: number): number {
-  return Math.min(...cardsOf(port, cardOf).filter(c => wants(c, now)).map(c => (c ? recallNow(c, now) ?? 1 : 1)));
+  const transport = cardOf(transportCard(port));
+  const due = [...cardsOf(port, cardOf).filter(c => wants(c, now)), ...(isDueCard(transport, now) ? [transport] : [])];
+  return Math.min(...due.map(c => (c ? recallNow(c, now) ?? 1 : 1)));
 }
 
-/** When the port's next card falls due, or undefined if it has never been studied. */
+/** When the port's next card falls due, its TCP or UDP card included, or undefined if it has never been studied. */
 export function nextDue(port: string, cardOf: CardLookup): number | undefined {
-  const due = cardsOf(port, cardOf).filter((c): c is SrsCard => !!c).map(c => c.due);
+  const due = [...cardsOf(port, cardOf), cardOf(transportCard(port))].filter((c): c is SrsCard => !!c).map(c => c.due);
   return due.length ? Math.min(...due) : undefined;
 }
 
@@ -85,22 +110,19 @@ export function lastAnswered(port: string, cardOf: CardLookup): number | undefin
 /**
  * A drill answer on one of a port's cards. Wrong always counts in full (Again). Right is a review (Good), except in
  * two cases, where only the answer is counted:
- * - the question asked for part of the card only (TCP or UDP, without the number);
  * - the card is in a learning step that is not due yet, so drilling a new set three times in five minutes cannot rush
  *   it through its steps;
  * - the card is at its last learning step and no round of another set has been finished since the step before
  *   (`otherSet` false), so it stays at level 1, and due, until one has.
  * A learned card answered before it is due is still a review: the memory model gives it less credit the fresher it is.
- * Returns null when nothing changes (a partial answer about a card never studied).
  */
 export function drillAnswer(
-  card: SrsCard | undefined, kind: QKind, right: boolean, now: number, opts: ScheduleOptions = {}, otherSet = true,
-): { card: SrsCard; review: boolean } | null {
+  card: SrsCard | undefined, right: boolean, now: number, opts: ScheduleOptions = {}, otherSet = true,
+): { card: SrsCard; review: boolean } {
   const o = { ...opts, learnSteps: DRILL_LEARN_STEPS };
   if (!right) return { card: schedule(card, 'again', now, o), review: true };
-  const partial = kind === 'transport';
   const waiting = !!card && card.state !== 'review' && card.due > now;
-  if (partial || waiting || (atLastStep(card) && !otherSet)) return card ? { card: { ...card, right: card.right + 1, at: now }, review: false } : null;
+  if (card && (waiting || (atLastStep(card) && !otherSet))) return { card: { ...card, right: card.right + 1, at: now }, review: false };
   return { card: schedule(card, 'good', now, o), review: true };
 }
 
@@ -186,7 +208,7 @@ export function askedFromOldLevels(old: Record<string, OldPortLevel>): Record<st
  * here rather than in PortLinks so the Progress page can run it without loading the firewall rules.
  */
 export function adoptOldLevels(progress: ProgressService) {
-  const slug = 'ports-trainer';
+  const slug = TRAINER_SLUG;
   const old = progress.lessonWork(slug, 'mastery') as Record<string, OldPortLevel> | null | undefined;
   if (!old || typeof old !== 'object') return;
   const cards = progress.data().cards;
