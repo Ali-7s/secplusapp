@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ProgressService, cardKey } from '../../services/progress.service';
@@ -22,13 +22,14 @@ import {
   shortName, startOrder,
 } from './ports-trainer';
 import { TRANSPORT_WHY } from './transport-why';
+import { SpeedRating, speedRating } from './answer-speed';
 
 /**
  * An answer in a round. `card` is the card it was a review of (none for the secure replacement): a Review card, or the
  * port's TCP or UDP card. It is kept with the card as it was before, so overruling a wrong mark can redo it. `review`
- * is false when it only counted the answer.
+ * is false when it only counted the answer. `ms` is how long it took, which rates a right answer (answer-speed.ts).
  */
-interface Answered { typed: string; right: boolean; note?: string; before: number; card?: string; cardBefore?: SrsCard | null; review?: boolean }
+interface Answered { typed: string; right: boolean; note?: string; before: number; card?: string; cardBefore?: SrsCard | null; review?: boolean; ms?: number }
 
 /** A round in progress. Saved after every answer, so a refresh lands on the same question. */
 interface Round {
@@ -89,6 +90,10 @@ export class PortsPageComponent {
   practiced: Record<string, number> = (this.progress.lessonWork(SLUG, 'practicedAt') as Record<string, number> | undefined) ?? {};
   readonly LOCK_AFTER = LOCK_AFTER;
   question: PortQuestion | null = null;
+  /** When the question on screen appeared, and how long the page has been hidden since, which does not count. */
+  private shownAt = Date.now();
+  private hiddenFor = 0;
+  private hiddenAt: number | null = null;
 
   /** The view last used, unless a link asks for one (the Today page sends due firewall rules here with ?view=firewalls). */
   view: View = (inject(ActivatedRoute).snapshot.queryParamMap.get('view') ?? this.progress.lessonWork(SLUG, 'view')) === 'firewalls' ? 'firewalls' : 'drills';
@@ -108,6 +113,13 @@ export class PortsPageComponent {
     .map(set => ({ ...set, items: SCENARIOS.filter(s => s.set === set.id) }));
 
   constructor() {
+    const onVisibility = () => {
+      const now = Date.now();
+      if (document.visibilityState === 'hidden') this.hiddenAt ??= now;
+      else if (this.hiddenAt !== null) { this.hiddenFor += now - this.hiddenAt; this.hiddenAt = null; }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('visibilitychange', onVisibility));
     this.work.slug = SLUG;
     adoptOldLevels(this.progress);
     this.asked = (this.progress.lessonWork(SLUG, 'asked') as Record<string, Asked> | undefined) ?? {};
@@ -379,6 +391,18 @@ export class PortsPageComponent {
 
   private load() {
     this.question = this.round && this.round.i < this.round.refs.length ? buildQuestion(this.round.refs[this.round.i]) : null;
+    this.shownAt = Date.now();
+    this.hiddenFor = 0;
+    this.hiddenAt = document.visibilityState === 'hidden' ? this.shownAt : null;
+  }
+
+  /** How long the question has been on screen, leaving out time with the page hidden. */
+  private timeOnQuestion(now: number) {
+    return now - this.shownAt - this.hiddenFor - (this.hiddenAt === null ? 0 : now - this.hiddenAt);
+  }
+
+  private speedOf(q: PortQuestion, a: Answered): SpeedRating {
+    return speedRating(a.ms, q.prompt, a.typed, !!q.choices);
   }
 
   setTyped(v: string) {
@@ -394,10 +418,10 @@ export class PortsPageComponent {
     if (!typed.trim()) return;
     const v = q.check(typed);
     const now = Date.now();
-    const a: Answered = { typed, right: v.right, note: v.note, before: this.level(q.port) };
+    const a: Answered = { typed, right: v.right, note: v.note, before: this.level(q.port), ms: this.timeOnQuestion(now) };
     if (q.card) {
       const cardBefore = this.cardOf(q.card);
-      Object.assign(a, { card: q.card, cardBefore: cardBefore ?? null, review: this.answerCard(q, q.card, cardBefore, v.right, now) });
+      Object.assign(a, { card: q.card, cardBefore: cardBefore ?? null, review: this.answerCard(q, q.card, cardBefore, v.right, now, 1, this.speedOf(q, a)) });
     } else {
       this.progress.saveCards('ref', {}, 1);
     }
@@ -412,10 +436,10 @@ export class PortsPageComponent {
   }
 
   /** Saves a drill answer on the card it asks about. True when it was a review, false when it only counted. */
-  private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1): boolean {
+  private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1, speed: SpeedRating = 'good'): boolean {
     const transport = isTransportCard(id);
     const fuzzId = transport ? `${SLUG}:${id}` : cardKey('ref', id);
-    const result = drillAnswer(card, right, now, { retention: this.retention, id: fuzzId }, otherSetSince(q.port, card, this.practiced));
+    const result = drillAnswer(card, right, now, { retention: this.retention, id: fuzzId }, otherSetSince(q.port, card, this.practiced), speed);
     if (transport) {
       // Kept in the trainer's work; the answer still counts in the day's reviews.
       this.progress.setLessonWork(SLUG, id, result.card);
@@ -432,7 +456,7 @@ export class PortsPageComponent {
     if (!r || !q || !a || a.right) return;
     a.right = true;
     a.note = undefined;
-    if (a.card) a.review = this.answerCard(q, a.card, a.cardBefore ?? undefined, true, Date.now(), 0);
+    if (a.card) a.review = this.answerCard(q, a.card, a.cardBefore ?? undefined, true, Date.now(), 0, this.speedOf(q, a));
     if (r.rested !== undefined && this.sets[r.set]) this.saveSets({ [r.set]: afterOverrule(this.sets[r.set]) });
     this.overruleRules(q);
     this.saveRound();

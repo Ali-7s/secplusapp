@@ -17,7 +17,8 @@
  */
 
 import { ProgressService, cardKey } from '../../services/progress.service';
-import { ScheduleOptions, SrsCard, isDueCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
+import { Rating, ScheduleOptions, SrsCard, isDueCard, recallNow, schedule, stabilityOf } from '../../utils/srs';
+import { SpeedRating } from './answer-speed';
 import { PORTS } from '../reference/reference-data';
 import { Asked, GROUPS, MAX_LEVEL, PortState, QKind, Want, entryOf, isTransportCard, transportCard } from './ports-trainer';
 
@@ -108,22 +109,25 @@ export function lastAnswered(port: string, cardOf: CardLookup): number | undefin
 }
 
 /**
- * A drill answer on one of a port's cards. Wrong always counts in full (Again). Right is a review (Good), except in
- * two cases, where only the answer is counted:
+ * A drill answer on one of a port's cards. Wrong always counts in full (Again). Right is a review, rated by how fast
+ * it came (`speed`, see answer-speed.ts), except in two cases, where only the answer is counted:
  * - the card is in a learning step that is not due yet, so drilling a new set three times in five minutes cannot rush
  *   it through its steps;
  * - the card is at its last learning step and no round of another set has been finished since the step before
  *   (`otherSet` false), so it stays at level 1, and due, until one has.
- * A learned card answered before it is due is still a review: the memory model gives it less credit the fresher it is.
+ * Easy only applies to a learned card: on a card still learning it would skip the steps, so it counts as Good there.
+ * Hard on a learning card repeats its step. A learned card answered before it is due is still a review: the memory
+ * model gives it less credit the fresher it is.
  */
 export function drillAnswer(
-  card: SrsCard | undefined, right: boolean, now: number, opts: ScheduleOptions = {}, otherSet = true,
+  card: SrsCard | undefined, right: boolean, now: number, opts: ScheduleOptions = {}, otherSet = true, speed: SpeedRating = 'good',
 ): { card: SrsCard; review: boolean } {
   const o = { ...opts, learnSteps: DRILL_LEARN_STEPS };
   if (!right) return { card: schedule(card, 'again', now, o), review: true };
   const waiting = !!card && card.state !== 'review' && card.due > now;
   if (card && (waiting || (atLastStep(card) && !otherSet))) return { card: { ...card, right: card.right + 1, at: now }, review: false };
-  return { card: schedule(card, 'good', now, o), review: true };
+  const rating: Rating = card?.state === 'review' || speed !== 'easy' ? speed : 'good';
+  return { card: schedule(card, rating, now, o), review: true };
 }
 
 /** A new card whose next right answer would graduate it, to level 2. */

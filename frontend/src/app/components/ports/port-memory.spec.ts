@@ -95,6 +95,22 @@ describe('Port memory', () => {
     });
 
 
+    it('rates a right answer by its speed: Easy, Good or Hard', () => {
+      const card = learned(10, 10 * DAY);
+      const at = (speed: 'easy' | 'good' | 'hard') => drillAnswer(card, true, card.due, {}, true, speed).card.stability!;
+      expect(at('easy')).toBeGreaterThan(at('good'));
+      expect(at('good')).toBeGreaterThan(at('hard'));
+    });
+
+    it('never lets a quick answer skip a new card\'s learning steps', () => {
+      const first = drillAnswer(undefined, true, NOW, {}, true, 'easy').card;
+      expect(first.state).toBe('learning');
+      expect(first.due).toBe(NOW + 20 * MIN);
+      const slow = drillAnswer(first, true, NOW + 21 * MIN, {}, true, 'hard').card;
+      expect(slow.state).withContext('a slow answer repeats the step').toBe('learning');
+      expect(drillAnswer(first, true, NOW + 21 * MIN, {}, false, 'easy').card.state).withContext('another set still needed').toBe('learning');
+    });
+
     it('gives an early review less credit than one on time', () => {
       const card = learned(10, 2 * DAY);
       const early = drillAnswer(card, true, NOW)!.card;
