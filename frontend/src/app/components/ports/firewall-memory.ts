@@ -6,7 +6,7 @@
  * firewall-generator.ts reads this memory to choose the next table's rules.
  */
 
-import { SrsCard, dayKey, formatDelay, schedule } from '../../utils/srs';
+import { SrsCard, StudyPrefs, dayKey, formatDelay, schedule } from '../../utils/srs';
 import { FACTS, FLOWS, RuleMemory, factLabel, factOf, factPort, setOfFact } from './firewall-generator';
 import { MIXED } from './firewall-scenarios';
 import { isRuleCard, memoryKey } from './rule-cards';
@@ -27,12 +27,12 @@ export function loadMemory(read: (key: string) => unknown): RuleMemory {
  * The cards changed by a checked table. `right` says, rule by rule, whether the protocol and the port were both right:
  * that is the fact being learned, so a slip in the source, destination or action does not count against it.
  */
-export function rateTable(memory: RuleMemory, flows: string[], right: boolean[], now: number, retention?: number): RuleMemory {
+export function rateTable(memory: RuleMemory, flows: string[], right: boolean[], now: number, prefs: StudyPrefs = {}): RuleMemory {
   const changed: RuleMemory = {};
   flows.forEach((id, i) => {
     const fact = factOf(id);
     if (!FACTS.includes(fact)) return;
-    changed[fact] = schedule(memory[fact], right[i] ? 'good' : 'again', now, { retention, id: memoryKey(fact) });
+    changed[fact] = schedule(memory[fact], right[i] ? 'good' : 'again', now, { ...prefs, id: memoryKey(fact) });
   });
   return changed;
 }
@@ -88,7 +88,7 @@ export interface OldRuleHistory { rules?: Record<string, { ok: boolean; at: numb
  * one answered right as answered right once, both dated when its port was last practiced (`practicedAt`), because the
  * old history kept no times. Either way the rule is due straight away and its next answer sets the real schedule.
  */
-export function memoryFromHistory(history: OldRuleHistory, practicedAt: (port: string) => number | undefined, now: number, retention?: number): RuleMemory {
+export function memoryFromHistory(history: OldRuleHistory, practicedAt: (port: string) => number | undefined, now: number, prefs: StudyPrefs = {}): RuleMemory {
   const latest = new Map<string, { ok: boolean; at: number }>();
   for (const [id, stat] of Object.entries(history.rules ?? {})) {
     if (!FLOWS.some(f => f.id === id) || !stat || typeof stat.at !== 'number') continue;
@@ -99,7 +99,7 @@ export function memoryFromHistory(history: OldRuleHistory, practicedAt: (port: s
   const memory: RuleMemory = {};
   for (const [fact, stat] of latest) {
     const at = Math.min(now, practicedAt(factPort(fact)) ?? now);
-    memory[fact] = schedule(undefined, stat.ok ? 'good' : 'again', at, { retention, id: memoryKey(fact) });
+    memory[fact] = schedule(undefined, stat.ok ? 'good' : 'again', at, { ...prefs, id: memoryKey(fact) });
   }
   return memory;
 }

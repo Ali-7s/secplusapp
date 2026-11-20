@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, noNewToday, parseProgress, recordQuestion } from '../utils/progress';
+import { CardKind, CardRecord, ExamRecord, LessonRecord, ProgressData, capDues, noNewToday, parseProgress, recordQuestion, studyPrefs } from '../utils/progress';
 import { Rating, answerOutsideQueue, clampRetention, dayKey, schedule } from '../utils/srs';
 import { ScrollSpot, sameSpot } from '../utils/scroll-spot';
 import { mergeProgress, stableStringify } from '../utils/sync';
@@ -18,7 +18,7 @@ export const cardKey = (kind: CardKind, name: string) => `${kind}:${name}`;
  */
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
-  private readonly state = signal<ProgressData>(parseProgress(this.read(KEY)));
+  private readonly state = signal<ProgressData>(capDues(parseProgress(this.read(KEY))));
   readonly data = this.state.asReadonly();
   readonly hasProgress = computed(() => {
     const d = this.state();
@@ -54,7 +54,7 @@ export class ProgressService {
     const key = cardKey(kind, name);
     const now = Date.now();
     this.update(d => {
-      d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', now, { retention: d.review.retention, id: key });
+      d.cards[key] = answerOutsideQueue(d.cards[key], known ? 'good' : 'again', now, { ...studyPrefs(d), id: key });
       this.studied(d, now);
     });
   }
@@ -70,7 +70,7 @@ export class ProgressService {
     this.update(d => {
       for (const a of answers) {
         const key = cardKey(kind, a.name);
-        const opts = { retention: d.review.retention, id: key };
+        const opts = { ...studyPrefs(d), id: key };
         d.cards[key] = a.review ? schedule(d.cards[key], a.known ? 'good' : 'again', now, opts) : answerOutsideQueue(d.cards[key], a.known ? 'good' : 'again', now, opts);
       }
       this.studied(d, now, answers.length);
@@ -86,7 +86,7 @@ export class ProgressService {
         this.rollDay(d, now);
         d.review.newToday[kind]++;
       }
-      d.cards[key] = schedule(d.cards[key], rating, now, { retention: d.review.retention, id: key });
+      d.cards[key] = schedule(d.cards[key], rating, now, { ...studyPrefs(d), id: key });
       this.studied(d, now);
     });
   }
@@ -97,6 +97,7 @@ export class ProgressService {
       if (date) d.plan.examDate = date;
       else delete d.plan.examDate;
       d.settingsAt = Date.now();
+      Object.assign(d, capDues(d));
     });
   }
 
@@ -258,6 +259,7 @@ export class ProgressService {
 
   /** Takes in progress combined with another device's copy. It is not a change made here, so it does not count as one. */
   replaceFromSync(data: ProgressData) {
+    data = capDues(data);
     this.state.set(data);
     this.write(KEY, JSON.stringify(data));
   }

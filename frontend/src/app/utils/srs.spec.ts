@@ -1,9 +1,10 @@
 import {
-  LEARN_STEPS, SrsCard, answerOutsideQueue, daysUntil, formatDelay, isLeech, isMature, nextCard, previewIntervals, recallChance,
-  recallNow, schedule,
+  LEARN_STEPS, SrsCard, answerOutsideQueue, capDue, daysUntil, examStart, formatDelay, isLeech, isMature, longestWait, nextCard, previewIntervals,
+  recallChance, recallNow, schedule,
 } from './srs';
 
 const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
 const DAY = 24 * 60 * MIN;
 const NOW = new Date(2026, 9, 26, 12).getTime();
 
@@ -52,7 +53,46 @@ describe('spaced repetition scheduler', () => {
   });
 
   it('labels the buttons for a new card with its learning steps', () => {
-    expect(previewIntervals(undefined, NOW)).toEqual({ again: '1m', hard: '6m', good: '10m', easy: '8d' });
+    expect(previewIntervals(undefined, NOW)).toEqual({ again: '1m', hard: '6m', good: '10m', easy: '7d' });
+  });
+
+  describe('with the exam close', () => {
+    it('never makes a review wait more than a week, though the memory model would', () => {
+      const strong = schedule(memoryCard(40, 5, 40), 'good', NOW);
+      expect(strong.interval).toBeGreaterThan(30);
+      expect(strong.due - NOW).toBe(7 * DAY);
+    });
+
+    it('keeps reviews to a third of the time left before the exam, down to hours', () => {
+      const card = memoryCard(40, 5, 40);
+      expect(schedule(card, 'good', NOW, { examAt: NOW + 9 * DAY }).due - NOW).toBe(3 * DAY);
+      expect(schedule(card, 'easy', NOW, { examAt: NOW + 30 * HOUR }).due - NOW).toBe(10 * HOUR);
+      expect(schedule(card, 'good', NOW, { examAt: NOW + HOUR }).due - NOW).withContext('at least an hour').toBe(HOUR);
+      expect(schedule(card, 'good', NOW, { examAt: NOW - DAY }).due - NOW).withContext('after the exam, a week').toBe(7 * DAY);
+      expect(longestWait(NOW, NOW + 60 * DAY)).toBe(7 * DAY);
+    });
+
+    it('leaves learning steps alone', () => {
+      expect(schedule(undefined, 'good', NOW, { examAt: NOW + HOUR }).due - NOW).toBe(10 * MIN);
+    });
+
+    it('brings forward a card already scheduled too far out, counting from its last review', () => {
+      const far = { ...memoryCard(50, 5, 2), due: NOW + 48 * DAY };
+      const last = far.last!;
+      expect(capDue(far).due).toBe(last + 7 * DAY);
+      expect(capDue(far, last + 9 * DAY).due).withContext('a third of the time left then').toBe(last + 3 * DAY);
+      expect(capDue(capDue(far, last + 9 * DAY), last + 9 * DAY)).withContext('the same every time').toEqual(capDue(far, last + 9 * DAY));
+      const near = memoryCard(3, 5, 1);
+      expect(capDue(near)).withContext('never later').toBe(near);
+      const old = { ...sm2(60), due: NOW + 30 * DAY };
+      expect(capDue(old).due).withContext('no last review saved: from its last answer').toBe(old.at + 7 * DAY);
+    });
+
+    it('reads the exam day as local midnight', () => {
+      expect(examStart('2026-12-15')).toBe(new Date(2026, 11, 15).getTime());
+      expect(examStart(undefined)).toBeUndefined();
+      expect(examStart('')).toBeUndefined();
+    });
   });
 
   it('starts a card you got wrong at first as harder, with less stability, than one you knew', () => {

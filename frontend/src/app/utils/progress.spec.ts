@@ -1,5 +1,5 @@
 import {
-  CardRecord, DEFAULT_NEW_PER_DAY, emptyProgress, isBenchmark, objectiveScores, parseProgress, recordQuestion,
+  CardRecord, DEFAULT_NEW_PER_DAY, capDues, emptyProgress, isBenchmark, objectiveScores, parseProgress, recordQuestion,
   smartOrder, weakQuestionIds,
 } from './progress';
 
@@ -24,6 +24,36 @@ describe('progress storage', () => {
     const card = { state: 'review', step: 0, interval: 3, ease: 2.5, due: NOW, reps: 3, lapses: 0, right: 3, wrong: 0, at: NOW };
     const parsed = parseProgress(JSON.stringify({ cards: { 'acr:PKI': card, 'acr:AES': { box: 3, due: NOW, right: 1, wrong: 0, at: NOW } } }));
     expect(Object.keys(parsed.cards)).toEqual(['acr:PKI']);
+  });
+});
+
+describe('capping saved cards', () => {
+  const card = (at: number, dueIn: number): CardRecord =>
+    ({ state: 'review', step: 0, interval: dueIn, ease: 2.5, due: at + dueIn * DAY, reps: 3, lapses: 0, right: 3, wrong: 0, at, last: at });
+
+  it('brings in Review cards and lesson work cards scheduled weeks out, and leaves the rest as it is', () => {
+    const d = emptyProgress();
+    d.cards['ref:port:22'] = card(NOW, 48);
+    d.cards['acr:PKI'] = card(NOW, 2);
+    d.lessons['ports-trainer'] = { pbqs: {}, work: { 'tr:22': { v: card(NOW, 40), at: NOW }, 'fw:m:x': { v: card(NOW, 3), at: NOW }, 'pos': { v: { due: 'x' }, at: NOW } } };
+    const capped = capDues(d);
+    expect(capped.cards['ref:port:22'].due).toBe(NOW + 7 * DAY);
+    expect(capped.cards['acr:PKI']).toBe(d.cards['acr:PKI']);
+    expect((capped.lessons['ports-trainer'].work!['tr:22'].v as CardRecord).due).toBe(NOW + 7 * DAY);
+    expect(capped.lessons['ports-trainer'].work!['tr:22'].at).withContext('times unchanged, so sync still picks the latest answer').toBe(NOW);
+    expect(capped.lessons['ports-trainer'].work!['fw:m:x']).toBe(d.lessons['ports-trainer'].work!['fw:m:x']);
+    expect(capped.lessons['ports-trainer'].work!['pos'].v).toEqual({ due: 'x' });
+    expect(d.cards['ref:port:22'].due).withContext('the original is not changed').toBe(NOW + 48 * DAY);
+    expect(capDues(capped)).withContext('nothing left to change').toBe(capped);
+  });
+
+  it('counts down to the exam date once one is set', () => {
+    const d = emptyProgress();
+    d.cards['ref:port:22'] = card(NOW, 48);
+    const exam = new Date(NOW + 10 * DAY);
+    d.plan.examDate = `${exam.getFullYear()}-${String(exam.getMonth() + 1).padStart(2, '0')}-${String(exam.getDate()).padStart(2, '0')}`;
+    const examAt = new Date(exam.getFullYear(), exam.getMonth(), exam.getDate()).getTime();
+    expect(capDues(d).cards['ref:port:22'].due).toBe(NOW + (examAt - NOW) / 3);
   });
 });
 

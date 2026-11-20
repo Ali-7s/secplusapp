@@ -16,7 +16,7 @@ describe('firewall rule memory', () => {
     expect(m['ssh'].state).toBe('learning');
   });
 
-  it('sends a rule away for days once it has been right twice, and for longer each time after', () => {
+  it('sends a rule away for days once it has been right twice, and for longer each time after, up to a week', () => {
     let m = rate({}, 'ssh', true, NOW);
     m = rate(m, 'ssh', true, NOW + 12 * MIN);
     expect(m['ssh'].state).toBe('review');
@@ -27,20 +27,22 @@ describe('firewall rule memory', () => {
       gaps.push(m['ssh'].due - at);
     }
     expect(gaps[0]).toBeGreaterThanOrEqual(1 * DAY);
-    for (let i = 1; i < gaps.length; i++) expect(gaps[i]).withContext(String(i)).toBeGreaterThan(gaps[i - 1]);
-    expect(gaps[3]).toBeGreaterThan(14 * DAY);
+    for (let i = 1; i < gaps.length; i++) expect(gaps[i]).withContext(String(i)).toBeGreaterThan(Math.min(gaps[i - 1], 7 * DAY - 1));
+    expect(gaps[3]).withContext('no review waits more than a week').toBe(7 * DAY);
+    expect(m['ssh'].interval).withContext('though the memory would last longer').toBeGreaterThan(14);
   });
 
   it('times each review for the recall chance asked for', () => {
     let m = rate({}, 'ssh', true, NOW);
     m = rate(m, 'ssh', true, NOW + 12 * MIN);
     m = rate(m, 'ssh', true, m['ssh'].due);
-    const strict = rateTable(m, ['ssh'], [true], m['ssh'].due, 0.95)['ssh'];
-    const normal = rateTable(m, ['ssh'], [true], m['ssh'].due, DEFAULT_RETENTION)['ssh'];
+    const strict = rateTable(m, ['ssh'], [true], m['ssh'].due, { retention: 0.95 })['ssh'];
+    const normal = rateTable(m, ['ssh'], [true], m['ssh'].due, { retention: DEFAULT_RETENTION })['ssh'];
     expect(strict.interval).toBeLessThan(normal.interval);
-    // Not fuzzed past the point: on its due day the chance is near the target.
-    expect(recallNow(normal, normal.due)!).toBeGreaterThan(0.85);
-    expect(recallNow(normal, normal.due)!).toBeLessThan(0.95);
+    // Not fuzzed past the point: on the day the memory model chose, the chance is near the target.
+    const chosen = normal.last! + normal.interval * DAY;
+    expect(recallNow(normal, chosen)!).toBeGreaterThan(0.85);
+    expect(recallNow(normal, chosen)!).toBeLessThan(0.95);
   });
 
   it('forgets most of a learned rule that is missed, and asks again within minutes', () => {

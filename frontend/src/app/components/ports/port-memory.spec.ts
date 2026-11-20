@@ -133,8 +133,8 @@ describe('Port memory', () => {
         t = Math.max(card.due, t + MIN);
       }
       expect(cardLevel(card)).toBe(MAX_LEVEL);
-      expect((card!.last! - NOW) / DAY).toBeGreaterThan(10);
-      expect((card!.last! - NOW) / DAY).toBeLessThan(45);
+      expect((card!.last! - NOW) / DAY).toBeGreaterThan(7);
+      expect((card!.last! - NOW) / DAY).toBeLessThan(30);
     });
   });
 

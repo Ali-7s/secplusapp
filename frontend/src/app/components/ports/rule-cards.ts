@@ -4,16 +4,12 @@
  * keeps it small enough for the Today page to count due rules without loading the whole trainer.
  */
 
-import { SrsCard } from '../../utils/srs';
+import { isSrsCard } from '../../utils/srs';
 
 const PREFIX = 'fw:m:';
 export const memoryKey = (fact: string) => `${PREFIX}${fact}`;
 
-export const isRuleCard = (v: unknown): v is SrsCard => {
-  const c = v as SrsCard | null | undefined;
-  return !!c && typeof c === 'object' && typeof c.due === 'number' && typeof c.at === 'number'
-    && (c.state === 'learning' || c.state === 'review' || c.state === 'relearning');
-};
+export const isRuleCard = isSrsCard;
 
 /** Rules due now and rules past their learning steps, counted straight from the trainer's saved work. */
 export function savedRuleCounts(work: Record<string, { v: unknown }> | undefined, now: number): { due: number; learned: number } {

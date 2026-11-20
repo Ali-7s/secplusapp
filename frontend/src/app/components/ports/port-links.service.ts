@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { ProgressService } from '../../services/progress.service';
 import { SrsCard } from '../../utils/srs';
+import { studyPrefs } from '../../utils/progress';
 import { loadMemory } from './firewall-memory';
 import { creditReview } from './port-links';
 import { memoryKey } from './rule-cards';
@@ -18,7 +19,7 @@ export class PortLinks {
    */
   reviewed(cardId: string, right: boolean): (() => void) | null {
     const memory = loadMemory(key => this.progress.lessonWork(SLUG, key));
-    const rules = creditReview(memory, cardId, right, Date.now(), this.progress.data().review.retention);
+    const rules = creditReview(memory, cardId, right, Date.now(), studyPrefs(this.progress.data()));
     if (!rules) return null;
 
     const changed = Object.entries(rules);

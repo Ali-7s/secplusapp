@@ -168,9 +168,53 @@ function fuzz(days: number, seed: string | undefined): number {
 
 // ── Scheduling ───────────────────────────────────────────────────────────────
 
-export interface ScheduleOptions {
+/** The learner's settings that shape every schedule. */
+export interface StudyPrefs {
   /** The recall chance to time the next review for (DEFAULT_RETENTION if missing). */
   retention?: number;
+  /** When the exam starts (ms), if a date is set: no review waits until after it (see longestWait). */
+  examAt?: number;
+}
+
+/** The longest any review waits: the exam is weeks away at most, so a gap of months would skip it. */
+export const MAX_WAIT_DAYS = 7;
+
+/**
+ * How long a review may wait from `now`: a week at most, and with an exam ahead, a third of the time left, so every
+ * card comes round a few more times before it (hours, in the last days). At least an hour; no limit but the week
+ * once the exam has passed.
+ */
+export function longestWait(now: number, examAt?: number): number {
+  const week = MAX_WAIT_DAYS * DAY;
+  if (examAt === undefined || examAt <= now) return week;
+  return Math.min(week, Math.max(60 * MIN, (examAt - now) / 3));
+}
+
+/**
+ * A card scheduled before the cap above (or before the exam date was set or moved closer) brought forward to the
+ * longest wait allowed from when it was last scheduled. Never pushes a card later, and gives the same answer however
+ * often it runs, so devices and tabs agree on it.
+ */
+export function capDue<T extends SrsCard>(card: T, examAt?: number): T {
+  const from = card.last ?? card.at;
+  const latest = from + longestWait(from, examAt);
+  return card.due > latest ? { ...card, due: latest } : card;
+}
+
+/** Whether a saved value is a spaced repetition card (lesson work holds other things too). */
+export const isSrsCard = (v: unknown): v is SrsCard => {
+  const c = v as SrsCard | null | undefined;
+  return !!c && typeof c === 'object' && typeof c.due === 'number' && typeof c.at === 'number'
+    && (c.state === 'learning' || c.state === 'review' || c.state === 'relearning');
+};
+
+/** The start of the exam day ("2026-12-15", local time), or undefined with no date set. */
+export function examStart(date: string | undefined): number | undefined {
+  const [y, m, d] = (date ?? '').split('-').map(Number);
+  return y && m && d ? new Date(y, m - 1, d).getTime() : undefined;
+}
+
+export interface ScheduleOptions extends StudyPrefs {
   /** The card's progress key, which seeds the fuzz. Without it intervals are not fuzzed. */
   id?: string;
   /** A new card's learning steps, if not LEARN_STEPS (the Ports trainer's drills wait longer before the last one). */
@@ -208,9 +252,11 @@ export function schedule(card: SrsCard | undefined, rating: Rating, now: number,
     ease: easeFromDifficulty(d),
   };
   const days = Math.min(MAX_DAYS, Math.max(1, Math.round(daysUntil(s, retention))));
+  // `interval` keeps the gap the memory model chose (it says how strong the card is); the review itself comes no later
+  // than longestWait allows.
   const graduate = (): SrsCard => {
     const ivl = fuzz(days, opts.id && `${opts.id}#${base.reps}`);
-    return { ...next, state: 'review', step: 0, interval: ivl, due: now + ivl * DAY };
+    return { ...next, state: 'review', step: 0, interval: ivl, due: now + Math.min(ivl * DAY, longestWait(now, opts.examAt)) };
   };
 
   if (base.state === 'review' && card) {

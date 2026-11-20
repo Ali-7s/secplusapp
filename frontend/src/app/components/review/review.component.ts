@@ -9,7 +9,7 @@ import { CardKind, ProgressService, cardKey } from '../../services/progress.serv
 import { Coverage, buildRubric, highlight, rate } from '../../utils/key-points';
 import { StudyCard } from '../../utils/study-card';
 import { ContentService } from '../../services/content.service';
-import { CardRecord, ProgressData } from '../../utils/progress';
+import { CardRecord, ProgressData, studyPrefs } from '../../utils/progress';
 import { RouterLink } from '@angular/router';
 import {
   LEECH_LAPSES, RETENTION_CHOICES, Rating, SrsCard, clampRetention, formatDelay, isLeech, nextCard, previewIntervals, recallNow,
@@ -263,7 +263,7 @@ export class ReviewComponent {
   readonly retentionChoices = RETENTION_CHOICES;
   readonly intervals = computed(() => {
     const card = this.card();
-    return previewIntervals(this.record(), this.now(), { retention: this.retention(), id: card ? cardKey(this.kind(), card.id) : undefined });
+    return previewIntervals(this.record(), this.now(), { ...studyPrefs(this.progress.data()), id: card ? cardKey(this.kind(), card.id) : undefined });
   });
   /** Forgotten again and again: repeating it the same way is not working. */
   readonly leech = computed(() => isLeech(this.record()));

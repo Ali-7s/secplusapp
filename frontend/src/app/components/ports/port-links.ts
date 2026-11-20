@@ -11,7 +11,7 @@
  *   never moves a schedule forward. Wrong, it sends the rules back like any miss.
  */
 
-import { SrsCard, schedule } from '../../utils/srs';
+import { ScheduleOptions, SrsCard, StudyPrefs, schedule } from '../../utils/srs';
 import { PORTS } from '../reference/reference-data';
 import { FACTS, RuleMemory, factOf, factPort, factProto } from './firewall-generator';
 import { trainerEntry } from './firewall-scenarios';
@@ -47,7 +47,7 @@ export function entryOfCard(cardId: string): { port: string; asksNumber: boolean
 }
 
 /** One rule's card after an answer given somewhere other than a table. */
-export function creditRule(card: SrsCard | undefined, right: boolean, evidence: Evidence, now: number, opts: { retention?: number; id?: string } = {}): SrsCard {
+export function creditRule(card: SrsCard | undefined, right: boolean, evidence: Evidence, now: number, opts: ScheduleOptions = {}): SrsCard {
   if (!right) return schedule(card, 'again', now, opts);
   if (!card) return schedule(undefined, 'good', now, opts);
   // Only a full answer is a review, and not while the rule is still waiting out a learning step.
@@ -60,10 +60,10 @@ export function creditRule(card: SrsCard | undefined, right: boolean, evidence: 
  * The rule cards changed by an answer about a trainer port given in a drill or in Review mode. `only` narrows it to
  * the rules on one of the port's numbers, when the question asked about that number alone (DHCP's client port, 68).
  */
-export function creditRules(memory: RuleMemory, port: string, right: boolean, evidence: Evidence, now: number, retention?: number, only?: number): RuleMemory {
+export function creditRules(memory: RuleMemory, port: string, right: boolean, evidence: Evidence, now: number, prefs: StudyPrefs = {}, only?: number): RuleMemory {
   const changed: RuleMemory = {};
   const facts = factsOfEntry(port).filter(fact => only === undefined || factPort(fact) === String(only));
-  for (const fact of facts) changed[fact] = creditRule(memory[fact], right, evidence, now, { retention, id: memoryKey(fact) });
+  for (const fact of facts) changed[fact] = creditRule(memory[fact], right, evidence, now, { ...prefs, id: memoryKey(fact) });
   return changed;
 }
 
@@ -90,9 +90,9 @@ export function tableCredits(flows: string[], right: boolean[]): { port: string;
  * card asks for the number. (The port's level needs nothing: it is read from the card itself.) Returns the rules
  * that changed, or null for a card that is not about a port.
  */
-export function creditReview(memory: RuleMemory, cardId: string, right: boolean, now: number, retention?: number): RuleMemory | null {
+export function creditReview(memory: RuleMemory, cardId: string, right: boolean, now: number, prefs: StudyPrefs = {}): RuleMemory | null {
   const entry = entryOfCard(cardId);
   if (!entry) return null;
   const evidence: Evidence = answersOf(entry.port).length <= 1 ? 'full' : 'partial';
-  return entry.asksNumber ? creditRules(memory, entry.port, right, evidence, now, retention) : {};
+  return entry.asksNumber ? creditRules(memory, entry.port, right, evidence, now, prefs) : {};
 }

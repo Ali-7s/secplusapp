@@ -77,7 +77,7 @@ describe('ProgressService with the app open in two tabs', () => {
 
   it('records several cards answered elsewhere at once, and counts only whole, checked answers as early reviews', () => {
     const day = 86_400_000;
-    const learned = { state: 'review' as const, step: 0, interval: 10, ease: 2.5, due: Date.now() + 5 * day, reps: 3, lapses: 0, right: 3, wrong: 0, at: Date.now() - 5 * day, stability: 10, difficulty: 5, last: Date.now() - 5 * day };
+    const learned = { state: 'review' as const, step: 0, interval: 5, ease: 2.5, due: Date.now() + 3 * day, reps: 3, lapses: 0, right: 3, wrong: 0, at: Date.now() - 2 * day, stability: 10, difficulty: 5, last: Date.now() - 2 * day };
     otherTabSaves(otherTabCopy(d => { d.cards['ref:proto:RDP'] = { ...learned }; d.cards['ref:proto:SSH / SFTP / SCP'] = { ...learned }; d.cards['ref:proto:Telnet'] = { ...learned }; }));
 
     progress.recordCards('ref', [{ name: 'proto:RDP', known: true, review: true }, { name: 'proto:SSH / SFTP / SCP', known: true }, { name: 'proto:Telnet', known: false }, { name: 'proto:DNS', known: true }]);
@@ -97,5 +97,17 @@ describe('ProgressService with the app open in two tabs', () => {
     progress.setLessonWork('crypto', 'hashlab', { text: 'mine' });
     window.dispatchEvent(new StorageEvent('storage', { key: 'sp-theme', newValue: 'dark' }));
     expect(progress.lessonWork('crypto', 'hashlab')).toEqual({ text: 'mine' });
+  });
+
+  it('pulls in cards already scheduled weeks out once an exam date is set', () => {
+    const now = Date.now();
+    const far = { state: 'review' as const, step: 0, interval: 48, ease: 2.5, due: now + 48 * 86_400_000, reps: 3, lapses: 0, right: 3, wrong: 0, at: now, last: now };
+    progress.replaceFromSync({ ...emptyProgress(), cards: { 'ref:port:22': far } });
+    expect(progress.data().cards['ref:port:22'].due).withContext('a week at most').toBe(now + 7 * 86_400_000);
+    const inThree = new Date(now + 3 * 86_400_000);
+    progress.setExamDate(`${inThree.getFullYear()}-${String(inThree.getMonth() + 1).padStart(2, '0')}-${String(inThree.getDate()).padStart(2, '0')}`);
+    const examAt = new Date(inThree.getFullYear(), inThree.getMonth(), inThree.getDate()).getTime();
+    expect(progress.data().cards['ref:port:22'].due).toBe(now + (examAt - now) / 3);
+    expect(stored().cards['ref:port:22'].due).toBe(now + (examAt - now) / 3);
   });
 });

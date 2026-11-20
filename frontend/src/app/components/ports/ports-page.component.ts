@@ -9,7 +9,8 @@ import { ExamAnswer, gradeQuestion, isStarted } from '../../utils/exam-engine';
 import { MIXED, PortScenario, SCENARIOS, portOutcomes, portsRight, trainerEntry } from './firewall-scenarios';
 import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewall-generator';
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
-import { SrsCard, formatDelay } from '../../utils/srs';
+import { SrsCard, StudyPrefs, formatDelay } from '../../utils/srs';
+import { studyPrefs } from '../../utils/progress';
 import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import {
   CardLookup, adoptOldLevels, atLastStep, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed,
@@ -138,7 +139,7 @@ export class PortsPageComponent {
     const saved: Record<string, unknown> = { 'fw:history': null };
     if (!Object.keys(this.memory).length) {
       const lastAt = (port: string) => { const entry = trainerEntry(port); return entry ? lastAnswered(entry, this.cardOf) : undefined; };
-      this.memory = memoryFromHistory(history, lastAt, Date.now(), this.retention);
+      this.memory = memoryFromHistory(history, lastAt, Date.now(), this.prefs);
       for (const [fact, card] of Object.entries(this.memory)) saved[memoryKey(fact)] = card;
     }
     this.progress.setLessonWorks(SLUG, saved);
@@ -156,13 +157,13 @@ export class PortsPageComponent {
    */
   private linkDrillToRules(q: PortQuestion, right: boolean, now: number) {
     if (q.kind !== 'number' && q.kind !== 'situation') return;
-    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.retention, partOf(q)?.n);
+    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.prefs, partOf(q)?.n);
     this.memory = { ...this.memory, ...changed };
     this.saveRules(changed);
   }
 
-  /** Rules follow Review mode's two settings: the recall chance to aim for, and how many new ones a day. */
-  private get retention() { return this.progress.data().review.retention; }
+  /** Schedules follow the recall chance Review mode aims for, and the exam date set on the Today page. */
+  private get prefs(): StudyPrefs { return studyPrefs(this.progress.data()); }
 
   // ── Firewall scenarios ──────────────────────────────────────────────────
 
@@ -289,7 +290,7 @@ export class PortsPageComponent {
     const ref = written ? undefined : this.randomRef(s.set);
     if (ref && ref.seed === s.seed && ref.flows.length === s.rows.length) {
       const right = portsRight(s, this.savedScenario(s)?.answer?.cells);
-      const changed = rateTable(this.memory, ref.flows, right, now, this.retention);
+      const changed = rateTable(this.memory, ref.flows, right, now, this.prefs);
       this.memory = { ...this.memory, ...changed };
       this.saveRules(changed);
       // The same answers count on each port's Review card, so Review mode does not ask again what a table just showed.
@@ -439,7 +440,7 @@ export class PortsPageComponent {
   private answerCard(q: PortQuestion, id: string, card: SrsCard | undefined, right: boolean, now: number, count = 1, speed: SpeedRating = 'good'): boolean {
     const transport = isTransportCard(id);
     const fuzzId = transport ? `${SLUG}:${id}` : cardKey('ref', id);
-    const result = drillAnswer(card, right, now, { retention: this.retention, id: fuzzId }, otherSetSince(q.port, card, this.practiced), speed);
+    const result = drillAnswer(card, right, now, { ...this.prefs, id: fuzzId }, otherSetSince(q.port, card, this.practiced), speed);
     if (transport) {
       // Kept in the trainer's work; the answer still counts in the day's reviews.
       this.progress.setLessonWork(SLUG, id, result.card);

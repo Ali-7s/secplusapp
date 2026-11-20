@@ -4,7 +4,7 @@
  * ProgressService wraps it with storage.
  */
 
-import { SrsCard, clampRetention } from './srs';
+import { SrsCard, StudyPrefs, capDue, clampRetention, examStart, isSrsCard } from './srs';
 import { ScrollSpot } from './scroll-spot';
 
 export type ExamDomainKey = 1 | 2 | 3 | 4 | 5;
@@ -170,6 +170,37 @@ function validCards(cards: Record<string, unknown>): Record<string, CardRecord> 
 // ── Spaced repetition ─────────────────────────────────────────────────────
 
 export const isDue = (card: CardRecord | undefined, now: number) => !!card && card.due <= now;
+
+/** The settings every schedule follows: the target recall chance, and the exam date, which caps how long a review waits. */
+export const studyPrefs = (d: ProgressData): StudyPrefs => ({ retention: d.review.retention, examAt: examStart(d.plan.examDate) });
+
+/**
+ * Brings every card scheduled past the longest allowed wait (see capDue) back within it: Review cards and the cards
+ * kept in lesson work (the Ports trainer's TCP or UDP and firewall rule cards). Run whenever saved progress arrives or
+ * the exam date changes. Leaves each card's time alone, so on another device the copy with the latest answer still wins.
+ */
+export function capDues(d: ProgressData): ProgressData {
+  const examAt = examStart(d.plan.examDate);
+  let changed = false;
+  const cards: Record<string, CardRecord> = {};
+  for (const [key, card] of Object.entries(d.cards)) {
+    cards[key] = capDue(card, examAt);
+    changed ||= cards[key] !== card;
+  }
+  const lessons: Record<string, LessonRecord> = {};
+  for (const [slug, lesson] of Object.entries(d.lessons)) {
+    lessons[slug] = lesson;
+    if (!lesson.work) continue;
+    let work: NonNullable<LessonRecord['work']> | undefined;
+    for (const [key, saved] of Object.entries(lesson.work)) {
+      if (!isSrsCard(saved?.v)) continue;
+      const capped = capDue(saved.v, examAt);
+      if (capped !== saved.v) (work ??= { ...lesson.work })[key] = { ...saved, v: capped };
+    }
+    if (work) { lessons[slug] = { ...lesson, work }; changed = true; }
+  }
+  return changed ? { ...d, cards, lessons } : d;
+}
 
 /**
  * Smart order for a flashcard deck: cards due for review first (ones still being learned, then the hardest by

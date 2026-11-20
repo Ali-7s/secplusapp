@@ -8,7 +8,7 @@
  */
 
 import { dayKey } from './srs';
-import { CARD_KINDS, CardKind, LessonRecord, ProgressData, parseProgress } from './progress';
+import { CARD_KINDS, CardKind, LessonRecord, ProgressData, capDues, parseProgress } from './progress';
 
 /** Everything that syncs. Device preferences (theme, lesson view) and an exam in progress stay on each device. */
 export interface SyncPayload {
@@ -95,7 +95,8 @@ export function mergeProgress(a: ProgressData, b: ProgressData): ProgressData {
   const settingsAt = Math.max(x.settingsAt ?? 0, y.settingsAt ?? 0);
   if (settingsAt) out.settingsAt = settingsAt;
   if (resetAt) out.resetAt = resetAt;
-  return out;
+  // Either copy may have been scheduled under an older exam date, or before the longest wait existed.
+  return capDues(out);
 }
 
 /** Combines two whole synced copies. */

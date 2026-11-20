@@ -15,6 +15,15 @@ const progress = (change: (d: ProgressData) => void): ProgressData => {
 };
 
 describe('mergeProgress', () => {
+  it('brings in cards scheduled too far out in the combined copy, keeping their times', () => {
+    const a = progress(d => { d.cards['ref:port:22'] = card(100, 40); });
+    const b = progress(d => { d.plan.examDate = '2026-12-01'; d.settingsAt = 200; });
+    const merged = mergeProgress(a, b);
+    expect(merged.plan.examDate).toBe('2026-12-01');
+    expect(merged.cards['ref:port:22'].due).toBe(100 + 7 * 86_400_000);
+    expect(merged.cards['ref:port:22'].at).toBe(100);
+  });
+
   it('keeps the most recent result for each card and question, and every card from both', () => {
     const a = progress(d => {
       d.cards['acr:AH'] = card(100, 1);
