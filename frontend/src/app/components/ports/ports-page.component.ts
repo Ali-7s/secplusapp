@@ -23,6 +23,7 @@ import {
   shortName, startOrder,
 } from './ports-trainer';
 import { TRANSPORT_WHY } from './transport-why';
+import { PortPhrasesComponent } from './port-phrases.component';
 import { SpeedRating, speedRating } from './answer-speed';
 
 /**
@@ -45,7 +46,8 @@ const SLUG = 'ports-trainer';
 /** How many ports a round of new ports starts with. */
 const NEW_AT_ONCE = 5;
 
-type View = 'drills' | 'firewalls';
+type View = 'drills' | 'firewalls' | 'phrases';
+const VIEWS: View[] = ['drills', 'firewalls', 'phrases'];
 /** A firewall scenario's state, as PbqPracticeComponent saves it. */
 interface SavedScenario { answer?: ExamAnswer; checked?: boolean }
 
@@ -53,7 +55,7 @@ interface SavedScenario { answer?: ExamAnswer; checked?: boolean }
 @Component({
   selector: 'app-ports-page',
   standalone: true,
-  imports: [RouterLink, MatIconModule, PbqPracticeComponent],
+  imports: [RouterLink, MatIconModule, PbqPracticeComponent, PortPhrasesComponent],
   providers: [LessonWork],
   templateUrl: './ports-page.component.html',
   styleUrl: './ports-page.component.scss',
@@ -97,7 +99,7 @@ export class PortsPageComponent {
   private hiddenAt: number | null = null;
 
   /** The view last used, unless a link asks for one (the Today page sends due firewall rules here with ?view=firewalls). */
-  view: View = (inject(ActivatedRoute).snapshot.queryParamMap.get('view') ?? this.progress.lessonWork(SLUG, 'view')) === 'firewalls' ? 'firewalls' : 'drills';
+  view: View = VIEWS.find(v => v === (inject(ActivatedRoute).snapshot.queryParamMap.get('view') ?? this.progress.lessonWork(SLUG, 'view'))) ?? 'drills';
   scenario: PortScenario | null = this.restoreScenario();
   /** Failed written scenarios whose Try again has been earned back. */
   unlocked: Unlocked = (this.progress.lessonWork(SLUG, 'fw:unlocked') as Unlocked | undefined) ?? {};

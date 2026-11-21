@@ -1,0 +1,21 @@
+<label class="find">
+  <mat-icon aria-hidden="true">search</mat-icon>
+  <input type="text" [value]="find()" (input)="find.set($any($event.target).value)" placeholder="Find a phrase, protocol or port"
+    aria-label="Find a phrase, protocol or port" autocomplete="off" autocapitalize="off" spellcheck="false" />
+</label>
+
+@for (s of shown(); track s.title) {
+  <section class="ph-set">
+    <h2>{{ s.title }}</h2>
+    <ul>
+      @for (r of s.rows; track r.name) {
+        <li>
+          <div class="ph-head"><span class="mono">{{ r.where }}</span> <strong>{{ r.name }}</strong></div>
+          <p class="ph-list">@for (p of r.phrases; track p; let last = $last) {<span [class.hit]="hits(p)">{{ p }}</span>@if (!last) {<span class="dot" aria-hidden="true"> · </span>} }</p>
+        </li>
+      }
+    </ul>
+  </section>
+} @empty {
+  <p class="none">Nothing matches.</p>
+}

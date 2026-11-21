@@ -141,9 +141,12 @@
   <div class="views" role="group" aria-label="How to practice">
     <button type="button" [class.on]="view === 'drills'" [attr.aria-pressed]="view === 'drills'" (click)="setView('drills')"><mat-icon aria-hidden="true">fitness_center</mat-icon> Drills</button>
     <button type="button" [class.on]="view === 'firewalls'" [attr.aria-pressed]="view === 'firewalls'" (click)="setView('firewalls')"><mat-icon aria-hidden="true">local_fire_department</mat-icon> Firewall scenarios</button>
+    <button type="button" [class.on]="view === 'phrases'" [attr.aria-pressed]="view === 'phrases'" (click)="setView('phrases')"><mat-icon aria-hidden="true">menu_book</mat-icon> Cheat sheet</button>
   </div>
 
-  @if (view === 'firewalls') {
+  @if (view === 'phrases') {
+    <app-port-phrases />
+  } @else if (view === 'firewalls') {
 
     <div class="overall">
       @let all = rules(MIXED);
