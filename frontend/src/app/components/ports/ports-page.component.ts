@@ -11,9 +11,9 @@ import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewal
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
 import { SrsCard, StudyPrefs, formatDelay } from '../../utils/srs';
 import { studyPrefs } from '../../utils/progress';
-import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
+import { answersOf, creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import {
-  CardLookup, adoptOldLevels, atLastStep, cardLevel, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed,
+  CardLookup, adoptOldLevels, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed,
   trainerCards, urgency,
 } from './port-memory';
 import { Unlocked, unlockedAfter } from './firewall-locks';
@@ -151,13 +151,14 @@ export class PortsPageComponent {
   }
 
   /**
-   * A drill answer about a port's number also counts for its firewall rules. It gives the number but not the whole
-   * rule, so a right answer only starts rules that were new (the next table then asks them instead of treating them
-   * as new), and a wrong one sends them back.
+   * A drill answer about a port's number also counts for its firewall rules. It gives the transport and number, so it
+   * is a full answer for a port (or number) with one rule. Where there are several (DNS lookups on UDP, zone transfers
+   * on TCP) it is partial: a right answer only starts rules that were new, and a wrong one sends them back.
    */
   private linkDrillToRules(q: PortQuestion, right: boolean, now: number) {
     if (q.kind !== 'number' && q.kind !== 'situation') return;
-    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.prefs, partOf(q)?.n);
+    const only = partOf(q)?.n;
+    const changed = creditRules(this.memory, q.port, right, answersOf(q.port, only).length <= 1 ? 'full' : 'partial', now, this.prefs, only);
     this.memory = { ...this.memory, ...changed };
     this.saveRules(changed);
   }
@@ -532,41 +533,11 @@ export class PortsPageComponent {
     });
   }
 
-  /** The level on the question card: the port's level, and once answered, where it moved from and what happens next. */
+  /** The level on the question card: the port's level, and once answered, where it moved from. */
   cardLevel(q: PortQuestion) {
-    const a = this.answered;
     const to = this.level(q.port);
-    const from = a ? a.before : to;
-    return { from, to, text: from === to ? `Level ${to} of ${MAX_LEVEL}` : `Level ${from} → ${to}`, after: a ? this.afterNote(q, a, from, to) : '' };
-  }
-
-  /** What an answer did: when its card comes back, and why the level stayed where it was. */
-  private afterNote(q: PortQuestion, a: Answered, from: number, to: number): string {
-    const card = a.card ? this.cardOf(a.card) : undefined;
-    if (!card) return '';
-    const when = formatDelay(Math.max(0, card.due - Date.now()));
-    const needsOther = atLastStep(card) && !otherSetSince(q.port, card, this.practiced);
-    if (a.card && isTransportCard(a.card)) {
-      if (!a.right || a.review) return `TCP or UDP has its own schedule, so the level stays. Next review in ${when}.`;
-      if (needsOther) return card.due > Date.now() ? `Still learning: next step in ${when}, after a round of another set.` : 'Still learning: finish a round of another set, then answer it again.';
-      return `Still learning: the next step is in ${when}.`;
-    }
-    if (!a.right) return `Next review in ${when}.`;
-    if (!a.review) {
-      if (needsOther) {
-        return card.due > Date.now() ? `Still learning: it can reach level 2 in ${when}, after a round of another set.`
-          : 'Still learning: finish a round of another set, then a right answer here takes it to level 2.';
-      }
-      return `Still learning: the next step is in ${when}, so the level stays.`;
-    }
-    if (needsOther) return `Next step in ${when}, after a round of another set.`;
-    if (to > from) return `Next review in ${when}.`;
-    // The level is the weaker card's, so a right answer on the stronger one leaves it.
-    if (cardLevel(card) > to) {
-      const other = a.card === `port:${q.port}` ? `${shortName(entryOf(q.port))}: which port?` : `Port ${q.port}: which protocol?`;
-      return `Stays at level ${to} until "${other}" catches up. Next review in ${when}.`;
-    }
-    return `Stays at level ${to}. Next review in ${when}.`;
+    const from = this.answered ? this.answered.before : to;
+    return { from, to, text: from === to ? `Level ${to} of ${MAX_LEVEL}` : `Level ${from} → ${to}` };
   }
 
   hookForQuestion(q: PortQuestion) { return PORT_HOOKS[q.port]; }

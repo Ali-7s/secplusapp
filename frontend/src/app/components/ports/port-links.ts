@@ -25,7 +25,8 @@ export const entryOfFact = (fact: string): string | undefined => trainerEntry(fa
 export const factsOfEntry = (port: string): string[] => FACTS.filter(fact => entryOfFact(fact) === port);
 /** The different protocol and port answers a trainer port's rules have: one for most, two or three where it splits. */
 const answerOf = (fact: string) => `${factProto(fact)} ${factPort(fact)}`;
-export const answersOf = (port: string): string[] => [...new Set(factsOfEntry(port).map(answerOf))];
+export const answersOf = (port: string, only?: number): string[] =>
+  [...new Set(factsOfEntry(port).filter(fact => only === undefined || factPort(fact) === String(only)).map(answerOf))];
 
 /** The Review card that asks for a trainer port's number and transport. */
 export const reviewCardOf = (port: string): string | undefined => {
