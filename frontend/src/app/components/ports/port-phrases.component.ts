@@ -1,26 +1,27 @@
 import { Component, computed, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { GROUPS, PARTS, entryOf, shortName } from './ports-trainer';
-import { KEY_PHRASES, NO_PORT } from './key-phrases';
+import { FLOWS, factLabel, factOf, factPort, factProto, setOfFact } from './firewall-generator';
+import { BOTH, NO_PORT } from './firewall-scenarios';
+import { GROUPS } from './ports-trainer';
+import { CUES, QUALIFIERS } from './key-phrases';
 
-interface Row { where: string; name: string; phrases: string[] }
-interface PhraseSet { title: string; rows: Row[] }
+interface Row { says: string[]; name: string; where?: string }
+interface CueSet { title: string; rows: Row[] }
 
-/** "TCP 22", or for a port whose numbers differ: "UDP 137/138 · TCP 139". */
-export function whereOf(port: string): string {
-  const parts = PARTS[port];
-  const e = entryOf(port);
-  if (!parts) return `${e.transport.replace('UDP/TCP', 'TCP/UDP')} ${port}`;
-  const runs: { t: string; ns: number[] }[] = [];
-  for (const p of [...parts].sort((a, b) => a.n - b.n)) {
-    const t = p.transport.replace('UDP/TCP', 'TCP/UDP');
-    if (runs.at(-1)?.t === t) runs.at(-1)!.ns.push(p.n);
-    else runs.push({ t, ns: [p.n] });
+/** Every firewall rule once, in the order the tables list them. */
+export const CUE_FACTS: string[] = [...new Set(FLOWS.map(f => factOf(f.id)))];
+
+/** "TCP 110", "TCP/UDP 88", or for a protocol with no port: "IP protocol 50". */
+export function answerOf(fact: string): { name: string; where: string } {
+  const proto = factProto(fact);
+  if (factPort(fact) === NO_PORT) {
+    const ip = /IP protocol \d+/.exec(proto)?.[0];
+    return { name: proto.replace(/ \(.*\)$/, ''), where: ip ?? 'no port' };
   }
-  return runs.map(r => `${r.t} ${r.ns.join('/')}`).join(' · ');
+  return { name: factLabel(fact), where: `${proto === BOTH ? 'TCP/UDP' : proto} ${factPort(fact)}` };
 }
 
-/** The Ports trainer's cheat sheet: the words in a question that point to each port, set by set, with a search. */
+/** The Ports trainer's cheat sheet: what a vague firewall requirement says, and the port and protocol it means. */
 @Component({
   selector: 'app-port-phrases',
   standalone: true,
@@ -29,20 +30,23 @@ export function whereOf(port: string): string {
   styleUrl: './port-phrases.component.scss',
 })
 export class PortPhrasesComponent {
-  private readonly sets: PhraseSet[] = [
-    ...GROUPS.map(g => ({ title: g.title, rows: g.ports.map(port => ({ where: whereOf(port), name: shortName(entryOf(port)), phrases: KEY_PHRASES[port] })) })),
-    { title: 'No port', rows: NO_PORT },
+  private readonly sets: CueSet[] = [
+    { title: 'Words that change the answer', rows: QUALIFIERS.map(q => ({ says: q.says, name: q.means })) },
+    ...GROUPS.map(g => ({
+      title: g.title,
+      rows: CUE_FACTS.filter(fact => setOfFact(fact) === g.id).map(fact => ({ says: CUES[fact] ?? [], ...answerOf(fact) })),
+    })),
   ];
   readonly find = signal('');
   readonly shown = computed(() => {
     const q = this.find().trim().toLowerCase();
     if (!q) return this.sets;
-    const hit = (r: Row) => [r.where, r.name, ...r.phrases].some(x => x.toLowerCase().includes(q));
+    const hit = (r: Row) => [r.name, r.where ?? '', ...r.says].some(x => x.toLowerCase().includes(q));
     return this.sets.map(s => ({ ...s, rows: s.rows.filter(hit) })).filter(s => s.rows.length);
   });
 
-  hits(phrase: string): boolean {
+  hits(text: string): boolean {
     const q = this.find().trim().toLowerCase();
-    return !!q && phrase.toLowerCase().includes(q);
+    return !!q && text.toLowerCase().includes(q);
   }
 }

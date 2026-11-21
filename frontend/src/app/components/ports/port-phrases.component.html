@@ -8,10 +8,15 @@
   <section class="ph-set">
     <h2>{{ s.title }}</h2>
     <ul>
-      @for (r of s.rows; track r.name) {
+      @for (r of s.rows; track r.name + r.where) {
         <li>
-          <div class="ph-head"><span class="mono">{{ r.where }}</span> <strong>{{ r.name }}</strong></div>
-          <p class="ph-list">@for (p of r.phrases; track p; let last = $last) {<span [class.hit]="hits(p)">{{ p }}</span>@if (!last) {<span class="dot" aria-hidden="true"> · </span>} }</p>
+          <ul class="says">
+            @for (p of r.says; track p) { <li [class.hit]="hits(p)">“{{ p }}”</li> }
+          </ul>
+          <div class="means" [class.plain]="!r.where">
+            <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+            <span>@if (r.where) {<span class="mono">{{ r.where }}</span> }{{ r.name }}</span>
+          </div>
         </li>
       }
     </ul>
