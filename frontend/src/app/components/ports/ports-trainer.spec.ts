@@ -2,10 +2,7 @@ import { PORTS } from '../reference/reference-data';
 import { PORT_NAMES, referenceCards } from '../reference/reference-cards';
 import {
   Asked, GROUPS, MAX_LEVEL, PARTS, PORT_HOOKS, PortState, QKind, ROUND, SECURE_SWAPS, SITUATIONS, buildQuestion, kindsFor, pickRound, transportCard,
-  transportOfNumber,
 } from './ports-trainer';
-import { factProto, factPort } from './firewall-generator';
-import { factsOfEntry } from './port-links';
 import { TRANSPORT_WHY } from './transport-why';
 
 /** A seeded random, so round tests are repeatable. */
@@ -44,7 +41,7 @@ describe('Ports trainer', () => {
     }
   });
 
-  it('asks a port with several numbers about one at a time, so every typed answer is one number', () => {
+  it('asks a port with several numbers about one at a time, so every typed answer fits a phone\'s number pad', () => {
     for (const p of all.filter(x => /[/-]/.test(x))) {
       const parts = PARTS[p];
       expect(parts).withContext(p).toBeDefined();
@@ -62,14 +59,12 @@ describe('Ports trainer', () => {
         for (const part of PARTS[p.port] && kind !== 'transport' && kind !== 'secure' ? PARTS[p.port].map((_, i) => i) : [undefined]) {
           const q = buildQuestion({ kind, port: p.port, part });
           const n = part === undefined ? p.port : String(PARTS[p.port][part].n);
-          const t = part === undefined ? p.transport : PARTS[p.port][part].transport;
-          const swap = SECURE_SWAPS[p.port]?.to[0];
           const right: Record<QKind, string> = {
             name: PORT_NAMES[p.port]?.[0] ?? p.protocol,
-            number: `${t} ${n}`,
+            number: n,
             transport: q.answer,
-            secure: `${transportOfNumber(swap ?? 0).split('/')[0]} ${swap}`,
-            situation: p.port === '53' ? 'UDP 53' : `${t} ${n}`,
+            secure: String(SECURE_SWAPS[p.port]?.to[0]),
+            situation: n,
           };
           const at = `${kind} ${p.port} ${part ?? ''}: "${right[kind]}"`;
           expect(q.check(right[kind]).right).withContext(at).toBeTrue();
@@ -82,7 +77,7 @@ describe('Ports trainer', () => {
 
   it('marks the other number of a pair wrong, and says what that number is for', () => {
     const client = buildQuestion({ kind: 'situation', port: '67/68', part: 1 });
-    expect(client.check('UDP 68').right).toBeTrue();
+    expect(client.check('68').right).toBeTrue();
     expect(client.check('67').right).toBeFalse();
     expect(client.check('67').note).toBe('67 is for the DHCP server.');
     expect(client.check('6768').right).toBeFalse();
@@ -92,7 +87,7 @@ describe('Ports trainer', () => {
     expect(traps.check('161 162').right).toBeFalse();
     expect(buildQuestion({ kind: 'name', port: '1812/1813', part: 1 }).prompt).toBe('Port 1813: which protocol?');
     // A round saved before pairs were split still opens, on the first number.
-    expect(buildQuestion({ kind: 'number', port: '67/68' }).answer).toBe('UDP 67');
+    expect(buildQuestion({ kind: 'number', port: '67/68' }).answer).toBe('67');
   });
 
   it('never gives away another port\'s number, in a question or in what is shown after it', () => {
@@ -143,47 +138,6 @@ describe('Ports trainer', () => {
     expect(telnet.check('23').right).toBeFalse();
     expect(telnet.check('').right).toBeFalse();
     expect(buildQuestion({ kind: 'transport', port: '22' }).check('UDP').right).toBeFalse();
-  });
-
-  it('only takes a typed port with its transport: "TCP 23", "TCP/UDP 53" or "both 88"', () => {
-    const telnet = buildQuestion({ kind: 'number', port: '23' });
-    expect(telnet.answer).toBe('TCP 23');
-    expect(telnet.check('TCP 23').right).toBeTrue();
-    expect(telnet.check('23 tcp').right).toBeTrue();
-    expect(telnet.check('23')).toEqual({ right: false, note: 'No TCP or UDP.' });
-    expect(telnet.check('UDP 23')).toEqual({ right: false, note: 'It does not use UDP.' });
-    expect(telnet.check('TCP/UDP 23').right).toBeFalse();
-    const dns = buildQuestion({ kind: 'number', port: '53' });
-    expect(dns.answer).toBe('TCP/UDP 53');
-    for (const typed of ['TCP/UDP 53', 'udp tcp 53', 'both 53']) expect(dns.check(typed).right).withContext(typed).toBeTrue();
-    expect(dns.check('UDP 53')).toEqual({ right: false, note: 'It uses TCP and UDP.' });
-    const lookups = buildQuestion({ kind: 'situation', port: '53' });
-    expect(lookups.answer).toBe('UDP 53 (DNS)');
-    expect(lookups.check('UDP 53').right).toBeTrue();
-    expect(lookups.check('TCP/UDP 53').right).toBeTrue();
-    expect(lookups.check('TCP 53')).toEqual({ right: false, note: 'It uses UDP.' });
-    const openvpn = buildQuestion({ kind: 'situation', port: '1194' });
-    expect(openvpn.check('UDP 1194').right).toBeTrue();
-    expect(openvpn.check('TCP 1194').right).toBeTrue();
-    expect(buildQuestion({ kind: 'number', port: '137-139', part: 2 }).check('UDP 139').right).toBeFalse();
-    expect(buildQuestion({ kind: 'number', port: '137-139', part: 0 }).check('UDP 137').right).toBeTrue();
-    const pptp = buildQuestion({ kind: 'secure', port: '1723' });
-    expect(pptp.check('UDP 500').right).toBeTrue();
-    expect(pptp.check('TCP 500').right).toBeFalse();
-    expect(pptp.check('TCP 1194').right).toBeTrue();
-    expect(pptp.check('500')).toEqual({ right: false, note: 'No TCP or UDP.' });
-  });
-
-  it('gives each number the transports its firewall rules use', () => {
-    const order = (t: string) => ['TCP', 'UDP'].filter(x => t.toUpperCase().includes(x));
-    for (const p of PORTS) {
-      for (const part of PARTS[p.port] ?? [undefined]) {
-        const facts = factsOfEntry(p.port).filter(f => !part || factPort(f) === String(part.n));
-        if (!facts.length) continue;
-        const used = order(facts.map(factProto).join('/'));
-        expect(order(part?.transport ?? p.transport)).withContext(`${p.port} ${part?.n ?? ''}`).toEqual(used);
-      }
-    }
   });
 
   it('counts answers in the Reference deck, and TCP or UDP on a card of its own', () => {
@@ -237,6 +191,18 @@ describe('Ports trainer', () => {
     // With nothing due, a known port may be asked any way at all, TCP or UDP and its secure replacement included.
     const kinds = new Set(Array.from({ length: 60 }, (_, s) => pickRound(['23'], () => st(3), seeded(s + 1))[0].kind));
     expect(kinds).toEqual(new Set(kindsFor('23')));
+  });
+
+  it('asks TCP or UDP about half the time when nothing is due, but never twice in a row', () => {
+    for (const port of ['22', '23', '53', '67/68']) {
+      let transport = 0;
+      for (let s = 1; s <= 400; s++) if (pickRound([port], () => st(3, {}, { kind: 'name' }), seeded(s))[0].kind === 'transport') transport++;
+      expect(transport / 400).withContext(port).toBeGreaterThan(0.4);
+      expect(transport / 400).withContext(port).toBeLessThan(0.65);
+      for (let s = 1; s <= 50; s++) expect(pickRound([port], () => st(3, {}, { kind: 'transport' }), seeded(s))[0].kind).not.toBe('transport');
+    }
+    // A due card still comes first.
+    for (let s = 1; s <= 50; s++) expect(pickRound(['22'], () => st(3, { name: 'due' }), seeded(s))[0].kind).toBe('name');
   });
 
   it('asks a port a different way from last time', () => {

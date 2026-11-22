@@ -11,7 +11,7 @@ import { FACTS, GeneratedRef, RuleMemory, buildTable, newTable } from './firewal
 import { OldRuleHistory, RuleCounts, comesBack, factsIn, loadMemory, memoryFromHistory, memoryKey, newRulesLeft, rateTable, ruleCounts } from './firewall-memory';
 import { SrsCard, StudyPrefs, formatDelay } from '../../utils/srs';
 import { studyPrefs } from '../../utils/progress';
-import { answersOf, creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
+import { creditRules, factsOfEntry, reviewCardOf, tableCredits } from './port-links';
 import {
   CardLookup, adoptOldLevels, drillAnswer, isDue, isNew, lastAnswered, nextDue, otherSetSince, portLevel, portState, setsPracticed,
   trainerCards, urgency,
@@ -153,14 +153,13 @@ export class PortsPageComponent {
   }
 
   /**
-   * A drill answer about a port's number also counts for its firewall rules. It gives the transport and number, so it
-   * is a full answer for a port (or number) with one rule. Where there are several (DNS lookups on UDP, zone transfers
-   * on TCP) it is partial: a right answer only starts rules that were new, and a wrong one sends them back.
+   * A drill answer about a port's number also counts for its firewall rules. It gives the number but not the whole
+   * rule, so a right answer only starts rules that were new (the next table then asks them instead of treating them
+   * as new), and a wrong one sends them back.
    */
   private linkDrillToRules(q: PortQuestion, right: boolean, now: number) {
     if (q.kind !== 'number' && q.kind !== 'situation') return;
-    const only = partOf(q)?.n;
-    const changed = creditRules(this.memory, q.port, right, answersOf(q.port, only).length <= 1 ? 'full' : 'partial', now, this.prefs, only);
+    const changed = creditRules(this.memory, q.port, right, 'partial', now, this.prefs, partOf(q)?.n);
     this.memory = { ...this.memory, ...changed };
     this.saveRules(changed);
   }

@@ -6,7 +6,7 @@
 
 import { PORTS, PortEntry } from '../reference/reference-data';
 import { PORT_NAMES, protocolCheck } from '../reference/reference-cards';
-import { Verdict, mentions, numbersIn } from '../../utils/typed-answer';
+import { Verdict, numbersIn } from '../../utils/typed-answer';
 
 export interface PortGroup {
   id: string;
@@ -88,29 +88,26 @@ export const SITUATIONS: Record<string, string> = {
   '445': 'Windows PCs open shared folders on a file server, the protocol ransomware loves to spread over.',
   '465': 'A mail server accepts mail over a connection that is encrypted from the very first byte.',
   '500': 'Two offices build a site-to-site IPsec VPN and must first negotiate their keys.',
-  '514': 'Firewalls send their logs to the SIEM the traditional way, unencrypted.',
+  '514': 'Firewalls send their logs to the SIEM the traditional way, unencrypted over UDP.',
   '587': 'Staff mail apps send outgoing mail to the company\'s mail server, upgrading to encryption with STARTTLS.',
   '636': 'An application must query the company directory over an encrypted connection.',
   '853': 'Laptops must encrypt their name lookups with TLS so nobody on the network can read or change them.',
   '993': 'Phones read company mail securely, leaving it on the server.',
   '995': 'An old mail app must download mail over an encrypted connection.',
-  '1194': 'Remote staff connect through an open-source, TLS-based VPN.',
+  '1194': 'Remote staff connect through an open-source, TLS-based VPN, usually over UDP.',
   '1433': 'The web app must reach its Microsoft database server.',
   '1521': 'An application must reach an Oracle database.',
   '1701': 'A VPN uses a layer 2 tunnelling protocol with no encryption of its own, so it is paired with IPsec.',
   '1723': 'An audit finds an old VPN that relies on MS-CHAPv2 and is considered broken. Which port is it on?',
   '3306': 'A web shop must reach its open-source MySQL-compatible database.',
   '3389': 'Administrators open a Windows server\'s full graphical desktop remotely.',
-  '4500': 'An IPsec VPN must cross a NAT router.',
+  '4500': 'An IPsec VPN must cross a NAT router, so it wraps its traffic in UDP.',
   '5900': 'Support staff view and control a desktop with a screen-sharing protocol that is often unencrypted.',
   '6514': 'Logs must reach the SIEM encrypted, over a reliable connection.',
   '8080': 'A web proxy listens on the usual alternative HTTP port.',
   '8443': 'An appliance\'s admin page uses HTTPS on the usual alternative port.',
-  '51820': 'Staff connect through a modern, minimal VPN with a tiny attack surface.',
+  '51820': 'A modern, minimal VPN with a tiny attack surface runs over UDP.',
 };
-
-/** What a situation needs of a port with two transports: name lookups use UDP, and a VPN that runs on either needs one. */
-const SITUATION_TRANSPORT: Record<string, string> = { '53': 'UDP', '1194': '' };
 
 /**
  * The memory hook shown after a drill question. Each names only its own port's numbers, never another port's, not
@@ -168,38 +165,38 @@ export const PORT_HOOKS: Record<string, string> = {
 };
 
 /** One number of a port whose numbers do different jobs. `label` finishes "Which port is for …?". */
-export interface PortPart { n: number; label: string; situation: string; transport: string }
+export interface PortPart { n: number; label: string; situation: string }
 
 /** Ports whose numbers do different jobs. Their questions ask one number at a time, so the answer is always one number. */
 export const PARTS: Record<string, PortPart[]> = {
   '67/68': [
-    { n: 67, label: 'the DHCP server', situation: 'A DHCP server waits for laptops asking for an IP address. Which port does the server listen on?', transport: 'UDP' },
-    { n: 68, label: 'the DHCP client', situation: 'A laptop with no IP address yet waits for the DHCP server\'s offer. Which port does the laptop listen on?', transport: 'UDP' },
+    { n: 67, label: 'the DHCP server', situation: 'A DHCP server waits for laptops asking for an IP address. Which port does the server listen on?' },
+    { n: 68, label: 'the DHCP client', situation: 'A laptop with no IP address yet waits for the DHCP server\'s offer. Which port does the laptop listen on?' },
   ],
   '137-139': [
-    { n: 137, label: 'the NetBIOS name service', situation: 'A very old Windows PC looks up another computer by its NetBIOS name.', transport: 'UDP' },
-    { n: 138, label: 'the NetBIOS datagram service', situation: 'Very old Windows PCs broadcast announcements to each other over NetBIOS, without a connection.', transport: 'UDP' },
-    { n: 139, label: 'the NetBIOS session service', situation: 'A very old Windows PC opens a file-sharing session the legacy NetBIOS way, not with SMB straight over TCP.', transport: 'TCP' },
+    { n: 137, label: 'the NetBIOS name service', situation: 'A very old Windows PC looks up another computer by its NetBIOS name.' },
+    { n: 138, label: 'the NetBIOS datagram service', situation: 'Very old Windows PCs broadcast announcements to each other over NetBIOS, without a connection.' },
+    { n: 139, label: 'the NetBIOS session service', situation: 'A very old Windows PC opens a file-sharing session the legacy NetBIOS way, not with SMB straight over TCP.' },
   ],
   '161/162': [
-    { n: 161, label: 'SNMP polling', situation: 'A monitoring server asks a switch for its interface counters. Which port does the switch answer on?', transport: 'UDP' },
-    { n: 162, label: 'SNMP traps', situation: 'A switch tells the monitoring server that a fan failed, without being asked. Which port does the monitoring server listen on?', transport: 'UDP' },
+    { n: 161, label: 'SNMP polling', situation: 'A monitoring server asks a switch for its interface counters. Which port does the switch answer on?' },
+    { n: 162, label: 'SNMP traps', situation: 'A switch tells the monitoring server that a fan failed, without being asked. Which port does the monitoring server listen on?' },
   ],
   '989/990': [
-    { n: 990, label: 'FTPS commands', situation: 'A partner\'s FTPS client logs in and sends its commands, inside TLS from the start. Which port carries the commands?', transport: 'TCP' },
-    { n: 989, label: 'FTPS data', situation: 'An FTPS transfer sends the file itself on its own encrypted connection. Which port carries the file?', transport: 'TCP' },
+    { n: 990, label: 'FTPS commands', situation: 'A partner\'s FTPS client logs in and sends its commands, inside TLS from the start. Which port carries the commands?' },
+    { n: 989, label: 'FTPS data', situation: 'An FTPS transfer sends the file itself on its own encrypted connection. Which port carries the file?' },
   ],
   '1812/1813': [
-    { n: 1812, label: 'RADIUS authentication', situation: 'Wi-Fi access points check each 802.1X login with the central RADIUS server.', transport: 'UDP' },
-    { n: 1813, label: 'RADIUS accounting', situation: 'A VPN gateway reports to the RADIUS server when each user connected and for how long.', transport: 'UDP' },
+    { n: 1812, label: 'RADIUS authentication', situation: 'Wi-Fi access points check each 802.1X login with the central RADIUS server.' },
+    { n: 1813, label: 'RADIUS accounting', situation: 'A VPN gateway reports to the RADIUS server when each user connected and for how long.' },
   ],
   '1883/8883': [
-    { n: 1883, label: 'MQTT without encryption', situation: 'IoT sensors on an isolated network publish their readings to a message broker, unencrypted.', transport: 'TCP' },
-    { n: 8883, label: 'MQTT over TLS', situation: 'IoT sensors publish their readings to a message broker over TLS.', transport: 'TCP' },
+    { n: 1883, label: 'MQTT without encryption', situation: 'IoT sensors on an isolated network publish their readings to a message broker, unencrypted.' },
+    { n: 8883, label: 'MQTT over TLS', situation: 'IoT sensors publish their readings to a message broker over TLS.' },
   ],
   '5060/5061': [
-    { n: 5060, label: 'SIP without encryption', situation: 'Desk phones set up calls with the phone system in cleartext (the signalling, not the audio).', transport: 'UDP/TCP' },
-    { n: 5061, label: 'SIP over TLS', situation: 'Desk phones set up calls with the phone system over TLS (the signalling, not the audio).', transport: 'TCP' },
+    { n: 5060, label: 'SIP without encryption', situation: 'Desk phones set up calls with the phone system in cleartext (the signalling, not the audio).' },
+    { n: 5061, label: 'SIP over TLS', situation: 'Desk phones set up calls with the phone system over TLS (the signalling, not the audio).' },
   ],
 };
 
@@ -212,21 +209,21 @@ export const partOf = (ref: QRef): PortPart | undefined =>
 
 /** Plaintext protocols and the ports that replace them. */
 export const SECURE_SWAPS: Record<string, { to: number[]; name: string }> = {
-  '23': { to: [22], name: 'SSH on TCP 22' },
-  '21': { to: [22, 989, 990], name: 'SFTP on TCP 22 (or FTPS on TCP 989/990)' },
-  '20': { to: [22, 989, 990], name: 'SFTP on TCP 22 (or FTPS on TCP 989/990)' },
-  '69': { to: [22], name: 'SFTP or SCP on TCP 22' },
-  '80': { to: [443], name: 'HTTPS on TCP 443' },
-  '8080': { to: [8443, 443], name: 'HTTPS on TCP 8443 (or 443)' },
-  '110': { to: [995], name: 'POP3S on TCP 995' },
-  '143': { to: [993], name: 'IMAPS on TCP 993' },
-  '389': { to: [636], name: 'LDAPS on TCP 636' },
-  '514': { to: [6514], name: 'Syslog over TLS on TCP 6514' },
-  '53': { to: [853], name: 'DNS over TLS on TCP 853' },
-  '5900': { to: [22, 3389], name: 'tunnel it through SSH on TCP 22, or use RDP on TCP 3389 with NLA' },
-  '1723': { to: [500, 4500, 1194, 51820], name: 'IPsec (UDP 500 and 4500), OpenVPN (UDP or TCP 1194) or WireGuard (UDP 51820)' },
-  '1701': { to: [500, 4500], name: 'IPsec: IKE on UDP 500 and NAT-T on UDP 4500' },
-  '25': { to: [587, 465], name: 'submission on TCP 587 with STARTTLS (or 465)' },
+  '23': { to: [22], name: 'SSH on 22' },
+  '21': { to: [22, 989, 990], name: 'SFTP on 22 (or FTPS on 989/990)' },
+  '20': { to: [22, 989, 990], name: 'SFTP on 22 (or FTPS on 989/990)' },
+  '69': { to: [22], name: 'SFTP or SCP on 22' },
+  '80': { to: [443], name: 'HTTPS on 443' },
+  '8080': { to: [8443, 443], name: 'HTTPS on 8443 (or 443)' },
+  '110': { to: [995], name: 'POP3S on 995' },
+  '143': { to: [993], name: 'IMAPS on 993' },
+  '389': { to: [636], name: 'LDAPS on 636' },
+  '514': { to: [6514], name: 'Syslog over TLS on 6514' },
+  '53': { to: [853], name: 'DNS over TLS on 853' },
+  '5900': { to: [22, 3389], name: 'tunnel it through SSH on 22, or use RDP on 3389 with NLA' },
+  '1723': { to: [500, 4500, 1194, 51820], name: 'IPsec (500, 4500), OpenVPN (1194) or WireGuard (51820)' },
+  '1701': { to: [500, 4500], name: 'IPsec: IKE on 500 and NAT-T on 4500' },
+  '25': { to: [587, 465], name: 'submission on 587 with STARTTLS (or 465)' },
 };
 
 export type QKind = 'name' | 'number' | 'transport' | 'secure' | 'situation';
@@ -269,32 +266,6 @@ const rangeOf = (port: string) => {
 };
 const transportAnswer = (t: string) => (t.includes('/') ? 'Both' : t);
 
-type Transport = 'TCP' | 'UDP';
-const transportsIn = (t: string): Transport[] => (['TCP', 'UDP'] as const).filter(x => t.toUpperCase().includes(x));
-/** How a number's transport is written in an answer: "TCP 22", "TCP/UDP 53". */
-const withTransport = (transport: string, port: string | number) => `${transportsIn(transport).join('/')} ${port}`;
-
-/** The transport a port number uses: its own if it is one of a port's PARTS, otherwise its port's. */
-export function transportOfNumber(n: number): string {
-  const part = Object.values(PARTS).flat().find(p => p.n === n);
-  if (part) return part.transport;
-  return PORTS.find(p => rangeOf(p.port).includes(n))?.transport ?? '';
-}
-
-/**
- * Every answer that gives a port number must say TCP or UDP too ("TCP 23", "TCP/UDP 53", "both 88"): only ones in
- * `allowed`, and every one in `need` (with none needed, any one of them will do). Undefined when that is right.
- */
-export function transportVerdict(typed: string, allowed: string, need = allowed): Verdict | undefined {
-  const got: Transport[] = mentions(typed, 'both') ? ['TCP', 'UDP'] : (['TCP', 'UDP'] as const).filter(t => mentions(typed, t));
-  if (!got.length) return { right: false, note: 'No TCP or UDP.' };
-  const wrong = got.find(t => !transportsIn(allowed).includes(t));
-  if (wrong) return { right: false, note: `It does not use ${wrong}.` };
-  const needed = transportsIn(need);
-  if (needed.some(t => !got.includes(t))) return { right: false, note: `It uses ${needed.join(' and ')}.` };
-  return undefined;
-}
-
 /** "Port 22: which protocol?", or "Port 68: which protocol?" for one number of a pair. */
 function nameQ(e: PortEntry, ref: QRef): PortQuestion {
   return {
@@ -309,7 +280,7 @@ function oneNumberCheck(port: string, part: PortPart) {
     const got = numbersIn(typed);
     if (!got.length) return { right: false };
     const bad = got.find(n => n !== part.n);
-    if (bad === undefined) return transportVerdict(typed, part.transport) ?? { right: true };
+    if (bad === undefined) return { right: true };
     const sibling = PARTS[port].find(p => p.n === bad);
     return { right: false, note: sibling ? `${bad} is for ${sibling.label}.` : wrongNumber(bad, 'not it') };
   };
@@ -321,21 +292,21 @@ function numberQ(e: PortEntry, ref: QRef): PortQuestion {
   if (part) {
     return {
       ...ref, label: 'Name to port', prompt: `Which port is for ${part.label}?`,
-      answer: withTransport(part.transport, part.n), card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
+      answer: String(part.n), card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
     };
   }
   const need = ends(e.port);
   const allowed = rangeOf(e.port);
   return {
     kind: 'number', port: e.port, label: 'Name to port', prompt: `${e.protocol} (${e.service}): which port${need.length > 1 ? 's' : ''}?`,
-    answer: withTransport(e.transport, e.port), card: `proto:${e.protocol}`,
+    answer: e.port, card: `proto:${e.protocol}`,
     check: typed => {
       const got = numbersIn(typed);
       const extra = got.find(n => !allowed.includes(n));
       if (extra !== undefined) return { right: false, note: extra ? wrongNumber(extra, 'not one of its ports') : undefined };
       const missing = need.filter(n => !got.includes(n));
       if (missing.length) return { right: false, note: got.length ? `It uses ${need.join(' and ')}.` : undefined };
-      return transportVerdict(typed, e.transport) ?? { right: true };
+      return { right: true };
     },
   };
 }
@@ -359,8 +330,7 @@ function secureQ(e: PortEntry): PortQuestion {
       const got = numbersIn(typed);
       if (!got.length) return { right: false };
       const bad = got.find(n => !s.to.includes(n));
-      if (bad !== undefined) return { right: false, note: bad === Number(e.port) ? 'That is the insecure one.' : wrongNumber(bad, 'not a replacement') };
-      return transportVerdict(typed, got.map(transportOfNumber).join('/'), '') ?? { right: true };
+      return bad !== undefined ? { right: false, note: bad === Number(e.port) ? 'That is the insecure one.' : wrongNumber(bad, 'not a replacement') } : { right: true };
     },
   };
 }
@@ -370,20 +340,18 @@ function situationQ(e: PortEntry, ref: QRef): PortQuestion {
   if (part) {
     return {
       ...ref, label: 'Which port?', prompt: part.situation,
-      answer: `${withTransport(part.transport, part.n)} (${shortName(e)})`, card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
+      answer: `${part.n} (${shortName(e)})`, card: `proto:${e.protocol}`, check: oneNumberCheck(e.port, part),
     };
   }
   const allowed = rangeOf(e.port);
-  const need = SITUATION_TRANSPORT[e.port] ?? e.transport;
   return {
     kind: 'situation', port: e.port, label: 'Which port?', prompt: SITUATIONS[e.port],
-    answer: `${withTransport(need || e.transport, e.port)} (${shortName(e)})`, card: `proto:${e.protocol}`,
+    answer: `${e.port} (${shortName(e)})`, card: `proto:${e.protocol}`,
     check: typed => {
       const got = numbersIn(typed);
       if (!got.length) return { right: false };
       const bad = got.find(n => !allowed.includes(n));
-      if (bad !== undefined) return { right: false, note: wrongNumber(bad, 'not it') };
-      return transportVerdict(typed, e.transport, need) ?? { right: true };
+      return bad !== undefined ? { right: false, note: wrongNumber(bad, 'not it') } : { right: true };
     },
   };
 }
@@ -473,11 +441,14 @@ function wantOf(kind: QKind, st: PortState): Want {
   return kind === 'transport' ? st.wants.transport : false;
 }
 
+/** With no card due, the share of picks that go straight to TCP or UDP. With the even pick after it, about half. */
+const TRANSPORT_FIRST = 1 / 3;
+
 /**
  * How to ask a port this time. A card that is due gets the review, else one never studied: the name question for
  * "port 22: which protocol?", a number or situation question for "SSH: which port?", and TCP or UDP for its own card.
- * Otherwise any kind its level allows. Either way a different kind from last time, and its other number for a port
- * in PARTS.
+ * Otherwise any kind its level allows, TCP or UDP about half the time. Either way a different kind from last time,
+ * and its other number for a port in PARTS.
  */
 function nextAsk(port: string, st: PortState, random: () => number): QRef {
   const kinds = kindsFor(port).filter(x => st.level >= 2 || EASY.includes(x));
@@ -490,5 +461,7 @@ function nextAsk(port: string, st: PortState, random: () => number): QRef {
   const otherKind = asks.filter(a => a.kind !== last?.kind);
   const otherPart = otherKind.filter(a => a.part === undefined || a.part !== last?.part);
   const from = otherPart.length ? otherPart : otherKind.length ? otherKind : asks;
+  const transport = from.find(a => a.kind === 'transport');
+  if (!wanted.length && transport && random() < TRANSPORT_FIRST) return transport;
   return from[Math.floor(random() * from.length)];
 }
